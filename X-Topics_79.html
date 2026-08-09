@@ -51,7 +51,7 @@
 <div class="meta" style="margin-bottom:8px;font-size:14px">Processo ativo: <b id="tabLabelTopicos">—</b></div>
 <div class="card"><h2>🏷️ 2 — Criar tópico</h2><div class="row"><div><label>Sigla do tópico</label><div class="stype-box"><span id="stypeText"></span><button type="button" id="stypeChangeBtn" class="linklike">alterar</button></div><select id="stype" class="hidden"></select></div><div><label>ID zona/local <span style="font-weight:400">(opcional)</span></label><input id="newdesignation" placeholder="Ex.: Zona A, Sala 3..."></div></div><label>Referência oficial <span style="font-weight:400">(opcional — ex.: Questão 5, Q32)</span></label><input id="newofficial" placeholder="Ex.: Q5"><button type="button" id="createSubBtn">＋ Criar tópico</button><div class="note" id="topicCreateHint"></div><input id="topicSearchInput" placeholder="🔎 Pesquisar tópicos (código, ID zona/local, referência)..." autocomplete="off" style="margin:10px 0 4px"><div id="subs"></div></div>
 
-<div class="card hidden" id="detail"><div class="meta" id="topicBreadcrumb"></div><h2 id="stitle"></h2><label>Estado do tópico</label><div class="actions three" id="topicStatusButtons"><button type="button" class="status-set-btn" data-status="aberto" style="background:#3fae67">Em aberto</button><button type="button" class="status-set-btn" data-status="resolvido" style="background:#5b9bd5">Resolvido</button><button type="button" class="status-set-btn" data-status="anulado" style="background:#a62c2c">Anulado</button></div><label>ID zona/local <span style="font-weight:400">(opcional)</span></label><input id="sdesignation" placeholder="Ex.: Zona A, Sala 3..."><label>Referência oficial <span style="font-weight:400">(opcional — ex.: Questão 5, Q32)</span></label><input id="sofficial" placeholder="Ex.: Q5"><label>Descrevendo <small id="codeSummary" class="note"></small></label><textarea id="ssummary"></textarea><label>Uso atual <small id="codeUso" class="note"></small></label><textarea id="susoatual"></textarea><label>Constatação <small id="codeConstat" class="note"></small></label><textarea id="sconstatacao"></textarea><label>Eventuais causas <small id="codeCausas" class="note"></small></label><textarea id="scausas"></textarea><label>Medidas propostas <small id="codeMedidas" class="note"></small></label><textarea id="smedidas"></textarea><label>Grupo <small id="codeGrupo" class="note"></small></label><select id="sgrupo"></select><div class="row"><div><label>Data e hora</label><input id="sdate" type="datetime-local"></div><div><label>Coordenadas GPS</label><input id="sgps" placeholder="40.386974,-8.042764 ou 40°23'13&quot;N 8°02'34&quot;W"></div></div><div class="note">Aceita graus decimais, graus/minutos ou graus/minutos/segundos, com ou sem N/S/E/W — é convertido automaticamente para decimal ao gravar.</div><div class="actions primary-one"><button type="button" id="saveSubBtn">Guardar dados</button></div><div id="sstatus" class="status"></div>
+<div class="card hidden" id="detail"><div class="meta" id="topicBreadcrumb"></div><h2 id="stitle"></h2><label>Estado do tópico</label><div class="actions three" id="topicStatusButtons"><button type="button" class="status-set-btn" data-status="aberto" style="background:#3fae67">Em aberto</button><button type="button" class="status-set-btn" data-status="resolvido" style="background:#5b9bd5">Resolvido</button><button type="button" class="status-set-btn" data-status="anulado" style="background:#a62c2c">Anulado</button></div><label>ID zona/local <span style="font-weight:400">(opcional)</span></label><input id="sdesignation" placeholder="Ex.: Zona A, Sala 3..."><label>Referência oficial <span style="font-weight:400">(opcional — ex.: Questão 5, Q32)</span></label><input id="sofficial" placeholder="Ex.: Q5"><label>Descrevendo <small id="codeSummary" class="note"></small></label><textarea id="ssummary"></textarea><label>Uso atual <small id="codeUso" class="note"></small></label><textarea id="susoatual"></textarea><label>Constatação <small id="codeConstat" class="note"></small></label><textarea id="sconstatacao"></textarea><label>Eventuais causas <small id="codeCausas" class="note"></small></label><textarea id="scausas"></textarea><label>Medidas propostas <small id="codeMedidas" class="note"></small></label><textarea id="smedidas"></textarea><label>Grupo <small id="codeGrupo" class="note"></small></label><select id="sgrupo"></select><div id="assetCharacteristics"></div><div class="row"><div><label>Data e hora</label><input id="sdate" type="datetime-local"></div><div><label>Coordenadas GPS</label><input id="sgps" placeholder="40.386974,-8.042764 ou 40°23'13&quot;N 8°02'34&quot;W"></div></div><div class="note">Aceita graus decimais, graus/minutos ou graus/minutos/segundos, com ou sem N/S/E/W — é convertido automaticamente para decimal ao gravar.</div><div class="actions primary-one"><button type="button" id="saveSubBtn">Guardar dados</button></div><div id="sstatus" class="status"></div>
 <div class="actions primary-one"><button type="button" class="secondary wide" id="exportTopicBtn">📤 Exportar tópico e anexos</button></div><div id="topicExpState" class="status"></div>
 
 <h3>Localização e mapa</h3>
@@ -146,8 +146,19 @@
 <div class="status">A sigla de <b>Resumo (Ficha de Processo — FxP)</b> é fixa (<b>"Resumo"</b>) e identifica a pasta e os ficheiros com o resumo de todos os tópicos do processo.</div>
 </div>
 <div class="card"><h2>Serviços e siglas</h2>
-<div class="status">Cada serviço tem uma sigla, usada como prefixo dos tópicos (ex.: VB_001). Pode aceitar os valores por defeito ou alterá-los. Ao criar um tópico, a sigla é proposta automaticamente a partir do serviço do processo, mas pode sempre escolher outra.</div>
+<div class="status">Cada serviço tem uma sigla. Pode aceitar os valores por defeito ou alterá-los.</div>
 <div id="serviceSiglasList"></div>
+</div>
+<div class="card"><h2>🏗️ Tipos de ativo e siglas</h2>
+<div class="status">Cada tipo de ativo (terreno, veículo, edifício, etc.) tem uma sigla, usada como prefixo do ativo (ex.: TER_001). Pode aceitar os valores por defeito ou alterá-los. Ao criar um ativo, escolhe o tipo — a ficha de características muda consoante o tipo escolhido.</div>
+<div id="assetTypeSiglasList"></div>
+</div>
+<div class="card"><h2>📋 Características por tipo de ativo</h2>
+<div class="status">Defina, para cada tipo de ativo, os campos próprios da sua ficha de características. Estes campos aparecem no ativo consoante o tipo escolhido e são incluídos nos documentos exportados.</div>
+<label>Tipo de ativo a configurar</label>
+<select id="assetFieldsTypeSelect"></select>
+<div id="assetFieldsList"></div>
+<div class="actions primary-one"><button type="button" class="secondary" id="addAssetFieldBtn">➕ Adicionar característica</button></div>
 </div>
 <div class="card"><h2>🏷️ Grupos (classificação de tópicos)</h2>
 <div class="status">Etiquetas disponíveis no campo "Grupo" de cada tópico. Pode editar, remover ou adicionar novos grupos.</div>
@@ -495,7 +506,7 @@ function migrate(){if(!app.settings.mapMethod)app.settings.mapMethod='manual';if
  app.process.attendees=Array.isArray(app.process.attendees)?app.process.attendees:[];
  if(!app.process.attendees.length&&app.process.presences){app.process.attendees=[{id:crypto.randomUUID(),name:'',role:'',contact:'',email:'',obs:app.process.presences}]}
  for(const a of app.process.attendees){a.id??=crypto.randomUUID();a.name??='';a.role??='';a.contact??='';a.email??='';a.obs??=''}
- app.settings.maxSide??=1200;app.settings.quality??=.7;app.settings.img??='IMG';app.settings.lcz??='LCZ';app.settings.gps??='GPS';app.settings.fix??='FxT';app.settings.capa??='CAPA';app.settings.mapMethod??='manual';app.settings.googleApiKey??='';app.settings.mapSource??='googlemaps';app.settings.mapType??='satellite';app.settings.mapWidthM??=500;app.settings.mapHeightM??=500;app.settings.pdfPhotoCols=[1,2,3,4,5].includes(app.settings.pdfPhotoCols)?app.settings.pdfPhotoCols:3;app.settings.mapInPhotoGrid=app.settings.mapInPhotoGrid!==false;app.settings.resumoApreciacao=app.settings.resumoApreciacao!==false;app.settings.resumoDescSucinta=app.settings.resumoDescSucinta!==false;app.settings.resumoTopicFields=app.settings.resumoTopicFields||{};if(app.settings.resumoTopicFields.summary==null)app.settings.resumoTopicFields.summary=true;for(const k of['usoAtual','constatacao','causas','medidas','grupo','gps'])if(app.settings.resumoTopicFields[k]==null)app.settings.resumoTopicFields[k]=false;app.settings.cronologiaHistorico=app.settings.cronologiaHistorico!==false;app.settings.lastBackupAt??=null;app.settings.serviceSiglas=app.settings.serviceSiglas||{};SERVICE_LIST.forEach(x=>{if(!app.settings.serviceSiglas[x.key])app.settings.serviceSiglas[x.key]=x.def});app.settings.gabinetes=app.settings.gabinetes||{};GABINETE_LIST.forEach(x=>{if(!app.settings.gabinetes[x.key])app.settings.gabinetes[x.key]=x.def});app.settings.analistas=app.settings.analistas||{};ANALISTA_LIST.forEach(x=>{if(!app.settings.analistas[x.key])app.settings.analistas[x.key]=x.def});
+ app.settings.maxSide??=1200;app.settings.quality??=.7;app.settings.img??='IMG';app.settings.lcz??='LCZ';app.settings.gps??='GPS';app.settings.fix??='FxT';app.settings.capa??='CAPA';app.settings.mapMethod??='manual';app.settings.googleApiKey??='';app.settings.mapSource??='googlemaps';app.settings.mapType??='satellite';app.settings.mapWidthM??=500;app.settings.mapHeightM??=500;app.settings.pdfPhotoCols=[1,2,3,4,5].includes(app.settings.pdfPhotoCols)?app.settings.pdfPhotoCols:3;app.settings.mapInPhotoGrid=app.settings.mapInPhotoGrid!==false;app.settings.resumoApreciacao=app.settings.resumoApreciacao!==false;app.settings.resumoDescSucinta=app.settings.resumoDescSucinta!==false;app.settings.resumoTopicFields=app.settings.resumoTopicFields||{};if(app.settings.resumoTopicFields.summary==null)app.settings.resumoTopicFields.summary=true;for(const k of['usoAtual','constatacao','causas','medidas','grupo','gps'])if(app.settings.resumoTopicFields[k]==null)app.settings.resumoTopicFields[k]=false;app.settings.cronologiaHistorico=app.settings.cronologiaHistorico!==false;app.settings.lastBackupAt??=null;app.settings.serviceSiglas=app.settings.serviceSiglas||{};SERVICE_LIST.forEach(x=>{if(!app.settings.serviceSiglas[x.key])app.settings.serviceSiglas[x.key]=x.def});app.settings.assetTypeSiglas=app.settings.assetTypeSiglas||{};ASSET_TYPE_LIST.forEach(x=>{if(!app.settings.assetTypeSiglas[x.key])app.settings.assetTypeSiglas[x.key]=x.def});app.settings.assetTypeFields=app.settings.assetTypeFields||{};app.settings.gabinetes=app.settings.gabinetes||{};GABINETE_LIST.forEach(x=>{if(!app.settings.gabinetes[x.key])app.settings.gabinetes[x.key]=x.def});app.settings.analistas=app.settings.analistas||{};ANALISTA_LIST.forEach(x=>{if(!app.settings.analistas[x.key])app.settings.analistas[x.key]=x.def});
  for(const p of app.process.coverPhotos){p.id??=crypto.randomUUID();p.date??=new Date().toISOString();p.caption??=''}
  for(const k in PDF_LAYOUT_DEFAULTS){if(app.settings[k]==null||app.settings[k]==='')app.settings[k]=PDF_LAYOUT_DEFAULTS[k]}
  if(!app.settings._migratedIndentDefault){app.settings.tagValueIndent=true;app.settings._migratedIndentDefault=true}
@@ -519,7 +530,7 @@ function fill(){
  $('number').value=app.process.number||'';$('nref').value=app.process.nref||'';if($('designacaoProcesso'))$('designacaoProcesso').value=app.process.designacaoProcesso||'';$('service').value=app.process.service||'';$('subject').value=app.process.subject||'';$('local').value=app.process.local;$('pdate').value=app.process.date||'';$('finalidade').value=app.process.finalidade||'';$('docfornecida').value=app.process.docFornecida||'';$('apreciacao').value=app.process.apreciacao||'';
  $('max').value=String(app.settings.maxSide||1200);$('quality').value=String(app.settings.quality||.7);$('imgsig').value=app.settings.img;$('lczsig').value=app.settings.lcz;$('gpssig').value=app.settings.gps;$('fixsig').value=app.settings.fix;$('capasig').value=app.settings.capa||'CAPA';if($('titleCapa'))$('titleCapa').value=app.settings.titleCapa??'Relatório de';if($('titleFxT'))$('titleFxT').value=app.settings.titleFxT??'Ficha de caracterização';if($('titleCronologia'))$('titleCronologia').value=app.settings.titleCronologia??'Cronologia';if($('titleFxP'))$('titleFxP').value=app.settings.titleFxP||'Resumo';if($('titleOutros'))$('titleOutros').value=app.settings.titleOutros||'';if($('headerGabineteSize'))$('headerGabineteSize').value=app.settings.headerGabineteSize??9;if($('headerGabineteBold'))$('headerGabineteBold').value=app.settings.headerGabineteBold?'1':'0';if($('headerTitleSize'))$('headerTitleSize').value=app.settings.headerTitleSize??9;if($('headerTitleBold'))$('headerTitleBold').value=app.settings.headerTitleBold!==false?'1':'0';if($('coverCodeLineSize'))$('coverCodeLineSize').value=app.settings.coverCodeLineSize??18;if($('coverCodeLineBold'))$('coverCodeLineBold').value=app.settings.coverCodeLineBold!==false?'1':'0';if($('cronologiaHistorico'))$('cronologiaHistorico').checked=app.settings.cronologiaHistorico!==false;if($('tagValueLayout'))$('tagValueLayout').value=app.settings.tagValueLayout||'stacked';if($('tagValueTabs'))$('tagValueTabs').value=String(app.settings.tagValueTabs||2);if($('tagValueIndent'))$('tagValueIndent').checked=app.settings.tagValueIndent!==false;updateTagValueLayoutUi();
  $('solicitante').value=app.process.solicitante||'';
- renderServiceSiglasUI();renderTopicTypeOptions();renderGabineteAnalistaUI();renderCoverPhotos();renderAttendees();renderGroupsUI();renderGabineteSelect();
+ renderServiceSiglasUI();renderAssetTypeSiglasUI();renderAssetFieldsTypeSelect();renderTopicTypeOptions();renderGabineteAnalistaUI();renderCoverPhotos();renderAttendees();renderGroupsUI();renderGabineteSelect();
  $('ffSummary').checked=app.settings.fichaFields.summary!==false;$('ffUsoAtual').checked=app.settings.fichaFields.usoAtual!==false;$('ffConstatacao').checked=app.settings.fichaFields.constatacao!==false;$('ffCausas').checked=app.settings.fichaFields.causas!==false;$('ffMedidas').checked=app.settings.fichaFields.medidas!==false;$('ffGrupo').checked=app.settings.fichaFields.grupo!==false;if($('ffGps'))$('ffGps').checked=app.settings.fichaFields.gps===true;
  const rf=app.settings.resumoTopicFields||{};if($('rfSummary'))$('rfSummary').checked=rf.summary===true;if($('rfUsoAtual'))$('rfUsoAtual').checked=rf.usoAtual===true;if($('rfConstatacao'))$('rfConstatacao').checked=rf.constatacao===true;if($('rfCausas'))$('rfCausas').checked=rf.causas===true;if($('rfMedidas'))$('rfMedidas').checked=rf.medidas===true;if($('rfGrupo'))$('rfGrupo').checked=rf.grupo===true;if($('rfGps'))$('rfGps').checked=rf.gps===true;if($('resumoDescSucinta'))$('resumoDescSucinta').checked=app.settings.resumoDescSucinta!==false;
  $('mapMethod').value=app.settings.mapMethod||'manual';$('googleApiKey').value=app.settings.googleApiKey||'';$('mapSource').value=app.settings.mapSource||'googlemaps';$('mapType').value=app.settings.mapType||'satellite';$('mapWidthM').value=app.settings.mapWidthM||500;$('mapHeightM').value=app.settings.mapHeightM||500;$('pdfPhotoCols').value=String(app.settings.pdfPhotoCols||3);if($('mapInPhotoGrid'))$('mapInPhotoGrid').checked=app.settings.mapInPhotoGrid!==false;if($('resumoApreciacao'))$('resumoApreciacao').checked=app.settings.resumoApreciacao!==false;if($('resumoPhotoCaptions'))$('resumoPhotoCaptions').checked=app.settings.resumoPhotoCaptions===true;if($('resumoCaptionsShowCode'))$('resumoCaptionsShowCode').checked=app.settings.resumoCaptionsShowCode===true;updateMapMethodUi();
@@ -533,6 +544,12 @@ function show(id){
 }
 function nextN(){return app.subs.length?Math.max(...app.subs.map(s=>s.n))+1:1}
 const SERVICE_LIST=[{key:'projeto',label:'Projeto',def:'PR'},{key:'fiscalizacao',label:'Fiscalização',def:'FZ'},{key:'peritagem',label:'Peritagem',def:'PE'},{key:'avaliacao',label:'Avaliação',def:'AA'},{key:'inspecao',label:'Inspeção',def:'IN'},{key:'levantamento',label:'Levantamento',def:'LV'},{key:'geral',label:'Outras situações',def:'OS'}];
+const ASSET_TYPE_LIST=[{key:'terreno',label:'Terreno',def:'TER'},{key:'veiculo',label:'Veículo',def:'VEI'},{key:'edificio',label:'Edifício ou construção',def:'EDI'},{key:'movel',label:'Móvel',def:'MOV'},{key:'maquina',label:'Máquina ou equipamento',def:'MAQ'},{key:'outras',label:'Outras situações',def:'OUT'}];
+function assetTypeSigla(key){return(app.settings.assetTypeSiglas&&app.settings.assetTypeSiglas[key])||(ASSET_TYPE_LIST.find(x=>x.key===key)||{}).def||''}
+function currentAssetTypes(){const map={};ASSET_TYPE_LIST.forEach(x=>{map[assetTypeSigla(x.key)]=x.label});return map}
+function assetTypeKeyFromSigla(sig){const x=ASSET_TYPE_LIST.find(x=>assetTypeSigla(x.key)===sig);return x?x.key:null}
+function assetTypeFieldsFor(typeKey){return(typeKey&&app.settings.assetTypeFields&&app.settings.assetTypeFields[typeKey])||[]}
+const ASSET_FIELD_TYPES=[{v:'texto',l:'Texto curto'},{v:'textolonga',l:'Texto longo'},{v:'numero',l:'Número'},{v:'opcoes',l:'Lista de opções'}];
 function serviceSigla(key){return(app.settings.serviceSiglas&&app.settings.serviceSiglas[key])||(SERVICE_LIST.find(x=>x.key===key)||{}).def||''}
 function currentTopicTypes(){const map={};SERVICE_LIST.forEach(x=>{map[serviceSigla(x.key)]=x.label});return map}
 function renderGroupsUI(){
@@ -553,11 +570,58 @@ function renderServiceSiglasUI(){
   inp.addEventListener('input',()=>{
    app.settings.serviceSiglas=app.settings.serviceSiglas||{};
    app.settings.serviceSiglas[inp.dataset.svc]=inp.value.trim().toUpperCase();
-   renderTopicTypeOptions();
    queue();
   });
   inp.addEventListener('blur',saveImmediate);
  });
+}
+function renderAssetTypeSiglasUI(){
+ const el=$('assetTypeSiglasList');if(!el)return;
+ el.innerHTML=ASSET_TYPE_LIST.map(x=>`<div class="row" style="align-items:end;margin-bottom:6px"><div><label>${x.label}</label><input value="${esc(assetTypeSigla(x.key))}" data-atk="${x.key}" class="assettypesig" maxlength="6" style="text-transform:uppercase"></div></div>`).join('');
+ el.querySelectorAll('.assettypesig').forEach(inp=>{
+  inp.addEventListener('input',()=>{
+   app.settings.assetTypeSiglas=app.settings.assetTypeSiglas||{};
+   app.settings.assetTypeSiglas[inp.dataset.atk]=inp.value.trim().toUpperCase();
+   renderTopicTypeOptions();
+   renderAssetFieldsTypeSelect();
+   queue();
+  });
+  inp.addEventListener('blur',saveImmediate);
+ });
+}
+let assetFieldsEditingType='';
+function renderAssetFieldsTypeSelect(){
+ const sel=$('assetFieldsTypeSelect');if(!sel)return;
+ const prev=assetFieldsEditingType||sel.value||ASSET_TYPE_LIST[0].key;
+ sel.innerHTML=ASSET_TYPE_LIST.map(x=>`<option value="${x.key}">${esc(x.label)} (${esc(assetTypeSigla(x.key))})</option>`).join('');
+ sel.value=ASSET_TYPE_LIST.some(x=>x.key===prev)?prev:ASSET_TYPE_LIST[0].key;
+ assetFieldsEditingType=sel.value;
+ renderAssetFieldsUI();
+}
+function renderAssetFieldsUI(){
+ const el=$('assetFieldsList');if(!el)return;
+ const typeKey=assetFieldsEditingType||ASSET_TYPE_LIST[0].key;
+ app.settings.assetTypeFields=app.settings.assetTypeFields||{};
+ const fields=app.settings.assetTypeFields[typeKey]=app.settings.assetTypeFields[typeKey]||[];
+ el.innerHTML=fields.length?fields.map((f,i)=>`<div class="row3" style="align-items:end;margin-bottom:6px"><div><label>Nome</label><input value="${esc(f.label)}" data-i="${i}" class="afld-label"></div><div><label>Tipo</label><select data-i="${i}" class="afld-type">${ASSET_FIELD_TYPES.map(t=>`<option value="${t.v}"${f.type===t.v?' selected':''}>${t.l}</option>`).join('')}</select></div><div><button type="button" class="compact-danger afld-del" data-i="${i}">🗑 Remover</button></div></div>${f.type==='opcoes'?`<div class="row" style="margin:-2px 0 6px"><div><label>Opções (separadas por vírgula)</label><input value="${esc((f.choices||[]).join(', '))}" data-i="${i}" class="afld-choices"></div></div>`:''}`).join(''):'<div class="status">Sem características definidas para este tipo.</div>';
+ el.querySelectorAll('.afld-label').forEach(inp=>{
+  inp.addEventListener('input',()=>{fields[parseInt(inp.dataset.i)].label=inp.value;renderAssetCharacteristics(active());queue()});
+  inp.addEventListener('blur',saveImmediate);
+ });
+ el.querySelectorAll('.afld-type').forEach(sel=>sel.addEventListener('change',()=>{fields[parseInt(sel.dataset.i)].type=sel.value;renderAssetFieldsUI();renderAssetCharacteristics(active());saveImmediate()}));
+ el.querySelectorAll('.afld-choices').forEach(inp=>{
+  inp.addEventListener('input',()=>{fields[parseInt(inp.dataset.i)].choices=inp.value.split(',').map(x=>x.trim()).filter(Boolean);renderAssetCharacteristics(active());queue()});
+  inp.addEventListener('blur',saveImmediate);
+ });
+ el.querySelectorAll('.afld-del').forEach(b=>b.addEventListener('click',()=>{fields.splice(parseInt(b.dataset.i),1);renderAssetFieldsUI();renderAssetCharacteristics(active());saveImmediate()}));
+}
+function addAssetField(){
+ const typeKey=assetFieldsEditingType||ASSET_TYPE_LIST[0].key;
+ app.settings.assetTypeFields=app.settings.assetTypeFields||{};
+ const fields=app.settings.assetTypeFields[typeKey]=app.settings.assetTypeFields[typeKey]||[];
+ fields.push({id:crypto.randomUUID(),label:'Nova característica',type:'texto',choices:[]});
+ renderAssetFieldsUI();
+ saveImmediate();
 }
 const GABINETE_LIST=[{key:'proficis',def:'PRF - Proficis - Engenheiros'},{key:'peritava',def:'PTV - Peritava - Peritos Avaliadores'},{key:'pfk',def:'PFK - Peritos'},{key:'nid',def:'NID'}];
 const ANALISTA_LIST=[{key:'pedro',def:'Pedro Fonseca'},{key:'nid',def:'NID'}];
@@ -626,11 +690,20 @@ const FICHA_FIELD_DEFS=[
 ];
 function topicFichaFields(s){
  const ff=(app.settings&&app.settings.fichaFields)||{};
- return FICHA_FIELD_DEFS.filter(d=>ff[d.key]!==false&&s[d.key]).map(d=>({
+ const base=FICHA_FIELD_DEFS.filter(d=>ff[d.key]!==false&&s[d.key]).map(d=>({
   code:`${topicCode(s)}.${d.suffix}`,
   label:d.label,
   value:s[d.key]
  }));
+ const typeKey=assetTypeKeyFromSigla(s.type);
+ const charFields=assetTypeFieldsFor(typeKey);
+ const chars=s.characteristics||{};
+ charFields.forEach((f,i)=>{
+  const v=chars[f.id];
+  if(v==null||v==='')return;
+  base.push({code:`${topicCode(s)}.C${pad(i+1,2)}`,label:f.label,value:Array.isArray(v)?v.join(', '):v});
+ });
+ return base;
 }
 function topicCode(s){
  const off=s.official&&s.official.trim()?('-'+sanitizePathSegment(s.official.trim().replace(/\s+/g,''))):'';
@@ -788,14 +861,13 @@ function processHistoryLines(){
  const hist=(app.process&&Array.isArray(app.process.resumoHistory))?app.process.resumoHistory:[];
  return hist.slice().sort((a,b)=>new Date(a.at)-new Date(b.at)).map(h=>`${new Date(h.at).toLocaleString('pt-PT')} — ${h.topics} tópico(s), ${h.photos} fotografia(s)`);
 }
-function renderTopicTypeOptions(syncFromService){
+function renderTopicTypeOptions(){
  const sel=$('stype');if(!sel)return;
  const prevValue=sel.value;
- sel.innerHTML=SERVICE_LIST.map(x=>{const sig=serviceSigla(x.key);return `<option value="${esc(sig)}">${esc(sig)} — ${esc(x.label)}</option>`}).join('');
- const svcItem=SERVICE_LIST.find(x=>x.label===app.process.service);
- const proposed=svcItem?serviceSigla(svcItem.key):serviceSigla(SERVICE_LIST[0].key);
- const values=SERVICE_LIST.map(x=>serviceSigla(x.key));
- sel.value=syncFromService?proposed:(values.includes(prevValue)?prevValue:proposed);
+ sel.innerHTML=ASSET_TYPE_LIST.map(x=>{const sig=assetTypeSigla(x.key);return `<option value="${esc(sig)}">${esc(sig)} — ${esc(x.label)}</option>`}).join('');
+ const proposed=assetTypeSigla(ASSET_TYPE_LIST[0].key);
+ const values=ASSET_TYPE_LIST.map(x=>assetTypeSigla(x.key));
+ sel.value=values.includes(prevValue)?prevValue:proposed;
  resetStypeToDisplay();
 }
 function updateStypeText(){
@@ -812,7 +884,7 @@ function resetStypeToDisplay(){
 }
 const VALID_TOPIC_TYPES_LEGACY={VB:'Verba',NR:'Número',IT:'Item',TM:'Tema',AS:'Assunto',AN:'Anomalia'};
 async function verifyTopicPrefixes(){
- const validMap=Object.assign({},VALID_TOPIC_TYPES_LEGACY,currentTopicTypes());
+ const validMap=Object.assign({},VALID_TOPIC_TYPES_LEGACY,currentTopicTypes(),currentAssetTypes());
  const invalid=app.subs.filter(s=>!validMap[s.type]);
  if(!invalid.length)return true;
  const keys=Object.keys(validMap);
@@ -831,9 +903,9 @@ async function verifyTopicPrefixes(){
  render();queue();await saveImmediate();
  return true;
 }
-function createSub(){sync();if(!code())return alert('Defina primeiro o processo (N/Ref).');if(!app.process.service)return alert('Defina primeiro o Serviço do processo (Configurações) — os códigos dos tópicos dependem dele.');const designation=$('newdesignation').value.trim();const official=$('newofficial').value.trim();const newSub={id:crypto.randomUUID(),type:$('stype').value,n:nextN(),designation,official,status:'aberto',summary:'',usoAtual:'',constatacao:'',causas:'',medidas:'',grupo:'',date:'',createdAt:new Date().toISOString(),gps:'',photos:[],kmlText:null,kmlGps:null,mapBlob:null,mapGps:null};app.subs.push(newSub);logProcessEvent(`Tópico ${topicCode(newSub)} criado`+(designation?` — ${designation}`:''));$('newdesignation').value='';$('newofficial').value='';app.active=app.subs.at(-1).id;render();queue()}
+function createSub(){sync();if(!code())return alert('Defina primeiro o processo (N/Ref).');if(!app.process.service)return alert('Defina primeiro o Serviço do processo (Configurações) — os códigos dos tópicos dependem dele.');const designation=$('newdesignation').value.trim();const official=$('newofficial').value.trim();const newSub={id:crypto.randomUUID(),type:$('stype').value,n:nextN(),designation,official,status:'aberto',summary:'',usoAtual:'',constatacao:'',causas:'',medidas:'',grupo:'',date:'',createdAt:new Date().toISOString(),gps:'',photos:[],kmlText:null,kmlGps:null,mapBlob:null,mapGps:null,characteristics:{}};app.subs.push(newSub);logProcessEvent(`Tópico ${topicCode(newSub)} criado`+(designation?` — ${designation}`:''));$('newdesignation').value='';$('newofficial').value='';app.active=app.subs.at(-1).id;render();queue()}
 function active(){return app.subs.find(s=>s.id===app.active)||null}
-function dupSub(id){sync();const s=app.subs.find(x=>x.id===id);if(!s)return;const copy={id:crypto.randomUUID(),type:s.type,n:nextN(),designation:s.designation,official:'',status:'aberto',summary:s.summary||'',usoAtual:s.usoAtual||'',constatacao:s.constatacao||'',causas:s.causas||'',medidas:s.medidas||'',grupo:s.grupo||'',date:'',createdAt:new Date().toISOString(),gps:'',photos:[],kmlText:null,kmlGps:null,mapBlob:null,mapGps:null};app.subs.push(copy);logProcessEvent(`Tópico ${topicCode(copy)} duplicado (de ${topicCode(s)})`);app.active=copy.id;render();queue()}
+function dupSub(id){sync();const s=app.subs.find(x=>x.id===id);if(!s)return;const copy={id:crypto.randomUUID(),type:s.type,n:nextN(),designation:s.designation,official:'',status:'aberto',summary:s.summary||'',usoAtual:s.usoAtual||'',constatacao:s.constatacao||'',causas:s.causas||'',medidas:s.medidas||'',grupo:s.grupo||'',date:'',createdAt:new Date().toISOString(),gps:'',photos:[],kmlText:null,kmlGps:null,mapBlob:null,mapGps:null,characteristics:{...(s.characteristics||{})}};app.subs.push(copy);logProcessEvent(`Tópico ${topicCode(copy)} duplicado (de ${topicCode(s)})`);app.active=copy.id;render();queue()}
 function selectSub(id){app.active=id;render();queue()}
 let pendingDeletedSub=null;
 function showUndoToast(msg,onUndo){
@@ -934,8 +1006,24 @@ function renderGrupoSelect(current){
 function renderDetail(){const s=active();$('detail').classList.toggle('hidden',!s);if(!s)return;const ctxLabel=`Processo ${code()||'—'} / Tópico ${topicCode(s)}${s.designation?' — '+s.designation:''}`;$('topicBreadcrumb').textContent=ctxLabel;if($('photoContextBar'))$('photoContextBar').textContent=ctxLabel;$('stitle').textContent=`🏷️ ${topicCode(s)}`;document.querySelectorAll('#topicStatusButtons .status-set-btn').forEach(b=>b.classList.toggle('selected',b.dataset.status===(s.status||'aberto')));$('sdesignation').value=s.designation||'';$('sofficial').value=s.official||'';$('ssummary').value=s.summary||'';$('susoatual').value=s.usoAtual||'';$('sconstatacao').value=s.constatacao||'';$('scausas').value=s.causas||'';$('smedidas').value=s.medidas||'';renderGrupoSelect(s.grupo||'');$('sdate').value=toLocal(s.date);$('sgps').value=s.gps||'';$('sstatus').innerHTML=`<span class="pill">${s.photos.length} foto(s)</span><span class="pill">${validGps(s.gps)?'GPS válido':'Sem GPS'}</span>`;
  const codeBase=`${topicCode(s)}`;
  $('codeSummary').textContent=`(${codeBase}.01)`;$('codeUso').textContent=`(${codeBase}.02)`;$('codeConstat').textContent=`(${codeBase}.03)`;$('codeCausas').textContent=`(${codeBase}.04)`;$('codeMedidas').textContent=`(${codeBase}.05)`;$('codeGrupo').textContent=`(${codeBase}.06)`;
+ renderAssetCharacteristics(s);
  renderLocation();renderPhotos()}
-function saveSub(renderAfter=true){const s=active();if(!s)return false;const rawGps=$('sgps').value.trim();let newGps=rawGps;if(rawGps){const p=parseGps(rawGps);if(!p){alert('Coordenadas não reconhecidas. Use graus decimais (40.386974,-8.042764), graus/minutos (40°23.2\'N 8°02.6\'W) ou graus/minutos/segundos (40°23\'13"N 8°02\'34"W).');return false}newGps=`${p.lat.toFixed(6)},${p.lon.toFixed(6)}`;$('sgps').value=newGps}if(s.gps!==newGps){s.kmlText=null;s.kmlGps=null;s.mapBlob=null;s.mapGps=null}s.designation=$('sdesignation').value.trim();s.official=$('sofficial').value.trim();s.summary=$('ssummary').value;s.usoAtual=$('susoatual').value;s.constatacao=$('sconstatacao').value;s.causas=$('scausas').value;s.medidas=$('smedidas').value;s.grupo=$('sgrupo').value;s.date=$('sdate').value?new Date($('sdate').value).toISOString():s.date;s.gps=newGps;touchTopicStart(s);if(renderAfter)render();queue();return true}
+function renderAssetCharacteristics(s){
+ const el=$('assetCharacteristics');if(!el)return;
+ if(!s){el.innerHTML='';return}
+ const typeKey=assetTypeKeyFromSigla(s.type);
+ const fields=assetTypeFieldsFor(typeKey);
+ s.characteristics=s.characteristics||{};
+ if(!fields.length){el.innerHTML='';return}
+ el.innerHTML=`<div class="config-doc-title" style="margin-top:14px">Características do ativo</div>`+fields.map(f=>{
+  const v=s.characteristics[f.id];
+  if(f.type==='textolonga')return `<label>${esc(f.label)}</label><textarea data-char="${f.id}" class="charfield">${esc(v||'')}</textarea>`;
+  if(f.type==='numero')return `<label>${esc(f.label)}</label><input type="number" data-char="${f.id}" class="charfield" value="${esc(v??'')}">`;
+  if(f.type==='opcoes')return `<label>${esc(f.label)}</label><select data-char="${f.id}" class="charfield"><option value="">Selecionar</option>${(f.choices||[]).map(c=>`<option value="${esc(c)}"${v===c?' selected':''}>${esc(c)}</option>`).join('')}</select>`;
+  return `<label>${esc(f.label)}</label><input data-char="${f.id}" class="charfield" value="${esc(v||'')}">`;
+ }).join('');
+}
+function saveSub(renderAfter=true){const s=active();if(!s)return false;const rawGps=$('sgps').value.trim();let newGps=rawGps;if(rawGps){const p=parseGps(rawGps);if(!p){alert('Coordenadas não reconhecidas. Use graus decimais (40.386974,-8.042764), graus/minutos (40°23.2\'N 8°02.6\'W) ou graus/minutos/segundos (40°23\'13"N 8°02\'34"W).');return false}newGps=`${p.lat.toFixed(6)},${p.lon.toFixed(6)}`;$('sgps').value=newGps}if(s.gps!==newGps){s.kmlText=null;s.kmlGps=null;s.mapBlob=null;s.mapGps=null}s.designation=$('sdesignation').value.trim();s.official=$('sofficial').value.trim();s.summary=$('ssummary').value;s.usoAtual=$('susoatual').value;s.constatacao=$('sconstatacao').value;s.causas=$('scausas').value;s.medidas=$('smedidas').value;s.grupo=$('sgrupo').value;s.date=$('sdate').value?new Date($('sdate').value).toISOString():s.date;s.gps=newGps;s.characteristics=s.characteristics||{};document.querySelectorAll('#assetCharacteristics .charfield').forEach(el=>{s.characteristics[el.dataset.char]=el.value});touchTopicStart(s);if(renderAfter)render();queue();return true}
 function showGpsStatus(msg,isErr){
  const el=$('gpsStatus');if(!el)return;
  el.textContent=msg;el.classList.toggle('hidden',!msg);
@@ -3311,7 +3399,7 @@ function updateExportOptionsUi(){
  });
 })();
 ['nref'].forEach(id=>{const el=$(id);el.addEventListener('blur',checkNrefDuplicate);el.addEventListener('change',checkNrefDuplicate)});
-$('service').addEventListener('change',()=>{sync();renderTopicTypeOptions(true)});
+$('service').addEventListener('change',()=>{sync();saveImmediate()});
 $('analista').addEventListener('change',()=>{sync();saveImmediate()});
 $('pdate').addEventListener('change',queue);$('pdate').addEventListener('blur',saveImmediate);
 $('mapSource').addEventListener('change',updateMapMethodUi);
@@ -3383,6 +3471,8 @@ function wireEvents(){
  bind('coverPhotoBtn','click',()=>$('coverPhotoInput').click());
  bind('addAttendeeBtn','click',()=>{app.process.attendees.push(newAttendee());renderAttendees()});
  bind('addGroupBtn','click',()=>{const v=$('newGroupInput').value.trim();if(!v)return;app.settings.groups=app.settings.groups||[];app.settings.groups.push(v);$('newGroupInput').value='';renderGroupsUI();renderGrupoSelect(active()?active().grupo:'');saveImmediate()});
+ bind('assetFieldsTypeSelect','change',()=>{assetFieldsEditingType=$('assetFieldsTypeSelect').value;renderAssetFieldsUI()});
+ bind('addAssetFieldBtn','click',addAssetField);
  [['ffSummary','summary'],['ffUsoAtual','usoAtual'],['ffConstatacao','constatacao'],['ffCausas','causas'],['ffMedidas','medidas'],['ffGrupo','grupo'],['ffGps','gps']].forEach(([id,key])=>{
   $(id).addEventListener('change',()=>{app.settings.fichaFields=app.settings.fichaFields||{};app.settings.fichaFields[key]=$(id).checked;saveImmediate()});
  });
