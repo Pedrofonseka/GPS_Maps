@@ -12,7 +12,7 @@
 <header><h1>Ava_Load</h1><small id="head">Sem processo ativo</small><small style="display:block;margin-top:3px">Core 1.0</small>
 <div id="floatingDownloadBar" class="hidden" style="margin-top:8px"></div>
 </header><div id="topicStatusFilterRow" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:8px 12px;background:#fff;border-bottom:1px solid var(--ln)"><button type="button" class="secondary status-filter-btn" data-status="" style="min-height:38px;padding:6px 4px;font-size:12px">Todos</button><button type="button" class="secondary status-filter-btn" data-status="aberto" style="min-height:38px;padding:6px 4px;font-size:12px">Em aberto</button><button type="button" class="secondary status-filter-btn" data-status="resolvido" style="min-height:38px;padding:6px 4px;font-size:12px">Resolvido</button><button type="button" class="secondary status-filter-btn" data-status="anulado" style="min-height:38px;padding:6px 4px;font-size:12px">Anulado</button></div><main>
-<div class="tabs" style="grid-template-columns:repeat(4,1fr)"><button type="button" id="btnProcesso">📋 Processo</button><button type="button" class="secondary" id="btnTopicos">🏷️ Tópicos</button><button type="button" class="secondary" id="btnProduzir">📤 Produzir</button><button type="button" class="secondary" id="btnConfig">⚙️ Mais</button></div>
+<div class="tabs" style="grid-template-columns:repeat(4,1fr)"><button type="button" id="btnProcesso">📋 Processo</button><button type="button" class="secondary" id="btnTopicos">🏷️ Núcleos</button><button type="button" class="secondary" id="btnProduzir">📤 Produzir</button><button type="button" class="secondary" id="btnConfig">⚙️ Mais</button></div>
 <div id="fileNameWarning" class="hidden" style="padding:10px;background:#fdecea;border:2px solid #e53935;border-radius:8px;color:#7a1a1a;font-size:13px;margin:8px 0;font-weight:600">⚠️ NÃO mude o nome nem o local deste ficheiro. Se o fizer (ou se abrir uma cópia descarregada de novo), o iPhone/iPad/PC trata-o como um ficheiro diferente e perde o acesso à base de dados já guardada (os dados não se apagam, mas ficam presos na cópia anterior).</div>
 <div id="persistenceWarning" class="hidden status"><b>Persistência:</b> use sempre o ficheiro com o nome fixo <b>Ava_Load.html</b> e substitua-o exatamente no mesmo local/pasta. Isto é essencial: no iPhone, cada ficheiro (mesmo com o mesmo nome, se estiver noutro sítio, ou se for uma cópia nova descarregada) é tratado pelo Safari como um "armazenamento" totalmente separado — abrir uma versão nova SEM substituir o ficheiro anterior no mesmo local apaga o acesso aos dados antigos (não apaga os dados em si, mas ficam presos na versão anterior). <b>Antes de atualizar para uma nova versão, faça sempre "⬇️ Guardar cópia" na versão atual e "⬆️ Restaurar cópia" logo a seguir a abrir a nova.</b></div>
 <div id="alertsBar" class="hidden" style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0"></div>
@@ -49,21 +49,40 @@
 
 <section id="topicos" class="hidden">
 <div class="meta" style="margin-bottom:8px;font-size:14px">Processo ativo: <b id="tabLabelTopicos">—</b></div>
-<div class="card"><h2>🏷️ 2 — Criar tópico</h2><div class="row"><div><label>Sigla do tópico</label><div class="stype-box"><span id="stypeText"></span><button type="button" id="stypeChangeBtn" class="linklike">alterar</button></div><select id="stype" class="hidden"></select></div><div><label>ID zona/local <span style="font-weight:400">(opcional)</span></label><input id="newdesignation" placeholder="Ex.: Zona A, Sala 3..."></div></div><label>Referência oficial <span style="font-weight:400">(opcional — ex.: Questão 5, Q32)</span></label><input id="newofficial" placeholder="Ex.: Q5"><button type="button" id="createSubBtn">＋ Criar tópico</button><div class="note" id="topicCreateHint"></div><input id="topicSearchInput" placeholder="🔎 Pesquisar tópicos (código, ID zona/local, referência)..." autocomplete="off" style="margin:10px 0 4px"><div id="subs"></div></div>
+<div class="card"><h2>🏢 1 — Ativo</h2>
+<div class="status">Um Ativo agrupa um ou mais Núcleos (ex.: Edifício + Anexo + Terreno = 1 Ativo com 3 Núcleos; ou apenas 1 Núcleo). Escolha o Ativo antes de criar um núcleo, ou crie um novo.</div>
+<div class="row"><div><label>Ativo selecionado</label><select id="ativoSelect"></select></div><div><label>Novo Ativo <span style="font-weight:400">(designação)</span></label><input id="newAtivoDesignation" placeholder="Ex.: Quinta do Outeiro"></div></div>
+<div class="actions primary-one"><button type="button" id="createAtivoBtn">➕ Criar Ativo</button></div>
+<div id="ativosList"></div>
+</div>
+<div class="card"><h2>🏷️ 2 — Criar núcleo</h2><div class="row"><div><label>Sigla do núcleo</label><div class="stype-box"><span id="stypeText"></span><button type="button" id="stypeChangeBtn" class="linklike">alterar</button></div><select id="stype" class="hidden"></select></div><div><label>ID zona/local <span style="font-weight:400">(opcional)</span></label><input id="newdesignation" placeholder="Ex.: Zona A, Sala 3..."></div></div><label>Referência oficial <span style="font-weight:400">(opcional — ex.: Questão 5, Q32)</span></label><input id="newofficial" placeholder="Ex.: Q5"><button type="button" id="createSubBtn">＋ Criar núcleo</button><div class="note" id="topicCreateHint"></div><input id="topicSearchInput" placeholder="🔎 Pesquisar núcleos (código, ID zona/local, referência)..." autocomplete="off" style="margin:10px 0 4px"><div id="subs"></div></div>
 
-<div class="card hidden" id="detail"><div class="meta" id="topicBreadcrumb"></div><h2 id="stitle"></h2><label>Estado do tópico</label><div class="actions three" id="topicStatusButtons"><button type="button" class="status-set-btn" data-status="aberto" style="background:#3f7fae">Em aberto</button><button type="button" class="status-set-btn" data-status="resolvido" style="background:#8f5cbf">Resolvido</button><button type="button" class="status-set-btn" data-status="anulado" style="background:#a62c2c">Anulado</button></div><label>ID zona/local <span style="font-weight:400">(opcional)</span></label><input id="sdesignation" placeholder="Ex.: Zona A, Sala 3..."><label>Referência oficial <span style="font-weight:400">(opcional — ex.: Questão 5, Q32)</span></label><input id="sofficial" placeholder="Ex.: Q5"><label>Descrevendo <small id="codeSummary" class="note"></small></label><textarea id="ssummary"></textarea><label>Uso atual <small id="codeUso" class="note"></small></label><textarea id="susoatual"></textarea><label>Constatação <small id="codeConstat" class="note"></small></label><textarea id="sconstatacao"></textarea><label>Eventuais causas <small id="codeCausas" class="note"></small></label><textarea id="scausas"></textarea><label>Medidas propostas <small id="codeMedidas" class="note"></small></label><textarea id="smedidas"></textarea><label>Grupo <small id="codeGrupo" class="note"></small></label><select id="sgrupo"></select><div id="assetCharacteristics"></div><div class="row"><div><label>Data e hora</label><input id="sdate" type="datetime-local"></div><div><label>Coordenadas GPS</label><input id="sgps" placeholder="40.386974,-8.042764 ou 40°23'13&quot;N 8°02'34&quot;W"></div></div><div class="note">Aceita graus decimais, graus/minutos ou graus/minutos/segundos, com ou sem N/S/E/W — é convertido automaticamente para decimal ao gravar.</div><div class="actions primary-one"><button type="button" id="saveSubBtn">Guardar dados</button></div><div id="sstatus" class="status"></div>
-<div class="actions primary-one"><button type="button" class="secondary wide" id="exportTopicBtn">📤 Exportar tópico e anexos</button></div><div id="topicExpState" class="status"></div>
+<div class="card hidden" id="detail"><div class="meta" id="topicBreadcrumb"></div><h2 id="stitle"></h2><label>Estado do núcleo</label><div class="actions three" id="topicStatusButtons"><button type="button" class="status-set-btn" data-status="aberto" style="background:#3f7fae">Em aberto</button><button type="button" class="status-set-btn" data-status="resolvido" style="background:#8f5cbf">Resolvido</button><button type="button" class="status-set-btn" data-status="anulado" style="background:#a62c2c">Anulado</button></div>
+<div class="config-doc-title">Características gerais</div>
+<div class="row"><div><label>ID processual</label><input id="gcharProcId" disabled></div><div><label>ID do núcleo</label><input id="gcharNucleoId" disabled></div></div>
+<label>Designação <span style="font-weight:400">(opcional)</span></label><input id="sdesignation" placeholder="Ex.: Zona A, Sala 3...">
+<div class="row"><div><label>Local <span style="font-weight:400">(opcional)</span></label><input id="sLocal" placeholder="Ex.: Rua das Flores, nº 12"></div><div><label>Freguesia <span style="font-weight:400">(opcional)</span></label><input id="sFreguesia"></div></div>
+<label>Concelho <span style="font-weight:400">(opcional)</span></label><input id="sConcelho">
+<label>Descrição sumária <small id="codeSummary" class="note"></small></label><textarea id="ssummary"></textarea>
+<div class="row3"><div><label>Quantidade <small>(QTD)</small></label><input id="sQtd" type="number" step="any"></div><div><label>Área de Terreno <small>(AT)</small></label><input id="sAreaTerreno" type="number" step="any"></div><div><label>Área de implantação <small>(AI)</small></label><input id="sAreaImplantacao" type="number" step="any"></div></div>
+<div class="row3"><div><label>Área bruta privativa <small>(ABP)</small></label><input id="sAreaBrutaPrivativa" type="number" step="any"></div><div><label>Área bruta dependente <small>(ABD)</small></label><input id="sAreaBrutaDependente" type="number" step="any"></div><div><label>Sup. coberta <small>(SC)</small></label><input id="sSupCoberta" type="number" step="any"></div></div>
+<label>Sup. descoberta <small>(SD)</small></label><input id="sSupDescoberta" type="number" step="any">
+<div class="config-doc-title">Documentação associada</div>
+<div class="note">Pode selecionar vários documentos, ou nenhum.</div>
+<div id="docAssocList" class="actions" style="grid-template-columns:1fr 1fr"></div>
+<label>Referência oficial <span style="font-weight:400">(opcional — ex.: Questão 5, Q32)</span></label><input id="sofficial" placeholder="Ex.: Q5"><label>Uso atual <small id="codeUso" class="note"></small></label><textarea id="susoatual"></textarea><label>Constatação <small id="codeConstat" class="note"></small></label><textarea id="sconstatacao"></textarea><label>Eventuais causas <small id="codeCausas" class="note"></small></label><textarea id="scausas"></textarea><label>Medidas propostas <small id="codeMedidas" class="note"></small></label><textarea id="smedidas"></textarea><label>Grupo <small id="codeGrupo" class="note"></small></label><select id="sgrupo"></select><div id="assetCharacteristics"></div><div class="row"><div><label>Data e hora</label><input id="sdate" type="datetime-local"></div><div><label>Coordenadas GPS</label><input id="sgps" placeholder="40.386974,-8.042764 ou 40°23'13&quot;N 8°02'34&quot;W"></div></div><div class="note">Aceita graus decimais, graus/minutos ou graus/minutos/segundos, com ou sem N/S/E/W — é convertido automaticamente para decimal ao gravar.</div><div class="actions primary-one"><button type="button" id="saveSubBtn">Guardar dados</button></div><div id="sstatus" class="status"></div>
+<div class="actions primary-one"><button type="button" class="secondary wide" id="exportTopicBtn">📤 Exportar núcleo e anexos</button></div><div id="topicExpState" class="status"></div>
 
 <h3>Localização e mapa</h3>
-<div class="note">GPS é uma propriedade de cada tópico. Passo 1 — obtenha as coordenadas (automático, manual ou a partir das fotos do tópico); Passo 2 — gere o mapa a partir delas.</div>
+<div class="note">GPS é uma propriedade de cada núcleo. Passo 1 — obtenha as coordenadas (automático, manual ou a partir das fotos do núcleo); Passo 2 — gere o mapa a partir delas.</div>
 <div class="location-actions">
 <button type="button" class="loc" id="gpsApiBtn">🌐 GPS automático (API)</button>
 <button type="button" class="loc" id="gpsManualBtn">✍️ Inserir coordenadas manualmente</button>
 <button type="button" class="loc" id="genKmlMapBtn">📍 Gerar GPS + KML</button>
 </div>
-<div class="note">"Gerar GPS + KML" (rotina manual): se o tópico ainda não tiver coordenadas, procura-as automaticamente nas fotografias já carregadas (funciona em Android/desktop; no iPhone o Safari costuma remover essa informação ao carregar da fototeca). Se não encontrar, use os botões acima.</div>
+<div class="note">"Gerar GPS + KML" (rotina manual): se o núcleo ainda não tiver coordenadas, procura-as automaticamente nas fotografias já carregadas (funciona em Android/desktop; no iPhone o Safari costuma remover essa informação ao carregar da fototeca). Se não encontrar, use os botões acima.</div>
 <div id="gpsStatus" class="status hidden"></div>
-<div id="locationState" class="status"></div><img id="mapPreview" class="map-preview hidden" alt="Mapa do tópico">
+<div id="locationState" class="status"></div><img id="mapPreview" class="map-preview hidden" alt="Mapa do núcleo">
 <div id="staticMapPreview" class="hidden"><img id="staticMapPreviewImg" class="map-preview" alt="Pré-visualização do mapa automático"><div class="actions"><button type="button" class="loc" id="confirmStaticMapBtn">✔ Confirmar mapa</button><button type="button" class="loc" id="retryStaticMapBtn">↻ Tentar novamente</button></div></div>
 <details><summary>Métodos alternativos (avançado)</summary>
 <div class="location-actions">
@@ -83,7 +102,7 @@
 <div class="meta" style="margin-bottom:8px;font-size:14px">Processo ativo: <b id="tabLabelProduzir">—</b></div>
 <details class="card" id="coverDetails"><summary><h2 style="display:inline">🖼️ Capa do processo</h2></summary>
 <div class="note">N/Ref, Número, Solicitante, Serviço, Local, Data e Analista são os definidos na secção 1 — Processo, acima. O Gabinete é escolhido no momento de gerar cada documento.</div>
-<label style="display:flex;align-items:center;gap:8px;font-weight:400;margin:6px 0"><input type="checkbox" id="coverNoPhotos" style="width:auto"> Não incluir fotografias na Capa <small class="note">(mesmo que existam fotos escolhidas ou disponíveis nos tópicos)</small></label>
+<label style="display:flex;align-items:center;gap:8px;font-weight:400;margin:6px 0"><input type="checkbox" id="coverNoPhotos" style="width:auto"> Não incluir fotografias na Capa <small class="note">(mesmo que existam fotos escolhidas ou disponíveis nos núcleos)</small></label>
 <div id="coverPhotosSection">
 <label>Fotos de capa <span style="font-weight:400">(até 4)</span></label>
 <div class="actions primary-one"><button type="button" id="coverPhotoBtn">🖼 Adicionar fotos de capa</button></div>
@@ -96,13 +115,13 @@
 <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin:6px 0"><input type="checkbox" id="pdfIncludePhotos" checked style="width:auto"> Incluir fotografias no PDF</label>
 <div class="row" id="pdfColsRow"><div><label>Colunas de fotografias</label><select id="pdfPreviewCols"><option value="1">1 coluna</option><option value="2">2 colunas</option><option value="3" selected>3 colunas</option><option value="4">4 colunas</option><option value="5">5 colunas</option></select></div></div>
 <label id="pdfIncludeCoverRow" style="display:flex;align-items:center;gap:8px;font-weight:400;margin:6px 0"><input type="checkbox" id="pdfIncludeCover" style="width:auto"> Incluir Capa do processo</label>
-<label style="display:flex;align-items:center;gap:8px;font-weight:400;margin:6px 0"><input type="checkbox" id="pdfIncludeChronology" checked style="width:auto"> Incluir Cronologia do processo <small class="note">(cronologia de alterações: tópicos criados/editados, fotos, estados — mesmo conteúdo do botão "Consultar histórico")</small></label>
+<label style="display:flex;align-items:center;gap:8px;font-weight:400;margin:6px 0"><input type="checkbox" id="pdfIncludeChronology" checked style="width:auto"> Incluir Cronologia do processo <small class="note">(cronologia de alterações: núcleos criados/editados, fotos, estados — mesmo conteúdo do botão "Consultar histórico")</small></label>
 <div class="actions primary-one"><button type="button" class="secondary" id="viewHistoryBtn">🕒 Consultar histórico</button></div>
-<div class="note">Registo de alterações ao processo (tópicos criados, editados, eliminados; fotos adicionadas/removidas; KML gerado) — sempre incluído na exportação (PDF e Word) na pasta Resumo.</div>
+<div class="note">Registo de alterações ao processo (núcleos criados, editados, eliminados; fotos adicionadas/removidas; KML gerado) — sempre incluído na exportação (PDF e Word) na pasta Resumo.</div>
 <details style="margin:8px 0"><summary style="font-size:12px;color:var(--muted);cursor:pointer">📑 Opções do Resumo (Ficha de Processo)</summary>
 <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:12px;margin:6px 0 0"><input type="checkbox" id="pdfResumoDescSucinta" style="width:auto"> Incluir "Descrição sucinta"</label>
 <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:12px;margin:4px 0"><input type="checkbox" id="pdfResumoApreciacao" style="width:auto"> Incluir "Resumo de apreciação"</label>
-<label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:12px;margin:4px 0"><input type="checkbox" id="pdfResumoPhotoCaptions" style="width:auto"> Legendas das fotos no Resumo (por tópico, pela ordem das fotos)</label>
+<label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:12px;margin:4px 0"><input type="checkbox" id="pdfResumoPhotoCaptions" style="width:auto"> Legendas das fotos no Resumo (por núcleo, pela ordem das fotos)</label>
 </details>
 <div class="actions"><button type="button" class="amber" id="pdfBtn">1️⃣ 📄 Gerar PDF Preview</button></div><div class="actions primary-one"><button type="button" class="compact-danger wide hidden" id="pdfCancelBtn">✖ Cancelar geração do PDF</button></div><div id="expstate" class="status">Pronto.</div></div>
 
@@ -119,7 +138,7 @@
 
 <div class="config-block-title">🔧 Geral</div>
 
-<div class="card"><h2>Fotografias</h2><div class="row"><div><label>Lado maior</label><select id="max"><option value="800">800 px</option><option value="1024">1024 px</option><option value="1200" selected>1200 px</option><option value="1600">1600 px</option><option value="0">Original</option></select></div><div><label>Qualidade JPEG</label><select id="quality"><option value="0.4">40%</option><option value="0.5">50%</option><option value="0.6">60%</option><option value="0.7" selected>70%</option><option value="0.75">75%</option><option value="0.8">80%</option></select></div></div><div class="status">Por defeito: <b>1200 px</b> e <b>70%</b>. Aplicável a todas as imagens fotográficas exportadas.</div><div class="row"><div><label>Colunas de fotos no PDF</label><select id="pdfPhotoCols"><option value="1">1 coluna</option><option value="2">2 colunas</option><option value="3" selected>3 colunas</option><option value="4">4 colunas</option><option value="5">5 colunas</option></select></div></div><label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-top:8px"><input type="checkbox" id="mapInPhotoGrid" checked style="width:auto"> Incluir mapa de localização nas fichas exportadas <small class="note">(secção própria, logo a seguir aos dados do tópico e antes das fotografias)</small></label></div>
+<div class="card"><h2>Fotografias</h2><div class="row"><div><label>Lado maior</label><select id="max"><option value="800">800 px</option><option value="1024">1024 px</option><option value="1200" selected>1200 px</option><option value="1600">1600 px</option><option value="0">Original</option></select></div><div><label>Qualidade JPEG</label><select id="quality"><option value="0.4">40%</option><option value="0.5">50%</option><option value="0.6">60%</option><option value="0.7" selected>70%</option><option value="0.75">75%</option><option value="0.8">80%</option></select></div></div><div class="status">Por defeito: <b>1200 px</b> e <b>70%</b>. Aplicável a todas as imagens fotográficas exportadas.</div><div class="row"><div><label>Colunas de fotos no PDF</label><select id="pdfPhotoCols"><option value="1">1 coluna</option><option value="2">2 colunas</option><option value="3" selected>3 colunas</option><option value="4">4 colunas</option><option value="5">5 colunas</option></select></div></div><label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-top:8px"><input type="checkbox" id="mapInPhotoGrid" checked style="width:auto"> Incluir mapa de localização nas fichas exportadas <small class="note">(secção própria, logo a seguir aos dados do núcleo e antes das fotografias)</small></label></div>
 <div class="card"><h2>Mapa de localização</h2>
 <label>Método de criação</label>
 <select id="mapMethod">
@@ -141,26 +160,26 @@
 </div>
 <div class="status"><b>Manual:</b> gera o KML, abre o ponto no Maps/Earth/OpenStreetMap e permite importar ou colar a captura.<br><br><b>Automático:</b> gera o KML e apresenta uma pré-visualização centrada no GPS, considerando a área configurada (Google exige chave; OpenStreetMap não exige).</div>
 </div>
-<div class="card"><h2>Nomenclatura</h2><div class="row4"><div><label>Imagens</label><input id="imgsig" value="IMG"></div><div><label>Mapa</label><input id="lczsig" value="LCZ"></div><div><label>KML</label><input id="gpssig" value="GPS"></div><div><label>Ficha de tópico (FxT)</label><input id="fixsig" value="FxT"></div></div>
+<div class="card"><h2>Nomenclatura</h2><div class="row4"><div><label>Imagens</label><input id="imgsig" value="IMG"></div><div><label>Mapa</label><input id="lczsig" value="LCZ"></div><div><label>KML</label><input id="gpssig" value="GPS"></div><div><label>Ficha de núcleo (FxT)</label><input id="fixsig" value="FxT"></div></div>
 <div class="row4"><div><label>Capa</label><input id="capasig" value="CAPA"></div></div>
-<div class="status">A sigla de <b>Resumo (Ficha de Processo — FxP)</b> é fixa (<b>"Resumo"</b>) e identifica a pasta e os ficheiros com o resumo de todos os tópicos do processo.</div>
+<div class="status">A sigla de <b>Resumo (Ficha de Processo — FxP)</b> é fixa (<b>"Resumo"</b>) e identifica a pasta e os ficheiros com o resumo de todos os núcleos do processo.</div>
 </div>
 <div class="card"><h2>Serviços e siglas</h2>
 <div class="status">Cada serviço tem uma sigla. Pode aceitar os valores por defeito ou alterá-los.</div>
 <div id="serviceSiglasList"></div>
 </div>
-<div class="card"><h2>🏗️ Tabelas de tipos de ativo</h2>
-<div class="status">Organize os tipos de ativo em tabelas (ex.: Tipos de imóvel, Veículos, Mobiliário). Cada tipo tem sigla própria (prefixo do ativo, ex.: TER_001) e a sua ficha de características, totalmente editável. Pode criar novas tabelas e tipos sempre que precisar.</div>
+<div class="card"><h2>🏗️ Tabelas de tipos de núcleo</h2>
+<div class="status">Organize os tipos de núcleo em tabelas (ex.: Tipos de imóvel, Veículos, Mobiliário). Cada tipo tem sigla própria (prefixo do núcleo, ex.: TER_001) e a sua ficha de características, totalmente editável. Pode criar novas tabelas e tipos sempre que precisar.</div>
 <div id="assetTablesList"></div>
 <div class="row"><div><input id="newAssetTableName" placeholder="Nome da nova tabela"></div><div><button type="button" class="secondary" id="addAssetTableBtn">➕ Adicionar tabela</button></div></div>
 </div>
-<div class="card"><h2>🏷️ Grupos (classificação de tópicos)</h2>
-<div class="status">Etiquetas disponíveis no campo "Grupo" de cada tópico. Pode editar, remover ou adicionar novos grupos.</div>
+<div class="card"><h2>🏷️ Grupos (classificação de núcleos)</h2>
+<div class="status">Etiquetas disponíveis no campo "Grupo" de cada núcleo. Pode editar, remover ou adicionar novos grupos.</div>
 <div id="groupsList"></div>
 <div class="row"><div><input id="newGroupInput" placeholder="Novo grupo"></div><div><button type="button" class="secondary" id="addGroupBtn">➕ Adicionar grupo</button></div></div>
 </div>
 <div class="card"><h2>Layout geral de página (PDF)</h2>
-<div class="status">Aplica-se a todos os tipos de documento. As configurações específicas de cada documento (Capa, Ficha de tópico, Resumo, Cronologia) estão mais abaixo.</div>
+<div class="status">Aplica-se a todos os tipos de documento. As configurações específicas de cada documento (Capa, Ficha de núcleo, Resumo, Cronologia) estão mais abaixo.</div>
 <div class="row"><div><label>Tamanho de página</label><select id="pdfPageSize"><option value="a4" selected>A4</option></select></div><div><label>Fonte</label><select id="pdfFontFamily"><option value="courier" selected>Courier</option><option value="helvetica">Helvetica</option><option value="times">Times</option></select></div></div>
 <div class="row"><div><label>Tamanho da fonte (pt)</label><input id="pdfFontSize" type="number" min="6" max="18" step="0.5" value="10"></div><div></div></div>
 <label>Margens da página (cm)</label>
@@ -180,7 +199,7 @@
 <label>Rodapé</label>
 <div class="row"><div><label>Distância do rodapé à base da página (cm)</label><input id="pdfFooterMargin" type="number" min="0" step="0.1" value="0.8"></div><div><label>Tamanho da fonte do rodapé (pt)</label><input id="pdfFooterFontSize" type="number" min="5" max="14" step="0.5" value="8"></div></div>
 <div class="row3"><div><label>Rodapé esquerda</label><input id="pdfFooterLeft" value="{processo}_{documento}_{topico}{versaoRelatorio}"></div><div><label>Rodapé centro</label><input id="pdfFooterCenter" value=""></div><div><label>Rodapé direita</label><input id="pdfFooterRight" value="{pagina}/{paginas}"></div></div>
-<div class="status">Use os marcadores <b>{processo}</b> (N/Ref processo), <b>{documento}</b> (Capa/FxP/FxT/Cronologia), <b>{topico}</b>, <b>{pagina}</b>, <b>{paginas}</b>, <b>{analista}</b>, <b>{versao}</b> (versão da app) e <b>{versaoRelatorio}</b> (versão deste relatório, ex.: _02) em qualquer campo do rodapé — são substituídos automaticamente ao gerar o PDF. Por defeito, o rodapé esquerdo identifica por completo a origem do documento: processo_documento_tópico_versão.</div>
+<div class="status">Use os marcadores <b>{processo}</b> (N/Ref processo), <b>{documento}</b> (Capa/FxP/FxT/Cronologia), <b>{topico}</b>, <b>{pagina}</b>, <b>{paginas}</b>, <b>{analista}</b>, <b>{versao}</b> (versão da app) e <b>{versaoRelatorio}</b> (versão deste relatório, ex.: _02) em qualquer campo do rodapé — são substituídos automaticamente ao gerar o PDF. Por defeito, o rodapé esquerdo identifica por completo a origem do documento: processo_documento_núcleo_versão.</div>
 <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-top:8px"><input type="checkbox" id="footerAnalystVersion" checked style="width:auto"> Incluir Analista e versão da aplicação no rodapé central <small class="note">(usa {analista} e {versao} no campo "Rodapé centro" — se desligado, estes marcadores ficam em branco mesmo que estejam escritos no campo)</small></label>
 <label style="display:flex;align-items:center;gap:8px;margin-top:10px"><input id="pdfFooterRuleEnabled" type="checkbox" style="width:auto" checked> <span>Mostrar linha fina acima do rodapé</span></label>
 <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-top:8px"><input type="checkbox" id="footerExtraEnabled" checked style="width:auto"> Incluir linha complementar no rodapé <small class="note">(acima do traço fino)</small></label>
@@ -215,13 +234,13 @@
 <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-top:8px"><input type="checkbox" id="coverReportVersionEnabled" checked style="width:auto"> Incluir versão do relatório na Capa <small class="note">(linha pequena, por baixo de "Analisado por"; incrementa a cada vez que gera o PDF do processo; também é usada no nome dos ficheiros exportados, ex.: _v3)</small></label>
 </div>
 
-<div class="config-doc-title">🏷️ Ficha de tópico (FxT)</div>
+<div class="config-doc-title">🏷️ Ficha de núcleo (FxT)</div>
 <div class="card"><h2>Designação</h2>
 <input id="titleFxT" value="Ficha de caracterização">
 </div>
 <div class="card"><h2>📋 Campos incluídos na ficha</h2>
-<div class="status">Escolha que campos dos tópicos aparecem nas fichas (PDF e Word) geradas. A numeração de cada campo (ex.: IN_001.03) mantém-se sempre, seja ou não apresentado na ficha.</div>
-<label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="ffSummary" checked style="width:auto"> Descrevendo</label>
+<div class="status">Escolha que campos dos núcleos aparecem nas fichas (PDF e Word) geradas. A numeração de cada campo (ex.: IN_001.03) mantém-se sempre, seja ou não apresentado na ficha.</div>
+<label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="ffSummary" checked style="width:auto"> Descrição sumária</label>
 <label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="ffUsoAtual" style="width:auto"> Uso atual</label>
 <label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="ffConstatacao" style="width:auto"> Constatação</label>
 <label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="ffCausas" style="width:auto"> Eventuais causas</label>
@@ -236,12 +255,12 @@
 <input id="titleFxP" placeholder="Resumo">
 <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-top:8px"><input type="checkbox" id="resumoDescSucinta" checked style="width:auto"> Incluir "Descrição sucinta" no Resumo do processo (FxP)</label>
 <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-top:8px"><input type="checkbox" id="resumoApreciacao" checked style="width:auto"> Incluir "Resumo de apreciação" no Resumo do processo (FxP) <small class="note">(só aparece se o campo tiver conteúdo preenchido; sai sempre no final dos restantes campos)</small></label>
-<label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-top:8px"><input type="checkbox" id="resumoPhotoCaptions" style="width:auto"> Incluir legendas das fotos no Resumo <small class="note">(secção única "Descrição sumária:" a seguir a Tópicos, organizada por Status: ON e Status: OFF; só as fotos que tiverem legenda preenchida)</small></label>
-<label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-top:8px;margin-left:24px"><input type="checkbox" id="resumoCaptionsShowCode" style="width:auto"> Incluir sigla do processo na referência de cada foto <small class="note">(desligado por defeito — lista mais limpa; mantém sempre a referência ao tópico e à foto)</small></label>
+<label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-top:8px"><input type="checkbox" id="resumoPhotoCaptions" style="width:auto"> Incluir legendas das fotos no Resumo <small class="note">(secção única "Descrição sumária:" a seguir a Núcleos, organizada por Status: ON e Status: OFF; só as fotos que tiverem legenda preenchida)</small></label>
+<label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-top:8px;margin-left:24px"><input type="checkbox" id="resumoCaptionsShowCode" style="width:auto"> Incluir sigla do processo na referência de cada foto <small class="note">(desligado por defeito — lista mais limpa; mantém sempre a referência ao núcleo e à foto)</small></label>
 </div>
-<div class="card"><h2>📋 Campos do tópico incluídos no Resumo (FxP)</h2>
-<div class="status">Escolha que campos de cada tópico aparecem, resumidos, na lista de tópicos do Resumo do processo. Por defeito nenhum — o Resumo lista só o nome do tópico; a informação completa fica na Ficha de tópico (FxT). Um campo só é impresso se tiver conteúdo.</div>
-<label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="rfSummary" checked style="width:auto"> Descrevendo</label>
+<div class="card"><h2>📋 Campos do núcleo incluídos no Resumo (FxP)</h2>
+<div class="status">Escolha que campos de cada núcleo aparecem, resumidos, na lista de núcleos do Resumo do processo. Por defeito nenhum — o Resumo lista só o nome do núcleo; a informação completa fica na Ficha de núcleo (FxT). Um campo só é impresso se tiver conteúdo.</div>
+<label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="rfSummary" checked style="width:auto"> Descrição sumária</label>
 <label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="rfUsoAtual" style="width:auto"> Uso atual</label>
 <label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="rfConstatacao" style="width:auto"> Constatação</label>
 <label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="rfCausas" style="width:auto"> Eventuais causas</label>
@@ -250,7 +269,7 @@
 <label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="rfGps" style="width:auto"> Coordenadas GPS</label>
 </div>
 <div class="card"><h2>🔤 Formatação TAG → resposta</h2>
-<div class="status">Regra de leitura dos campos de cada tópico no Resumo (e, para consistência, também na Ficha de tópico): a <b>TAG</b> (nome do campo) aparece sempre a negrito; a <b>resposta</b> aparece sempre em texto normal. Escolha aqui como a resposta se posiciona em relação à TAG.</div>
+<div class="status">Regra de leitura dos campos de cada núcleo no Resumo (e, para consistência, também na Ficha de núcleo): a <b>TAG</b> (nome do campo) aparece sempre a negrito; a <b>resposta</b> aparece sempre em texto normal. Escolha aqui como a resposta se posiciona em relação à TAG.</div>
 <label>Disposição</label>
 <select id="tagValueLayout">
 <option value="stacked">TAG numa linha, resposta na linha seguinte (com espaço entre linhas)</option>
@@ -260,7 +279,7 @@
 <div id="tagValueIndentRow" class="hidden"><label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-top:8px"><input type="checkbox" id="tagValueIndent" checked style="width:auto"> Indentar a resposta (em vez de a alinhar com a TAG) <small class="note">(por defeito, ligado: a TAG fica alinhada à esquerda a negrito, e a linha da resposta avança)</small></label></div>
 </div>
 <div class="card"><h2>Histórico de exportações do Resumo</h2>
-<div class="note">Regista, para o processo atual, cada vez que exporta/partilha o Resumo (PDF+Word) — com o nº de tópicos e fotografias nesse momento, para saber se um documento já enviado reflete ou não o estado atual do processo.</div>
+<div class="note">Regista, para o processo atual, cada vez que exporta/partilha o Resumo (PDF+Word) — com o nº de núcleos e fotografias nesse momento, para saber se um documento já enviado reflete ou não o estado atual do processo.</div>
 <div id="resumoHistoryList" class="status"></div>
 </div>
 
@@ -290,7 +309,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 const APP_VER='3.99.5';const $=id=>document.getElementById(id),DB='AvaLoad_Data',VER=2,STORE='state',LEGACY_KEY='main',LEGACY_FALLBACK='LEV_Foto_Fallback_v1',INDEX_KEY='__index__',ACTIVE_KEY='__active__',FALLBACK_PREFIX='AvaLoad_Fallback_v1_',FALLBACK_INDEX='AvaLoad_Index_v1';let db=null,tm=null,pid=null,_coverPhotosOverride=null;
 const newProcessId=()=>crypto.randomUUID();
 const PDF_LAYOUT_DEFAULTS={pdfPageSize:'a4',pdfFontFamily:'courier',pdfFontSize:10,pdfMarginLeft:2.0,pdfMarginTop:2.0,pdfMarginRight:0.5,pdfMarginBottom:1.0,pdfFooterMargin:0.8,pdfFooterFontSize:8,pdfFooterLeft:'{processo}_{documento}_{topico}{versaoRelatorio}',pdfFooterCenter:'',pdfFooterRight:'{pagina}/{paginas}',pdfFooterRuleEnabled:true,footerAnalystVersion:true,titleCapa:'Relatório de',titleFxT:'Ficha de caracterização',titleCronologia:'Cronologia',titleFxP:'Resumo',titleOutros:'',headerGabineteSize:9,headerGabineteBold:false,headerTitleSize:9,headerTitleBold:true,coverCodeLineSize:18,coverCodeLineBold:true,tagValueLayout:'stacked',tagValueTabs:2,tagValueIndent:true,coverReportVersionEnabled:true,pdfHeaderDistance:0.5,headerExtraEnabled:true,headerExtraText:'',headerExtraSize:8,footerExtraEnabled:true,footerExtraText:'',footerExtraSize:6};
-function blankApp(){return {schema:3,process:{prefix:'Ptv_',number:'',nref:'',service:'',subject:'',local:'',date:new Date().toISOString().slice(0,10),presences:'',description:'',finalidade:'',docFornecida:'',apreciacao:'',attendees:[],gabinete:'',resumoHistory:[],editHistory:[]},settings:{maxSide:1200,quality:.7,img:'IMG',lcz:'LCZ',gps:'GPS',mapMethod:'manual',googleApiKey:'',mapSource:'googlemaps',mapType:'satellite',mapWidthM:500,mapHeightM:500,pdfPhotoCols:3,mapInPhotoGrid:true,lastBackupAt:null,groups:['Estrutural','Fissuras','Desgaste','Humidade/Infiltração'],fichaFields:{summary:true,usoAtual:false,constatacao:false,causas:false,medidas:false,grupo:false,gps:false},resumoApreciacao:true,resumoDescSucinta:true,resumoTopicFields:{summary:true,usoAtual:false,constatacao:false,causas:false,medidas:false,grupo:false,gps:false},cronologiaHistorico:true,...PDF_LAYOUT_DEFAULTS},subs:[],active:null}}
+function blankApp(){return {schema:3,process:{prefix:'Ptv_',number:'',nref:'',service:'',subject:'',local:'',date:new Date().toISOString().slice(0,10),presences:'',description:'',finalidade:'',docFornecida:'',apreciacao:'',attendees:[],gabinete:'',resumoHistory:[],editHistory:[]},settings:{maxSide:1200,quality:.7,img:'IMG',lcz:'LCZ',gps:'GPS',mapMethod:'manual',googleApiKey:'',mapSource:'googlemaps',mapType:'satellite',mapWidthM:500,mapHeightM:500,pdfPhotoCols:3,mapInPhotoGrid:true,lastBackupAt:null,groups:['Estrutural','Fissuras','Desgaste','Humidade/Infiltração'],fichaFields:{summary:true,usoAtual:false,constatacao:false,causas:false,medidas:false,grupo:false,gps:false},resumoApreciacao:true,resumoDescSucinta:true,resumoTopicFields:{summary:true,usoAtual:false,constatacao:false,causas:false,medidas:false,grupo:false,gps:false},cronologiaHistorico:true,...PDF_LAYOUT_DEFAULTS},subs:[],ativos:[],active:null}}
 async function idbGet(key){return new Promise((res,rej)=>{const tx=db.transaction(STORE,'readonly'),r=tx.objectStore(STORE).get(key);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
 async function idbPut(key,val){return new Promise((res,rej)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put(val,key);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error)})}
 async function idbDelete(key){return new Promise((res,rej)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).delete(key);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error)})}
@@ -462,7 +481,7 @@ async function createNewProcess(){
  }finally{switchingProcess=false}
 }
 async function deleteProcessById(id){
- if(!confirm('Eliminar este processo e todo o conteúdo (tópicos, fotografias, mapas)? Esta ação não pode ser desfeita.'))return;
+ if(!confirm('Eliminar este processo e todo o conteúdo (núcleos, fotografias, mapas)? Esta ação não pode ser desfeita.'))return;
  try{await idbDelete(id)}catch(e){}
  try{localStorage.removeItem(FALLBACK_PREFIX+id)}catch(e){}
  await removeFromIndex(id);
@@ -489,7 +508,7 @@ async function renderProcessList(){
   const label=e.code||'(sem número)';
   const subj=e.subject||e.service||'';
   const isActive=e.id===pid;
-  return `<div class="item${isActive?' active':''}" data-id="${e.id}"><b>${esc(label)}</b><div class="meta">${esc(subj)}${subj?' · ':''}${e.subs} tópico(s) · ${e.photos} fotografia(s)<br>Atualizado: ${new Date(e.updatedAt).toLocaleString('pt-PT')}</div><div class="item-actions"><button type="button" class="secondary open-process" data-id="${e.id}"${isActive?' disabled':''}>${isActive?'Ativo':'Abrir'}</button> <button type="button" class="danger del-process" data-id="${e.id}">Eliminar</button></div></div>`;
+  return `<div class="item${isActive?' active':''}" data-id="${e.id}"><b>${esc(label)}</b><div class="meta">${esc(subj)}${subj?' · ':''}${e.subs} núcleo(s) · ${e.photos} fotografia(s)<br>Atualizado: ${new Date(e.updatedAt).toLocaleString('pt-PT')}</div><div class="item-actions"><button type="button" class="secondary open-process" data-id="${e.id}"${isActive?' disabled':''}>${isActive?'Ativo':'Abrir'}</button> <button type="button" class="danger del-process" data-id="${e.id}">Eliminar</button></div></div>`;
  }).join('');
  el.querySelectorAll('.item[data-id]').forEach(elItem=>elItem.addEventListener('click',e=>{if(e.target.closest('.open-process,.del-process'))return;switchProcess(elItem.dataset.id)}));
  el.querySelectorAll('.open-process').forEach(b=>b.addEventListener('click',()=>switchProcess(b.dataset.id)));
@@ -497,7 +516,7 @@ async function renderProcessList(){
 }
 function migrate(){if(!app.settings.mapMethod)app.settings.mapMethod='manual';if(app.settings.googleApiKey==null)app.settings.googleApiKey='';
  if(!app.settings.maxSide||app.settings.maxSide===1024)app.settings.maxSide=1200;if(!app.settings.quality||app.settings.quality===.6)app.settings.quality=.7;
- app.process=app.process||{};app.settings=app.settings||{};app.subs=Array.isArray(app.subs)?app.subs:[];
+ app.process=app.process||{};app.settings=app.settings||{};app.subs=Array.isArray(app.subs)?app.subs:[];app.ativos=Array.isArray(app.ativos)?app.ativos:[];
  app.process.prefix??='Ptv_';app.process.number??='';app.process.nref??='';app.process.nref=String(app.process.nref||'').slice(0,10);app.process.designacaoProcesso??='';app.process.service??='';app.process.subject??='';app.process.local??='';app.process.date??='';app.process.presences??='';app.process.gabinete??='';app.process.solicitante??='';app.process.analista??='';app.process.finalidade??='';app.process.docFornecida??='';app.process.apreciacao??='';app.process.coverPhotos=Array.isArray(app.process.coverPhotos)?app.process.coverPhotos:[];app.process.coverNoPhotos=app.process.coverNoPhotos===true;app.process.reportVersion=Number(app.process.reportVersion)||0;app.process.resumoHistory=Array.isArray(app.process.resumoHistory)?app.process.resumoHistory:[];app.process.editHistory=Array.isArray(app.process.editHistory)?app.process.editHistory:[];
  app.process.attendees=Array.isArray(app.process.attendees)?app.process.attendees:[];
  if(!app.process.attendees.length&&app.process.presences){app.process.attendees=[{id:crypto.randomUUID(),name:'',role:'',contact:'',email:'',obs:app.process.presences}]}
@@ -526,7 +545,7 @@ function fill(){
  $('number').value=app.process.number||'';$('nref').value=app.process.nref||'';if($('designacaoProcesso'))$('designacaoProcesso').value=app.process.designacaoProcesso||'';$('service').value=app.process.service||'';$('subject').value=app.process.subject||'';$('local').value=app.process.local;$('pdate').value=app.process.date||'';$('finalidade').value=app.process.finalidade||'';$('docfornecida').value=app.process.docFornecida||'';$('apreciacao').value=app.process.apreciacao||'';
  $('max').value=String(app.settings.maxSide||1200);$('quality').value=String(app.settings.quality||.7);$('imgsig').value=app.settings.img;$('lczsig').value=app.settings.lcz;$('gpssig').value=app.settings.gps;$('fixsig').value=app.settings.fix;$('capasig').value=app.settings.capa||'CAPA';if($('titleCapa'))$('titleCapa').value=app.settings.titleCapa??'Relatório de';if($('titleFxT'))$('titleFxT').value=app.settings.titleFxT??'Ficha de caracterização';if($('titleCronologia'))$('titleCronologia').value=app.settings.titleCronologia??'Cronologia';if($('titleFxP'))$('titleFxP').value=app.settings.titleFxP||'Resumo';if($('titleOutros'))$('titleOutros').value=app.settings.titleOutros||'';if($('headerGabineteSize'))$('headerGabineteSize').value=app.settings.headerGabineteSize??9;if($('headerGabineteBold'))$('headerGabineteBold').value=app.settings.headerGabineteBold?'1':'0';if($('headerTitleSize'))$('headerTitleSize').value=app.settings.headerTitleSize??9;if($('headerTitleBold'))$('headerTitleBold').value=app.settings.headerTitleBold!==false?'1':'0';if($('coverCodeLineSize'))$('coverCodeLineSize').value=app.settings.coverCodeLineSize??18;if($('coverCodeLineBold'))$('coverCodeLineBold').value=app.settings.coverCodeLineBold!==false?'1':'0';if($('cronologiaHistorico'))$('cronologiaHistorico').checked=app.settings.cronologiaHistorico!==false;if($('tagValueLayout'))$('tagValueLayout').value=app.settings.tagValueLayout||'stacked';if($('tagValueTabs'))$('tagValueTabs').value=String(app.settings.tagValueTabs||2);if($('tagValueIndent'))$('tagValueIndent').checked=app.settings.tagValueIndent!==false;updateTagValueLayoutUi();
  $('solicitante').value=app.process.solicitante||'';
- renderServiceSiglasUI();renderAssetTablesUI();renderTopicTypeOptions();renderGabineteAnalistaUI();renderCoverPhotos();renderAttendees();renderGroupsUI();renderGabineteSelect();
+ renderServiceSiglasUI();renderAssetTablesUI();renderTopicTypeOptions();renderAtivoSelect();renderGabineteAnalistaUI();renderCoverPhotos();renderAttendees();renderGroupsUI();renderGabineteSelect();
  $('ffSummary').checked=app.settings.fichaFields.summary!==false;$('ffUsoAtual').checked=app.settings.fichaFields.usoAtual!==false;$('ffConstatacao').checked=app.settings.fichaFields.constatacao!==false;$('ffCausas').checked=app.settings.fichaFields.causas!==false;$('ffMedidas').checked=app.settings.fichaFields.medidas!==false;$('ffGrupo').checked=app.settings.fichaFields.grupo!==false;if($('ffGps'))$('ffGps').checked=app.settings.fichaFields.gps===true;
  const rf=app.settings.resumoTopicFields||{};if($('rfSummary'))$('rfSummary').checked=rf.summary===true;if($('rfUsoAtual'))$('rfUsoAtual').checked=rf.usoAtual===true;if($('rfConstatacao'))$('rfConstatacao').checked=rf.constatacao===true;if($('rfCausas'))$('rfCausas').checked=rf.causas===true;if($('rfMedidas'))$('rfMedidas').checked=rf.medidas===true;if($('rfGrupo'))$('rfGrupo').checked=rf.grupo===true;if($('rfGps'))$('rfGps').checked=rf.gps===true;if($('resumoDescSucinta'))$('resumoDescSucinta').checked=app.settings.resumoDescSucinta!==false;
  $('mapMethod').value=app.settings.mapMethod||'manual';$('googleApiKey').value=app.settings.googleApiKey||'';$('mapSource').value=app.settings.mapSource||'googlemaps';$('mapType').value=app.settings.mapType||'satellite';$('mapWidthM').value=app.settings.mapWidthM||500;$('mapHeightM').value=app.settings.mapHeightM||500;$('pdfPhotoCols').value=String(app.settings.pdfPhotoCols||3);if($('mapInPhotoGrid'))$('mapInPhotoGrid').checked=app.settings.mapInPhotoGrid!==false;if($('resumoApreciacao'))$('resumoApreciacao').checked=app.settings.resumoApreciacao!==false;if($('resumoPhotoCaptions'))$('resumoPhotoCaptions').checked=app.settings.resumoPhotoCaptions===true;if($('resumoCaptionsShowCode'))$('resumoCaptionsShowCode').checked=app.settings.resumoCaptionsShowCode===true;updateMapMethodUi();
@@ -557,7 +576,7 @@ const DEFAULT_ASSET_TABLES=[
    {label:'Outras situações',sigla:'OUT'}
  ]}
 ];
-function defaultAssetTypeFields(){return[{id:crypto.randomUUID(),label:'Descrição específica do ativo',type:'textolonga',choices:[]}]}
+function defaultAssetTypeFields(){return[{id:crypto.randomUUID(),label:'Descrição específica do núcleo',type:'textolonga',choices:[]}]}
 function defaultAssetTables(){return DEFAULT_ASSET_TABLES.map(t=>({id:crypto.randomUUID(),name:t.name,types:t.types.map(ty=>({id:crypto.randomUUID(),label:ty.label,sigla:ty.sigla,fields:defaultAssetTypeFields()}))}))}
 function allAssetTypes(){return(app.settings.assetTables||[]).flatMap(t=>t.types.map(ty=>({...ty,tableId:t.id,tableName:t.name})))}
 function assetTypeBySigla(sig){return allAssetTypes().find(t=>t.sigla===sig)||null}
@@ -572,6 +591,7 @@ function autoAssetSigla(label,existingSiglas){
  return s;
 }
 const ASSET_FIELD_TYPES=[{v:'texto',l:'Texto curto'},{v:'textolonga',l:'Texto longo'},{v:'numero',l:'Número'},{v:'opcoes',l:'Lista de opções'}];
+const DOC_TYPES=['Caderneta predial','Certidão de registo','Plantas','Levantamento topográfico','BUPI','Outros'];
 function serviceSigla(key){return(app.settings.serviceSiglas&&app.settings.serviceSiglas[key])||(SERVICE_LIST.find(x=>x.key===key)||{}).def||''}
 function currentTopicTypes(){const map={};SERVICE_LIST.forEach(x=>{map[serviceSigla(x.key)]=x.label});return map}
 function renderGroupsUI(){
@@ -614,7 +634,7 @@ function renderAssetTablesUI(){
  });
  el.querySelectorAll('.atbl-del').forEach(b=>b.addEventListener('click',()=>{
   const t=tables.find(x=>x.id===b.dataset.tid);if(!t)return;
-  if(!confirm(`Remover a tabela "${t.name}" e ${t.types.length} tipo(s)? Ativos já criados com estes tipos mantêm os dados guardados, mas o tipo deixa de estar disponível para novos ativos.`))return;
+  if(!confirm(`Remover a tabela "${t.name}" e ${t.types.length} tipo(s)? Núcleos já criados com estes tipos mantêm os dados guardados, mas o tipo deixa de estar disponível para novos núcleos.`))return;
   app.settings.assetTables=tables.filter(x=>x.id!==t.id);
   renderAssetTablesUI();renderTopicTypeOptions();saveImmediate();
  }));
@@ -654,7 +674,7 @@ function renderAssetTypesUI(t){
  });
  el.querySelectorAll('.atype-del').forEach(b=>b.addEventListener('click',()=>{
   const ty=t.types.find(x=>x.id===b.dataset.tyid);if(!ty)return;
-  if(!confirm(`Remover o tipo "${ty.label}"? Ativos já criados com este tipo mantêm os dados guardados.`))return;
+  if(!confirm(`Remover o tipo "${ty.label}"? Núcleos já criados com este tipo mantêm os dados guardados.`))return;
   t.types=t.types.filter(x=>x.id!==ty.id);
   renderAssetTypesUI(t);renderTopicTypeOptions();saveImmediate();
  }));
@@ -749,7 +769,7 @@ function attendeesLine(){
  return list.map(a=>{const parts=[a.name||'—'];if(a.role)parts.push(`(${a.role})`);return parts.join(' ')}).join('; ');
 }
 const FICHA_FIELD_DEFS=[
- {key:'summary',suffix:'01',label:'Descrevendo'},
+ {key:'summary',suffix:'01',label:'Descrição sumária'},
  {key:'usoAtual',suffix:'02',label:'Uso atual'},
  {key:'constatacao',suffix:'03',label:'Constatação'},
  {key:'causas',suffix:'04',label:'Eventuais causas'},
@@ -758,6 +778,22 @@ const FICHA_FIELD_DEFS=[
 ];
 function topicFichaFields(s){
  const ff=(app.settings&&app.settings.fichaFields)||{};
+ const gcode=suf=>`${topicCode(s)}.${suf}`;
+ const gerais=[];
+ gerais.push({code:gcode('PROC'),label:'ID processual',value:code()||'—'});
+ gerais.push({code:gcode('NUC'),label:'ID do núcleo',value:topicCode(s)});
+ if(ativoLabel(s.ativoId))gerais.push({code:gcode('ATV'),label:'Ativo',value:ativoLabel(s.ativoId)});
+ if(s.local)gerais.push({code:gcode('LOC'),label:'Local',value:s.local});
+ if(s.freguesia)gerais.push({code:gcode('FRG'),label:'Freguesia',value:s.freguesia});
+ if(s.concelho)gerais.push({code:gcode('CONC'),label:'Concelho',value:s.concelho});
+ if(s.qtd!==''&&s.qtd!=null)gerais.push({code:gcode('QTD'),label:'Quantidade',value:s.qtd});
+ if(s.areaTerreno!==''&&s.areaTerreno!=null)gerais.push({code:gcode('AT'),label:'Área de Terreno',value:s.areaTerreno});
+ if(s.areaImplantacao!==''&&s.areaImplantacao!=null)gerais.push({code:gcode('AI'),label:'Área de implantação',value:s.areaImplantacao});
+ if(s.areaBrutaPrivativa!==''&&s.areaBrutaPrivativa!=null)gerais.push({code:gcode('ABP'),label:'Área bruta privativa',value:s.areaBrutaPrivativa});
+ if(s.areaBrutaDependente!==''&&s.areaBrutaDependente!=null)gerais.push({code:gcode('ABD'),label:'Área bruta dependente',value:s.areaBrutaDependente});
+ if(s.supCoberta!==''&&s.supCoberta!=null)gerais.push({code:gcode('SC'),label:'Sup. coberta',value:s.supCoberta});
+ if(s.supDescoberta!==''&&s.supDescoberta!=null)gerais.push({code:gcode('SD'),label:'Sup. descoberta',value:s.supDescoberta});
+ if(Array.isArray(s.documentacao)&&s.documentacao.length)gerais.push({code:gcode('DOC'),label:'Documentação associada',value:s.documentacao.join(', ')});
  const base=FICHA_FIELD_DEFS.filter(d=>ff[d.key]!==false&&s[d.key]).map(d=>({
   code:`${topicCode(s)}.${d.suffix}`,
   label:d.label,
@@ -770,7 +806,7 @@ function topicFichaFields(s){
   if(v==null||v==='')return;
   base.push({code:`${topicCode(s)}.C${pad(i+1,2)}`,label:f.label,value:Array.isArray(v)?v.join(', '):v});
  });
- return base;
+ return [...gerais,...base];
 }
 function topicCode(s){
  const off=s.official&&s.official.trim()?('-'+sanitizePathSegment(s.official.trim().replace(/\s+/g,''))):'';
@@ -778,7 +814,7 @@ function topicCode(s){
 }
 function dlgTitle(topic){
  const proc=`Processo: ${code()||'—'}`;
- const line=topic?`${proc} — Tópico: ${topicCode(topic)}${topic.designation?' — '+topic.designation:''}`:proc;
+ const line=topic?`${proc} — Núcleo: ${topicCode(topic)}${topic.designation?' — '+topic.designation:''}`:proc;
  return line+'\n'+'—'.repeat(Math.min(40,line.length))+'\n\n';
 }
 function topicIsStarted(s){
@@ -876,7 +912,7 @@ function reportVersionLabel(){
 function resumoTopicFieldLines(s){
  const rf=app.settings.resumoTopicFields||{};
  const defs=[
-  ['summary','Descrevendo',s.summary],
+  ['summary','Descrição sumária',s.summary],
   ['usoAtual','Uso atual',s.usoAtual],
   ['constatacao','Constatação',s.constatacao],
   ['causas','Eventuais causas',s.causas],
@@ -926,7 +962,7 @@ function logProcessEvent(msg){
 }
 function processHistoryLines(){
  const hist=(app.process&&Array.isArray(app.process.resumoHistory))?app.process.resumoHistory:[];
- return hist.slice().sort((a,b)=>new Date(a.at)-new Date(b.at)).map(h=>`${new Date(h.at).toLocaleString('pt-PT')} — ${h.topics} tópico(s), ${h.photos} fotografia(s)`);
+ return hist.slice().sort((a,b)=>new Date(a.at)-new Date(b.at)).map(h=>`${new Date(h.at).toLocaleString('pt-PT')} — ${h.topics} núcleo(s), ${h.photos} fotografia(s)`);
 }
 function renderTopicTypeOptions(){
  const sel=$('stype');if(!sel)return;
@@ -962,7 +998,7 @@ async function verifyTopicPrefixes(){
   const label=s.designation?` — "${s.designation}"`:'';
   let fixed=false;
   while(!fixed){
-   const answer=prompt(dlgTitle(s)+`O tópico n.º ${pad(s.n)}${label} tem uma sigla/prefixo inválida ou em falta ("${s.type||'—'}").\n\nEscolha a sigla correta:\n${list}`,'');
+   const answer=prompt(dlgTitle(s)+`O núcleo n.º ${pad(s.n)}${label} tem uma sigla/prefixo inválida ou em falta ("${s.type||'—'}").\n\nEscolha a sigla correta:\n${list}`,'');
    if(answer===null)return false;
    const idx=parseInt(answer,10);
    if(idx>=1&&idx<=keys.length){s.type=keys[idx-1];fixed=true}
@@ -972,9 +1008,53 @@ async function verifyTopicPrefixes(){
  render();queue();await saveImmediate();
  return true;
 }
-function createSub(){sync();if(!code())return alert('Defina primeiro o processo (N/Ref).');if(!app.process.service)return alert('Defina primeiro o Serviço do processo (Configurações) — os códigos dos tópicos dependem dele.');const designation=$('newdesignation').value.trim();const official=$('newofficial').value.trim();const newSub={id:crypto.randomUUID(),type:$('stype').value,n:nextN(),designation,official,status:'aberto',summary:'',usoAtual:'',constatacao:'',causas:'',medidas:'',grupo:'',date:'',createdAt:new Date().toISOString(),gps:'',photos:[],kmlText:null,kmlGps:null,mapBlob:null,mapGps:null,characteristics:{}};app.subs.push(newSub);logProcessEvent(`Tópico ${topicCode(newSub)} criado`+(designation?` — ${designation}`:''));$('newdesignation').value='';$('newofficial').value='';app.active=app.subs.at(-1).id;render();queue()}
+function ativoLabel(id){const a=(app.ativos||[]).find(x=>x.id===id);return a?a.designation:''}
+function renderAtivoSelect(){
+ const sel=$('ativoSelect');if(!sel)return;
+ const prev=sel.value;
+ const ativos=app.ativos||[];
+ sel.innerHTML=ativos.length?ativos.map(a=>`<option value="${a.id}">${esc(a.designation)} (${(app.subs||[]).filter(s=>s.ativoId===a.id).length} núcleo(s))</option>`).join(''):'<option value="">— Crie um Ativo —</option>';
+ sel.value=ativos.some(a=>a.id===prev)?prev:(ativos[0]?ativos[0].id:'');
+ renderAtivosList();
+}
+function createAtivo(){
+ const inp=$('newAtivoDesignation');const designation=(inp&&inp.value||'').trim();
+ if(!designation)return alert('Indique uma designação para o novo Ativo.');
+ app.ativos=app.ativos||[];
+ const a={id:crypto.randomUUID(),designation,createdAt:new Date().toISOString()};
+ app.ativos.push(a);
+ logProcessEvent(`Ativo "${designation}" criado`);
+ if(inp)inp.value='';
+ renderAtivoSelect();
+ const sel=$('ativoSelect');if(sel)sel.value=a.id;
+ saveImmediate();
+}
+function renderAtivosList(){
+ const el=$('ativosList');if(!el)return;
+ const ativos=app.ativos||[];
+ el.innerHTML=ativos.length?ativos.map(a=>{
+  const n=(app.subs||[]).filter(s=>s.ativoId===a.id).length;
+  return `<div class="item" style="cursor:default"><b>${esc(a.designation)}</b><span class="meta">${n} núcleo(s)</span><div class="item-actions"><button type="button" class="secondary ativo-rename" data-id="${a.id}">✏️ Renomear</button><button type="button" class="danger ativo-del" data-id="${a.id}"${n>0?' disabled title="Só é possível remover Ativos sem núcleos"':''}>🗑 Remover</button></div></div>`;
+ }).join(''):'<div class="status">Sem Ativos criados.</div>';
+ el.querySelectorAll('.ativo-rename').forEach(b=>b.addEventListener('click',()=>{
+  const a=ativos.find(x=>x.id===b.dataset.id);if(!a)return;
+  const v=prompt('Nova designação do Ativo:',a.designation);
+  if(v===null)return;
+  const trimmed=v.trim();if(!trimmed)return;
+  a.designation=trimmed;
+  renderAtivoSelect();render();saveImmediate();
+ }));
+ el.querySelectorAll('.ativo-del').forEach(b=>b.addEventListener('click',()=>{
+  if(b.disabled)return;
+  const a=ativos.find(x=>x.id===b.dataset.id);if(!a)return;
+  if(!confirm(`Remover o Ativo "${a.designation}"?`))return;
+  app.ativos=ativos.filter(x=>x.id!==a.id);
+  renderAtivoSelect();saveImmediate();
+ }));
+}
+function createSub(){sync();if(!code())return alert('Defina primeiro o processo (N/Ref).');if(!app.process.service)return alert('Defina primeiro o Serviço do processo (Configurações) — os códigos dos núcleos dependem dele.');const ativoId=$('ativoSelect')&&$('ativoSelect').value;if(!ativoId)return alert('Crie ou selecione primeiro um Ativo.');const designation=$('newdesignation').value.trim();const official=$('newofficial').value.trim();const newSub={id:crypto.randomUUID(),ativoId,type:$('stype').value,n:nextN(),designation,official,status:'aberto',summary:'',usoAtual:'',constatacao:'',causas:'',medidas:'',grupo:'',date:'',createdAt:new Date().toISOString(),gps:'',photos:[],kmlText:null,kmlGps:null,mapBlob:null,mapGps:null,characteristics:{}};app.subs.push(newSub);logProcessEvent(`Núcleo ${topicCode(newSub)} criado`+(designation?` — ${designation}`:''));$('newdesignation').value='';$('newofficial').value='';app.active=app.subs.at(-1).id;render();queue()}
 function active(){return app.subs.find(s=>s.id===app.active)||null}
-function dupSub(id){sync();const s=app.subs.find(x=>x.id===id);if(!s)return;const copy={id:crypto.randomUUID(),type:s.type,n:nextN(),designation:s.designation,official:'',status:'aberto',summary:s.summary||'',usoAtual:s.usoAtual||'',constatacao:s.constatacao||'',causas:s.causas||'',medidas:s.medidas||'',grupo:s.grupo||'',date:'',createdAt:new Date().toISOString(),gps:'',photos:[],kmlText:null,kmlGps:null,mapBlob:null,mapGps:null,characteristics:{...(s.characteristics||{})}};app.subs.push(copy);logProcessEvent(`Tópico ${topicCode(copy)} duplicado (de ${topicCode(s)})`);app.active=copy.id;render();queue()}
+function dupSub(id){sync();const s=app.subs.find(x=>x.id===id);if(!s)return;const copy={id:crypto.randomUUID(),ativoId:s.ativoId,type:s.type,n:nextN(),designation:s.designation,official:'',status:'aberto',summary:s.summary||'',usoAtual:s.usoAtual||'',constatacao:s.constatacao||'',causas:s.causas||'',medidas:s.medidas||'',grupo:s.grupo||'',date:'',createdAt:new Date().toISOString(),gps:'',photos:[],kmlText:null,kmlGps:null,mapBlob:null,mapGps:null,characteristics:{...(s.characteristics||{})}};app.subs.push(copy);logProcessEvent(`Núcleo ${topicCode(copy)} duplicado (de ${topicCode(s)})`);app.active=copy.id;render();queue()}
 function selectSub(id){app.active=id;render();queue()}
 let pendingDeletedSub=null;
 function showUndoToast(msg,onUndo){
@@ -990,7 +1070,7 @@ function hideUndoToast(){const el=$('undoToast');if(el)el.remove()}
 function commitPendingDelete(){
  if(!pendingDeletedSub)return;
  clearTimeout(pendingDeletedSub.timer);
- logProcessEvent(`Tópico ${topicCode(pendingDeletedSub.sub)} eliminado`);
+ logProcessEvent(`Núcleo ${topicCode(pendingDeletedSub.sub)} eliminado`);
  pendingDeletedSub=null;
  hideUndoToast();
  queue();
@@ -1011,13 +1091,13 @@ function delSub(id){
  const s=app.subs[idx];
  const photoCount=s.photos?s.photos.length:0;
  const detail=`${topicCode(s)}${s.designation?' — '+s.designation:''}`;
- if(!confirm(`Eliminar o tópico ${detail}${photoCount?` e ${photoCount} fotografia(s)`:''}?\n\nVai poder desfazer durante alguns segundos a seguir à eliminação.`))return;
+ if(!confirm(`Eliminar o núcleo ${detail}${photoCount?` e ${photoCount} fotografia(s)`:''}?\n\nVai poder desfazer durante alguns segundos a seguir à eliminação.`))return;
  commitPendingDelete();
  app.subs.splice(idx,1);
  if(app.active===id)app.active=null;
  pendingDeletedSub={sub:s,idx,timer:setTimeout(commitPendingDelete,8000)};
  render();queue();
- showUndoToast(`Tópico ${topicCode(s)} eliminado.`,undoDeleteSub);
+ showUndoToast(`Núcleo ${topicCode(s)} eliminado.`,undoDeleteSub);
 }
 function parseGpsDecimalOnly(v){const m=String(v).replace(/;/g,',').match(/-?\d+(?:[.,]\d+)?/g);if(!m||m.length<2)return null;const lat=parseFloat(m[0].replace(',','.')),lon=parseFloat(m[1].replace(',','.'));return Number.isFinite(lat)&&Number.isFinite(lon)&&lat>=-90&&lat<=90&&lon>=-180&&lon<=180?{lat,lon}:null}
 function dmsPartToDecimal(hemiPrefix,degStr,minStr,secStr,hemiSuffix){
@@ -1059,8 +1139,8 @@ function renderSubs(){
  const subsEl=$('subs');
  let list=topicStatusFilter?app.subs.filter(s=>(s.status||'aberto')===topicStatusFilter):app.subs;
  const q=topicSearchQuery.trim().toLowerCase();
- if(q)list=list.filter(s=>`${topicCode(s)} ${s.designation||''} ${s.official||''}`.toLowerCase().includes(q));
- subsEl.innerHTML=list.length?list.map(s=>{const started=topicIsStarted(s);const st=s.status||'aberto';return `<div class="item ${s.id===app.active?'active':''}" data-id="${s.id}"><span class="meta">Processo ${esc(code()||'—')} / Tópico</span><b>🏷️ ${esc(topicCode(s))} — ${esc(s.designation||'Sem ID definido')}</b> <span class="status-badge" style="display:inline-block;padding:1px 7px;border-radius:9px;font-size:11px;font-weight:600;${topicStatusColors(st)}">${topicStatusLabel(st)}</span> <span class="status-badge" style="display:inline-block;padding:1px 7px;border-radius:9px;font-size:11px;font-weight:600;${started?'background:#dcf5df;color:#1a7431':'background:#f2e9d0;color:#8a6a13'}">${started?'● Iniciado':'○ Não iniciado'}</span><span class="meta">${s.photos.length} foto(s) · ${s.kmlText?'KML':'sem KML'} · ${s.mapBlob?'Mapa':'sem mapa'}</span><div class="item-actions"><button type="button" class="secondary dup-sub" data-id="${s.id}">Duplicar</button><button type="button" class="danger del-sub" data-id="${s.id}">Eliminar</button></div></div>`}).join(''):`<div class="status">${q?'Sem tópicos correspondentes à pesquisa.':topicStatusFilter?'Sem tópicos neste estado.':'Sem tópicos.'}</div>`;
+ if(q)list=list.filter(s=>`${topicCode(s)} ${s.designation||''} ${s.official||''} ${ativoLabel(s.ativoId)}`.toLowerCase().includes(q));
+ subsEl.innerHTML=list.length?list.map(s=>{const started=topicIsStarted(s);const st=s.status||'aberto';return `<div class="item ${s.id===app.active?'active':''}" data-id="${s.id}"><span class="meta">Processo ${esc(code()||'—')} / Ativo: ${esc(ativoLabel(s.ativoId)||'—')} / Núcleo</span><b>🏷️ ${esc(topicCode(s))} — ${esc(s.designation||'Sem ID definido')}</b> <span class="status-badge" style="display:inline-block;padding:1px 7px;border-radius:9px;font-size:11px;font-weight:600;${topicStatusColors(st)}">${topicStatusLabel(st)}</span> <span class="status-badge" style="display:inline-block;padding:1px 7px;border-radius:9px;font-size:11px;font-weight:600;${started?'background:#dcf5df;color:#1a7431':'background:#f2e9d0;color:#8a6a13'}">${started?'● Iniciado':'○ Não iniciado'}</span><span class="meta">${s.photos.length} foto(s) · ${s.kmlText?'KML':'sem KML'} · ${s.mapBlob?'Mapa':'sem mapa'}</span><div class="item-actions"><button type="button" class="secondary dup-sub" data-id="${s.id}">Duplicar</button><button type="button" class="danger del-sub" data-id="${s.id}">Eliminar</button></div></div>`}).join(''):`<div class="status">${q?'Sem núcleos correspondentes à pesquisa.':topicStatusFilter?'Sem núcleos neste estado.':'Sem núcleos.'}</div>`;
  subsEl.querySelectorAll('.item[data-id]').forEach(el=>el.addEventListener('click',e=>{if(!e.target.classList.contains('del-sub')&&!e.target.classList.contains('dup-sub'))selectSub(el.dataset.id)}));
  subsEl.querySelectorAll('.del-sub').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();delSub(b.dataset.id)}));
  subsEl.querySelectorAll('.dup-sub').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();dupSub(b.dataset.id)}));
@@ -1072,18 +1152,27 @@ function renderGrupoSelect(current){
  sel.innerHTML='<option value="">Selecionar</option>'+groups.map(g=>`<option value="${esc(g)}">${esc(g)}</option>`).join('');
  sel.value=groups.includes(current)?current:'';
 }
-function renderDetail(){const s=active();$('detail').classList.toggle('hidden',!s);if(!s)return;const ctxLabel=`Processo ${code()||'—'} / Tópico ${topicCode(s)}${s.designation?' — '+s.designation:''}`;$('topicBreadcrumb').textContent=ctxLabel;if($('photoContextBar'))$('photoContextBar').textContent=ctxLabel;$('stitle').textContent=`🏷️ ${topicCode(s)}`;document.querySelectorAll('#topicStatusButtons .status-set-btn').forEach(b=>b.classList.toggle('selected',b.dataset.status===(s.status||'aberto')));$('sdesignation').value=s.designation||'';$('sofficial').value=s.official||'';$('ssummary').value=s.summary||'';$('susoatual').value=s.usoAtual||'';$('sconstatacao').value=s.constatacao||'';$('scausas').value=s.causas||'';$('smedidas').value=s.medidas||'';renderGrupoSelect(s.grupo||'');$('sdate').value=toLocal(s.date);$('sgps').value=s.gps||'';$('sstatus').innerHTML=`<span class="pill">${s.photos.length} foto(s)</span><span class="pill">${validGps(s.gps)?'GPS válido':'Sem GPS'}</span>`;
+function renderDetail(){const s=active();$('detail').classList.toggle('hidden',!s);if(!s)return;const ctxLabel=`Processo ${code()||'—'} / Ativo: ${ativoLabel(s.ativoId)||'—'} / Núcleo ${topicCode(s)}${s.designation?' — '+s.designation:''}`;$('topicBreadcrumb').textContent=ctxLabel;if($('photoContextBar'))$('photoContextBar').textContent=ctxLabel;$('stitle').textContent=`🏷️ ${topicCode(s)}`;document.querySelectorAll('#topicStatusButtons .status-set-btn').forEach(b=>b.classList.toggle('selected',b.dataset.status===(s.status||'aberto')));$('sdesignation').value=s.designation||'';$('sofficial').value=s.official||'';$('ssummary').value=s.summary||'';$('susoatual').value=s.usoAtual||'';$('sconstatacao').value=s.constatacao||'';$('scausas').value=s.causas||'';$('smedidas').value=s.medidas||'';renderGrupoSelect(s.grupo||'');$('sdate').value=toLocal(s.date);$('sgps').value=s.gps||'';$('sstatus').innerHTML=`<span class="pill">${s.photos.length} foto(s)</span><span class="pill">${validGps(s.gps)?'GPS válido':'Sem GPS'}</span>`;
+ $('gcharProcId').value=code()||'—';$('gcharNucleoId').value=topicCode(s);
+ $('sLocal').value=s.local||'';$('sFreguesia').value=s.freguesia||'';$('sConcelho').value=s.concelho||'';
+ $('sQtd').value=s.qtd??'';$('sAreaTerreno').value=s.areaTerreno??'';$('sAreaImplantacao').value=s.areaImplantacao??'';$('sAreaBrutaPrivativa').value=s.areaBrutaPrivativa??'';$('sAreaBrutaDependente').value=s.areaBrutaDependente??'';$('sSupCoberta').value=s.supCoberta??'';$('sSupDescoberta').value=s.supDescoberta??'';
+ renderDocAssocList(s);
  const codeBase=`${topicCode(s)}`;
  $('codeSummary').textContent=`(${codeBase}.01)`;$('codeUso').textContent=`(${codeBase}.02)`;$('codeConstat').textContent=`(${codeBase}.03)`;$('codeCausas').textContent=`(${codeBase}.04)`;$('codeMedidas').textContent=`(${codeBase}.05)`;$('codeGrupo').textContent=`(${codeBase}.06)`;
  renderAssetCharacteristics(s);
  renderLocation();renderPhotos()}
+function renderDocAssocList(s){
+ const el=$('docAssocList');if(!el)return;
+ const selected=Array.isArray(s.documentacao)?s.documentacao:[];
+ el.innerHTML=DOC_TYPES.map(d=>`<label style="display:flex;align-items:center;gap:6px;font-weight:400;background:#f5f7f9;border:1px solid var(--ln);border-radius:8px;padding:9px 10px"><input type="checkbox" class="docfield" value="${esc(d)}" style="width:auto"${selected.includes(d)?' checked':''}> ${esc(d)}</label>`).join('');
+}
 function renderAssetCharacteristics(s){
  const el=$('assetCharacteristics');if(!el)return;
  if(!s){el.innerHTML='';return}
  const fields=assetTypeFieldsFor(s.type);
  s.characteristics=s.characteristics||{};
  if(!fields.length){el.innerHTML='';return}
- el.innerHTML=`<div class="config-doc-title" style="margin-top:14px">Características do ativo</div>`+fields.map(f=>{
+ el.innerHTML=`<div class="config-doc-title" style="margin-top:14px">Características do núcleo</div>`+fields.map(f=>{
   const v=s.characteristics[f.id];
   if(f.type==='textolonga')return `<label>${esc(f.label)}</label><textarea data-char="${f.id}" class="charfield">${esc(v||'')}</textarea>`;
   if(f.type==='numero')return `<label>${esc(f.label)}</label><input type="number" data-char="${f.id}" class="charfield" value="${esc(v??'')}">`;
@@ -1091,14 +1180,14 @@ function renderAssetCharacteristics(s){
   return `<label>${esc(f.label)}</label><input data-char="${f.id}" class="charfield" value="${esc(v||'')}">`;
  }).join('');
 }
-function saveSub(renderAfter=true){const s=active();if(!s)return false;const rawGps=$('sgps').value.trim();let newGps=rawGps;if(rawGps){const p=parseGps(rawGps);if(!p){alert('Coordenadas não reconhecidas. Use graus decimais (40.386974,-8.042764), graus/minutos (40°23.2\'N 8°02.6\'W) ou graus/minutos/segundos (40°23\'13"N 8°02\'34"W).');return false}newGps=`${p.lat.toFixed(6)},${p.lon.toFixed(6)}`;$('sgps').value=newGps}if(s.gps!==newGps){s.kmlText=null;s.kmlGps=null;s.mapBlob=null;s.mapGps=null}s.designation=$('sdesignation').value.trim();s.official=$('sofficial').value.trim();s.summary=$('ssummary').value;s.usoAtual=$('susoatual').value;s.constatacao=$('sconstatacao').value;s.causas=$('scausas').value;s.medidas=$('smedidas').value;s.grupo=$('sgrupo').value;s.date=$('sdate').value?new Date($('sdate').value).toISOString():s.date;s.gps=newGps;s.characteristics=s.characteristics||{};document.querySelectorAll('#assetCharacteristics .charfield').forEach(el=>{s.characteristics[el.dataset.char]=el.value});touchTopicStart(s);if(renderAfter)render();queue();return true}
+function saveSub(renderAfter=true){const s=active();if(!s)return false;const rawGps=$('sgps').value.trim();let newGps=rawGps;if(rawGps){const p=parseGps(rawGps);if(!p){alert('Coordenadas não reconhecidas. Use graus decimais (40.386974,-8.042764), graus/minutos (40°23.2\'N 8°02.6\'W) ou graus/minutos/segundos (40°23\'13"N 8°02\'34"W).');return false}newGps=`${p.lat.toFixed(6)},${p.lon.toFixed(6)}`;$('sgps').value=newGps}if(s.gps!==newGps){s.kmlText=null;s.kmlGps=null;s.mapBlob=null;s.mapGps=null}s.designation=$('sdesignation').value.trim();s.official=$('sofficial').value.trim();s.summary=$('ssummary').value;s.usoAtual=$('susoatual').value;s.constatacao=$('sconstatacao').value;s.causas=$('scausas').value;s.medidas=$('smedidas').value;s.grupo=$('sgrupo').value;s.date=$('sdate').value?new Date($('sdate').value).toISOString():s.date;s.gps=newGps;s.local=$('sLocal').value.trim();s.freguesia=$('sFreguesia').value.trim();s.concelho=$('sConcelho').value.trim();s.qtd=$('sQtd').value;s.areaTerreno=$('sAreaTerreno').value;s.areaImplantacao=$('sAreaImplantacao').value;s.areaBrutaPrivativa=$('sAreaBrutaPrivativa').value;s.areaBrutaDependente=$('sAreaBrutaDependente').value;s.supCoberta=$('sSupCoberta').value;s.supDescoberta=$('sSupDescoberta').value;s.documentacao=Array.from(document.querySelectorAll('#docAssocList .docfield:checked')).map(el=>el.value);s.characteristics=s.characteristics||{};document.querySelectorAll('#assetCharacteristics .charfield').forEach(el=>{s.characteristics[el.dataset.char]=el.value});touchTopicStart(s);if(renderAfter)render();queue();return true}
 function showGpsStatus(msg,isErr){
  const el=$('gpsStatus');if(!el)return;
  el.textContent=msg;el.classList.toggle('hidden',!msg);
  el.style.color=isErr?'#9a6700':'';
 }
 async function getGpsApi(){
- const s=active();if(!s)return showGpsStatus('Selecione primeiro um tópico.',true);
+ const s=active();if(!s)return showGpsStatus('Selecione primeiro um núcleo.',true);
  const btn=$('gpsApiBtn'),original=btn.textContent;
  if(!navigator.geolocation){showGpsStatus('Este navegador não tem API de localização disponível. Use a inserção manual.',true);return}
  btn.disabled=true;showGpsStatus('A obter localização via API do dispositivo…');
@@ -1118,7 +1207,7 @@ async function getGpsApi(){
  );
 }
 function getGpsManual(){
- const s=active();if(!s)return showGpsStatus('Selecione primeiro um tópico.',true);
+ const s=active();if(!s)return showGpsStatus('Selecione primeiro um núcleo.',true);
  showGpsStatus('Escreva as coordenadas no campo abaixo, no formato latitude,longitude.');
  const gpsField=$('sgps');gpsField.focus();gpsField.select();gpsField.scrollIntoView({behavior:'smooth',block:'center'});
 }
@@ -1131,7 +1220,7 @@ async function findGpsFromTopicPhotos(s){
 async function acquireGpsForActiveTopic(){
  const s=active();if(!s)return false;
  if(validGps(s.gps))return true;
- showGpsStatus('A procurar coordenadas GPS nas fotografias do tópico…');
+ showGpsStatus('A procurar coordenadas GPS nas fotografias do núcleo…');
  const found=await findGpsFromTopicPhotos(s);
  if(found){
   s.gps=`${found.lat.toFixed(6)},${found.lon.toFixed(6)}`;
@@ -1144,7 +1233,7 @@ async function acquireGpsForActiveTopic(){
  return false;
 }
 async function generateKmlAndMap(){
- const s=active();if(!s)return showGpsStatus('Selecione primeiro um tópico.',true);
+ const s=active();if(!s)return showGpsStatus('Selecione primeiro um núcleo.',true);
  const btn=$('genKmlMapBtn'),original=btn?btn.textContent:'';
  if(btn){btn.disabled=true;btn.textContent='A obter GPS…'}
  try{
@@ -1168,7 +1257,7 @@ async function generateKmlAndMap(){
 }
 function photoName(s,i){return `${code()}_${pad(s.n)}_${app.settings.img}_${pad(i)}.jpg`}
 function photoRefLabel(s,i){return app.settings.resumoCaptionsShowCode===true?photoName(s,i):`${topicCode(s)}_${app.settings.img}_${pad(i)}`}
-function renderPhotos(){const s=active();$('photos').innerHTML=s&&s.photos.length?s.photos.map((p,i)=>{const u=URL.createObjectURL(p.blob);const n=s.photos.length;return `<div class="photo"><img src="${u}" data-url="${u}" alt="${esc(photoName(s,i+1))}"><div class="meta"><b>${photoName(s,i+1)}</b><div class="photo-row"><span>${new Date(p.date).toLocaleString('pt-PT')}<br>${Math.round(p.blob.size/1024)} KB</span><button type="button" class="secondary move-photo-up" data-index="${i}" ${i===0?'disabled':''} title="Mover para trás" aria-label="Mover fotografia para trás">▲</button><button type="button" class="secondary move-photo-down" data-index="${i}" ${i===n-1?'disabled':''} title="Mover para a frente" aria-label="Mover fotografia para a frente">▼</button><button type="button" class="danger remove-photo" data-index="${i}">Eliminar</button></div><label>Legenda opcional</label><input class="caption" data-index="${i}" value="${esc(p.caption||'')}"></div></div>`}).join(''):'<div class="status">Sem fotografias.</div>';document.querySelectorAll('#photos img[data-url]').forEach(im=>im.addEventListener('load',()=>URL.revokeObjectURL(im.dataset.url),{once:true}));document.querySelectorAll('.caption').forEach(inp=>inp.addEventListener('input',()=>{active().photos[Number(inp.dataset.index)].caption=inp.value;queue()}));document.querySelectorAll('.remove-photo').forEach(b=>b.addEventListener('click',()=>{const s=active();logProcessEvent(`Fotografia removida do tópico ${topicCode(s)}`);s.photos.splice(Number(b.dataset.index),1);render();queue()}));document.querySelectorAll('.move-photo-up').forEach(b=>b.addEventListener('click',()=>{const i=Number(b.dataset.index),arr=active().photos;if(i>0){[arr[i-1],arr[i]]=[arr[i],arr[i-1]];render();queue()}}));document.querySelectorAll('.move-photo-down').forEach(b=>b.addEventListener('click',()=>{const i=Number(b.dataset.index),arr=active().photos;if(i<arr.length-1){[arr[i+1],arr[i]]=[arr[i],arr[i+1]];render();queue()}}))}
+function renderPhotos(){const s=active();$('photos').innerHTML=s&&s.photos.length?s.photos.map((p,i)=>{const u=URL.createObjectURL(p.blob);const n=s.photos.length;return `<div class="photo"><img src="${u}" data-url="${u}" alt="${esc(photoName(s,i+1))}"><div class="meta"><b>${photoName(s,i+1)}</b><div class="photo-row"><span>${new Date(p.date).toLocaleString('pt-PT')}<br>${Math.round(p.blob.size/1024)} KB</span><button type="button" class="secondary move-photo-up" data-index="${i}" ${i===0?'disabled':''} title="Mover para trás" aria-label="Mover fotografia para trás">▲</button><button type="button" class="secondary move-photo-down" data-index="${i}" ${i===n-1?'disabled':''} title="Mover para a frente" aria-label="Mover fotografia para a frente">▼</button><button type="button" class="danger remove-photo" data-index="${i}">Eliminar</button></div><label>Legenda opcional</label><input class="caption" data-index="${i}" value="${esc(p.caption||'')}"></div></div>`}).join(''):'<div class="status">Sem fotografias.</div>';document.querySelectorAll('#photos img[data-url]').forEach(im=>im.addEventListener('load',()=>URL.revokeObjectURL(im.dataset.url),{once:true}));document.querySelectorAll('.caption').forEach(inp=>inp.addEventListener('input',()=>{active().photos[Number(inp.dataset.index)].caption=inp.value;queue()}));document.querySelectorAll('.remove-photo').forEach(b=>b.addEventListener('click',()=>{const s=active();logProcessEvent(`Fotografia removida do núcleo ${topicCode(s)}`);s.photos.splice(Number(b.dataset.index),1);render();queue()}));document.querySelectorAll('.move-photo-up').forEach(b=>b.addEventListener('click',()=>{const i=Number(b.dataset.index),arr=active().photos;if(i>0){[arr[i-1],arr[i]]=[arr[i],arr[i-1]];render();queue()}}));document.querySelectorAll('.move-photo-down').forEach(b=>b.addEventListener('click',()=>{const i=Number(b.dataset.index),arr=active().photos;if(i<arr.length-1){[arr[i+1],arr[i]]=[arr[i],arr[i+1]];render();queue()}}))}
 async function fileToStableBlob(f){try{const buf=await f.arrayBuffer();return new Blob([buf],{type:f.type||'image/jpeg'})}catch(e){return f}}
 async function extractExifGps(file){
  try{
@@ -1228,9 +1317,9 @@ async function extractExifGps(file){
   return null;
  }catch(e){return null}
 }
-async function addFiles(fs){const s=active();if(!s)return alert('Selecione um tópico.');const list=[...fs].filter(f=>f.type.startsWith('image/'));for(const f of list){const stable=await fileToStableBlob(f);s.photos.push({id:crypto.randomUUID(),name:f.name||'foto.jpg',date:f.lastModified?new Date(f.lastModified).toISOString():new Date().toISOString(),caption:'',blob:stable})}if(list.length)logProcessEvent(`${list.length} fotografia(s) adicionada(s) ao tópico ${topicCode(s)}`);touchTopicStart(s);render();await saveNow();$('save').textContent='Fotografias gravadas'}
+async function addFiles(fs){const s=active();if(!s)return alert('Selecione um núcleo.');const list=[...fs].filter(f=>f.type.startsWith('image/'));for(const f of list){const stable=await fileToStableBlob(f);s.photos.push({id:crypto.randomUUID(),name:f.name||'foto.jpg',date:f.lastModified?new Date(f.lastModified).toISOString():new Date().toISOString(),caption:'',blob:stable})}if(list.length)logProcessEvent(`${list.length} fotografia(s) adicionada(s) ao núcleo ${topicCode(s)}`);touchTopicStart(s);render();await saveNow();$('save').textContent='Fotografias gravadas'}
 function kmlText(s){const p=parseGps(s.gps);return `<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2"><Placemark><name>${xmlEsc(code()+'_'+pad(s.n))}</name><description>${xmlEsc(s.designation+' | '+s.summary)}</description><Point><coordinates>${p.lon},${p.lat},0</coordinates></Point></Placemark></kml>`}
-function generateKml(){const s=active();if(!s||!validGps(s.gps))return alert('Defina coordenadas válidas.');s.kmlText=kmlText(s);s.kmlGps=s.gps;logProcessEvent(`KML gerado para o tópico ${topicCode(s)}`);render();queue()}
+function generateKml(){const s=active();if(!s||!validGps(s.gps))return alert('Defina coordenadas válidas.');s.kmlText=kmlText(s);s.kmlGps=s.gps;logProcessEvent(`KML gerado para o núcleo ${topicCode(s)}`);render();queue()}
 function deleteKml(){const s=active();if(!s)return;s.kmlText=null;s.kmlGps=null;render();queue()}
 function updateMapMethodUi(){
  const automatic=$('mapMethod').value==='static';
@@ -1336,7 +1425,7 @@ async function confirmStaticMap(){
  $('staticMapPreview').classList.add('hidden');
  await saveImmediate();
  renderLocation();
- $('expstate').textContent='Mapa confirmado e guardado no tópico.';
+ $('expstate').textContent='Mapa confirmado e guardado no núcleo.';
 }
 function mapUrls(s){const p=parseGps(s.gps);return{maps:`https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lon}`,earth:`https://earth.google.com/web/@${p.lat},${p.lon},500a,1000d,35y,0h,0t,0r`,osm:`https://www.openstreetmap.org/?mlat=${p.lat}&mlon=${p.lon}#map=18/${p.lat}/${p.lon}`}}
 function openMap(){
@@ -1352,7 +1441,7 @@ function openMap(){
 }
 async function importMap(file){
  const s=active();
- if(!s)return alert('Selecione primeiro um tópico.');
+ if(!s)return alert('Selecione primeiro um núcleo.');
  if(!file)return;
  if(!file.type||!file.type.startsWith('image/'))return alert('Selecione uma imagem válida.');
  try{
@@ -1372,7 +1461,7 @@ async function importMap(file){
 function deleteMap(){const s=active();if(!s)return;s.mapBlob=null;s.mapGps=null;render();queue()}
 async function pasteMap(){
  const s=active();
- if(!s)return alert('Selecione primeiro um tópico.');
+ if(!s)return alert('Selecione primeiro um núcleo.');
  if(!navigator.clipboard||!navigator.clipboard.read)return alert('Este navegador não permite colar imagens diretamente. Use "Importar captura do mapa".');
  try{
   const items=await navigator.clipboard.read();
@@ -1389,7 +1478,7 @@ async function pasteMap(){
 }
 async function validateLocation(){
  const s=active();
- if(!s)return alert('Selecione primeiro um tópico.');
+ if(!s)return alert('Selecione primeiro um núcleo.');
  const gpsValue=$('sgps').value.trim();
  if(!validGps(gpsValue))return alert('Defina coordenadas válidas no formato latitude,longitude.');
  if(!saveSub(false))return;
@@ -1558,7 +1647,7 @@ function sheetXml(rows,dateCols){
  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${xmlRows}</sheetData></worksheet>`;
 }
 
-function buildXlsx(topics){topics=topics||app.subs;const z=new JSZip(),subs=[['Processo','Serviço','Assunto','Data do processo','Tópico','Sigla','Referência oficial','Designação','Data e hora','GPS','Descrevendo','Uso atual','Constatação','Eventuais causas','Medidas propostas','Grupo','N.º fotos','KML','Mapa']];const fotos=[['Processo','Tópico','Foto','Data e hora original','GPS','Legenda']];for(const s of topics){subs.push([code(),app.process.service,app.process.subject,app.process.date||'',`${topicCode(s)}`,s.type,s.official||'',s.designation,s.date,s.gps,s.summary,s.usoAtual||'',s.constatacao||'',s.causas||'',s.medidas||'',s.grupo||'',String(s.photos.length),s.kmlText?'Sim':'Não',s.mapBlob?'Sim':'Não']);s.photos.forEach((p,i)=>fotos.push([code(),`${topicCode(s)}`,photoName(s,i+1),p.date,s.gps,p.caption||'']))}z.file('[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>');z.folder('_rels').file('.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>');z.folder('xl').file('workbook.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Tópicos" sheetId="1" r:id="rId1"/><sheet name="Fotografias" sheetId="2" r:id="rId2"/></sheets></workbook>');z.folder('xl').file('styles.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="dd/mm/yyyy hh:mm"/></numFmts><fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts><fills count="1"><fill><patternFill patternType="none"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs></styleSheet>');z.folder('xl').folder('_rels').file('workbook.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>');z.folder('xl').folder('worksheets').file('sheet1.xml',sheetXml(subs,new Set([8]))).file('sheet2.xml',sheetXml(fotos,new Set([3])));return z.generateAsync({type:'blob'})}
+function buildXlsx(topics){topics=topics||app.subs;const z=new JSZip(),subs=[['Processo','Serviço','Assunto','Data do processo','Núcleo','Sigla','Referência oficial','Designação','Data e hora','GPS','Descrição sumária','Uso atual','Constatação','Eventuais causas','Medidas propostas','Grupo','N.º fotos','KML','Mapa']];const fotos=[['Processo','Núcleo','Foto','Data e hora original','GPS','Legenda']];for(const s of topics){subs.push([code(),app.process.service,app.process.subject,app.process.date||'',`${topicCode(s)}`,s.type,s.official||'',s.designation,s.date,s.gps,s.summary,s.usoAtual||'',s.constatacao||'',s.causas||'',s.medidas||'',s.grupo||'',String(s.photos.length),s.kmlText?'Sim':'Não',s.mapBlob?'Sim':'Não']);s.photos.forEach((p,i)=>fotos.push([code(),`${topicCode(s)}`,photoName(s,i+1),p.date,s.gps,p.caption||'']))}z.file('[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>');z.folder('_rels').file('.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>');z.folder('xl').file('workbook.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Núcleos" sheetId="1" r:id="rId1"/><sheet name="Fotografias" sheetId="2" r:id="rId2"/></sheets></workbook>');z.folder('xl').file('styles.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="dd/mm/yyyy hh:mm"/></numFmts><fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts><fills count="1"><fill><patternFill patternType="none"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs></styleSheet>');z.folder('xl').folder('_rels').file('workbook.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>');z.folder('xl').folder('worksheets').file('sheet1.xml',sheetXml(subs,new Set([8]))).file('sheet2.xml',sheetXml(fotos,new Set([3])));return z.generateAsync({type:'blob'})}
 function updateDiagnostic(){
  const totalPhotos=app.subs.reduce((n,s)=>n+s.photos.length,0);
  const gpsCount=app.subs.filter(s=>validGps(s.gps)).length;
@@ -1569,7 +1658,7 @@ function updateDiagnostic(){
  if(el)el.innerHTML=[
   `<b>Persistência:</b> ${db?'base de dados ativa':'cópia local'}`,
   `<b>Processo:</b> ${code()||'não definido'}`,
-  `<b>Tópicos:</b> ${app.subs.length}`,
+  `<b>Núcleos:</b> ${app.subs.length}`,
   `<b>Fotografias:</b> ${totalPhotos}`,
   `<b>GPS:</b> ${gpsCount}`,
   `<b>KML válidos:</b> ${kmlCount}`,
@@ -1817,7 +1906,7 @@ async function buildProcessPdfBlob(topics,includePhotos,pdfCols,withCover=false,
   y+=wa.length*SUB*.44;
  }
  if(!isSingleFicha&&topics.length){
-  y+=3;doc.setFont(F,'bold');doc.setFontSize(SUB);ensureSpace(6);doc.text('Tópicos',mL,y);y+=6;
+  y+=3;doc.setFont(F,'bold');doc.setFontSize(SUB);ensureSpace(6);doc.text('Núcleos',mL,y);y+=6;
   const rf=app.settings.resumoTopicFields||{};
   const onTopics=topics.filter(s=>(s.status||'aberto')==='aberto');
   const offTopics=topics.filter(s=>(s.status||'aberto')!=='aberto');
@@ -1920,8 +2009,8 @@ async function buildProcessPdfBlob(topics,includePhotos,pdfCols,withCover=false,
    y=drawTagValue(doc,f.label,f.value,mL,y,contentW,F,SMALLTXT,BODY,ensureSpace);y+=1;
   });
   }catch(topicErr){
-   console.error('Erro ao gerar a ficha do tópico',s.type,s.n,topicErr);
-   if(!firstError)firstError=`Tópico ${topicCode(s)}: ${topicErr&&topicErr.message?topicErr.message:topicErr}`;
+   console.error('Erro ao gerar a ficha do núcleo',s.type,s.n,topicErr);
+   if(!firstError)firstError=`Núcleo ${topicCode(s)}: ${topicErr&&topicErr.message?topicErr.message:topicErr}`;
    skipped++;
    ensureSpace(10);
    doc.setFontSize(BODY);doc.setTextColor(160,40,40);
@@ -1974,7 +2063,7 @@ async function buildProcessPdfBlob(topics,includePhotos,pdfCols,withCover=false,
       rowH=Math.max(rowH,h);
      }catch(e){
       skipped++;
-      if(!firstError)firstError=`Tópico ${topicCode(s)}: ${e&&e.message?e.message:String(e)}`;
+      if(!firstError)firstError=`Núcleo ${topicCode(s)}: ${e&&e.message?e.message:String(e)}`;
      }
     }
     if(!cellData.length)continue;
@@ -1995,16 +2084,16 @@ async function buildProcessPdfBlob(topics,includePhotos,pdfCols,withCover=false,
    if(embedded<s.photos.length){
     ensureSpace(6);
     doc.setFontSize(SMALLTXT);doc.setTextColor(160,40,40);
-    doc.text(`⚠ ${embedded}/${s.photos.length} fotografia(s) incluídas com sucesso neste tópico.`,mL,y);y+=6;
+    doc.text(`⚠ ${embedded}/${s.photos.length} fotografia(s) incluídas com sucesso neste núcleo.`,mL,y);y+=6;
     doc.setTextColor(0);doc.setFontSize(BODY);
    }
    }catch(photosErr){
-    console.error('Erro no bloco de fotografias do tópico',s.type,s.n,photosErr);
-    if(!firstError)firstError=`Tópico ${topicCode(s)}: ${photosErr&&photosErr.message?photosErr.message:photosErr}`;
+    console.error('Erro no bloco de fotografias do núcleo',s.type,s.n,photosErr);
+    if(!firstError)firstError=`Núcleo ${topicCode(s)}: ${photosErr&&photosErr.message?photosErr.message:photosErr}`;
     skipped++;
     ensureSpace(8);
     doc.setFontSize(SMALLTXT);doc.setTextColor(160,40,40);
-    doc.text(`⚠ Erro ao incluir as fotografias deste tópico.`,mL,y);y+=6;
+    doc.text(`⚠ Erro ao incluir as fotografias deste núcleo.`,mL,y);y+=6;
     doc.setTextColor(0);doc.setFontSize(BODY);
    }
   }
@@ -2294,7 +2383,7 @@ async function generateProcessPdf(){
  try{
  sync();
  if(!code())return alert('Defina primeiro o processo.');
- if(!app.subs.length)return alert('Sem tópicos para incluir no PDF.');
+ if(!app.subs.length)return alert('Sem núcleos para incluir no PDF.');
  if(!(window.jspdf&&window.jspdf.jsPDF))return alert('O gerador de PDF ainda não carregou. Confirme que tem ligação à internet (necessária apenas para carregar esta funcionalidade, uma única vez) e tente novamente.');
  if(!(await verifyTopicPrefixes()))return;
  const includePhotosCheck=!!($('pdfIncludePhotos')&&$('pdfIncludePhotos').checked);
@@ -2360,11 +2449,11 @@ async function generateProcessPdf(){
   $('pdfPreviewCard').classList.remove('hidden');
   $('pdfPreviewCard').scrollIntoView({behavior:'smooth',block:'start'});
   $('expstate').textContent=skipped>0?`Pré-visualização do PDF gerada. ${skipped} fotografia(s) ignoradas — motivo: ${firstError}`:'Pré-visualização do PDF gerada. Reveja e depois exporte (PDF ou Word).';
-  if(skipped>0)alert(`Atenção: ${skipped} de ${totalPhotos} fotografia(s) não puderam ser incluídas no PDF.\nMotivo: ${firstError}\n\nO PDF também indica, tópico a tópico, quantas fotos tinha disponíveis e quantas conseguiu incluir.`);
+  if(skipped>0)alert(`Atenção: ${skipped} de ${totalPhotos} fotografia(s) não puderam ser incluídas no PDF.\nMotivo: ${firstError}\n\nO PDF também indica, núcleo a núcleo, quantas fotos tinha disponíveis e quantas conseguiu incluir.`);
   const emptyTopics=app.subs.filter(s=>!topicIsStarted(s));
   if(emptyTopics.length){
    const listaTxt=emptyTopics.map(s=>`• ${topicCode(s)}${s.designation?' — '+s.designation:''}`).join('\n');
-   alert(`Atenção: ${emptyTopics.length} tópico(s) foram criados mas ainda não têm nenhuma informação (fotos, GPS ou campos de caracterização) — não vão ter conteúdo relevante neste documento:\n\n${listaTxt}`);
+   alert(`Atenção: ${emptyTopics.length} núcleo(s) foram criados mas ainda não têm nenhuma informação (fotos, GPS ou campos de caracterização) — não vão ter conteúdo relevante neste documento:\n\n${listaTxt}`);
   }
  }catch(e){
   console.error(e);
@@ -2737,7 +2826,7 @@ async function buildProcessDocx(topics,includePhotos,pdfCols,withCover=false,wit
    introParts.push(docxPara(docxRun(app.process.apreciacao,{font:F,size:szBody+2}),{after:120,indent:200,align:'both'}));
   }
   if(topics.length){
-   introParts.push(docxPara(docxRun('Tópicos',{bold:true,font:F,size:szBody+2}),{after:40}));
+   introParts.push(docxPara(docxRun('Núcleos',{bold:true,font:F,size:szBody+2}),{after:40}));
    const onTopics=topics.filter(s=>(s.status||'aberto')==='aberto');
    const offTopics=topics.filter(s=>(s.status||'aberto')!=='aberto');
    const pushTopicLine=s=>{
@@ -2857,7 +2946,7 @@ async function confirmPdfExport(){
  if(!window._pendingPdfBlob)return alert('Não existe nenhum PDF pendente. Gere o PDF primeiro.');
  sync();
  if(window._previewSignature&&dataSignature()!==window._previewSignature){
-  alert('Os dados do processo mudaram desde que gerou esta pré-visualização (texto, fotos ou tópicos). Descarte e gere o PDF novamente antes de exportar, para garantir que o documento reflete o estado atual.');
+  alert('Os dados do processo mudaram desde que gerou esta pré-visualização (texto, fotos ou núcleos). Descarte e gere o PDF novamente antes de exportar, para garantir que o documento reflete o estado atual.');
   return;
  }
  await share(window._pendingPdfBlob,`${code()}_Resumo${reportVersionSuffix()}.pdf`,'application/pdf');
@@ -2870,7 +2959,7 @@ async function confirmDocxExport(){
  if(!window._pendingPdfBlob)return alert('Gere primeiro o PDF (Pré-visualização) antes de exportar o Word.');
  sync();
  if(window._previewSignature&&dataSignature()!==window._previewSignature){
-  alert('Os dados do processo mudaram desde que gerou esta pré-visualização (texto, fotos ou tópicos). Descarte e gere o PDF novamente antes de exportar, para garantir que o documento reflete o estado atual.');
+  alert('Os dados do processo mudaram desde que gerou esta pré-visualização (texto, fotos ou núcleos). Descarte e gere o PDF novamente antes de exportar, para garantir que o documento reflete o estado atual.');
   return;
  }
  const dbtn=$('docxConfirmBtn'),original=dbtn.textContent;
@@ -2896,7 +2985,7 @@ async function confirmProcessZipExport(){
  if(!window._pendingPdfBlob)return alert('Gere primeiro o PDF (Pré-visualização) antes de exportar o processo completo.');
  sync();
  if(window._previewSignature&&dataSignature()!==window._previewSignature){
-  alert('Os dados do processo mudaram desde que gerou esta pré-visualização (texto, fotos ou tópicos). Descarte e gere o PDF novamente antes de exportar, para garantir que o documento reflete o estado atual.');
+  alert('Os dados do processo mudaram desde que gerou esta pré-visualização (texto, fotos ou núcleos). Descarte e gere o PDF novamente antes de exportar, para garantir que o documento reflete o estado atual.');
   return;
  }
  if(!window._restExportOffered){window._restExportOffered=true;logResumoExport()}
@@ -2946,24 +3035,24 @@ async function exportTopic(id){
  if(!code())return alert('Defina o processo.');
  if(!(await verifyTopicPrefixes()))return;
  const s=app.subs.find(x=>x.id===id);
- if(!s)return alert('Tópico não encontrado.');
- if(!s.photos.length&&!s.kmlText&&!s.mapBlob)return alert('Este tópico ainda não tem fotografias, KML ou mapa para exportar.');
+ if(!s)return alert('Núcleo não encontrado.');
+ if(!s.photos.length&&!s.kmlText&&!s.mapBlob)return alert('Este núcleo ainda não tem fotografias, KML ou mapa para exportar.');
  if(!validGps(s.gps)||!s.kmlText||!s.mapBlob){
   const faltas=[];
   if(!validGps(s.gps))faltas.push('GPS');
   if(!s.kmlText)faltas.push('KML');
   if(!s.mapBlob)faltas.push('mapa');
-  $('topicExpState').textContent=`⚠ Aviso: este tópico está sem ${faltas.join(', ')} — a exportação vai continuar na mesma.`;
+  $('topicExpState').textContent=`⚠ Aviso: este núcleo está sem ${faltas.join(', ')} — a exportação vai continuar na mesma.`;
   await new Promise(r=>setTimeout(r,30));
  }
  const btn=$('exportTopicBtn'),original=btn.textContent;
  const gabinete=pickGabinete(s);
  const setProgress=(t)=>{btn.textContent=t;showBusy(t)};
  btn.disabled=true;
- setProgress('A preparar exportação do tópico…');
+ setProgress('A preparar exportação do núcleo…');
  try{
   const z=new JSZip(),root=z.folder(code()),sub=root.folder(`${topicCode(s)}`),imf=sub.folder('IMG'),r=[];
-  r.push(`Processo: ${code()}`,`Tópico: ${topicCode(s)}`,`Resolução: ${app.settings.maxSide||'Original'}`,`Qualidade: ${Math.round(app.settings.quality*100)}%`,'');
+  r.push(`Processo: ${code()}`,`Núcleo: ${topicCode(s)}`,`Resolução: ${app.settings.maxSide||'Original'}`,`Qualidade: ${Math.round(app.settings.quality*100)}%`,'');
   let seq=0;
   for(let i=0;i<s.photos.length;i++){
    const p=s.photos[i];
@@ -2981,28 +3070,28 @@ async function exportTopic(id){
   sub.file(`${code()}_${pad(s.n)}_Compressao.txt`,r.join('\n'));
   if(s.kmlText)sub.file(`${code()}_${pad(s.n)}_${app.settings.gps}_01.kml`,s.kmlText);
   if(s.mapBlob)sub.file(`${code()}_${pad(s.n)}_${app.settings.lcz}_01.jpg`,s.mapBlob);
-  setProgress('A gerar ficha do tópico…');
+  setProgress('A gerar ficha do núcleo…');
   const includePhotosFicha=!!($('pdfIncludePhotos')?$('pdfIncludePhotos').checked:true);
   const pdfColsFicha=[1,2,3,4,5].includes(app.settings.pdfPhotoCols)?app.settings.pdfPhotoCols:3;
   try{
    const fichaPdf=await buildProcessPdfBlob([s],includePhotosFicha,pdfColsFicha,false,false,gabinete);
    if(fichaPdf&&!fichaPdf.cancelled)sub.file(`${code()}_${pad(s.n)}_${app.settings.fix}_01${reportVersionSuffix()}.pdf`,fichaPdf.blob);
-  }catch(e){console.error('Erro ao gerar a ficha PDF do tópico',e)}
+  }catch(e){console.error('Erro ao gerar a ficha PDF do núcleo',e)}
   try{
    const fichaDocx=await buildProcessDocx([s],includePhotosFicha,pdfColsFicha,false,false,gabinete);
    sub.file(`${code()}_${pad(s.n)}_${app.settings.fix}_01${reportVersionSuffix()}.docx`,fichaDocx);
-  }catch(e){console.error('Erro ao gerar a ficha Word do tópico',e)}
-  setProgress('A gerar ficha Excel do tópico…');
+  }catch(e){console.error('Erro ao gerar a ficha Word do núcleo',e)}
+  setProgress('A gerar ficha Excel do núcleo…');
   try{
    const fichaXlsx=await buildXlsx([s]);
    sub.file(`${code()}_${pad(s.n)}_${app.settings.fix}_01${reportVersionSuffix()}.xlsx`,fichaXlsx);
-  }catch(e){console.error('Erro ao gerar a ficha Excel do tópico',e)}
+  }catch(e){console.error('Erro ao gerar a ficha Excel do núcleo',e)}
   setProgress('A gerar ZIP…');
   const b=await z.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
-  offerDownload(b,`${code()}_${topicCode(s)}_Ava_Load.zip`,'application/zip',()=>{$('topicExpState').textContent='Tópico exportado com sucesso.'},'topicExpState');
+  offerDownload(b,`${code()}_${topicCode(s)}_Ava_Load.zip`,'application/zip',()=>{$('topicExpState').textContent='Núcleo exportado com sucesso.'},'topicExpState');
  }catch(e){
   console.error(e);
-  alert('Não foi possível exportar o tópico: '+(e&&e.message?e.message:e));
+  alert('Não foi possível exportar o núcleo: '+(e&&e.message?e.message:e));
  }finally{
   btn.disabled=false;
   btn.textContent=original;
@@ -3019,7 +3108,7 @@ async function exportProcess(force=false,skipCoverResumo=false){
  try{
  sync();
  if(!code())return alert('Defina o processo.');
- if(!app.subs.length)return alert('Sem tópicos.');
+ if(!app.subs.length)return alert('Sem núcleos.');
  if(!(await verifyTopicPrefixes()))return;
  const missing=app.subs.filter(s=>!validGps(s.gps)||!s.kmlText||!s.mapBlob);
  if(missing.length){
@@ -3030,7 +3119,7 @@ async function exportProcess(force=false,skipCoverResumo=false){
    if(!s.mapBlob)faltas.push('mapa');
    return `${topicCode(s)}: sem ${faltas.join(', ')}`;
   }).join(' · ');
-  $('expstate').textContent=`⚠ Aviso: tópicos sem localização completa (${list}) — a exportação vai continuar na mesma.`;
+  $('expstate').textContent=`⚠ Aviso: núcleos sem localização completa (${list}) — a exportação vai continuar na mesma.`;
   await new Promise(r=>setTimeout(r,30));
  }
  let bySubfolder=true;
@@ -3039,7 +3128,7 @@ async function exportProcess(force=false,skipCoverResumo=false){
    dlgTitle()+
    `Como organizar os ficheiros exportados?\n\n`+
    `1 — Pasta única (todos os ficheiros diretamente dentro de ${code()}, sem subpastas).\n`+
-   `2 — Por pasta do processo + subpasta por tópico (dentro de ${code()}, uma subpasta por tópico, mais Capa/ e Resumo/).`,
+   `2 — Por pasta do processo + subpasta por núcleo (dentro de ${code()}, uma subpasta por núcleo, mais Capa/ e Resumo/).`,
    '2'
   );
   if(folderAnswer===null){
@@ -3060,7 +3149,7 @@ async function exportProcess(force=false,skipCoverResumo=false){
    const s=app.subs[si];
    setExpState(`A preparar ${topicCode(s)} (${si+1}/${app.subs.length})…`);
    const sub=bySubfolder?root.folder(`${topicCode(s)}`):root,imf=bySubfolder?sub.folder('IMG'):root,r=[];
-   r.push(`Processo: ${code()}`,`Tópico: ${topicCode(s)}`,`Resolução: ${app.settings.maxSide||'Original'}`,`Qualidade: ${Math.round(app.settings.quality*100)}%`,'');
+   r.push(`Processo: ${code()}`,`Núcleo: ${topicCode(s)}`,`Resolução: ${app.settings.maxSide||'Original'}`,`Qualidade: ${Math.round(app.settings.quality*100)}%`,'');
    let seq=0;
    for(let i=0;i<s.photos.length;i++){
     const p=s.photos[i];
@@ -3083,15 +3172,15 @@ async function exportProcess(force=false,skipCoverResumo=false){
    try{
     const fichaPdf=await buildProcessPdfBlob([s],includePhotosFicha,pdfColsFicha,false,false,gabinete);
     if(fichaPdf&&!fichaPdf.cancelled)sub.file(`${code()}_${pad(s.n)}_${app.settings.fix}_01${reportVersionSuffix()}.pdf`,fichaPdf.blob);
-   }catch(e){console.error('Erro ao gerar a ficha PDF do tópico',s.type,s.n,e)}
+   }catch(e){console.error('Erro ao gerar a ficha PDF do núcleo',s.type,s.n,e)}
    try{
     const fichaDocx=await buildProcessDocx([s],includePhotosFicha,pdfColsFicha,false,false,gabinete);
     sub.file(`${code()}_${pad(s.n)}_${app.settings.fix}_01${reportVersionSuffix()}.docx`,fichaDocx);
-   }catch(e){console.error('Erro ao gerar a ficha Word do tópico',s.type,s.n,e)}
+   }catch(e){console.error('Erro ao gerar a ficha Word do núcleo',s.type,s.n,e)}
    try{
     const fichaXlsx=await buildXlsx([s]);
     sub.file(`${code()}_${pad(s.n)}_${app.settings.fix}_01${reportVersionSuffix()}.xlsx`,fichaXlsx);
-   }catch(e){console.error('Erro ao gerar a ficha Excel do tópico',s.type,s.n,e)}
+   }catch(e){console.error('Erro ao gerar a ficha Excel do núcleo',s.type,s.n,e)}
   }
   setExpState('A preparar a Capa do processo…');
   const capaFolder=bySubfolder?root.folder('Capa'):root,capaSig=app.settings.capa||'CAPA';
@@ -3425,17 +3514,17 @@ function renderResumoHistory(){
  if(!hist.length){el.textContent='Ainda sem exportações do Resumo registadas para este processo.';return}
  el.innerHTML=hist.slice().reverse().slice(0,20).map(h=>{
   const d=new Date(h.at);
-  return `<div style="padding:4px 0;border-bottom:1px solid var(--ln)">${d.toLocaleString('pt-PT')} — ${h.topics} tópico(s), ${h.photos} fotografia(s)</div>`;
+  return `<div style="padding:4px 0;border-bottom:1px solid var(--ln)">${d.toLocaleString('pt-PT')} — ${h.topics} núcleo(s), ${h.photos} fotografia(s)</div>`;
  }).join('');
 }
 function activeProcessLabel(){
  const c=code();
  if(!c)return 'Sem processo ativo';
  let label=app.process.designacaoProcesso?`${c} — ${app.process.designacaoProcesso}`:c;
- if(app.subs&&app.subs.length)label+=` · ${app.subs.length} tópico(s)`;
+ if(app.subs&&app.subs.length)label+=` · ${app.subs.length} núcleo(s)`;
  return label;
 }
-function render(){ $('head').textContent=activeProcessLabel();if($('tabLabelTopicos'))$('tabLabelTopicos').textContent=activeProcessLabel();if($('tabLabelProduzir'))$('tabLabelProduzir').textContent=activeProcessLabel();$('topicCreateHint').textContent=code()?`A criar tópico para o processo: ${code()}`:'Defina primeiro os dados do processo (secção 1) antes de criar um tópico.';renderSubs();renderDetail();const n=app.subs.reduce((a,s)=>a+s.photos.length,0),k=app.subs.filter(s=>s.kmlText).length,m=app.subs.filter(s=>s.mapBlob).length;$('summary').textContent=`${app.subs.length} tópico(s) · ${n} fotografia(s) · ${k} KML · ${m} mapa(s)`;updateBackupStatus();renderResumoHistory();if(code()||app.subs.length){const w=$('freshStateWarning');if(w)w.classList.add('hidden');removeAlertBadge('fresh')}updateExportOptionsUi() }
+function render(){ $('head').textContent=activeProcessLabel();if($('tabLabelTopicos'))$('tabLabelTopicos').textContent=activeProcessLabel();if($('tabLabelProduzir'))$('tabLabelProduzir').textContent=activeProcessLabel();$('topicCreateHint').textContent=code()?`A criar núcleo para o processo: ${code()}`:'Defina primeiro os dados do processo (secção 1) antes de criar um núcleo.';renderAtivoSelect();renderSubs();renderDetail();const n=app.subs.reduce((a,s)=>a+s.photos.length,0),k=app.subs.filter(s=>s.kmlText).length,m=app.subs.filter(s=>s.mapBlob).length;$('summary').textContent=`${app.subs.length} núcleo(s) · ${n} fotografia(s) · ${k} KML · ${m} mapa(s)`;updateBackupStatus();renderResumoHistory();if(code()||app.subs.length){const w=$('freshStateWarning');if(w)w.classList.add('hidden');removeAlertBadge('fresh')}updateExportOptionsUi() }
 function updateExportOptionsUi(){
  const coverRow=$('pdfIncludeCoverRow');
  if(coverRow){
@@ -3482,7 +3571,7 @@ function wireEvents(){
  bind('createSubBtn','click',createSub);
  bind('stypeChangeBtn','click',()=>{const sel=$('stype'),txt=$('stypeText'),btn=$('stypeChangeBtn');if(!sel)return;sel.classList.remove('hidden');if(txt)txt.classList.add('hidden');if(btn)btn.classList.add('hidden');sel.focus()});
  bind('stype','change',resetStypeToDisplay);
- bind('saveSubBtn','click',()=>{const s=active();if(saveSub()&&s)logProcessEvent(`Tópico ${topicCode(s)} atualizado`);});
+ bind('saveSubBtn','click',()=>{const s=active();if(saveSub()&&s)logProcessEvent(`Núcleo ${topicCode(s)} atualizado`);});
  document.querySelectorAll('.status-filter-btn').forEach(b=>b.addEventListener('click',()=>{topicStatusFilter=b.dataset.status;renderSubs()}));
  bind('topicSearchInput','input',()=>{topicSearchQuery=$('topicSearchInput').value;renderSubs()});
  document.querySelectorAll('#topicStatusButtons .status-set-btn').forEach(b=>b.addEventListener('click',()=>{
@@ -3491,7 +3580,7 @@ function wireEvents(){
   const newSt=b.dataset.status;
   if(s.status!==newSt){
    s.status=newSt;
-   logProcessEvent(`Tópico ${topicCode(s)}: estado alterado para ${label[newSt]||newSt}`);
+   logProcessEvent(`Núcleo ${topicCode(s)}: estado alterado para ${label[newSt]||newSt}`);
    render();queue();
   }
  }));
@@ -3540,6 +3629,8 @@ function wireEvents(){
  bind('addAttendeeBtn','click',()=>{app.process.attendees.push(newAttendee());renderAttendees()});
  bind('addGroupBtn','click',()=>{const v=$('newGroupInput').value.trim();if(!v)return;app.settings.groups=app.settings.groups||[];app.settings.groups.push(v);$('newGroupInput').value='';renderGroupsUI();renderGrupoSelect(active()?active().grupo:'');saveImmediate()});
  bind('addAssetTableBtn','click',addAssetTable);
+ bind('createAtivoBtn','click',createAtivo);
+ bind('ativoSelect','change',()=>{renderAtivosList()});
  [['ffSummary','summary'],['ffUsoAtual','usoAtual'],['ffConstatacao','constatacao'],['ffCausas','causas'],['ffMedidas','medidas'],['ffGrupo','grupo'],['ffGps','gps']].forEach(([id,key])=>{
   $(id).addEventListener('change',()=>{app.settings.fichaFields=app.settings.fichaFields||{};app.settings.fichaFields[key]=$(id).checked;saveImmediate()});
  });
@@ -3552,5 +3643,5 @@ function wireEvents(){
 document.title='Ava_Load '+APP_VER;const _h1=document.querySelector('header h1');if(_h1)_h1.textContent='Ava_Load '+APP_VER;
 wireEvents();
 window.addEventListener('pagehide',()=>{try{sync();saveFallback();saveNow()}catch(e){}});window.addEventListener('beforeunload',()=>{try{sync();saveFallback();saveNow()}catch(e){}});document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')try{sync();saveFallback();saveNow()}catch(e){}});
-(async()=>{try{await openDb();await load();renderProcessList();fill();render();addAlertBadge('filename','⚠ Nome/local do ficheiro','fileNameWarning');addAlertBadge('persistence','ℹ Persistência','persistenceWarning');try{if(localStorage.getItem('LEV_Foto_Mapa_Pendente')==='1'){localStorage.removeItem('LEV_Foto_Mapa_Pendente');$('expstate').textContent='Regressou do mapa. Faça a captura e use “Importar imagem do mapa” no tópico.'}}catch(e){}$('save').textContent='Histórico carregado. Gravação imediata ativa';if(typeof updateDiagnostic==='function')updateDiagnostic();if(!code()&&app.subs.length===0){addAlertBadge('fresh','⚠ Ficheiro vazio','freshStateWarning')}}catch(e){$('save').textContent='Erro de persistência: '+e.message}})();
+(async()=>{try{await openDb();await load();renderProcessList();fill();render();addAlertBadge('filename','⚠ Nome/local do ficheiro','fileNameWarning');addAlertBadge('persistence','ℹ Persistência','persistenceWarning');try{if(localStorage.getItem('LEV_Foto_Mapa_Pendente')==='1'){localStorage.removeItem('LEV_Foto_Mapa_Pendente');$('expstate').textContent='Regressou do mapa. Faça a captura e use “Importar imagem do mapa” no núcleo.'}}catch(e){}$('save').textContent='Histórico carregado. Gravação imediata ativa';if(typeof updateDiagnostic==='function')updateDiagnostic();if(!code()&&app.subs.length===0){addAlertBadge('fresh','⚠ Ficheiro vazio','freshStateWarning')}}catch(e){$('save').textContent='Erro de persistência: '+e.message}})();
 </script></body></html>
