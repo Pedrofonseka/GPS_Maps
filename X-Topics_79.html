@@ -49,7 +49,7 @@
 
 <section id="topicos" class="hidden">
 <div class="meta" style="margin-bottom:8px;font-size:14px">Processo ativo: <b id="tabLabelTopicos">—</b></div>
-<div class="card"><h2>🏷️ 2 — Criar tópico</h2><div class="row"><div><label>Sigla do tópico</label><div class="stype-box"><span id="stypeText"></span><button type="button" id="stypeChangeBtn" class="linklike">alterar</button></div><select id="stype" class="hidden"></select></div><div><label>ID zona/local <span style="font-weight:400">(opcional)</span></label><input id="newdesignation" placeholder="Ex.: Zona A, Sala 3..."></div></div><label>Referência oficial <span style="font-weight:400">(opcional — ex.: Questão 5, Q32)</span></label><input id="newofficial" placeholder="Ex.: Q5"><button type="button" id="createSubBtn">＋ Criar tópico</button><div class="note" id="topicCreateHint"></div><div id="subs"></div></div>
+<div class="card"><h2>🏷️ 2 — Criar tópico</h2><div class="row"><div><label>Sigla do tópico</label><div class="stype-box"><span id="stypeText"></span><button type="button" id="stypeChangeBtn" class="linklike">alterar</button></div><select id="stype" class="hidden"></select></div><div><label>ID zona/local <span style="font-weight:400">(opcional)</span></label><input id="newdesignation" placeholder="Ex.: Zona A, Sala 3..."></div></div><label>Referência oficial <span style="font-weight:400">(opcional — ex.: Questão 5, Q32)</span></label><input id="newofficial" placeholder="Ex.: Q5"><button type="button" id="createSubBtn">＋ Criar tópico</button><div class="note" id="topicCreateHint"></div><input id="topicSearchInput" placeholder="🔎 Pesquisar tópicos (código, ID zona/local, referência)..." autocomplete="off" style="margin:10px 0 4px"><div id="subs"></div></div>
 
 <div class="card hidden" id="detail"><div class="meta" id="topicBreadcrumb"></div><h2 id="stitle"></h2><label>Estado do tópico</label><div class="actions three" id="topicStatusButtons"><button type="button" class="status-set-btn" data-status="aberto" style="background:#3fae67">Em aberto</button><button type="button" class="status-set-btn" data-status="resolvido" style="background:#5b9bd5">Resolvido</button><button type="button" class="status-set-btn" data-status="anulado" style="background:#a62c2c">Anulado</button></div><label>ID zona/local <span style="font-weight:400">(opcional)</span></label><input id="sdesignation" placeholder="Ex.: Zona A, Sala 3..."><label>Referência oficial <span style="font-weight:400">(opcional — ex.: Questão 5, Q32)</span></label><input id="sofficial" placeholder="Ex.: Q5"><label>Descrevendo <small id="codeSummary" class="note"></small></label><textarea id="ssummary"></textarea><label>Uso atual <small id="codeUso" class="note"></small></label><textarea id="susoatual"></textarea><label>Constatação <small id="codeConstat" class="note"></small></label><textarea id="sconstatacao"></textarea><label>Eventuais causas <small id="codeCausas" class="note"></small></label><textarea id="scausas"></textarea><label>Medidas propostas <small id="codeMedidas" class="note"></small></label><textarea id="smedidas"></textarea><label>Grupo <small id="codeGrupo" class="note"></small></label><select id="sgrupo"></select><div class="row"><div><label>Data e hora</label><input id="sdate" type="datetime-local"></div><div><label>Coordenadas GPS</label><input id="sgps" placeholder="40.386974,-8.042764 ou 40°23'13&quot;N 8°02'34&quot;W"></div></div><div class="note">Aceita graus decimais, graus/minutos ou graus/minutos/segundos, com ou sem N/S/E/W — é convertido automaticamente para decimal ao gravar.</div><div class="actions primary-one"><button type="button" id="saveSubBtn">Guardar dados</button></div><div id="sstatus" class="status"></div>
 <div class="actions primary-one"><button type="button" class="secondary wide" id="exportTopicBtn">📤 Exportar tópico e anexos</button></div><div id="topicExpState" class="status"></div>
@@ -416,6 +416,7 @@ function jumpToSection(id){
 function hideBusy(){const o=$('busyOverlay');if(o)o.classList.add('hidden')}
 async function switchProcess(id){
  if(id===pid||switchingProcess)return;
+ commitPendingDelete();
  switchingProcess=true;
  const el=$('processList');if(el)el.style.pointerEvents='none';
  $('save').textContent='A mudar de processo…';
@@ -438,6 +439,7 @@ async function switchProcess(id){
 }
 async function createNewProcess(){
  if(switchingProcess)return;
+ commitPendingDelete();
  switchingProcess=true;
  try{
   await saveImmediate();
@@ -486,8 +488,7 @@ async function renderProcessList(){
  el.querySelectorAll('.del-process').forEach(b=>b.addEventListener('click',()=>deleteProcessById(b.dataset.id)));
 }
 function migrate(){if(!app.settings.mapMethod)app.settings.mapMethod='manual';if(app.settings.googleApiKey==null)app.settings.googleApiKey='';
- if(!app.settings.mapMethodMigratedV1){app.settings.mapMethodMigratedV1=true;if((app.settings.mapMethod||'manual')==='manual'&&(app.settings.mapSource||'googlemaps')==='googlemaps'){app.settings.mapMethod='static';app.settings.mapSource='osm'}}
- if(!app.settings.mapMethodRevertV1){app.settings.mapMethodRevertV1=true;app.settings.mapMethod='manual';app.settings.mapSource='googlemaps'}if(!app.settings.maxSide||app.settings.maxSide===1024)app.settings.maxSide=1200;if(!app.settings.quality||app.settings.quality===.6)app.settings.quality=.7;
+ if(!app.settings.maxSide||app.settings.maxSide===1024)app.settings.maxSide=1200;if(!app.settings.quality||app.settings.quality===.6)app.settings.quality=.7;
  app.process=app.process||{};app.settings=app.settings||{};app.subs=Array.isArray(app.subs)?app.subs:[];
  app.process.prefix??='Ptv_';app.process.number??='';app.process.nref??='';app.process.nref=String(app.process.nref||'').slice(0,10);app.process.designacaoProcesso??='';app.process.service??='';app.process.subject??='';app.process.local??='';app.process.date??='';app.process.presences??='';app.process.gabinete??='';app.process.solicitante??='';app.process.analista??='';app.process.finalidade??='';app.process.docFornecida??='';app.process.apreciacao??='';app.process.coverPhotos=Array.isArray(app.process.coverPhotos)?app.process.coverPhotos:[];app.process.coverNoPhotos=app.process.coverNoPhotos===true;app.process.reportVersion=Number(app.process.reportVersion)||0;app.process.resumoHistory=Array.isArray(app.process.resumoHistory)?app.process.resumoHistory:[];app.process.editHistory=Array.isArray(app.process.editHistory)?app.process.editHistory:[];
  app.process.attendees=Array.isArray(app.process.attendees)?app.process.attendees:[];
@@ -685,7 +686,7 @@ ${app.process.attendees.length>1?`<div class="actions primary-one"><button type=
 function renderCoverPhotos(){
  const el=$('coverPhotos');if(!el)return;
  const list=app.process.coverPhotos||[];
- el.innerHTML=list.length?list.map((p,i)=>{const u=URL.createObjectURL(p.blob);return `<div class="cover-photo"><img src="${u}" data-url="${u}"><div class="meta">${esc(coverPhotoName(i+1))}</div><button type="button" class="danger remove-cover-photo" data-index="${i}">Eliminar</button></div>`}).join(''):'<div class="status">Sem fotos de capa.</div>';
+ el.innerHTML=list.length?list.map((p,i)=>{const u=URL.createObjectURL(p.blob);return `<div class="cover-photo"><img src="${u}" data-url="${u}" alt="${esc(coverPhotoName(i+1))}"><div class="meta">${esc(coverPhotoName(i+1))}</div><button type="button" class="danger remove-cover-photo" data-index="${i}">Eliminar</button></div>`}).join(''):'<div class="status">Sem fotos de capa.</div>';
  document.querySelectorAll('#coverPhotos img[data-url]').forEach(im=>im.addEventListener('load',()=>URL.revokeObjectURL(im.dataset.url),{once:true}));
  document.querySelectorAll('.remove-cover-photo').forEach(b=>b.addEventListener('click',()=>{app.process.coverPhotos.splice(Number(b.dataset.index),1);renderCoverPhotos();queue()}));
  const btn=$('coverPhotoBtn');if(btn)btn.disabled=list.length>=4;
@@ -833,7 +834,49 @@ function createSub(){sync();if(!code())return alert('Defina primeiro o processo 
 function active(){return app.subs.find(s=>s.id===app.active)||null}
 function dupSub(id){sync();const s=app.subs.find(x=>x.id===id);if(!s)return;const copy={id:crypto.randomUUID(),type:s.type,n:nextN(),designation:s.designation,official:'',status:'aberto',summary:s.summary||'',usoAtual:s.usoAtual||'',constatacao:s.constatacao||'',causas:s.causas||'',medidas:s.medidas||'',grupo:s.grupo||'',date:'',createdAt:new Date().toISOString(),gps:'',photos:[],kmlText:null,kmlGps:null,mapBlob:null,mapGps:null};app.subs.push(copy);logProcessEvent(`Tópico ${topicCode(copy)} duplicado (de ${topicCode(s)})`);app.active=copy.id;render();queue()}
 function selectSub(id){app.active=id;render();queue()}
-function delSub(id){if(!confirm('Eliminar este tópico e todo o conteúdo?'))return;const s=app.subs.find(x=>x.id===id);if(s)logProcessEvent(`Tópico ${topicCode(s)} eliminado`);app.subs=app.subs.filter(s=>s.id!==id);if(app.active===id)app.active=null;render();queue()}
+let pendingDeletedSub=null;
+function showUndoToast(msg,onUndo){
+ hideUndoToast();
+ const el=document.createElement('div');
+ el.id='undoToast';
+ el.style.cssText='position:fixed;left:12px;right:12px;bottom:12px;z-index:9998;background:#1f2933;color:#fff;border-radius:10px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:0 4px 14px #0004';
+ el.innerHTML=`<span style="font-size:13px">${esc(msg)}</span><button type="button" style="border:0;border-radius:7px;padding:8px 12px;background:#3fae67;color:#fff;font-weight:750;min-height:auto">Desfazer</button>`;
+ el.querySelector('button').addEventListener('click',onUndo);
+ document.body.appendChild(el);
+}
+function hideUndoToast(){const el=$('undoToast');if(el)el.remove()}
+function commitPendingDelete(){
+ if(!pendingDeletedSub)return;
+ clearTimeout(pendingDeletedSub.timer);
+ logProcessEvent(`Tópico ${topicCode(pendingDeletedSub.sub)} eliminado`);
+ pendingDeletedSub=null;
+ hideUndoToast();
+ queue();
+}
+function undoDeleteSub(){
+ if(!pendingDeletedSub)return;
+ clearTimeout(pendingDeletedSub.timer);
+ const{sub,idx}=pendingDeletedSub;
+ app.subs.splice(Math.min(idx,app.subs.length),0,sub);
+ app.active=sub.id;
+ pendingDeletedSub=null;
+ hideUndoToast();
+ render();queue();
+}
+function delSub(id){
+ const idx=app.subs.findIndex(x=>x.id===id);
+ if(idx<0)return;
+ const s=app.subs[idx];
+ const photoCount=s.photos?s.photos.length:0;
+ const detail=`${topicCode(s)}${s.designation?' — '+s.designation:''}`;
+ if(!confirm(`Eliminar o tópico ${detail}${photoCount?` e ${photoCount} fotografia(s)`:''}?\n\nVai poder desfazer durante alguns segundos a seguir à eliminação.`))return;
+ commitPendingDelete();
+ app.subs.splice(idx,1);
+ if(app.active===id)app.active=null;
+ pendingDeletedSub={sub:s,idx,timer:setTimeout(commitPendingDelete,8000)};
+ render();queue();
+ showUndoToast(`Tópico ${topicCode(s)} eliminado.`,undoDeleteSub);
+}
 function parseGpsDecimalOnly(v){const m=String(v).replace(/;/g,',').match(/-?\d+(?:[.,]\d+)?/g);if(!m||m.length<2)return null;const lat=parseFloat(m[0].replace(',','.')),lon=parseFloat(m[1].replace(',','.'));return Number.isFinite(lat)&&Number.isFinite(lon)&&lat>=-90&&lat<=90&&lon>=-180&&lon<=180?{lat,lon}:null}
 function dmsPartToDecimal(hemiPrefix,degStr,minStr,secStr,hemiSuffix){
  if(degStr===undefined)return null;
@@ -867,12 +910,15 @@ function parseGps(v){return parseGpsFlexible(v)||parseGpsDecimalOnly(v)}
 function validGps(v){return!!parseGps(v)}
 function toLocal(i){if(!i)return'';const d=new Date(i),p=n=>pad(n);return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`}
 let topicStatusFilter='';
+let topicSearchQuery='';
 function topicStatusLabel(st){return st==='resolvido'?'Resolvido':st==='anulado'?'Anulado':'Em aberto'}
 function topicStatusColors(st){return st==='resolvido'?'background:#dceafd;color:#1a4d84':st==='anulado'?'background:#f5dcdc;color:#8a1a1a':'background:#dcf5df;color:#1a7431'}
 function renderSubs(){
  const subsEl=$('subs');
- const list=topicStatusFilter?app.subs.filter(s=>(s.status||'aberto')===topicStatusFilter):app.subs;
- subsEl.innerHTML=list.length?list.map(s=>{const started=topicIsStarted(s);const st=s.status||'aberto';return `<div class="item ${s.id===app.active?'active':''}" data-id="${s.id}"><span class="meta">Processo ${esc(code()||'—')} / Tópico</span><b>🏷️ ${esc(topicCode(s))} — ${esc(s.designation||'Sem ID definido')}</b> <span class="status-badge" style="display:inline-block;padding:1px 7px;border-radius:9px;font-size:11px;font-weight:600;${topicStatusColors(st)}">${topicStatusLabel(st)}</span> <span class="status-badge" style="display:inline-block;padding:1px 7px;border-radius:9px;font-size:11px;font-weight:600;${started?'background:#dcf5df;color:#1a7431':'background:#f2e9d0;color:#8a6a13'}">${started?'● Iniciado':'○ Não iniciado'}</span><span class="meta">${s.photos.length} foto(s) · ${s.kmlText?'KML':'sem KML'} · ${s.mapBlob?'Mapa':'sem mapa'}</span><div class="item-actions"><button type="button" class="secondary dup-sub" data-id="${s.id}">Duplicar</button><button type="button" class="danger del-sub" data-id="${s.id}">Eliminar</button></div></div>`}).join(''):`<div class="status">${topicStatusFilter?'Sem tópicos neste estado.':'Sem tópicos.'}</div>`;
+ let list=topicStatusFilter?app.subs.filter(s=>(s.status||'aberto')===topicStatusFilter):app.subs;
+ const q=topicSearchQuery.trim().toLowerCase();
+ if(q)list=list.filter(s=>`${topicCode(s)} ${s.designation||''} ${s.official||''}`.toLowerCase().includes(q));
+ subsEl.innerHTML=list.length?list.map(s=>{const started=topicIsStarted(s);const st=s.status||'aberto';return `<div class="item ${s.id===app.active?'active':''}" data-id="${s.id}"><span class="meta">Processo ${esc(code()||'—')} / Tópico</span><b>🏷️ ${esc(topicCode(s))} — ${esc(s.designation||'Sem ID definido')}</b> <span class="status-badge" style="display:inline-block;padding:1px 7px;border-radius:9px;font-size:11px;font-weight:600;${topicStatusColors(st)}">${topicStatusLabel(st)}</span> <span class="status-badge" style="display:inline-block;padding:1px 7px;border-radius:9px;font-size:11px;font-weight:600;${started?'background:#dcf5df;color:#1a7431':'background:#f2e9d0;color:#8a6a13'}">${started?'● Iniciado':'○ Não iniciado'}</span><span class="meta">${s.photos.length} foto(s) · ${s.kmlText?'KML':'sem KML'} · ${s.mapBlob?'Mapa':'sem mapa'}</span><div class="item-actions"><button type="button" class="secondary dup-sub" data-id="${s.id}">Duplicar</button><button type="button" class="danger del-sub" data-id="${s.id}">Eliminar</button></div></div>`}).join(''):`<div class="status">${q?'Sem tópicos correspondentes à pesquisa.':topicStatusFilter?'Sem tópicos neste estado.':'Sem tópicos.'}</div>`;
  subsEl.querySelectorAll('.item[data-id]').forEach(el=>el.addEventListener('click',e=>{if(!e.target.classList.contains('del-sub')&&!e.target.classList.contains('dup-sub'))selectSub(el.dataset.id)}));
  subsEl.querySelectorAll('.del-sub').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();delSub(b.dataset.id)}));
  subsEl.querySelectorAll('.dup-sub').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();dupSub(b.dataset.id)}));
@@ -965,7 +1011,7 @@ async function generateKmlAndMap(){
 }
 function photoName(s,i){return `${code()}_${pad(s.n)}_${app.settings.img}_${pad(i)}.jpg`}
 function photoRefLabel(s,i){return app.settings.resumoCaptionsShowCode===true?photoName(s,i):`${topicCode(s)}_${app.settings.img}_${pad(i)}`}
-function renderPhotos(){const s=active();$('photos').innerHTML=s&&s.photos.length?s.photos.map((p,i)=>{const u=URL.createObjectURL(p.blob);const n=s.photos.length;return `<div class="photo"><img src="${u}" data-url="${u}"><div class="meta"><b>${photoName(s,i+1)}</b><div class="photo-row"><span>${new Date(p.date).toLocaleString('pt-PT')}<br>${Math.round(p.blob.size/1024)} KB</span><button type="button" class="secondary move-photo-up" data-index="${i}" ${i===0?'disabled':''} title="Mover para trás">▲</button><button type="button" class="secondary move-photo-down" data-index="${i}" ${i===n-1?'disabled':''} title="Mover para a frente">▼</button><button type="button" class="danger remove-photo" data-index="${i}">Eliminar</button></div><label>Legenda opcional</label><input class="caption" data-index="${i}" value="${esc(p.caption||'')}"></div></div>`}).join(''):'<div class="status">Sem fotografias.</div>';document.querySelectorAll('#photos img[data-url]').forEach(im=>im.addEventListener('load',()=>URL.revokeObjectURL(im.dataset.url),{once:true}));document.querySelectorAll('.caption').forEach(inp=>inp.addEventListener('input',()=>{active().photos[Number(inp.dataset.index)].caption=inp.value;queue()}));document.querySelectorAll('.remove-photo').forEach(b=>b.addEventListener('click',()=>{const s=active();logProcessEvent(`Fotografia removida do tópico ${topicCode(s)}`);s.photos.splice(Number(b.dataset.index),1);render();queue()}));document.querySelectorAll('.move-photo-up').forEach(b=>b.addEventListener('click',()=>{const i=Number(b.dataset.index),arr=active().photos;if(i>0){[arr[i-1],arr[i]]=[arr[i],arr[i-1]];render();queue()}}));document.querySelectorAll('.move-photo-down').forEach(b=>b.addEventListener('click',()=>{const i=Number(b.dataset.index),arr=active().photos;if(i<arr.length-1){[arr[i+1],arr[i]]=[arr[i],arr[i+1]];render();queue()}}))}
+function renderPhotos(){const s=active();$('photos').innerHTML=s&&s.photos.length?s.photos.map((p,i)=>{const u=URL.createObjectURL(p.blob);const n=s.photos.length;return `<div class="photo"><img src="${u}" data-url="${u}" alt="${esc(photoName(s,i+1))}"><div class="meta"><b>${photoName(s,i+1)}</b><div class="photo-row"><span>${new Date(p.date).toLocaleString('pt-PT')}<br>${Math.round(p.blob.size/1024)} KB</span><button type="button" class="secondary move-photo-up" data-index="${i}" ${i===0?'disabled':''} title="Mover para trás" aria-label="Mover fotografia para trás">▲</button><button type="button" class="secondary move-photo-down" data-index="${i}" ${i===n-1?'disabled':''} title="Mover para a frente" aria-label="Mover fotografia para a frente">▼</button><button type="button" class="danger remove-photo" data-index="${i}">Eliminar</button></div><label>Legenda opcional</label><input class="caption" data-index="${i}" value="${esc(p.caption||'')}"></div></div>`}).join(''):'<div class="status">Sem fotografias.</div>';document.querySelectorAll('#photos img[data-url]').forEach(im=>im.addEventListener('load',()=>URL.revokeObjectURL(im.dataset.url),{once:true}));document.querySelectorAll('.caption').forEach(inp=>inp.addEventListener('input',()=>{active().photos[Number(inp.dataset.index)].caption=inp.value;queue()}));document.querySelectorAll('.remove-photo').forEach(b=>b.addEventListener('click',()=>{const s=active();logProcessEvent(`Fotografia removida do tópico ${topicCode(s)}`);s.photos.splice(Number(b.dataset.index),1);render();queue()}));document.querySelectorAll('.move-photo-up').forEach(b=>b.addEventListener('click',()=>{const i=Number(b.dataset.index),arr=active().photos;if(i>0){[arr[i-1],arr[i]]=[arr[i],arr[i-1]];render();queue()}}));document.querySelectorAll('.move-photo-down').forEach(b=>b.addEventListener('click',()=>{const i=Number(b.dataset.index),arr=active().photos;if(i<arr.length-1){[arr[i+1],arr[i]]=[arr[i],arr[i+1]];render();queue()}}))}
 async function fileToStableBlob(f){try{const buf=await f.arrayBuffer();return new Blob([buf],{type:f.type||'image/jpeg'})}catch(e){return f}}
 async function extractExifGps(file){
  try{
@@ -1384,6 +1430,11 @@ async function blobToDrawable(blob){
  const img=await blobToImage(blob);
  return {source:img,w:img.naturalWidth||img.width,h:img.naturalHeight||img.height,close:()=>{}};
 }
+function docImgOpts(defaultMaxSide,defaultQuality){
+ const ms=app.settings.maxSide>0?Math.min(defaultMaxSide,app.settings.maxSide):defaultMaxSide;
+ const q=typeof app.settings.quality==='number'?app.settings.quality:defaultQuality;
+ return [ms,q];
+}
 async function pdfImageAsset(blob,maxSide,quality=.65){
  let drawable;
  try{
@@ -1507,7 +1558,7 @@ async function renderCoverPageIntoDoc(doc,mL,mT,mR,pageW,F,BS,gabinete,servico){
   let col=0,rowH=0;
   for(let i=0;i<photos.length;i++){
    try{
-    const asset=await pdfImageAsset(photos[i].blob,700,.6);
+    const asset=await pdfImageAsset(photos[i].blob,...docImgOpts(700,.6));
     let w=colW,h=w*asset.height/asset.width;
     if(h>85){h=85;w=h*asset.width/asset.height}
     const cellX=mL+col*(colW+gap),imgX=cellX+(colW-w)/2;
@@ -1759,7 +1810,7 @@ async function buildProcessPdfBlob(topics,includePhotos,pdfCols,withCover=false,
      $('expstate').textContent=`A gerar PDF… fotografia ${donePhotos}/${totalPhotos}`;
      await new Promise(r=>setTimeout(r,0));
      try{
-      const asset=await pdfImageAsset(p.blob,540,.5);
+      const asset=await pdfImageAsset(p.blob,...docImgOpts(540,.5));
       let w=useColW,h=w*asset.height/asset.width;
       if(h>maxH){h=maxH;w=h*asset.width/asset.height}
       cellData.push({k,i,p,asset,w,h});
@@ -2001,7 +2052,7 @@ async function rotateBlob90(blob){
   canvas.toBlob(result=>result?resolve(result):reject(new Error('Falha ao rodar a fotografia.')),'image/jpeg',0.92);
  });
 }
-function showPhotoIssueModal(topicLabel,photoBlob,photoLabel){
+function showPhotoIssueModal(topicLabel,photoBlob,photoLabel,remaining){
  return new Promise(resolve=>{
   const url=URL.createObjectURL(photoBlob);
   const overlay=document.createElement('div');
@@ -2012,12 +2063,14 @@ function showPhotoIssueModal(topicLabel,photoBlob,photoLabel){
    <img src="${url}" style="width:100%;border-radius:9px;margin-bottom:12px;max-height:320px;object-fit:contain;background:#f5f7f9;display:block">
    <div style="display:grid;gap:8px">
     <button type="button" id="paRotate" style="border:0;border-radius:9px;padding:12px;background:#1f7a4d;color:#fff;font-weight:750;font-size:15px">🔄 Rodar 90°</button>
+    ${remaining>1?`<button type="button" id="paRotateAll" style="border:0;border-radius:9px;padding:12px;background:#1f7a4d;color:#fff;font-weight:750;font-size:13px">🔄 Rodar esta e as restantes ${remaining-1} automaticamente</button>`:''}
     <button type="button" id="paKeep" style="border:0;border-radius:9px;padding:12px;background:#64727d;color:#fff;font-weight:750;font-size:15px">✅ Manter assim</button>
     <button type="button" id="paDelete" style="border:0;border-radius:9px;padding:12px;background:#a62c2c;color:#fff;font-weight:750;font-size:15px">🗑 Eliminar foto</button>
    </div></div>`;
   document.body.appendChild(overlay);
   const cleanup=action=>{URL.revokeObjectURL(url);overlay.remove();resolve(action)};
   overlay.querySelector('#paRotate').addEventListener('click',()=>cleanup('rotate'));
+  const allBtn=overlay.querySelector('#paRotateAll');if(allBtn)allBtn.addEventListener('click',()=>cleanup('rotateAll'));
   overlay.querySelector('#paKeep').addEventListener('click',()=>cleanup('keep'));
   overlay.querySelector('#paDelete').addEventListener('click',()=>cleanup('delete'));
  });
@@ -2039,13 +2092,16 @@ async function checkPhotoAspectWarnings(includePhotos){
  return warnings;
 }
 async function resolvePhotoAspectIssues(warnings){
- for(const w of warnings){
+ let rotateRest=false;
+ for(let idx=0;idx<warnings.length;idx++){
+  const w=warnings[idx];
   try{
    const s=app.subs.find(x=>x.id===w.sId);
    if(!s||!s.photos[w.idx])continue;
    const label=photoName(s,w.idx+1);
-   const action=await showPhotoIssueModal(w.topicLabel,s.photos[w.idx].blob,label);
-   if(action==='rotate'){
+   const action=rotateRest?'rotate':await showPhotoIssueModal(w.topicLabel,s.photos[w.idx].blob,label,warnings.length-idx);
+   if(action==='rotateAll')rotateRest=true;
+   if(action==='rotate'||action==='rotateAll'){
     try{
      s.photos[w.idx].blob=await rotateBlob90(s.photos[w.idx].blob);
     }catch(e){console.error('Erro ao rodar fotografia',e);alert('Não foi possível rodar a fotografia: '+(e&&e.message?e.message:e))}
@@ -2076,6 +2132,9 @@ async function viewProcessHistory(){
  }
 }
 async function generateProcessPdf(){
+ if(window._pdfGenBusy)return;
+ window._pdfGenBusy=true;
+ try{
  sync();
  if(!code())return alert('Defina primeiro o processo.');
  if(!app.subs.length)return alert('Sem tópicos para incluir no PDF.');
@@ -2123,10 +2182,16 @@ async function generateProcessPdf(){
  $('expstate').scrollIntoView({behavior:'smooth',block:'center'});
  await new Promise(r=>setTimeout(r,0));
  try{
-  app.process.reportVersion=(Number(app.process.reportVersion)||0)+1;
+  const prevReportVersion=Number(app.process.reportVersion)||0;
+  app.process.reportVersion=prevReportVersion+1;
   await saveImmediate();
   const result=await buildProcessPdfBlob(app.subs,includePhotos,pdfCols,withCoverResumo,withChronologyResumo,gabinete);
-  if(result.cancelled){$('expstate').textContent='Geração de PDF cancelada.';return}
+  if(result.cancelled){
+   app.process.reportVersion=prevReportVersion;
+   await saveImmediate();
+   $('expstate').textContent='Geração de PDF cancelada.';
+   return;
+  }
   const{blob,skipped,firstError,totalPhotos}=result;
   if(window._pdfPreviewUrl)URL.revokeObjectURL(window._pdfPreviewUrl);
   window._pendingPdfBlob=blob;
@@ -2153,6 +2218,9 @@ async function generateProcessPdf(){
   cancelBtn.classList.add('hidden');
   window._pdfCancel=false;
   _coverPhotosOverride=null;
+ }
+ }finally{
+  window._pdfGenBusy=false;
  }
 }
 function xmlesc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;')}
@@ -2276,7 +2344,7 @@ async function buildCoverDocx(gabinete=''){
   const cells=[];
   for(let i=0;i<photos.length;i++){
    try{
-    const img=await addImg(photos[i].blob,700,.6);
+    const img=await addImg(photos[i].blob,...docImgOpts(700,.6));
     cells.push(docxImageParagraph(img.rId,++docPrId,img.width,img.height,Math.max(1,colCmW-0.2),8.5));
    }catch(e){
     cells.push(docxPara(docxRun('⚠ Erro ao incluir esta fotografia.',{font:F,size:szTiny,color:'a02020'}),{after:60}));
@@ -2456,7 +2524,7 @@ async function buildProcessDocx(topics,includePhotos,pdfCols,withCover=false,wit
    const ccells=[];
    for(let i=0;i<cphotos.length;i++){
     try{
-     const img=await addImage(cphotos[i].blob,700,.6);
+     const img=await addImage(cphotos[i].blob,...docImgOpts(700,.6));
      ccells.push(docxImageParagraph(img.rId,++docPrId,img.width,img.height,Math.max(1,ccolCmW-0.2),8.5));
     }catch(e){
      ccells.push(docxPara(docxRun('⚠ Erro ao incluir esta fotografia.',{font:F,size:szTiny,color:'a02020'}),{after:60}));
@@ -2586,7 +2654,7 @@ async function buildProcessDocx(topics,includePhotos,pdfCols,withCover=false,wit
     for(const i of prow.items){
      const p=s.photos[i];
      try{
-      const img=await addImage(p.blob,540,.5);
+      const img=await addImage(p.blob,...docImgOpts(540,.5));
       rowCells.push(docxImageParagraph(img.rId,++docPrId,img.width,img.height,Math.max(1,useColCmW-0.2),maxCmH)+docxPara(docxRun(photoName(s,i+1)+(p.caption?' — '+p.caption:''),{font:F,size:szTiny}),{after:60}));
      }catch(e){
       rowCells.push(docxPara(docxRun('⚠ Erro ao incluir esta fotografia.',{font:F,size:szTiny,color:'a02020'}),{after:60}));
@@ -2650,15 +2718,18 @@ async function confirmDocxExport(){
  }
  const dbtn=$('docxConfirmBtn'),original=dbtn.textContent;
  dbtn.disabled=true;dbtn.textContent='📝 A preparar Word…';
+ showBusy('A gerar documento Word…');
  try{
   window._pendingDocxBlob=await buildProcessDocx(app.subs,!!window._lastIncludePhotos,window._lastPdfCols||3,!!window._lastWithCoverResumo,!!window._lastWithChronologyResumo,window._lastGabinete||'');
  }catch(docxErr){
   console.error('Erro ao gerar o Word',docxErr);
   dbtn.disabled=false;dbtn.textContent=original;
+  hideBusy();
   alert('Não foi possível gerar o Word: '+(docxErr&&docxErr.message?docxErr.message:docxErr));
   return;
  }
  dbtn.disabled=false;dbtn.textContent=original;
+ hideBusy();
  await share(window._pendingDocxBlob,`${code()}_Resumo${reportVersionSuffix()}.docx`,'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
  $('expstate').textContent='Word exportado.';
  window._resumoDocxExported=true;
@@ -2711,6 +2782,9 @@ function openPdfInTab(){
  window.open(window._pdfPreviewUrl,'_blank');
 }
 async function exportTopic(id){
+ if(window._exportTopicBusy)return;
+ window._exportTopicBusy=true;
+ try{
  sync();
  if(!code())return alert('Defina o processo.');
  if(!(await verifyTopicPrefixes()))return;
@@ -2727,14 +2801,16 @@ async function exportTopic(id){
  }
  const btn=$('exportTopicBtn'),original=btn.textContent;
  const gabinete=pickGabinete(s);
+ const setProgress=(t)=>{btn.textContent=t;showBusy(t)};
  btn.disabled=true;
+ setProgress('A preparar exportação do tópico…');
  try{
   const z=new JSZip(),root=z.folder(code()),sub=root.folder(`${topicCode(s)}`),imf=sub.folder('IMG'),r=[];
   r.push(`Processo: ${code()}`,`Tópico: ${topicCode(s)}`,`Resolução: ${app.settings.maxSide||'Original'}`,`Qualidade: ${Math.round(app.settings.quality*100)}%`,'');
   let seq=0;
   for(let i=0;i<s.photos.length;i++){
    const p=s.photos[i];
-   btn.textContent=`A preparar foto ${i+1}/${s.photos.length}…`;
+   setProgress(`A preparar foto ${i+1}/${s.photos.length}…`);
    try{
     if(!p.blob||!p.blob.size)throw new Error('sem dados');
     const o=await dims(p.blob),b=await compress(p.blob,app.settings.maxSide,app.settings.quality),d=await dims(b);
@@ -2748,7 +2824,7 @@ async function exportTopic(id){
   sub.file(`${code()}_${pad(s.n)}_Compressao.txt`,r.join('\n'));
   if(s.kmlText)sub.file(`${code()}_${pad(s.n)}_${app.settings.gps}_01.kml`,s.kmlText);
   if(s.mapBlob)sub.file(`${code()}_${pad(s.n)}_${app.settings.lcz}_01.jpg`,s.mapBlob);
-  btn.textContent='A gerar ficha do tópico…';
+  setProgress('A gerar ficha do tópico…');
   const includePhotosFicha=!!($('pdfIncludePhotos')?$('pdfIncludePhotos').checked:true);
   const pdfColsFicha=[1,2,3,4,5].includes(app.settings.pdfPhotoCols)?app.settings.pdfPhotoCols:3;
   try{
@@ -2759,12 +2835,12 @@ async function exportTopic(id){
    const fichaDocx=await buildProcessDocx([s],includePhotosFicha,pdfColsFicha,false,false,gabinete);
    sub.file(`${code()}_${pad(s.n)}_${app.settings.fix}_01${reportVersionSuffix()}.docx`,fichaDocx);
   }catch(e){console.error('Erro ao gerar a ficha Word do tópico',e)}
-  btn.textContent='A gerar ficha Excel do tópico…';
+  setProgress('A gerar ficha Excel do tópico…');
   try{
    const fichaXlsx=await buildXlsx([s]);
    sub.file(`${code()}_${pad(s.n)}_${app.settings.fix}_01${reportVersionSuffix()}.xlsx`,fichaXlsx);
   }catch(e){console.error('Erro ao gerar a ficha Excel do tópico',e)}
-  btn.textContent='A gerar ZIP…';
+  setProgress('A gerar ZIP…');
   const b=await z.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
   offerDownload(b,`${code()}_${topicCode(s)}_X-Topics.zip`,'application/zip',()=>{$('topicExpState').textContent='Tópico exportado com sucesso.'},'topicExpState');
  }catch(e){
@@ -2773,9 +2849,17 @@ async function exportTopic(id){
  }finally{
   btn.disabled=false;
   btn.textContent=original;
+  hideBusy();
+ }
+ }finally{
+  window._exportTopicBusy=false;
  }
 }
 async function exportProcess(force=false,skipCoverResumo=false){
+ if(window._exportProcessBusy)return;
+ window._exportProcessBusy=true;
+ const zipBtn=$('zipExportBtn');if(zipBtn)zipBtn.disabled=true;
+ try{
  sync();
  if(!code())return alert('Defina o processo.');
  if(!app.subs.length)return alert('Sem tópicos.');
@@ -2811,12 +2895,13 @@ async function exportProcess(force=false,skipCoverResumo=false){
  if(!skipCoverResumo&&coverNeeded()&&!(await resolveCoverPhotosForGeneration()))return;
  const withChronologyResumo=skipCoverResumo?(window._lastWithChronologyResumo!==false):confirm(dlgTitle()+'Deseja agregar a Cronologia do processo no Resumo (PDF e Word)?');
  const gabinete=pickGabinete();
- $('expstate').textContent='A preparar a exportação…';
+ const setExpState=(t)=>{$('expstate').textContent=t;showBusy(t)};
+ setExpState('A preparar a exportação…');
  try{
   const z=new JSZip(),root=z.folder(code());
   for(let si=0;si<app.subs.length;si++){
    const s=app.subs[si];
-   $('expstate').textContent=`A preparar ${topicCode(s)} (${si+1}/${app.subs.length})…`;
+   setExpState(`A preparar ${topicCode(s)} (${si+1}/${app.subs.length})…`);
    const sub=bySubfolder?root.folder(`${topicCode(s)}`):root,imf=bySubfolder?sub.folder('IMG'):root,r=[];
    r.push(`Processo: ${code()}`,`Tópico: ${topicCode(s)}`,`Resolução: ${app.settings.maxSide||'Original'}`,`Qualidade: ${Math.round(app.settings.quality*100)}%`,'');
    let seq=0;
@@ -2835,7 +2920,7 @@ async function exportProcess(force=false,skipCoverResumo=false){
    sub.file(`${code()}_${pad(s.n)}_Compressao.txt`,r.join('\n'));
    if(s.kmlText)sub.file(`${code()}_${pad(s.n)}_${app.settings.gps}_01.kml`,s.kmlText);
    if(s.mapBlob)sub.file(`${code()}_${pad(s.n)}_${app.settings.lcz}_01.jpg`,s.mapBlob);
-   $('expstate').textContent=`A gerar ficha de ${topicCode(s)} (${si+1}/${app.subs.length})…`;
+   setExpState(`A gerar ficha de ${topicCode(s)} (${si+1}/${app.subs.length})…`);
    const includePhotosFicha=!!($('pdfIncludePhotos')?$('pdfIncludePhotos').checked:true);
    const pdfColsFicha=[1,2,3,4,5].includes(app.settings.pdfPhotoCols)?app.settings.pdfPhotoCols:3;
    try{
@@ -2851,7 +2936,7 @@ async function exportProcess(force=false,skipCoverResumo=false){
     sub.file(`${code()}_${pad(s.n)}_${app.settings.fix}_01${reportVersionSuffix()}.xlsx`,fichaXlsx);
    }catch(e){console.error('Erro ao gerar a ficha Excel do tópico',s.type,s.n,e)}
   }
-  $('expstate').textContent='A preparar a Capa do processo…';
+  setExpState('A preparar a Capa do processo…');
   const capaFolder=bySubfolder?root.folder('Capa'):root,capaSig=app.settings.capa||'CAPA';
   if(coverNeeded()){
   try{
@@ -2870,7 +2955,7 @@ async function exportProcess(force=false,skipCoverResumo=false){
    }catch(e){console.error('Erro ao incluir foto de capa',e)}
   }
   }
-  $('expstate').textContent='A preparar o Resumo do processo (PDF, Word e cronologia)…';
+  setExpState('A preparar o Resumo do processo (PDF, Word e cronologia)…');
   const resumoFolder=bySubfolder?root.folder('Resumo'):root;
   const includePhotosResumo=!!($('pdfIncludePhotos')?$('pdfIncludePhotos').checked:true);
   const pdfColsResumo=[1,2,3,4,5].includes(app.settings.pdfPhotoCols)?app.settings.pdfPhotoCols:3;
@@ -2909,11 +2994,11 @@ async function exportProcess(force=false,skipCoverResumo=false){
    const historicoDocx=await buildProcessEditHistoryDocx(gabinete);
    resumoFolder.file(`${code()}_Historico${reportVersionSuffix()}.docx`,historicoDocx);
   }catch(e){console.error('Erro ao gerar o Histórico em Word',e)}
-  $('expstate').textContent='Fotografias concluídas. A criar o resumo Excel…';
+  setExpState('Fotografias concluídas. A criar o resumo Excel…');
   const xlsx=await buildXlsx();
   const xlsxFolder=bySubfolder?root.folder('Resumo'):root;
   xlsxFolder.file(`${code()}_Resumo${reportVersionSuffix()}.xlsx`,xlsx);
-  const b=await z.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}},m=>$('expstate').textContent=`A gerar ZIP: ${Math.round(m.percent)}%`);
+  const b=await z.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}},m=>setExpState(`A gerar ZIP: ${Math.round(m.percent)}%`));
   offerDownload(b,`${code()}_X-Topics.zip`,'application/zip',()=>{
    const d=daysSince(app.settings.lastBackupAt);
    $('expstate').textContent=(d===null||d>7)?'Exportação concluída. Lembrete: convém também "Guardar cópia" em Configurações.':'Exportação concluída.';
@@ -2924,6 +3009,11 @@ async function exportProcess(force=false,skipCoverResumo=false){
   alert('Não foi possível exportar: '+(e&&e.message?e.message:e));
  }finally{
   _coverPhotosOverride=null;
+  hideBusy();
+ }
+ }finally{
+  window._exportProcessBusy=false;
+  if(zipBtn)zipBtn.disabled=false;
  }
 }
 async function exportBackup(){
@@ -3237,6 +3327,7 @@ function wireEvents(){
  bind('stype','change',resetStypeToDisplay);
  bind('saveSubBtn','click',()=>{const s=active();if(saveSub()&&s)logProcessEvent(`Tópico ${topicCode(s)} atualizado`);});
  document.querySelectorAll('.status-filter-btn').forEach(b=>b.addEventListener('click',()=>{topicStatusFilter=b.dataset.status;renderSubs()}));
+ bind('topicSearchInput','input',()=>{topicSearchQuery=$('topicSearchInput').value;renderSubs()});
  document.querySelectorAll('#topicStatusButtons .status-set-btn').forEach(b=>b.addEventListener('click',()=>{
   const s=active();if(!s)return;
   const label={aberto:'Em aberto',resolvido:'Resolvido',anulado:'Anulado'};
