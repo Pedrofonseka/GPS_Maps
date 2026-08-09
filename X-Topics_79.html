@@ -297,7 +297,8 @@ async function upsertIndex(entry){const idx=await getIndex();const i=idx.findInd
 async function removeFromIndex(id){const idx=(await getIndex()).filter(e=>e.id!==id);await idbPut(INDEX_KEY,idx);saveIndexFallback(idx);return idx}
 const app={schema:3,process:{prefix:'Ptv_',number:'',nref:'',service:'',subject:'',local:'',date:'',presences:'',description:'',finalidade:'',docFornecida:'',apreciacao:'',attendees:[],gabinete:'',resumoHistory:[],editHistory:[]},settings:{maxSide:1200,quality:.7,img:'IMG',lcz:'LCZ',gps:'GPS',mapMethod:'manual',googleApiKey:'',mapSource:'googlemaps',mapType:'satellite',mapWidthM:500,mapHeightM:500,pdfPhotoCols:3,mapInPhotoGrid:true,lastBackupAt:null,groups:['Estrutural','Fissuras','Desgaste','Humidade/Infiltração'],fichaFields:{summary:true,usoAtual:false,constatacao:false,causas:false,medidas:false,grupo:false,gps:false},resumoApreciacao:true,resumoDescSucinta:true,resumoTopicFields:{summary:true,usoAtual:false,constatacao:false,causas:false,medidas:false,grupo:false,gps:false},cronologiaHistorico:true,...PDF_LAYOUT_DEFAULTS},subs:[],active:null};
 const pad=(n,d=3)=>String(n).padStart(d,'0'),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),xmlEsc=esc;
-const code=()=>(app.process.nref&&app.process.nref.trim())?app.process.nref.trim():'';
+function sanitizePathSegment(v){return String(v||'').replace(/[\\/:*?"<>|]/g,'').replace(/\.{2,}/g,'.').trim();}
+const code=()=>sanitizePathSegment((app.process.nref&&app.process.nref.trim())?app.process.nref.trim():'');
 async function checkNrefDuplicate(){
  sync();
  const w=$('nrefWarning');if(!w)return;
@@ -632,7 +633,7 @@ function topicFichaFields(s){
  }));
 }
 function topicCode(s){
- const off=s.official&&s.official.trim()?('-'+s.official.trim().replace(/\s+/g,'')):'';
+ const off=s.official&&s.official.trim()?('-'+sanitizePathSegment(s.official.trim().replace(/\s+/g,''))):'';
  return `${s.type}_${pad(s.n)}${off}`;
 }
 function dlgTitle(topic){
