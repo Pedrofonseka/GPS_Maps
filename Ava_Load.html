@@ -477,12 +477,12 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 <div class="actions primary-one"><button type="button" id="createAtivoBtn">➕ Criar Ativo</button></div>
 <div id="ativosList"></div>
 </div>
-<div class="card"><h2>🏷️ 2 – Núcleo Funcional do ativo</h2><div class="row"><div><div class="field-label-row"><label>Tipo de núcleo</label><button type="button" class="table-edit-link" data-config-target="assetTablesList">editar tabela</button></div><div class="stype-box"><span id="stypeText"></span><button type="button" id="stypeChangeBtn" class="linklike">alterar</button></div><select id="stype" class="hidden"></select></div><div><label>Designação <span style="font-weight:400">(opcional)</span></label><input id="newdesignation" placeholder="Ex.: Casa, Anexo, Terreno..."></div></div><div class="field-label-row"><label>Grupo_ativo <span style="font-weight:400">(classificação automática)</span></label><button type="button" class="table-edit-link" data-config-target="assetTablesList">editar emparelhamento</button></div><div class="stype-box"><span id="newGrupoAtivoText">—</span></div><input id="newGrupoAtivo" type="hidden"><button type="button" id="createSubBtn">＋ Criar Núcleo do Ativo</button><div class="note" id="topicCreateHint"></div><input id="topicSearchInput" placeholder="🔎 Pesquisar núcleos (código ou designação)..." autocomplete="off" style="margin:10px 0 4px"><div id="subs"></div></div>
+<div class="card"><h2>🏷️ 2 – Núcleo Funcional do ativo</h2><div class="row"><div><div class="field-label-row"><label>Tipo de núcleo</label><button type="button" class="table-edit-link" data-config-target="assetTablesList">editar tabela</button></div><select id="stype"></select><span id="stypeText" class="hidden"></span></div><div><label>Designação <span style="font-weight:400">(opcional)</span></label><input id="newdesignation" placeholder="Ex.: Casa, Anexo, Terreno..."></div></div><div class="field-label-row"><label>Grupo_ativo <span style="font-weight:400">(classificação automática)</span></label><button type="button" class="table-edit-link" data-config-target="assetTablesList">editar emparelhamento</button></div><div class="stype-box"><span id="newGrupoAtivoText">—</span></div><input id="newGrupoAtivo" type="hidden"><button type="button" id="createSubBtn">＋ Criar Núcleo do Ativo</button><div class="note" id="topicCreateHint"></div><input id="topicSearchInput" placeholder="🔎 Pesquisar núcleos (código ou designação)..." autocomplete="off" style="margin:10px 0 4px"><div id="subs"></div></div>
 
 <div class="card hidden" id="detail"><div class="meta" id="topicBreadcrumb"></div><h2 id="stitle"></h2><label class="topic-status-label">Estado do núcleo</label><div class="actions three" id="topicStatusButtons"><button type="button" class="status-set-btn" data-status="aberto" style="background:#3f7fae">Em aberto</button><button type="button" class="status-set-btn" data-status="resolvido" style="background:#8f5cbf">Resolvido</button><button type="button" class="status-set-btn" data-status="anulado" style="background:#a62c2c">Anulado</button></div>
 <div class="config-doc-title">Características gerais</div>
 <label>ID_NUF</label><input id="sIdNuf" placeholder="Ex.: ATV_001_01" autocapitalize="characters">
-<div class="field-label-row"><label>Grupo_ativo</label><button type="button" class="table-edit-link" data-config-target="characteristicMatrix">editar matriz</button></div><select id="sgrupo"></select>
+<div class="field-label-row"><label>Grupo_ativo <span style="font-weight:400">(derivado do Tipo)</span></label><button type="button" class="table-edit-link" data-config-target="characteristicMatrix">editar matriz</button></div><input id="sgrupo" disabled>
 <label>Designação <span style="font-weight:400">(opcional)</span></label><input id="sdesignation" placeholder="Ex.: Zona A, Sala 3...">
 <label>Descrição sumária <small id="codeSummary" class="note"></small></label><textarea id="ssummary"></textarea>
 <div class="config-doc-title">Variáveis de localização</div>
@@ -973,9 +973,10 @@ function migrate(){if(!app.settings.mapMethod)app.settings.mapMethod='manual';if
  if(app.subs.length&&!app.ativos.length)app.ativos.push({id:crypto.randomUUID(),code:'',designation:'Ativo 1',official:'',createdAt:new Date().toISOString()});
  if(app.ativos.length)app.subs.forEach(s=>{if(!app.ativos.some(a=>a.id===s.ativoId))s.ativoId=app.ativos[0].id});
  normalizeAtivoCodes();app.ativos.forEach(a=>{a.idAtivo=a.idAtivo||a.code;a.official=a.official||''});app.subs.forEach(s=>{if(!s.idNuf)s.idNuf=topicCode(s)});
- app.settings.characteristicTables=app.settings.characteristicTables.filter(t=>t.code!=='TAB_USO_ATUAL');
  for(const t of app.settings.characteristicTables){if(t.code==='TAB_USO_POTENCIAL'){t.code='TAB_USO_ALTERNATIVO';t.name='Uso potencial';t.type='opcoes';t.choices=['Manter o uso atual','Manter temporariamente o uso atual','Uso alternativo']}if(t.code==='TAB_IDADE_APARENTE'){t.code='TAB_VIDA_UTIL';t.name='Vida_Util';t.type='numero'}}
  if(!app.settings.characteristicTables.some(t=>t.code==='TAB_USO_ALTERNATIVO'))app.settings.characteristicTables.push(defaultCharacteristicTables().find(t=>t.code==='TAB_USO_ALTERNATIVO'));
+ if(!app.settings.characteristicTables.some(t=>t.code==='TAB_USO_ATUAL_EDC'))app.settings.characteristicTables.push(defaultCharacteristicTables().find(t=>t.code==='TAB_USO_ATUAL_EDC'));
+ if(!app.settings.characteristicTables.some(t=>t.code==='TAB_USO_ATUAL_TRN'))app.settings.characteristicTables.push(defaultCharacteristicTables().find(t=>t.code==='TAB_USO_ATUAL_TRN'));
  const DEFAULT_GROUPS_M=['Estrutural','Fissuras','Desgaste','Humidade/Infiltração'];
  app.settings.groups=Array.isArray(app.settings.groups)&&app.settings.groups.length?app.settings.groups:DEFAULT_GROUPS_M.slice();
  app.settings.fichaFields=app.settings.fichaFields||{};
@@ -1090,6 +1091,9 @@ function defaultCharacteristicTables(){
   make('TAB_LOCALIZACAO','Tipo de localização','opcoes',['Urbana','Periurbana','Rural','Industrial','Outra'],['TRN','TAC','TOF','EDC']),
   make('TAB_ENVOLVENTE','Envolvente periférica','textolonga',[],['TRN','TAC','TOF','EDC']),
   make('TAB_CONSOLIDACAO','Grau de consolidação urbana','opcoes',['Consolidada','Em consolidação','Não consolidada','Não aplicável'],['TAC','EDC']),
+  make('TAB_USO_ATUAL_EDC','Uso atual','opcoes',['Habitação','Comércio','Serviços','Indústria'],['EDC'],true),
+  make('TAB_USO_ATUAL_TRN','Uso atual','opcoes',['Agrícola','Florestal','Agro florestal','Industrial','Habitacional','Já edificado','Em fase de edificação'],['TRN','TAC','TOF'],true),
+  make('TAB_USO_ATUAL_DESCRICAO','Uso atual — descrição','textolonga',[],['TRN','TAC','TOF']),
   make('TAB_USO_ALTERNATIVO','Uso potencial','opcoes',['Manter o uso atual','Manter temporariamente o uso atual','Uso alternativo'],['TRN','TAC','TOF','EDC','OTS']),
   make('TAB_APTIDAO','Aptidão para o melhor uso','opcoes',APPRECIATION_CHOICES,['TRN','TAC','TOF','EDC','OTS']),
   make('TAB_OCUPACAO','Estado de ocupação','opcoes',['Devoluto','Ocupado','Arrendado','Desconhecido'],['TAC','EDC']),
@@ -1528,12 +1532,9 @@ function updateStypeText(){
  txt.textContent=opt?opt.textContent:sel.value;
 }
 function resetStypeToDisplay(){
- const sel=$('stype'),box=$('stypeChangeBtn');if(!sel)return;
+ const sel=$('stype');if(!sel)return;
  updateAutomaticNewGroup();
  updateStypeText();
- sel.classList.add('hidden');
- const span=$('stypeText');if(span)span.classList.remove('hidden');
- if(box)box.classList.remove('hidden');
 }
 function updateAutomaticNewGroup(){const sel=$('stype'),hidden=$('newGrupoAtivo'),txt=$('newGrupoAtivoText');if(!sel)return;const ty=assetTypeBySigla(sel.value),group=ty&&ty.group||'OTS',g=ASSET_GROUPS.find(x=>x.code===group);if(hidden)hidden.value=group;if(txt)txt.textContent=g?`${g.code} — ${g.label}`:group}
 const VALID_TOPIC_TYPES_LEGACY={VB:'Verba',NR:'Número',IT:'Item',TM:'Tema',AS:'Assunto',AN:'Anomalia'};
@@ -1650,6 +1651,7 @@ async function importProcessExcel(file){
  }catch(e){alert('Não foi possível importar: '+e.message)}finally{hideBusy()}
 }
 function createAtivo(){
+ sync();if(!code())return alert('Defina primeiro o processo (N/Ref).');
  const inp=$('newAtivoDesignation');const designation=(inp&&inp.value||'').trim();
  if(!designation)return alert('Indique uma designação para o novo Ativo.');
  app.ativos=app.ativos||[];
@@ -1794,9 +1796,9 @@ function renderSubs(){
  document.querySelectorAll('.status-filter-btn').forEach(b=>b.classList.toggle('active',b.dataset.status===topicStatusFilter));
 }
 function renderGrupoSelect(current){
- const sel=$('sgrupo');if(!sel)return;
- sel.innerHTML='<option value="">Selecionar</option>'+ASSET_GROUPS.map(g=>`<option value="${g.code}">${g.code} — ${esc(g.label)}</option>`).join('');
- sel.value=ASSET_GROUPS.some(g=>g.code===current)?current:'';
+ const inp=$('sgrupo');if(!inp)return;
+ const g=ASSET_GROUPS.find(x=>x.code===current);
+ inp.value=g?`${g.code} — ${g.label}`:(current||'—');
 }
 function renderNewGrupoSelect(){updateAutomaticNewGroup()}
 function concelhoForFreguesia(f){const x=(app.settings.locations||[]).find(v=>v.freguesia===f);return x?x.concelho:''}
@@ -1838,7 +1840,7 @@ function renderAssetCharacteristics(s){
  el.innerHTML=MATRIX_BLOCKS.map((b,bi)=>{const rows=fields.filter(f=>f.block===b.code);return rows.length?`<div class="config-doc-title" style="margin-top:14px">${bi+1} — ${esc(b.label)}</div>${rows.map(fieldHtml).join('')}`:''}).join('');
  el.querySelectorAll('.characteristic-table-link').forEach(b=>b.addEventListener('click',()=>openConfigTarget('characteristicTablesList',b.dataset.tableId)));
 }
-function saveSub(renderAfter=true){const s=active();if(!s)return false;const rawGps=$('sgps').value.trim();let newGps=rawGps;if(rawGps){const p=parseGps(rawGps);if(!p){alert('Coordenadas não reconhecidas. Use graus decimais.');return false}newGps=`${p.lat.toFixed(6)},${p.lon.toFixed(6)}`;$('sgps').value=newGps}if(s.gps!==newGps){s.kmlText=null;s.kmlGps=null;s.mapBlob=null;s.mapGps=null}s.designation=$('sdesignation').value.trim();s.summary=$('ssummary').value;s.grupo=$('sgrupo').value;s.date=$('sdate').value?new Date($('sdate').value).toISOString():s.date;s.gps=newGps;s.local=$('sLocal').value.trim();s.freguesia=$('sFreguesia').value;s.concelho=concelhoForFreguesia(s.freguesia);s.qtd=$('sQtd').value;s.areaTerreno=$('sAreaTerreno').value;s.areaImplantacao=$('sAreaImplantacao').value;s.areaBrutaPrivativa=$('sAreaBrutaPrivativa').value;s.areaBrutaDependente=$('sAreaBrutaDependente').value;s.supCoberta=$('sSupCoberta').value;s.supDescoberta=$('sSupDescoberta').value;s.documentacao=Array.from(document.querySelectorAll('#docAssocList .docfield:checked')).map(el=>el.value);s.characteristics=s.characteristics||{};document.querySelectorAll('.charfield').forEach(el=>{s.characteristics[el.dataset.char]=el.multiple?Array.from(el.selectedOptions).map(o=>o.value):el.value});touchTopicStart(s);if(renderAfter)render();queue();return true}
+function saveSub(renderAfter=true){const s=active();if(!s)return false;const rawGps=$('sgps').value.trim();let newGps=rawGps;if(rawGps){const p=parseGps(rawGps);if(!p){alert('Coordenadas não reconhecidas. Use graus decimais.');return false}newGps=`${p.lat.toFixed(6)},${p.lon.toFixed(6)}`;$('sgps').value=newGps}if(s.gps!==newGps){s.kmlText=null;s.kmlGps=null;s.mapBlob=null;s.mapGps=null}s.designation=$('sdesignation').value.trim();s.summary=$('ssummary').value;s.grupo=(assetTypeBySigla(s.type)||{}).group||s.grupo||'OTS';s.date=$('sdate').value?new Date($('sdate').value).toISOString():s.date;s.gps=newGps;s.local=$('sLocal').value.trim();s.freguesia=$('sFreguesia').value;s.concelho=concelhoForFreguesia(s.freguesia);s.qtd=$('sQtd').value;s.areaTerreno=$('sAreaTerreno').value;s.areaImplantacao=$('sAreaImplantacao').value;s.areaBrutaPrivativa=$('sAreaBrutaPrivativa').value;s.areaBrutaDependente=$('sAreaBrutaDependente').value;s.supCoberta=$('sSupCoberta').value;s.supDescoberta=$('sSupDescoberta').value;s.documentacao=Array.from(document.querySelectorAll('#docAssocList .docfield:checked')).map(el=>el.value);s.characteristics=s.characteristics||{};document.querySelectorAll('.charfield').forEach(el=>{s.characteristics[el.dataset.char]=el.multiple?Array.from(el.selectedOptions).map(o=>o.value):el.value});touchTopicStart(s);if(renderAfter)render();queue();return true}
 function showGpsStatus(msg,isErr){
  const el=$('gpsStatus');if(!el)return;
  el.textContent=msg;el.classList.toggle('hidden',!msg);
@@ -4222,7 +4224,6 @@ $('mapSource').addEventListener('change',updateMapMethodUi);
 if($('sIdNuf')){const saveIdNuf=()=>{const s=active();if(!s)return;s.idNuf=$('sIdNuf').value.trim()||topicCode(s);queue()};$('sIdNuf').addEventListener('input',saveIdNuf);$('sIdNuf').addEventListener('change',saveIdNuf);$('sIdNuf').addEventListener('blur',saveImmediate)}
 $('sFreguesia').addEventListener('change',()=>{$('sConcelho').value=concelhoForFreguesia($('sFreguesia').value);saveSub(false);saveImmediate()});
 ['sAreaTerreno','sAreaImplantacao'].forEach(id=>$(id).addEventListener('input',validateAreas));
-$('sgrupo').addEventListener('change',()=>{const s=active();if(!s)return;s.grupo=$('sgrupo').value;touchTopicStart(s);renderAssetCharacteristics(s);saveFallback();queue();saveImmediate()});
 function wireEvents(){
  const bind=(id,event,fn)=>{const el=$(id);if(el)el.addEventListener(event,fn)};
  bind('btnProcesso','click',()=>show('processo'));
