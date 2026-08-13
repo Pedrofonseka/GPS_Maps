@@ -57,7 +57,8 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
 .table-editor{background:var(--bg)!important;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)!important}.table-editor .config-shell{width:100%;max-width:none!important;height:100dvh;max-height:none;margin:0!important;border:0;border-radius:0;box-shadow:none}.table-editor .config-tabs{display:none}.table-editor .config-body> :not(#cfgTablesSection){display:none!important}.table-editor #cfgTablesSection{display:block!important}.table-editor #cfgTablesSection>.card{margin-top:0}.table-editor #cfgTable{display:block!important}
 .table-chooser{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:10px}.table-chooser button{text-align:left;min-height:48px}.table-editor .table-chooser,.table-editor #cfgTableChooserLabel{display:none!important}.table-editor #cfgTable{display:block}.process-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;max-width:100%;overflow:hidden}.process-card-main{border:0;background:transparent;text-align:left;padding:0;min-width:0;max-width:100%;overflow:hidden;touch-action:manipulation}.process-card-status{display:flex;gap:3px;align-items:center;flex-wrap:wrap;justify-content:flex-end}.process-card-status .pill{padding:2px 5px;font-size:9px}.asset-visit-people{display:flex;gap:6px;flex-wrap:wrap}.status-auto{padding:6px 8px;min-height:34px;border:1px solid #9dcbd8;border-radius:8px;background:var(--feedback);font-weight:800}
 .address-compact{display:grid;grid-template-columns:.7fr 1fr 1.25fr;gap:8px;align-items:end}.feedback-ruler{background:var(--feedback)!important;border-color:#9dcbd8!important;color:#244b58!important}.id-hint{font-size:10px;font-weight:600;color:var(--muted)}
-#orientationInfo:not(:empty),#photoInfo:not(:empty),#zipInfo:not(:empty),#folderInfo:not(:empty),#cfgPhotoInfo:not(:empty),#cfgPageInfo:not(:empty),#cfgTableInfo:not(:empty){display:block;background:var(--feedback);border:1px solid #9dcbd8;border-radius:8px;padding:6px 8px;color:#244b58}
+#orientationInfo:not(:empty),#photoInfo:not(:empty),#zipInfo:not(:empty),#folderInfo:not(:empty),#cfgPhotoInfo:not(:empty),#cfgPageInfo:not(:empty),#cfgTableInfo:not(:empty),#aGPSInfo:not(:empty){display:block;background:var(--feedback);border:1px solid #9dcbd8;border-radius:8px;padding:6px 8px;color:#244b58}
+#aGPSInfo.gps-weak{background:#fff4e0;border-color:#e6b35c;color:#7a4b06}
 .participant-row{display:grid;grid-template-columns:1.4fr 1fr 1fr 1.2fr auto;gap:6px;align-items:end}.participant-row label{margin-top:0}.participant-row input{padding:7px}
 .visit-choice{display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:7px;align-items:center}.visit-choice label{margin:0}.visit-summary{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
  .auto-asset-row{display:grid;grid-template-columns:90px minmax(0,1fr);gap:7px;align-items:end}.auto-asset-code{font-weight:850;padding:10px 4px}
@@ -235,7 +236,8 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
    <input id="restoreFile" type="file" accept="application/json,.json" class="hidden">
   </div>
   <div id="backupInfo" class="muted"></div>
-  <div class="muted">Os Processos guardados neste dispositivo são carregados automaticamente ao abrir a aplicação.</div>
+  <div id="lastBackupInfo" class="muted"></div>
+  <div class="muted">Os Processos guardados neste dispositivo são carregados automaticamente ao abrir a aplicação. As fotografias não entram no Backup_OUT — use a Exportação Geral ZIP por Processo para as levar consigo.</div>
   <div class="row">
    <div><label>Pesquisar</label><input id="searchProcess" class="search" placeholder="Código, referência ou designação"></div>
    <div><label>Estado</label><select id="filterProcessStatus"><option value="">Todos</option><option>ON</option><option>STBY</option><option>END</option><option>ANL</option></select></div>
@@ -331,6 +333,7 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
   <label>Outra pessoa presente apenas neste Ativo <small>(Nome — Função)</small></label><input id="aVisitOther" placeholder="Ex.: João Silva — Proprietário">
   <label>GPS — coordenadas decimais</label>
   <input id="aGPS" inputmode="decimal" placeholder="40.386974,-8.042764">
+  <div id="aGPSInfo" class="muted" style="margin-top:6px"></div>
   <div class="actions" style="margin-top:6px">
    <button class="btn" id="getGPS" type="button">Obter GPS</button>
    <button class="btn" id="openMap" type="button">Abrir mapa</button>
@@ -621,8 +624,8 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
 // Do not depend on browsers exposing element IDs as automatic global variables.
 // Several iOS file viewers/WebViews do not provide that legacy behaviour.
 const {
- aCode,aConc,aDoorNumber,aFloor,aFreg,aGPS,aInspectionStatus,aKMLInfo,aLocal,aName,aObs,aPostalCode,aRef,aStatus,aVisitDate,aVisitTime,aVisitEnd,assetStatusAuto,assetVisitPeople,aVisitOther,postalCodeSuggestions,cAssetType,cAssetGroup,cCurrentUse,cDestinationChecks,
- addNUF,addProcessStakeholder,assetEditor,assetEditorTitle,assetList,autoAssetCount,autoAssetRows,autoProcessCard,autoProcessCode,autoProcessName,autoProcessRef,backCharacter,backupAll,backupInfo,cancelAutoProcess,cancelVisit,cObs,cameraPhoto,cancelNewProcess,createAutoProcess,downloadAssetTemplate,exportVisits,visitsReport,
+ aCode,aConc,aDoorNumber,aFloor,aFreg,aGPS,aGPSInfo,aInspectionStatus,aKMLInfo,aLocal,aName,aObs,aPostalCode,aRef,aStatus,aVisitDate,aVisitTime,aVisitEnd,assetStatusAuto,assetVisitPeople,aVisitOther,postalCodeSuggestions,cAssetType,cAssetGroup,cCurrentUse,cDestinationChecks,
+ addNUF,addProcessStakeholder,assetEditor,assetEditorTitle,assetList,autoAssetCount,autoAssetRows,autoProcessCard,autoProcessCode,autoProcessName,autoProcessRef,backCharacter,backupAll,backupInfo,lastBackupInfo,cancelAutoProcess,cancelVisit,cObs,cameraPhoto,cancelNewProcess,createAutoProcess,downloadAssetTemplate,exportVisits,visitsReport,
  adjustOrientation,cfgAddField,cfgFieldHelp,cfgFieldHelpText,cfgFields,cfgFieldsSection,cfgFooterCenter,cfgFooterLeft,cfgFooterRight,cfgFooterSize,cfgFooterAutoFit,cfgFooterDistance,cfgFooterFontSizeLegacy,cfgFooterTextLeft,cfgFooterTextCenter,cfgFooterTextRight,cfgFooterAnalystVersion,cfgGroup,cfgGroupName,cfgHeaderCenter,cfgHeaderLeft,cfgHeaderRight,cfgHeaderSize,cfgHeaderDistance,cfgHeaderGabineteSize,cfgHeaderGabineteBold,cfgHeaderTitleSize,cfgHeaderTitleBold,cfgHeaderExtraEnabled,cfgHeaderExtraText,cfgHeaderExtraSize,cfgMarginBottom,cfgMarginLeft,cfgMarginRight,cfgMarginTop,cfgOutputHelp,cfgOutputHelpText,cfgOutputValues,cfgCoverContentValues,cfgResetCoverContent,cfgOutModelSelect,cfgOutModelZones,cfgOutModelAddField,cfgOutModelInfo,cfgOutputsSection,cfgFontFamily,cfgPageInfo,cfgPageOrientation,cfgTopContext,cfgTopContextSize,cfgPageTitleMode,cfgPageTitleSize,cfgPhotoInfo,cfgPhotoMaxSide,cfgPhotoQuality,cfgResetOutput,cfgResetPage,cfgResetPhotos,cfgRestore,cfgRotateQuality,cfgSavePage,cfgSavePhotos,cfgTable,cfgTableAdd,cfgTableGroup,cfgTableGroupBox,cfgTableNew,cfgTableNewLabel,cfgParishMunicipality,cfgParishMunicipalityBox,cfgTablesSection,cfgTableValues,cfgTableInfo,charTitle,characterEditor,characterList,characterPick,chooseFolder,closeAsset,closeConfig,coverCols,coverMinPhotos,
  configBody,configModal,configTabs,cfgPageSection,cfgPhotosSection,cfgStructureSection,dCode,dDeadline,dInputDate,dName,dOffice,dObs,dPurpose,dService,dRef,dRequestDescription,dRequester,dStatus,dValueBase,deleteAsset,deleteProcess,
  appVersionLabel,dashboardDeadlines,dashboardProgress,dashboardStats,dashboardStatus,downloadKML,dynamicFields,exportSummary,exportWord,exportZIP,filterProcessStatus,folderInfo,getGPS,groupPill,newAutoProcess,newVisit,nufChooser,nufList,nufsBox,newAsset,newProcess,
@@ -736,6 +739,16 @@ const groups=LEGACY_GROUP_SCHEMAS; // compatibilidade temporária; não é fonte
 
 const defaultGroups=JSON.parse(JSON.stringify(groups));
 const LAST_PROCESS_KEY='ativa_last_active_process_v2';
+const LAST_BACKUP_KEY='ativa_last_backup_at';
+function renderLastBackupInfo(){
+ if(!lastBackupInfo)return;
+ let at=null;try{at=localStorage.getItem(LAST_BACKUP_KEY)}catch(e){}
+ if(!at){lastBackupInfo.textContent='Ainda não fez nenhum Backup_OUT neste dispositivo.';lastBackupInfo.className='muted status-warn';return}
+ const days=Math.floor((Date.now()-new Date(at).getTime())/86400000);
+ const when=days<=0?'hoje':days===1?'há 1 dia':'há '+days+' dias';
+ lastBackupInfo.textContent='Última cópia de segurança (Backup_OUT): '+when+'.';
+ lastBackupInfo.className=days>=7?'muted status-warn':'muted';
+}
 let db=load(), currentProcess=null, editingAsset=null, editingVisit=null, charAsset=null, charNUF=null;
 function rememberCurrentProcess(){
  try{if(currentProcess)localStorage.setItem(LAST_PROCESS_KEY,currentProcess);else localStorage.removeItem(LAST_PROCESS_KEY)}catch(e){}
@@ -1480,6 +1493,7 @@ function renderDashboard(){
  dashboardDeadlines.querySelectorAll('[data-dashboard-process]').forEach(button=>button.onclick=()=>{currentProcess=button.dataset.dashboardProcess;charAsset=null;go('dados')});
 }
 function renderProcesses(){
+ renderLastBackupInfo();
  if(!lightBoot)renderDashboard();else renderDashboardLight();
  let q=document.getElementById('searchProcess').value.toLowerCase();
  let st=(document.getElementById('filterProcessStatus')?.value||'');
@@ -1558,7 +1572,7 @@ backupAll.onclick=async()=>{
    photosIncluded:false
  };
  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
- try{await saveBlobToDestination(blob,'Ativa_Arquivo_'+new Date().toISOString().slice(0,10)+'.json',backupInfo,'Backup_OUT de dados pronto; as fotografias permanecem na exportação ZIP dos Processos.')}finally{backupAll.disabled=false}
+ try{await saveBlobToDestination(blob,'Ativa_Arquivo_'+new Date().toISOString().slice(0,10)+'.json',backupInfo,'Backup_OUT de dados pronto; as fotografias permanecem na exportação ZIP dos Processos.');try{localStorage.setItem(LAST_BACKUP_KEY,new Date().toISOString())}catch(e){}renderLastBackupInfo()}finally{backupAll.disabled=false}
 };
 restoreAll.onclick=()=>restoreFile.click();
 restoreFile.onchange=async()=>{
@@ -1714,6 +1728,7 @@ aVisitDate.addEventListener('change',()=>{clearTimeout(assetDateCommitTimer);ass
 newAsset.onclick=()=>openAsset(null);
 function openAsset(id){
  let p=proc();editingAsset=id;let a=id?p.assets.find(x=>x.id===id):{code:nextAssetCode(p),ref:'',name:'',status:'ON',type:'',group:'',currentUse:'',local:'',doorNumber:'',floor:'',postalCode:'',freg:'',conc:'',visitDate:'',visitTime:'',visitEnd:'',visitParticipantIds:[],visitOtherPeople:'',inspectionStatus:'',gps:'',obs:'',split:true,nufs:[],char:{},photos:[],origin:'manual'};
+ if(aGPSInfo){aGPSInfo.textContent='';aGPSInfo.classList.remove('gps-weak')}
  if(!a.nufs?.length)a.nufs=[createNUF(a)];syncNUFCodes(a);
  refreshConfiguredSelects();assetEditor.classList.remove('hidden');assetEditorTitle.textContent=id?'Editar Ativo':'Novo Ativo';aCode.value=a.code;aRef.value=a.ref||'';aName.value=a.name||'';aStatus.value=a.status||'ON';aLocal.value=a.local||'';aDoorNumber.value=a.doorNumber||'';aFloor.value=a.floor||'';aPostalCode.value=formatPostalCode(a.postalCode||'');aFreg.value=a.freg||'';aConc.value=a.conc||'';aVisitDate.value=a.visitDate||'';aVisitTime.value=a.visitTime||'';aVisitEnd.value=a.visitEnd||'';a.visitParticipantIds=Array.isArray(a.visitParticipantIds)?a.visitParticipantIds:[];aVisitOther.value=a.visitOtherPeople||'';assetVisitPeople.innerHTML=(p.participants||[]).map(person=>`<label class="pill"><input type="checkbox" data-asset-visit-person="${person.id}" style="width:auto" ${a.visitParticipantIds.includes(person.id)?'checked':''}> ${esc([person.name,person.role].filter(Boolean).join(' — '))}</label>`).join('')||'<span class="muted">Não existem Intervenientes definidos no Processo; use o campo seguinte.</span>';assetVisitPeople.querySelectorAll('[data-asset-visit-person]').forEach(x=>x.onchange=persistExistingAsset);a.inspectionStatus=automaticInspectionStatus(a);aInspectionStatus.value=a.inspectionStatus;assetStatusAuto.textContent=assetOperationalStatus(a);aGPS.value=assetGPS(a);aObs.value=a.obs||'';
  nufsBox.classList.remove('hidden');renderNUFs(a);renderAssetDynamicVariables();deleteAsset.classList.toggle('hidden',!id);assetEditor._draft=a;updateContext()
@@ -1760,9 +1775,15 @@ saveAsset.onclick=()=>{let p=proc(),a=assetEditor._draft,previousInspection=a.in
 
 getGPS.onclick=()=>{
  if(!navigator.geolocation){alert('Este navegador não permite obter o GPS. Introduza as coordenadas manualmente.');aGPS.focus();return}
- getGPS.disabled=true;getGPS.textContent='A obter…';
+ getGPS.disabled=true;getGPS.textContent='A obter…';aGPSInfo.textContent='';aGPSInfo.classList.remove('gps-weak');
  navigator.geolocation.getCurrentPosition(pos=>{
    aGPS.value=Number(pos.coords.latitude).toFixed(6)+','+Number(pos.coords.longitude).toFixed(6);
+   const accuracy=Math.round(pos.coords.accuracy||0);
+   if(accuracy){
+     const weak=accuracy>20;
+     aGPSInfo.textContent='Precisão: ±'+accuracy+' m'+(weak?' — sinal fraco, considere repetir a leitura a céu aberto.':'.');
+     aGPSInfo.classList.toggle('gps-weak',weak);
+   }
    persistExistingAsset();getGPS.disabled=false;getGPS.textContent='Obter GPS';
  },()=>{
    getGPS.disabled=false;getGPS.textContent='Obter GPS';
@@ -3691,6 +3712,7 @@ function initialiseApp(){
 
  try{
    loadConstructionRules();
+   restoreLastActiveProcess();
    renderProcesses();
    updateContext();
    applyPageSettings();
