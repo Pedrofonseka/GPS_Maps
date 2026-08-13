@@ -3426,6 +3426,7 @@ adjustOrientation.onclick=async()=>{
 };
 
 const reportObjectURLs=new Set();
+let reportRenderToken=0;
 function clearReportURLs(){reportObjectURLs.forEach(url=>URL.revokeObjectURL(url));reportObjectURLs.clear()}
 function reportField(label,value){
  if(value===undefined||value===null||String(value).trim()==='')return '';
@@ -3537,8 +3538,10 @@ function filterPreviewPhotos(photoRefs){
  return (photoRefs||[]).filter(ref=>!isRotatedPhotoMeta(ref?.photo||ref));
 }
 async function renderReportPreview(strictOrientation=false){
+ const myToken=++reportRenderToken;
  const p=syncPendingData();if(!p){alert('Selecione primeiro um Processo.');return false}
  const components=activeOutputComponents(),orientationScan=components.some(id=>id==='cover'||id==='characterization')?await scanPhotoOrientations():null;
+ if(myToken!==reportRenderToken)return false;
  if(orientationScan?.outliers?.length&&strictOrientation){
    orientationInfo.scrollIntoView({behavior:'smooth',block:'center'});
    alert('Existem fotografias com orientação divergente. Escolha Rodar, Eliminar ou Manter antes de produzir o documento.');
@@ -3605,6 +3608,7 @@ async function renderReportPreview(strictOrientation=false){
  if(!renderedCount)previewPages.push('<p class="muted">Não existem outras fichas ativas. Configure-as em Configurações → Saídas.</p>');
  const actualTotal=previewPages.length;
  let html=previewPages.map((page,index)=>`<div class="preview-page" data-preview-page="${index+1}">${page}</div>`).join('');
+ if(myToken!==reportRenderToken)return false;
  reportPreview.innerHTML=html;reportPreview.classList.remove('hidden');applyReportLayout();
  const footerWarnings=reportPreview.querySelectorAll('[data-footer-warn="1"]');
  if(footerWarnings.length){orientationInfo.textContent=(pageSettings.footerAutoFit!==false?'Rodapé ajustado automaticamente à altura definida.':'Aviso: a altura definida para o rodapé pode ser insuficiente para o conteúdo.');}
@@ -3612,11 +3616,13 @@ async function renderReportPreview(strictOrientation=false){
  if(renderedPages.length!==previewPages.length)throw new Error('Falha interna no Preview: foram construídas '+previewPages.length+' páginas mas apenas '+renderedPages.length+' ficaram disponíveis.');
  const loads=[];
  const coverRefs=await collectCoverPhotoRefs(p);
+ if(myToken!==reportRenderToken)return false;
  const masterCover=reportPreview.querySelector('[data-cover-master="1"]');
  if(masterCover){
   for(const ref of coverRefs){
    try{
     const blob=await photoGet(ref.photo.id);if(!blob)continue;
+    if(myToken!==reportRenderToken)return false;
     const url=URL.createObjectURL(blob);reportObjectURLs.add(url);
     const figure=document.createElement('figure');figure.className='report-cover-photo photo-landscape';
     const img=document.createElement('img');img.alt='Fotografia da capa';
@@ -3626,12 +3632,14 @@ async function renderReportPreview(strictOrientation=false){
   }
  }
  for(const target of targets){
+   if(myToken!==reportRenderToken)return false;
    const coverHolder=null;
    const sheetHolder=reportPreview.querySelector('[data-sheet-key="'+target.key+'"]');
    const photos=(target.t.photos||[]).map((photo,index)=>({photo,index}));
    for(const {photo,index} of photos){
      try{
        const blob=await photoGet(photo.id);if(!blob)continue;
+       if(myToken!==reportRenderToken)return false;
        if(photo.cover&&coverHolder){
          const coverURL=URL.createObjectURL(blob);reportObjectURLs.add(coverURL);
          const figure=document.createElement('figure');figure.className='report-cover-photo';
@@ -3649,12 +3657,14 @@ async function renderReportPreview(strictOrientation=false){
    }
  }
  for(const q of ensureQuesitos(p)){
+   if(myToken!==reportRenderToken)return false;
    for(const personId of Object.keys(q.respostas||{})){
      const resp=q.respostas[personId],holder=reportPreview.querySelector('[data-quesito-key="'+q.id+'_'+personId+'"]');
      if(!holder)continue;
      for(const ref of (resp.photoRefs||[])){
        try{
          const blob=await photoGet(ref.photoId);if(!blob)continue;
+         if(myToken!==reportRenderToken)return false;
          const url=URL.createObjectURL(blob);reportObjectURLs.add(url);
          const figure=document.createElement('figure');figure.className='report-photo';
          const img=document.createElement('img');img.alt=ref.label||'Foto';const load=waitForReportImage(img,{w:0,h:0});img.src=url;
@@ -3665,6 +3675,7 @@ async function renderReportPreview(strictOrientation=false){
    }
  }
  await Promise.all(loads);
+ if(myToken!==reportRenderToken)return false;
  reportPreview.querySelectorAll('.report-cover-photos,.report-sheet-photos').forEach(adaptPhotoGrid);
  // No iOS/WebView ambiguity: always reveal the beginning of the generated document.
  requestAnimationFrame(()=>reportPreview.scrollIntoView({behavior:'auto',block:'start'}));
