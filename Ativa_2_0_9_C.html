@@ -3334,7 +3334,35 @@ function waitForReportImage(img,photo){
  });
 }
 function adaptPhotoGrid(holder){
- if(!holder)return;const figures=[...holder.children],portrait=figures.filter(x=>x.classList.contains('photo-portrait')).length,landscape=figures.filter(x=>x.classList.contains('photo-landscape')).length,dominant=portrait>landscape?'portrait':'landscape',configured=holder.classList.contains('report-cover-photos')?validReportCols(coverCols.value):validReportCols(sheetCols.value),cols=dominant==='portrait'?Math.min(4,Math.max(2,configured)):configured;holder.dataset.dominant=dominant;holder.style.gridTemplateColumns='repeat('+cols+',minmax(0,1fr))';holder.style.setProperty('--sheet-photo-height',(dominant==='portrait'?Math.max(150,photoHeightForCols(cols)*1.18):photoHeightForCols(cols))+'px');
+ if(!holder)return;
+ const figures=[...holder.children],portrait=figures.filter(x=>x.classList.contains('photo-portrait')).length,landscape=figures.filter(x=>x.classList.contains('photo-landscape')).length,dominant=portrait>landscape?'portrait':'landscape';
+ const isCover=holder.classList.contains('report-cover-photos');
+ const configured=isCover?validReportCols(coverCols.value):validReportCols(sheetCols.value),cols=dominant==='portrait'?Math.min(4,Math.max(2,configured)):configured;
+ holder.dataset.dominant=dominant;
+ holder.style.gridTemplateColumns='repeat('+cols+',minmax(0,1fr))';
+ const heightVar=isCover?'--cover-photo-height':'--sheet-photo-height';
+ const fallbackHeight=dominant==='portrait'?Math.max(150,photoHeightForCols(cols)*1.18):photoHeightForCols(cols);
+ holder.style.setProperty(heightVar,fallbackHeight+'px');
+ adaptPhotoGridRows(holder,figures,cols,heightVar,fallbackHeight);
+}
+// Cada linha da grelha fica com a altura da imagem predominante dessa linha (não uma
+// altura global fixa), para eliminar as barras cinzentas de letterbox nas fotos que
+// já correspondem à tendência da linha; só uma foto claramente fora do padrão da
+// linha continua a mostrar alguma margem, por não ser recortada.
+function adaptPhotoGridRows(holder,figures,cols,heightVar,fallbackHeight){
+ const gap=8,holderWidth=holder.clientWidth||0;
+ if(!holderWidth||!figures.length)return;
+ const columnWidth=(holderWidth-gap*(cols-1))/cols;
+ if(!(columnWidth>0))return;
+ for(let i=0;i<figures.length;i+=cols){
+   const row=figures.slice(i,i+cols);
+   const ratios=row.map(fig=>{
+     const img=fig.querySelector('img'),w=img?.naturalWidth||0,h=img?.naturalHeight||0;
+     return w>0&&h>0?w/h:null;
+   }).filter(Boolean).sort((a,b)=>a-b);
+   const rowHeight=ratios.length?Math.max(70,Math.min(fallbackHeight*1.6,Math.round(columnWidth/ratios[Math.floor(ratios.length/2)]))):fallbackHeight;
+   row.forEach(fig=>fig.style.setProperty(heightVar,rowHeight+'px'));
+ }
 }
 
 function shuffleRefs(list){
