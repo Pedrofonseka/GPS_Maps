@@ -22,8 +22,9 @@ h2{font-size:18px;margin:0 0 10px} h3{font-size:15px;margin:0 0 8px}
 label{display:block;font-size:12px;font-weight:700;margin:8px 0 4px}
 input,select,textarea{width:100%;font:inherit;padding:10px;border:1px solid #bfc5cc;border-radius:8px;background:white}
 textarea{min-height:76px}.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
-button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}.btn{border:1px solid #aeb5bd;background:white;border-radius:8px;padding:9px 11px;font-weight:700}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.actions .btn.danger{margin-left:6px}
+button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}.btn{border:1px solid #aeb5bd;background:white;border-radius:8px;padding:9px 11px;font-weight:700;min-height:42px}
 .safe-save-action{display:block;min-height:54px;padding:13px 16px;margin:10px 0 110px}
 .btn.primary{background:var(--yellow);border-color:#c8a52f}.btn.danger{color:var(--red)}
 .list{display:grid;gap:6px}.item{background:white;border:1px solid var(--line);border-radius:9px;padding:9px;display:flex;justify-content:space-between;gap:8px;align-items:center;transition:background .6s ease}.process-active{background:#e9f7ee!important;border-color:#8fc7a1!important}.cfg-row-flash{background:#fff4bd!important}
@@ -52,7 +53,7 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
 .deadline-overdue{color:var(--red);font-weight:800}.deadline-soon{color:#9a6700;font-weight:800}
 .history-entry{align-items:flex-start}.history-time{white-space:nowrap;color:var(--muted);font-size:11px;text-align:right}.stage-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
 .label-line{display:flex;align-items:flex-end;justify-content:space-between;gap:8px}.label-line label{flex:1}.config-link{border:0;background:transparent;color:#765d00;text-decoration:underline;font-size:11px;font-weight:800;padding:6px 0;white-space:nowrap}
-.config-shell{height:calc(100dvh - 24px - env(safe-area-inset-top));max-height:850px;display:flex;flex-direction:column;overflow:hidden;margin:auto!important}.config-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin:10px 0}.config-tabs button{border:1px solid var(--line);background:white;border-radius:8px;padding:8px 3px;font-size:12px;font-weight:800}.config-tabs button.on{background:#fff4bd;border-color:#c8a52f}.config-body{min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:2px 2px 100px}.config-section{display:none}.config-section.active{display:block}
+.config-shell{height:calc(100dvh - 24px - env(safe-area-inset-top));max-height:850px;display:flex;flex-direction:column;overflow:hidden;margin:auto!important}.config-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin:10px 0}.config-tabs button{border:1px solid var(--line);background:white;border-radius:8px;padding:8px 3px;font-size:12px;font-weight:800}.config-tabs button.on{background:#fff4bd;border-color:#c8a52f}.config-body{min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:2px 2px calc(180px + env(safe-area-inset-bottom))}.config-section{display:none}.config-section.active{display:block}
 .table-editor{background:var(--bg)!important;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)!important}.table-editor .config-shell{width:100%;max-width:none!important;height:100dvh;max-height:none;margin:0!important;border:0;border-radius:0;box-shadow:none}.table-editor .config-tabs{display:none}.table-editor .config-body> :not(#cfgTablesSection){display:none!important}.table-editor #cfgTablesSection{display:block!important}.table-editor #cfgTablesSection>.card{margin-top:0}.table-editor #cfgTable{display:block!important}
 .table-chooser{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:10px}.table-chooser button{text-align:left;min-height:48px}.table-editor .table-chooser,.table-editor #cfgTableChooserLabel{display:none!important}.table-editor #cfgTable{display:block}.process-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;max-width:100%;overflow:hidden}.process-card-main{border:0;background:transparent;text-align:left;padding:0;min-width:0;max-width:100%;overflow:hidden;touch-action:manipulation}.process-card-status{display:flex;gap:3px;align-items:center;flex-wrap:wrap;justify-content:flex-end}.process-card-status .pill{padding:2px 5px;font-size:9px}.asset-visit-people{display:flex;gap:6px;flex-wrap:wrap}.status-auto{padding:6px 8px;min-height:34px;border:1px solid #9dcbd8;border-radius:8px;background:var(--feedback);font-weight:800}
 .address-compact{display:grid;grid-template-columns:.7fr 1fr 1.25fr;gap:8px;align-items:end}.feedback-ruler{background:var(--feedback)!important;border-color:#9dcbd8!important;color:#244b58!important}.id-hint{font-size:10px;font-weight:600;color:var(--muted)}
@@ -71,6 +72,9 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
 .photo-row{display:grid;grid-template-columns:120px minmax(0,1fr) auto;gap:10px;align-items:center}
 .photo-thumb{width:120px;height:90px;border-radius:8px;border:1px solid var(--line);object-fit:cover;background:#eef0f3}
 .photo-actions{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.nuf-row{flex-wrap:wrap}
+.nuf-row .nuf-actions{flex:1 1 100%;display:flex;flex-direction:column;gap:9px;margin-top:8px}
+.nuf-row .nuf-actions .btn{width:100%;min-height:46px;padding:11px 12px}
 .photo-actions .btn{padding:6px 8px}
 .photo-caption{margin-top:6px;padding:7px!important;font-size:12px!important;min-height:54px!important;resize:vertical}
 .photo-code{font-variant-numeric:tabular-nums;letter-spacing:.1px;font-size:10px!important;line-height:1.15}
@@ -175,6 +179,14 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
 .process-variable-field label{display:block;margin-bottom:4px;font-weight:750}
 .process-variable-field input,.process-variable-field select,.process-variable-field textarea{width:100%}
 .pv-characteristics{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-top:5px}
+.pv-table{width:100%;border-collapse:collapse}
+.pv-table td{padding:8px 5px;border-top:1px solid var(--line);vertical-align:top}
+.pv-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+.mini{border:1px solid #aeb5bd;background:white;border-radius:8px;padding:8px 11px;font-weight:700;min-height:40px;min-width:40px}
+.small{border:1px solid #aeb5bd;background:white;border-radius:8px;padding:9px 12px;font-weight:700;min-height:42px}
+.mini.danger{color:var(--red);margin-left:4px}
+#cfgProcessVariablesTable td:last-child{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;align-items:center}
+#cfgProcessVariablesTable td:last-child .btn.danger{margin-left:4px}
 @media(min-width:760px){.process-dynamic-form{grid-template-columns:1fr 1fr}.process-variable-field:has(textarea){grid-column:1/-1}}
 
 .process-variable-field .label-line{align-items:center}
@@ -238,6 +250,8 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
  </div>
  <div id="autoProcessCard" class="card hidden">
   <h3>Criação automática de Processo e Ativos</h3>
+  <div class="muted">Prefere preparar os dados fora da app? Descarregue o modelo, preencha em Excel e transcreva os valores para aqui.</div>
+  <div class="actions"><button class="btn" id="downloadAssetTemplate" type="button">Descarregar modelo Excel</button></div>
   <div class="row"><div><label>Código do Processo</label><input id="autoProcessCode" placeholder="Ptv_2631"></div><div><label>ID Institucional</label><input id="autoProcessRef"></div></div>
   <label>Designação do Processo</label><input id="autoProcessName">
   <label>Número de Ativos</label><input id="autoAssetCount" type="number" inputmode="numeric" min="1" max="200" step="1" value="1">
@@ -402,6 +416,7 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
    <button class="btn" id="exportWord">Gerar apenas Word</button>
    <button class="btn primary" id="exportZIP">Exportação Geral ZIP + Word</button>
    <button class="btn" id="exportSummary">Resumo TXT</button>
+   <button class="btn" id="exportVisits">Lista de Visitas</button>
   </div>
   <div id="zipInfo" class="muted" style="margin-top:7px"></div>
  </div>
@@ -410,6 +425,7 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
   <div class="muted">Se houver algo a corrigir, volte aos dados ou às configurações e gere um novo preview. Só a versão aceite segue para PDF e Word.</div>
   <div class="actions"><button class="btn" id="rejectPreview" type="button">Corrigir e gerar novo preview</button><button class="btn primary" id="acceptPreview" type="button">Aceitar e exportar PDF + Word</button></div>
  </div>
+ <div id="visitsReport" class="report hidden"></div>
  <div id="reportPreview" class="report hidden"></div>
 </section>
 </main>
@@ -442,7 +458,7 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
 <div class="item"><span class="item-main"><b>Ativo</b><br><span class="item-sub">Motor + variáveis base + grupos aplicáveis</span></span><span class="pill">Estruturado</span></div>
 <div class="item"><span class="item-main"><b>Parte do Ativo</b><br><span class="item-sub">Caracterização, fotografias e legenda próprias</span></span><span class="pill">Estruturado</span></div>
 </div></div>
-<div class="card"><h3>Estrutura — Transferência</h3><div class="muted">Exporta a definição atual dos blocos e tabelas para revisão e futura importação.</div><button class="small" type="button" onclick="exportVariableStructure()">Exportar estrutura JSON</button></div>
+<div class="card"><h3>Estrutura — Transferência</h3><div class="muted">Exporta a definição atual dos blocos e tabelas para revisão e futura importação.</div><div class="actions"><button class="small" type="button" onclick="exportVariableStructure()">Exportar estrutura JSON</button><button class="small" type="button" onclick="exportVariableStructureXLSX()">Exportar estrutura (Excel)</button></div></div>
 <div class="card" id="cfgStructureDiagnostics">
 <h3>Diagnóstico da Estrutura</h3>
 <div id="cfgStructureDiagnosticSummary" class="muted">A verificar…</div>
@@ -606,7 +622,7 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
 // Several iOS file viewers/WebViews do not provide that legacy behaviour.
 const {
  aCode,aConc,aDoorNumber,aFloor,aFreg,aGPS,aInspectionStatus,aKMLInfo,aLocal,aName,aObs,aPostalCode,aRef,aStatus,aVisitDate,aVisitTime,aVisitEnd,assetStatusAuto,assetVisitPeople,aVisitOther,postalCodeSuggestions,cAssetType,cAssetGroup,cCurrentUse,cDestinationChecks,
- addNUF,addProcessStakeholder,assetEditor,assetEditorTitle,assetList,autoAssetCount,autoAssetRows,autoProcessCard,autoProcessCode,autoProcessName,autoProcessRef,backCharacter,backupAll,backupInfo,cancelAutoProcess,cancelVisit,cObs,cameraPhoto,cancelNewProcess,createAutoProcess,
+ addNUF,addProcessStakeholder,assetEditor,assetEditorTitle,assetList,autoAssetCount,autoAssetRows,autoProcessCard,autoProcessCode,autoProcessName,autoProcessRef,backCharacter,backupAll,backupInfo,cancelAutoProcess,cancelVisit,cObs,cameraPhoto,cancelNewProcess,createAutoProcess,downloadAssetTemplate,exportVisits,visitsReport,
  adjustOrientation,cfgAddField,cfgFieldHelp,cfgFieldHelpText,cfgFields,cfgFieldsSection,cfgFooterCenter,cfgFooterLeft,cfgFooterRight,cfgFooterSize,cfgFooterAutoFit,cfgFooterDistance,cfgFooterFontSizeLegacy,cfgFooterTextLeft,cfgFooterTextCenter,cfgFooterTextRight,cfgFooterAnalystVersion,cfgGroup,cfgGroupName,cfgHeaderCenter,cfgHeaderLeft,cfgHeaderRight,cfgHeaderSize,cfgHeaderDistance,cfgHeaderGabineteSize,cfgHeaderGabineteBold,cfgHeaderTitleSize,cfgHeaderTitleBold,cfgHeaderExtraEnabled,cfgHeaderExtraText,cfgHeaderExtraSize,cfgMarginBottom,cfgMarginLeft,cfgMarginRight,cfgMarginTop,cfgOutputHelp,cfgOutputHelpText,cfgOutputValues,cfgCoverContentValues,cfgResetCoverContent,cfgOutModelSelect,cfgOutModelZones,cfgOutModelAddField,cfgOutModelInfo,cfgOutputsSection,cfgFontFamily,cfgPageInfo,cfgPageOrientation,cfgTopContext,cfgTopContextSize,cfgPageTitleMode,cfgPageTitleSize,cfgPhotoInfo,cfgPhotoMaxSide,cfgPhotoQuality,cfgResetOutput,cfgResetPage,cfgResetPhotos,cfgRestore,cfgRotateQuality,cfgSavePage,cfgSavePhotos,cfgTable,cfgTableAdd,cfgTableGroup,cfgTableGroupBox,cfgTableNew,cfgTableNewLabel,cfgParishMunicipality,cfgParishMunicipalityBox,cfgTablesSection,cfgTableValues,cfgTableInfo,charTitle,characterEditor,characterList,characterPick,chooseFolder,closeAsset,closeConfig,coverCols,coverMinPhotos,
  configBody,configModal,configTabs,cfgPageSection,cfgPhotosSection,cfgStructureSection,dCode,dDeadline,dInputDate,dName,dOffice,dObs,dPurpose,dService,dRef,dRequestDescription,dRequester,dStatus,dValueBase,deleteAsset,deleteProcess,
  appVersionLabel,dashboardDeadlines,dashboardProgress,dashboardStats,dashboardStatus,downloadKML,dynamicFields,exportSummary,exportWord,exportZIP,filterProcessStatus,folderInfo,getGPS,groupPill,newAutoProcess,newVisit,nufChooser,nufList,nufsBox,newAsset,newProcess,
@@ -1058,6 +1074,43 @@ function renderNUFDynamicVariables(){
  box.querySelectorAll('[data-dyn-var]').forEach(el=>el.onchange=()=>{n.vars[el.dataset.dynVar]=el.value;save()});
 }
 function exportVariableStructure(){const payload={version:APP_VERSION,blocks:{process:processVariables,asset:assetVariables,nuf:nufVariables},tables:TABLE_CATALOG};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Ativa_Estrutura_Variaveis_'+APP_VERSION+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function variableStructureRows(){
+ const rows=[['Bloco','Ordem','ID','Rótulo','Tipo','Estado','Tabela associada','Grupos aplicáveis']];
+ const addBlock=(blockLabel,list,withGroups)=>(list||[]).forEach(v=>{
+   const groupsLabel=withGroups?((v.groups&&v.groups.length)?v.groups.join(', '):'TODOS'):'—';
+   rows.push([blockLabel,v.order??'',v.id||'',v.label||'',v.type||'',v.state||'',v.table||'',groupsLabel]);
+ });
+ addBlock('Processo',processVariables,false);
+ addBlock('Ativo',assetVariables,true);
+ addBlock('Parte do Ativo (NUF)',nufVariables,true);
+ return rows;
+}
+function tableFillStatusRows(){
+ const rows=[['Chave','Rótulo','N.º de valores','Estado']];
+ Object.keys(appTables).sort((a,b)=>a.localeCompare(b,'pt')).forEach(key=>{
+   const count=(appTables[key]||[]).length;
+   rows.push([key,CLEAN_TABLE_LABELS[key]||key,count,count===0?'POR PREENCHER':'OK']);
+ });
+ return rows;
+}
+function exportVariableStructureXLSX(){
+ const encoder=new TextEncoder(),variableRows=variableStructureRows(),tableRows=tableFillStatusRows();
+ const contentTypes='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>';
+ const rootRels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>';
+ const workbookXML='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Variáveis" sheetId="1" r:id="rId1"/><sheet name="Tabelas" sheetId="2" r:id="rId2"/></sheets></workbook>';
+ const workbookRels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/></Relationships>';
+ const entries=[
+   {name:'[Content_Types].xml',data:encoder.encode(contentTypes)},
+   {name:'_rels/.rels',data:encoder.encode(rootRels)},
+   {name:'xl/workbook.xml',data:encoder.encode(workbookXML)},
+   {name:'xl/_rels/workbook.xml.rels',data:encoder.encode(workbookRels)},
+   {name:'xl/worksheets/sheet1.xml',data:encoder.encode(xlsxSheetXML(variableRows))},
+   {name:'xl/worksheets/sheet2.xml',data:encoder.encode(xlsxSheetXML(tableRows))}
+ ];
+ const blob=new Blob([makeStoredZIP(entries)],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Ativa_Estrutura_Variaveis_'+APP_VERSION+'.xlsx';a.click();
+ setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+}
 function renderAssetVariablesTable(){
  const body=document.getElementById('cfgAssetVariablesBody');if(!body)return;
  body.innerHTML=assetVariables.map((v,i)=>`<tr><td>${i+1}</td><td><input data-av-label="${i}" value="${esc(v.label)}"></td><td><div class="pv-characteristics">
@@ -1474,6 +1527,13 @@ cancelNewProcess.onclick=()=>newProcessCard.classList.add('hidden');
 saveNewProcess.onclick=()=>{const now=new Date().toISOString();let p={id:uid(),code:pCode.value.trim(),ref:pRef.value.trim(),name:pName.value.trim(),requester:'',purpose:'',requestDescription:'',valueBase:'',status:'ON',inputDate:'',deadline:'',obs:'',assets:[],participants:[],visits:[],origin:'manual',createdAt:now,history:[]};if(!p.code){alert('Indique o código do Processo.');return}if(processCodeConflict(p.code)){alert('Já existe um Processo com o código “'+p.code+'”.');pCode.focus();return}historyAdd(p,'process_created','Processo criado.','','manual');db.processes.unshift(p);save();currentProcess=p.id;rememberCurrentProcess();newProcessCard.classList.add('hidden');pCode.value=pRef.value=pName.value='';go('dados')};
 autoAssetCount.onchange=renderAutomaticAssetRows;
 cancelAutoProcess.onclick=()=>{autoProcessCard.classList.add('hidden');autoProcessCode.value=autoProcessRef.value=autoProcessName.value='';autoAssetCount.value='1';autoAssetRows.innerHTML=''};
+downloadAssetTemplate.onclick=()=>{
+ const rows=[['Código','ID Institucional','Designação']];
+ for(let i=0;i<30;i++)rows.push(['','','']);
+ const blob=buildXLSX('Ativos',rows),a=document.createElement('a');
+ a.href=URL.createObjectURL(blob);a.download='Ativa_Modelo_Ativos.xlsx';a.click();
+ setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+};
 createAutoProcess.onclick=()=>{
  const code=autoProcessCode.value.trim();if(!code){alert('Indique o código do Processo.');autoProcessCode.focus();return}if(processCodeConflict(code)){alert('Já existe um Processo com o código “'+code+'”.');autoProcessCode.focus();return}
  renderAutomaticAssetRows();const now=new Date().toISOString(),rows=[...autoAssetRows.querySelectorAll('[data-auto-asset-row]')],p={id:uid(),code,ref:autoProcessRef.value.trim(),name:autoProcessName.value.trim(),requester:'',purpose:'',requestDescription:'',valueBase:'',status:'ON',inputDate:'',deadline:'',obs:'',assets:[],participants:[],visits:[],origin:'automatic',createdAt:now,history:[]};
@@ -1661,7 +1721,7 @@ function openAsset(id){
 addNUF.onclick=()=>{let a=assetEditor._draft,n=createNUF(a,'Ativo '+String(a.nufs.length+1));a.nufs.push(n);syncNUFCodes(a);renderNUFs(a);if(editingAsset){historyAdd(proc(),'asset_part_added',(a.code||'Núcleo')+' — Ativo '+n.code+' acrescentado.',a.id);saveSoon()}}
 function renderNUFs(a){
  syncNUFCodes(a);renderNUFDynamicVariables();
- nufList.innerHTML=(a.nufs||[]).map((n,i)=>`<div class="item" style="align-items:flex-start"><span class="item-main" style="flex:1"><span class="item-title">${esc(n.code)}</span><input data-nuf-name="${n.id}" value="${esc(n.name)}" placeholder="Designação do Ativo" style="padding:7px;margin-top:5px"></span><span class="photo-actions"><button class="btn" data-nuf-dup="${n.id}" title="Cria outro Ativo dentro deste mesmo núcleo (mesmo código-base)">Agregar ao mesmo núcleo</button><button class="btn" data-nuf-dup-new="${n.id}" title="Cria um Ativo novo e independente (novo núcleo, código próprio), com a classificação e caracterização copiadas">Duplicar em núcleo diferente</button><button class="btn danger" data-nuf-del="${n.id}">Eliminar</button></span></div>`).join('');
+ nufList.innerHTML=(a.nufs||[]).map((n,i)=>`<div class="item nuf-row" style="align-items:flex-start"><span class="item-main" style="flex:1"><span class="item-title">${esc(n.code)}</span><input data-nuf-name="${n.id}" value="${esc(n.name)}" placeholder="Designação do Ativo" style="padding:7px;margin-top:5px"></span><span class="nuf-actions"><button class="btn" data-nuf-dup="${n.id}" title="Cria outro Ativo dentro deste mesmo núcleo (mesmo código-base)">Agregar ao mesmo núcleo</button><button class="btn" data-nuf-dup-new="${n.id}" title="Cria um Ativo novo e independente (novo núcleo, código próprio), com a classificação e caracterização copiadas">Duplicar em núcleo diferente</button><button class="btn danger" data-nuf-del="${n.id}">Eliminar</button></span></div>`).join('');
  document.querySelectorAll('[data-nuf-name]').forEach(x=>x.oninput=()=>{const n=a.nufs.find(v=>v.id===x.dataset.nufName);if(n)n.name=x.value;if(editingAsset)saveSoon()});
  document.querySelectorAll('[data-nuf-dup]').forEach(x=>x.onclick=()=>duplicateNUF(a,x.dataset.nufDup));
  document.querySelectorAll('[data-nuf-dup-new]').forEach(x=>x.onclick=()=>duplicateAsIndependentAsset(a,x.dataset.nufDupNew));
@@ -3483,6 +3543,36 @@ function makeStoredZIP(entries){
  const end=zipBytes(22);end.view.setUint32(0,0x06054b50,true);end.view.setUint16(4,0,true);end.view.setUint16(6,0,true);end.view.setUint16(8,entries.length,true);end.view.setUint16(10,entries.length,true);end.view.setUint32(12,centralSize,true);end.view.setUint32(16,offset,true);end.view.setUint16(20,0,true);
  return new Blob([...locals,...centrals,end.bytes],{type:'application/zip'});
 }
+function xlsxColLetter(index){let n=index+1,s='';while(n>0){const m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=Math.floor((n-1)/26)}return s}
+function xlsxSheetXML(rows){
+ const body=(rows||[]).map((row,ri)=>{
+   const r=ri+1;
+   const cells=(row||[]).map((val,ci)=>{
+     if(val===null||val===undefined||val==='')return'';
+     const ref=xlsxColLetter(ci)+r,text=escXML(String(val));
+     return '<c r="'+ref+'" t="inlineStr"><is><t xml:space="preserve">'+text+'</t></is></c>';
+   }).join('');
+   return '<row r="'+r+'">'+cells+'</row>';
+ }).join('');
+ return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>'+body+'</sheetData></worksheet>';
+}
+function buildXLSX(sheetName,rows){
+ const encoder=new TextEncoder();
+ const contentTypes='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>';
+ const rootRels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>';
+ const safeName=escXML(String(sheetName||'Folha1').slice(0,31));
+ const workbookXML='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="'+safeName+'" sheetId="1" r:id="rId1"/></sheets></workbook>';
+ const workbookRels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>';
+ const entries=[
+   {name:'[Content_Types].xml',data:encoder.encode(contentTypes)},
+   {name:'_rels/.rels',data:encoder.encode(rootRels)},
+   {name:'xl/workbook.xml',data:encoder.encode(workbookXML)},
+   {name:'xl/_rels/workbook.xml.rels',data:encoder.encode(workbookRels)},
+   {name:'xl/worksheets/sheet1.xml',data:encoder.encode(xlsxSheetXML(rows))}
+ ];
+ const zipBlob=makeStoredZIP(entries);
+ return new Blob([zipBlob],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+}
 function processSummaryText(p){
  const lines=[p.code||'',p.name||'',p.ref||'','Solicitante: '+(p.requester||''),'Finalidade: '+(p.purpose||''),'Descrição do solicitado: '+(p.requestDescription||''),''];
  if((p.participants||[]).length){lines.push('INTERVENIENTES');(p.participants||[]).forEach(person=>lines.push([person.name,person.role,person.phone,person.email].filter(Boolean).join(' | ')));lines.push('')}
@@ -3495,11 +3585,20 @@ function kmlForAsset(p,a,gps){
  const label=[p?.code,a?.code,a?.name].filter(Boolean).join(' · ');
  return '<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><Placemark><name>'+escXML(label)+'</name><Point><coordinates>'+gps.lon+','+gps.lat+',0</coordinates></Point></Placemark></Document></kml>';
 }
+function processDataRows(p){
+ const rows=[['Código','ID Institucional','Designação','Grupo','Destino/Uso','Estado','Data Visita','Hora Início','Hora Fim','Freguesia','Concelho','GPS','Observações']];
+ (p.assets||[]).forEach(a=>{
+   rows.push([a.code||'',a.ref||'',a.name||'',a.group||'',a.currentUse||'',assetOperationalStatus(a),a.visitDate||'',a.visitTime||'',a.visitEnd||'',a.freg||'',a.conc||'',assetGPS(a),a.obs||'']);
+   if((a.nufs||[]).length>1)a.nufs.forEach((n,i)=>rows.push(['  '+nufCode(a,i),'','  '+(n.name||'SUB/NUF'),'','','','','','','','','','']));
+ });
+ return rows;
+}
 async function buildProcessZIP(p,wordBlob=null){
  const encoder=new TextEncoder(),root=safeFileName(p.code||'Processo')+'_Export/',entries=[],missing=[];
  entries.push({name:root+safeFileName(p.code||'Processo')+'_Dados.json',data:encoder.encode(JSON.stringify({app:'Ativa',version:APP_VERSION,schemaVersion:DATA_SCHEMA_VERSION,exportedAt:new Date().toISOString(),process:p},null,2))});
  entries.push({name:root+safeFileName(p.code||'Processo')+'_Resumo.txt',data:encoder.encode(processSummaryText(p))});
  entries.push({name:root+safeFileName(p.code||'Processo')+'_Cronologia.txt',data:encoder.encode(processHistoryText(p))});
+ entries.push({name:root+safeFileName(p.code||'Processo')+'_Dados.xlsx',data:new Uint8Array(await buildXLSX('Ativos',processDataRows(p)).arrayBuffer())});
  if(wordBlob)entries.push({name:root+safeFileName(p.code||'Processo')+'_Ficha.docx',data:new Uint8Array(await wordBlob.arrayBuffer())});
  let done=0,total=(p.assets||[]).reduce((n,a)=>n+(a.nufs||[]).reduce((m,nuf)=>m+(nuf.photos?.length||0),0),0);
  for(const a of (p.assets||[])){
@@ -3535,6 +3634,34 @@ exportZIP.onclick=async()=>{
  exportZIP.disabled=false;
 };
 exportSummary.onclick=async()=>{let p=syncPendingData();if(!p)return;let lines=[p.code,p.name,p.ref,'',...p.assets.map(a=>a.code+' | '+(a.ref||'')+' | '+(a.name||'')+' | '+(a.group||'')+' | '+(a.currentUse||'')+' | SUB/NUF: '+(a.nufs||[]).map((n,i)=>nufCode(a,i)+' — '+(n.name||'')).join(', '))],blob=new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'});await saveBlobToDestination(blob,safeFileName(p.code||'Processo')+'_Resumo.txt',zipInfo,'Resumo TXT pronto.')}
+function visitedAssetsUpToToday(p){
+ const today=new Date().toISOString().slice(0,10);
+ return (p.assets||[]).filter(a=>a.visitDate&&a.visitDate<=today).sort((a,b)=>String(a.visitDate+' '+(a.visitTime||'')).localeCompare(String(b.visitDate+' '+(b.visitTime||''))));
+}
+function visitParticipantsLabel(p,a){
+ const people=(a.visitParticipantIds||[]).map(id=>(p.participants||[]).find(x=>x.id===id)).filter(Boolean).map(x=>[x.name,x.role].filter(Boolean).join(' — '));
+ if(a.visitOtherPeople)people.push(a.visitOtherPeople);
+ return people;
+}
+function visitsReportHTML(p){
+ const today=new Date().toISOString().slice(0,10),dated=visitedAssetsUpToToday(p);
+ const rows=dated.map(a=>`<div class="report-field"><b>${esc(a.visitDate)} · ${esc([a.visitTime,a.visitEnd].filter(Boolean).join('–')||'hora não indicada')} — ${esc(a.code||'Ativo')} · ${esc(a.name||'Sem designação')}</b>${esc(visitParticipantsLabel(p,a).join('; ')||'Sem intervenientes registados')}</div>`).join('');
+ return `<h2>Lista de Visitas — ${esc(p.code||'Processo')}</h2><div class="muted">${dated.length} visita(s) registada(s) até ${esc(today)}.</div>${rows||'<p class="muted">Ainda não existem datas de visita registadas nos Ativos.</p>'}`;
+}
+function visitsListText(p){
+ const today=new Date().toISOString().slice(0,10),dated=visitedAssetsUpToToday(p);
+ const lines=[p.code||'',p.name||'','Lista de Visitas até '+today,''];
+ dated.forEach(a=>lines.push([a.visitDate,[a.visitTime,a.visitEnd].filter(Boolean).join('-'),a.code,a.name,visitParticipantsLabel(p,a).join('; ')].filter(Boolean).join(' | ')));
+ return lines.length>4?lines.join('\n'):'Sem visitas registadas.';
+}
+exportVisits.onclick=async()=>{
+ const p=syncPendingData();if(!p){alert('Selecione primeiro um Processo.');return}
+ visitsReport.innerHTML=visitsReportHTML(p);
+ visitsReport.classList.remove('hidden');
+ visitsReport.scrollIntoView({behavior:'smooth',block:'start'});
+ const blob=new Blob([visitsListText(p)],{type:'text/plain;charset=utf-8'});
+ await saveBlobToDestination(blob,safeFileName(p.code||'Processo')+'_Visitas.txt',zipInfo,'Lista de Visitas pronta — visível acima e descarregada.');
+};
 
 
 // Capture button actions before their own handlers. This is the common guard
