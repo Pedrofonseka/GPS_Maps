@@ -11,7 +11,7 @@
 body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 header{position:sticky;top:0;z-index:20;background:var(--menu);color:#fff;padding:calc(4px + env(safe-area-inset-top)) 10px 4px;border-bottom:1px solid #6e3327}
 .brand{font-weight:800;font-size:16px}.ctx{font-size:11px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(255,255,255,.88)}
-.header-line{display:flex;align-items:center;justify-content:space-between;gap:10px}.header-config{padding:5px 9px!important;min-height:30px;background:#fff9dc!important;border-color:rgba(0,0,0,.24)!important;color:var(--ink)}
+.header-line{display:flex;align-items:center;justify-content:space-between;gap:10px}.header-config{padding:9px 16px!important;min-height:44px;font-size:14px;background:#fff9dc!important;border-color:rgba(0,0,0,.24)!important;color:var(--ink)}
 nav{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:5px}
 nav button{border:1px solid rgba(0,0,0,.18);background:#f7fcfe;color:var(--ink);border-radius:9px;padding:6px 2px;font-size:11px;font-weight:700;min-height:44px}
 nav button.on{background:#fff;border:2px solid #222}
@@ -23,10 +23,10 @@ label{display:block;font-size:12px;font-weight:700;margin:8px 0 4px}
 input,select,textarea{width:100%;font:inherit;padding:10px;border:1px solid #bfc5cc;border-radius:8px;background:white}
 textarea{min-height:76px}.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
-button{font:inherit;cursor:pointer;touch-action:manipulation}.btn{border:1px solid #aeb5bd;background:white;border-radius:8px;padding:9px 11px;font-weight:700}
+button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}.btn{border:1px solid #aeb5bd;background:white;border-radius:8px;padding:9px 11px;font-weight:700}
 .safe-save-action{display:block;min-height:54px;padding:13px 16px;margin:10px 0 110px}
 .btn.primary{background:var(--yellow);border-color:#c8a52f}.btn.danger{color:var(--red)}
-.list{display:grid;gap:6px}.item{background:white;border:1px solid var(--line);border-radius:9px;padding:9px;display:flex;justify-content:space-between;gap:8px;align-items:center}.process-active{background:#e9f7ee!important;border-color:#8fc7a1!important}
+.list{display:grid;gap:6px}.item{background:white;border:1px solid var(--line);border-radius:9px;padding:9px;display:flex;justify-content:space-between;gap:8px;align-items:center;transition:background .6s ease}.process-active{background:#e9f7ee!important;border-color:#8fc7a1!important}.cfg-row-flash{background:#fff4bd!important}
 .item-main{min-width:0;max-width:100%;overflow:hidden}.item-title{font-weight:800;font-size:14px}.item-sub{display:inline-block;max-width:100%;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .search{margin-bottom:8px}.muted{color:var(--muted);font-size:12px}.pill{display:inline-block;padding:3px 7px;border-radius:999px;background:#eef0f3;font-size:11px}
 .tabs{display:flex;gap:5px;margin-bottom:8px}.tabs button{flex:1;padding:8px;border:1px solid var(--line);background:white;border-radius:8px}.tabs .on{background:#fff4bd;border-color:#c8a52f}
@@ -56,7 +56,7 @@ button{font:inherit;cursor:pointer;touch-action:manipulation}.btn{border:1px sol
 .table-editor{background:var(--bg)!important;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)!important}.table-editor .config-shell{width:100%;max-width:none!important;height:100dvh;max-height:none;margin:0!important;border:0;border-radius:0;box-shadow:none}.table-editor .config-tabs{display:none}.table-editor .config-body> :not(#cfgTablesSection){display:none!important}.table-editor #cfgTablesSection{display:block!important}.table-editor #cfgTablesSection>.card{margin-top:0}.table-editor #cfgTable{display:block!important}
 .table-chooser{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:10px}.table-chooser button{text-align:left;min-height:48px}.table-editor .table-chooser,.table-editor #cfgTableChooserLabel{display:none!important}.table-editor #cfgTable{display:block}.process-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;max-width:100%;overflow:hidden}.process-card-main{border:0;background:transparent;text-align:left;padding:0;min-width:0;max-width:100%;overflow:hidden;touch-action:manipulation}.process-card-status{display:flex;gap:3px;align-items:center;flex-wrap:wrap;justify-content:flex-end}.process-card-status .pill{padding:2px 5px;font-size:9px}.asset-visit-people{display:flex;gap:6px;flex-wrap:wrap}.status-auto{padding:6px 8px;min-height:34px;border:1px solid #9dcbd8;border-radius:8px;background:var(--feedback);font-weight:800}
 .address-compact{display:grid;grid-template-columns:.7fr 1fr 1.25fr;gap:8px;align-items:end}.feedback-ruler{background:var(--feedback)!important;border-color:#9dcbd8!important;color:#244b58!important}.id-hint{font-size:10px;font-weight:600;color:var(--muted)}
-#orientationInfo:not(:empty),#photoInfo:not(:empty),#zipInfo:not(:empty),#folderInfo:not(:empty),#cfgPhotoInfo:not(:empty),#cfgPageInfo:not(:empty){display:block;background:var(--feedback);border:1px solid #9dcbd8;border-radius:8px;padding:6px 8px;color:#244b58}
+#orientationInfo:not(:empty),#photoInfo:not(:empty),#zipInfo:not(:empty),#folderInfo:not(:empty),#cfgPhotoInfo:not(:empty),#cfgPageInfo:not(:empty),#cfgTableInfo:not(:empty){display:block;background:var(--feedback);border:1px solid #9dcbd8;border-radius:8px;padding:6px 8px;color:#244b58}
 .participant-row{display:grid;grid-template-columns:1.4fr 1fr 1fr 1.2fr auto;gap:6px;align-items:end}.participant-row label{margin-top:0}.participant-row input{padding:7px}
 .visit-choice{display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:7px;align-items:center}.visit-choice label{margin:0}.visit-summary{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
  .auto-asset-row{display:grid;grid-template-columns:90px minmax(0,1fr);gap:7px;align-items:end}.auto-asset-code{font-weight:850;padding:10px 4px}
@@ -326,7 +326,7 @@ button{font:inherit;cursor:pointer;touch-action:manipulation}.btn{border:1px sol
   <label>Observações do Ativo</label><textarea id="aObs"></textarea>
   <h3 style="margin-top:14px">Ativos do mesmo núcleo <small>— mesmo código agregador</small></h3>
   <div id="nufsBox">
-   <div class="muted">Por defeito, o núcleo é único e contém apenas o Ativo de índice 1. Acrescente outro Ativo apenas quando existirem zonas suscetíveis de análise autónoma; todas mantêm o mesmo código agregador.</div>
+   <div class="muted">Por defeito, o núcleo é único e contém apenas o Ativo de índice 1. Acrescente outro Ativo apenas quando existirem zonas suscetíveis de análise autónoma; todas mantêm o mesmo código agregador. Em cada Ativo abaixo: <b>Agregar ao mesmo núcleo</b> acrescenta uma parte com o mesmo código-base (ex.: 005.2); <b>Duplicar em núcleo diferente</b> cria um Ativo novo e independente (ex.: 006.1), com a classificação copiada mas endereço e fotografias em branco.</div>
    <div class="actions"><button class="btn" id="addNUF">+ Agregar outro</button></div>
    <div id="nufList" class="list"></div>
   </div>
@@ -493,6 +493,7 @@ button{font:inherit;cursor:pointer;touch-action:manipulation}.btn{border:1px sol
    <label>Tabela em edição</label><select id="cfgTable" class="hidden"><option value="requesters">Solicitantes</option><option value="stakeholders">Intervenientes</option><option value="services">Tipos de serviço</option><option value="purposes">Finalidade</option><option value="valueBases">Bases de valor</option><option value="assetTypes">Tipos de Ativo e classificação</option><option value="municipalities">Concelhos</option><option value="parishes">Freguesias</option><option value="postalCodes">Códigos Postais</option><option value="documents">Documentação</option><option value="visitTypes">Tipos de visita</option><option value="weather">Estado do tempo</option><option value="offices">Gabinetes</option><option value="destinations">Destino</option><option value="occupancyStates">Estado ocupação</option><option value="conservationStates">Estado conservação</option><option value="vetustez">Vetustez</option></select>
    <div class="row"><div><label id="cfgTableNewLabel">Novo valor</label><input id="cfgTableNew"></div><div id="cfgTableGroupBox" class="hidden"><label>Grupo obrigatório</label><select id="cfgTableGroup"></select></div><div id="cfgParishMunicipalityBox" class="hidden"><label>Concelho relacionado</label><input id="cfgParishMunicipality" list="municipalitySuggestions"></div></div>
    <div class="actions"><button class="btn primary" id="cfgTableAdd" type="button">+ Adicionar</button></div>
+   <div id="cfgTableInfo" class="muted" style="margin-top:6px"></div>
    <div id="cfgTableValues" class="list" style="margin-top:8px"></div>
   </div>
   <div id="cfgPhotosSection" class="config-section"><h3>Fotografias</h3>
@@ -606,7 +607,7 @@ button{font:inherit;cursor:pointer;touch-action:manipulation}.btn{border:1px sol
 const {
  aCode,aConc,aDoorNumber,aFloor,aFreg,aGPS,aInspectionStatus,aKMLInfo,aLocal,aName,aObs,aPostalCode,aRef,aStatus,aVisitDate,aVisitTime,aVisitEnd,assetStatusAuto,assetVisitPeople,aVisitOther,postalCodeSuggestions,cAssetType,cAssetGroup,cCurrentUse,cDestinationChecks,
  addNUF,addProcessStakeholder,assetEditor,assetEditorTitle,assetList,autoAssetCount,autoAssetRows,autoProcessCard,autoProcessCode,autoProcessName,autoProcessRef,backCharacter,backupAll,backupInfo,cancelAutoProcess,cancelVisit,cObs,cameraPhoto,cancelNewProcess,createAutoProcess,
- adjustOrientation,cfgAddField,cfgFieldHelp,cfgFieldHelpText,cfgFields,cfgFieldsSection,cfgFooterCenter,cfgFooterLeft,cfgFooterRight,cfgFooterSize,cfgFooterAutoFit,cfgFooterDistance,cfgFooterFontSizeLegacy,cfgFooterTextLeft,cfgFooterTextCenter,cfgFooterTextRight,cfgFooterAnalystVersion,cfgGroup,cfgGroupName,cfgHeaderCenter,cfgHeaderLeft,cfgHeaderRight,cfgHeaderSize,cfgHeaderDistance,cfgHeaderGabineteSize,cfgHeaderGabineteBold,cfgHeaderTitleSize,cfgHeaderTitleBold,cfgHeaderExtraEnabled,cfgHeaderExtraText,cfgHeaderExtraSize,cfgMarginBottom,cfgMarginLeft,cfgMarginRight,cfgMarginTop,cfgOutputHelp,cfgOutputHelpText,cfgOutputValues,cfgCoverContentValues,cfgResetCoverContent,cfgOutModelSelect,cfgOutModelZones,cfgOutModelAddField,cfgOutModelInfo,cfgOutputsSection,cfgFontFamily,cfgPageInfo,cfgPageOrientation,cfgTopContext,cfgTopContextSize,cfgPageTitleMode,cfgPageTitleSize,cfgPhotoInfo,cfgPhotoMaxSide,cfgPhotoQuality,cfgResetOutput,cfgResetPage,cfgResetPhotos,cfgRestore,cfgRotateQuality,cfgSavePage,cfgSavePhotos,cfgTable,cfgTableAdd,cfgTableGroup,cfgTableGroupBox,cfgTableNew,cfgTableNewLabel,cfgParishMunicipality,cfgParishMunicipalityBox,cfgTablesSection,cfgTableValues,charTitle,characterEditor,characterList,characterPick,chooseFolder,closeAsset,closeConfig,coverCols,coverMinPhotos,
+ adjustOrientation,cfgAddField,cfgFieldHelp,cfgFieldHelpText,cfgFields,cfgFieldsSection,cfgFooterCenter,cfgFooterLeft,cfgFooterRight,cfgFooterSize,cfgFooterAutoFit,cfgFooterDistance,cfgFooterFontSizeLegacy,cfgFooterTextLeft,cfgFooterTextCenter,cfgFooterTextRight,cfgFooterAnalystVersion,cfgGroup,cfgGroupName,cfgHeaderCenter,cfgHeaderLeft,cfgHeaderRight,cfgHeaderSize,cfgHeaderDistance,cfgHeaderGabineteSize,cfgHeaderGabineteBold,cfgHeaderTitleSize,cfgHeaderTitleBold,cfgHeaderExtraEnabled,cfgHeaderExtraText,cfgHeaderExtraSize,cfgMarginBottom,cfgMarginLeft,cfgMarginRight,cfgMarginTop,cfgOutputHelp,cfgOutputHelpText,cfgOutputValues,cfgCoverContentValues,cfgResetCoverContent,cfgOutModelSelect,cfgOutModelZones,cfgOutModelAddField,cfgOutModelInfo,cfgOutputsSection,cfgFontFamily,cfgPageInfo,cfgPageOrientation,cfgTopContext,cfgTopContextSize,cfgPageTitleMode,cfgPageTitleSize,cfgPhotoInfo,cfgPhotoMaxSide,cfgPhotoQuality,cfgResetOutput,cfgResetPage,cfgResetPhotos,cfgRestore,cfgRotateQuality,cfgSavePage,cfgSavePhotos,cfgTable,cfgTableAdd,cfgTableGroup,cfgTableGroupBox,cfgTableNew,cfgTableNewLabel,cfgParishMunicipality,cfgParishMunicipalityBox,cfgTablesSection,cfgTableValues,cfgTableInfo,charTitle,characterEditor,characterList,characterPick,chooseFolder,closeAsset,closeConfig,coverCols,coverMinPhotos,
  configBody,configModal,configTabs,cfgPageSection,cfgPhotosSection,cfgStructureSection,dCode,dDeadline,dInputDate,dName,dOffice,dObs,dPurpose,dService,dRef,dRequestDescription,dRequester,dStatus,dValueBase,deleteAsset,deleteProcess,
  appVersionLabel,dashboardDeadlines,dashboardProgress,dashboardStats,dashboardStatus,downloadKML,dynamicFields,exportSummary,exportWord,exportZIP,filterProcessStatus,folderInfo,getGPS,groupPill,newAutoProcess,newVisit,nufChooser,nufList,nufsBox,newAsset,newProcess,
  municipalitySuggestions,newProcessCard,nextAsset,openConfig,openMap,pCode,pName,pRef,parishSuggestions,photoInfo,photoList,photos,piEmail,piName,piObs,piPhone,piReusable,piRole,previewReport,previewValidation,rejectPreview,acceptPreview,printReport,prevAsset,processList,
@@ -1600,7 +1601,7 @@ async function deleteProcessById(processId){
 deleteProcess.onclick=()=>{const p=proc();if(p)void deleteProcessById(p.id)};
 
 function nextAssetCode(p){let n=(p.assets.length?Math.max(...p.assets.map(a=>parseInt((a.code||'').match(/\d+/)?.[0]||0))):0)+1;return 'ATV_'+String(n).padStart(3,'0')}
-function nufCode(a,index){return (a?.code||'ATV_001')+'_'+String(index+1)}
+function nufCode(a,index){return (a?.code||'ATV_001')+'.'+String(index+1)}
 function createNUF(a,name='Ativo 1'){
  const id=uid(),index=(a?.nufs||[]).length;
  return {id,idNUF:id,code:nufCode(a,index),name,char:{},qtyAreas:{},photos:[]};
@@ -1660,15 +1661,32 @@ function openAsset(id){
 addNUF.onclick=()=>{let a=assetEditor._draft,n=createNUF(a,'Ativo '+String(a.nufs.length+1));a.nufs.push(n);syncNUFCodes(a);renderNUFs(a);if(editingAsset){historyAdd(proc(),'asset_part_added',(a.code||'Núcleo')+' — Ativo '+n.code+' acrescentado.',a.id);saveSoon()}}
 function renderNUFs(a){
  syncNUFCodes(a);renderNUFDynamicVariables();
- nufList.innerHTML=(a.nufs||[]).map((n,i)=>`<div class="item" style="align-items:flex-start"><span class="item-main" style="flex:1"><span class="item-title">${esc(n.code)}</span><input data-nuf-name="${n.id}" value="${esc(n.name)}" placeholder="Designação do Ativo" style="padding:7px;margin-top:5px"></span><span class="photo-actions"><button class="btn" data-nuf-dup="${n.id}">Duplicar como novo Ativo</button><button class="btn danger" data-nuf-del="${n.id}">Eliminar</button></span></div>`).join('');
+ nufList.innerHTML=(a.nufs||[]).map((n,i)=>`<div class="item" style="align-items:flex-start"><span class="item-main" style="flex:1"><span class="item-title">${esc(n.code)}</span><input data-nuf-name="${n.id}" value="${esc(n.name)}" placeholder="Designação do Ativo" style="padding:7px;margin-top:5px"></span><span class="photo-actions"><button class="btn" data-nuf-dup="${n.id}" title="Cria outro Ativo dentro deste mesmo núcleo (mesmo código-base)">Agregar ao mesmo núcleo</button><button class="btn" data-nuf-dup-new="${n.id}" title="Cria um Ativo novo e independente (novo núcleo, código próprio), com a classificação e caracterização copiadas">Duplicar em núcleo diferente</button><button class="btn danger" data-nuf-del="${n.id}">Eliminar</button></span></div>`).join('');
  document.querySelectorAll('[data-nuf-name]').forEach(x=>x.oninput=()=>{const n=a.nufs.find(v=>v.id===x.dataset.nufName);if(n)n.name=x.value;if(editingAsset)saveSoon()});
  document.querySelectorAll('[data-nuf-dup]').forEach(x=>x.onclick=()=>duplicateNUF(a,x.dataset.nufDup));
+ document.querySelectorAll('[data-nuf-dup-new]').forEach(x=>x.onclick=()=>duplicateAsIndependentAsset(a,x.dataset.nufDupNew));
  document.querySelectorAll('[data-nuf-del]').forEach(x=>x.onclick=()=>deleteNUF(a,x.dataset.nufDel));
 }
 async function duplicateNUF(a,id){
  const source=a.nufs.find(n=>n.id===id);if(!source)return;
  const clone=JSON.parse(JSON.stringify(source)),newId=uid();clone.id=newId;clone.idNUF=newId;clone.name='Ativo '+String(a.nufs.length+1);clone.photos=[];
  a.nufs.push(clone);syncNUFCodes(a);if(editingAsset){historyAdd(proc(),'asset_part_duplicated',(a.code||'Ativo')+' — criado '+clone.code+' com os dados-base; fotografias não copiadas.',a.id);save()}renderNUFs(a);
+}
+function duplicateAsIndependentAsset(a,id){
+ const p=proc();if(!p)return;
+ const source=a.nufs.find(n=>n.id===id);if(!source)return;
+ if(!confirm('Criar um novo Ativo independente (novo núcleo, com o próprio código) a partir de "'+(source.name||'Ativo 1')+'"?\n\nA classificação e a caracterização são copiadas; endereço, GPS, dados da visita e fotografias ficam em branco, por se tratar de outro local.'))return;
+ const newAsset={ref:'',name:a.name||'',status:'ON',type:a.type||'',group:a.group||'',currentUse:a.currentUse||'',local:'',doorNumber:'',floor:'',postalCode:'',freg:'',conc:'',visitDate:'',visitTime:'',visitEnd:'',visitParticipantIds:[],visitOtherPeople:'',inspectionStatus:'',gps:'',obs:'',split:true,nufs:[],char:{},photos:[],origin:'manual'};
+ newAsset.code=nextAssetCode(p);newAsset.id=uid();newAsset.idAtivo=newAsset.id;newAsset.createdAt=new Date().toISOString();
+ const firstNUF=createNUF(newAsset,'Ativo 1');
+ firstNUF.char=JSON.parse(JSON.stringify(source.char||{}));firstNUF.qtyAreas=JSON.parse(JSON.stringify(source.qtyAreas||{}));
+ newAsset.nufs=[firstNUF];syncNUFCodes(newAsset);newAsset.inspectionStatus=automaticInspectionStatus(newAsset);
+ p.assets.push(newAsset);
+ historyAdd(p,'asset_created',newAsset.code+' — criado como núcleo independente a partir de '+(a.code||'Ativo')+' ('+(source.name||'Ativo 1')+'); classificação e caracterização copiadas, localização e fotografias por preencher.',newAsset.id,'manual');
+ save();
+ assetEditor.classList.add('hidden');
+ renderAssets();
+ openAsset(newAsset.id);
 }
 async function deleteNUF(a,id){
  if(a.nufs.length<=1){alert('O núcleo tem de manter pelo menos o Ativo de índice 1.');return}
@@ -2487,6 +2505,7 @@ cfgSavePage.onclick=()=>{savePageSettings();alert('Layout de página guardado.')
 cfgResetPage.onclick=()=>{pageSettings=Object.assign({},PAGE_SETTINGS_DEFAULT);try{localStorage.setItem(PAGE_SETTINGS_KEY,JSON.stringify(pageSettings))}catch(e){warnStorageFailure()}fillPageSettings();applyPageSettings()};
 
 function renderCfgTable(){
+ if(cfgTableInfo)cfgTableInfo.textContent='';
  const key=cfgTable.value||'purposes';let values=appTables[key]||[];
  const typeMode=key==='assetTypes',parishMode=key==='parishes';cfgTableGroupBox.classList.toggle('hidden',!typeMode);cfgParishMunicipalityBox.classList.toggle('hidden',!parishMode);cfgTableNewLabel.textContent=typeMode?'Nova designação':parishMode?'Nova Freguesia':'Novo valor';
  if(typeMode)sortAssetTypes(values);
@@ -2525,7 +2544,60 @@ function renderTableChooser(){
  box.querySelectorAll('[data-table-open]').forEach(button=>button.onclick=()=>openConfigAt('tables',button.textContent.trim(),button.dataset.tableOpen));
 }
 cfgTable.onchange=renderCfgTable;
-cfgTableAdd.onclick=()=>{const key=cfgTable.value,value=cfgTableNew.value.trim();if(!value)return;if(key==='offices'){appTables.offices.push({id:'office_'+uid(),name:value,extra:''});cfgTableNew.value='';saveAppTables();renderCfgTable();refreshConfiguredSelects();return;}if(key==='parishes'){const municipality=cfgParishMunicipality.value.trim();if(!municipality){alert('Indique o Concelho relacionado com a Freguesia.');cfgParishMunicipality.focus();return}appTables.parishes=normalizeParishes([...(appTables.parishes||[]),{id:'parish_'+uid(),name:value,municipality}]);appTables.municipalities=normalizeGeneralTable([...(appTables.municipalities||[]),municipality]);cfgTableNew.value='';cfgParishMunicipality.value='';saveAppTables();refreshConfiguredSelects();renderCfgTable();return}if(key==='assetTypes'){if((appTables.assetTypes||[]).some(x=>x.name.toLowerCase()===value.toLowerCase())){alert('Já existe um Tipo com esta designação.');return}const group=cfgTableGroup.value;if(!groups[group]){alert('Escolha o Grupo de classificação.');return}appTables.assetTypes.push({id:'type_'+uid(),name:value,group});sortAssetTypes(appTables.assetTypes)}else{appTables[key]=normalizeGeneralTable([...(appTables[key]||[]),value])}cfgTableNew.value='';saveAppTables();refreshConfiguredSelects();refreshOpenOutputs();renderCfgTable()};
+function cfgTableFlash(matchText){
+ if(!matchText)return;
+ const selectors=['[data-table-value]','[data-parish-name]','[data-office-name]','[data-type-name]'];
+ let target=null;
+ for(const sel of selectors){
+   target=[...cfgTableValues.querySelectorAll(sel)].find(el=>el.value.trim().toLowerCase()===matchText.trim().toLowerCase());
+   if(target)break;
+ }
+ const row=target?.closest('.item');
+ if(!row)return;
+ row.scrollIntoView({behavior:'smooth',block:'center'});
+ row.classList.add('cfg-row-flash');
+ setTimeout(()=>row.classList.remove('cfg-row-flash'),1600);
+}
+cfgTableAdd.onclick=()=>{
+ const key=cfgTable.value,value=cfgTableNew.value.trim();
+ if(!value)return;
+ if(key==='offices'){
+   const already=appTables.offices.some(x=>x.name.localeCompare(value,'pt',{sensitivity:'base'})===0);
+   if(already){cfgTableInfo.textContent='"'+value+'" já existe nos Gabinetes.';cfgTableFlash(value);return}
+   appTables.offices.push({id:'office_'+uid(),name:value,extra:''});
+   cfgTableNew.value='';saveAppTables();renderCfgTable();refreshConfiguredSelects();
+   cfgTableInfo.textContent='"'+value+'" adicionado — '+appTables.offices.length+' Gabinete(s) no total.';
+   cfgTableFlash(value);
+   return;
+ }
+ if(key==='parishes'){
+   const municipality=cfgParishMunicipality.value.trim();
+   if(!municipality){alert('Indique o Concelho relacionado com a Freguesia.');cfgParishMunicipality.focus();return}
+   const already=(appTables.parishes||[]).some(x=>x.name.localeCompare(value,'pt',{sensitivity:'base'})===0&&x.municipality.localeCompare(municipality,'pt',{sensitivity:'base'})===0);
+   appTables.parishes=normalizeParishes([...(appTables.parishes||[]),{id:'parish_'+uid(),name:value,municipality}]);
+   appTables.municipalities=normalizeGeneralTable([...(appTables.municipalities||[]),municipality]);
+   cfgTableNew.value='';cfgParishMunicipality.value='';saveAppTables();refreshConfiguredSelects();renderCfgTable();
+   cfgTableInfo.textContent=(already?'"'+value+' — '+municipality+'" já existia — ':'"'+value+' — '+municipality+'" adicionada — ')+appTables.parishes.length+' Freguesia(s) no total.';
+   cfgTableFlash(value);
+   return;
+ }
+ if(key==='assetTypes'){
+   if((appTables.assetTypes||[]).some(x=>x.name.toLowerCase()===value.toLowerCase())){alert('Já existe um Tipo com esta designação.');cfgTableFlash(value);return}
+   const group=cfgTableGroup.value;
+   if(!groups[group]){alert('Escolha o Grupo de classificação.');return}
+   appTables.assetTypes.push({id:'type_'+uid(),name:value,group});
+   sortAssetTypes(appTables.assetTypes);
+   cfgTableNew.value='';saveAppTables();refreshConfiguredSelects();refreshOpenOutputs();renderCfgTable();
+   cfgTableInfo.textContent='"'+value+'" adicionado — '+appTables.assetTypes.length+' Tipo(s) no total.';
+   cfgTableFlash(value);
+   return;
+ }
+ const already=(appTables[key]||[]).some(x=>String(x).localeCompare(value,'pt',{sensitivity:'base'})===0);
+ appTables[key]=normalizeGeneralTable([...(appTables[key]||[]),value]);
+ cfgTableNew.value='';saveAppTables();refreshConfiguredSelects();refreshOpenOutputs();renderCfgTable();
+ cfgTableInfo.textContent=(already?'"'+value+'" já existia — ':'"'+value+'" adicionado — ')+appTables[key].length+' valor(es) no total.';
+ cfgTableFlash(value);
+};
 
 function initConfig(section='tables',tableKey=''){
  appTables=loadAppTables();
