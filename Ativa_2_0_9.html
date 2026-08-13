@@ -1032,7 +1032,7 @@ function renderProcessDynamicForm(){
    // Calendários só confirmam após o utilizador sair do campo, evitando fechos prematuros.
    const evt=el.type==='date'?'blur':(el.tagName==='SELECT'?'change':'input');
    let calendarTimer=null;
-   el.addEventListener(evt,()=>{const commit=()=>{const back=map[el.dataset.processVar];if(back)back.value=el.value;syncPendingData(true)};if(el.type==='date'){clearTimeout(calendarTimer);calendarTimer=setTimeout(commit,2000)}else commit()});
+   el.addEventListener(evt,()=>{const commit=()=>{const back=map[el.dataset.processVar];if(back)back.value=el.value;syncPendingData(true)};if(el.type==='date'){clearTimeout(calendarTimer);calendarTimer=setTimeout(commit,3000)}else commit()});
  });
  box.querySelectorAll('[data-process-var-table]').forEach(btn=>btn.onclick=()=>{
    openConfigAt('tables',btn.dataset.processVarLabel||'Tabela',btn.dataset.processVarTable);
@@ -1649,7 +1649,7 @@ function persistExistingAsset(){
 aPostalCode.addEventListener('input',()=>{const formatted=formatPostalCode(aPostalCode.value);if(formatted!==aPostalCode.value)aPostalCode.value=formatted});
 aFreg.addEventListener('change',()=>{const match=(appTables.parishes||[]).find(x=>x.name.localeCompare(aFreg.value.trim(),'pt',{sensitivity:'base'})===0);if(match?.municipality)aConc.value=match.municipality;persistExistingAsset()});
 let assetDateCommitTimer=null;
-aVisitDate.addEventListener('change',()=>{clearTimeout(assetDateCommitTimer);assetDateCommitTimer=setTimeout(persistExistingAsset,2000)});
+aVisitDate.addEventListener('change',()=>{clearTimeout(assetDateCommitTimer);assetDateCommitTimer=setTimeout(persistExistingAsset,3000)});
 newAsset.onclick=()=>openAsset(null);
 function openAsset(id){
  let p=proc();editingAsset=id;let a=id?p.assets.find(x=>x.id===id):{code:nextAssetCode(p),ref:'',name:'',status:'ON',type:'',group:'',currentUse:'',local:'',doorNumber:'',floor:'',postalCode:'',freg:'',conc:'',visitDate:'',visitTime:'',visitEnd:'',visitParticipantIds:[],visitOtherPeople:'',inspectionStatus:'',gps:'',obs:'',split:true,nufs:[],char:{},photos:[],origin:'manual'};
