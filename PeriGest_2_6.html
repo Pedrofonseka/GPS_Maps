@@ -139,6 +139,9 @@ function defaultFieldOrder(){
  Object.keys(FIELD_DEFS).forEach(k=>{o[k]=FIELD_DEFS[k].map(f=>f[0])});
  return o;
 }
+// Uma linha de campos do corpo de um Out Model (capa / resumo): cada posição E/C/D é uma
+// lista de variáveis do processo, tal como as linhas de cabeçalho/rodapé.
+function campoLinha(key){return {id:uid(),esquerda:key?[key]:[],centro:[],direita:[]}}
 // Mais hipóteses de fonte de texto sem engordar o código: o Word (.docx) apenas referencia
 // o nome da fonte instalada no sistema (não a embebe), pelo que aceita qualquer nome sem
 // custo nenhum; o jsPDF só tem 3 fontes base embutidas (helvetica/times/courier), por isso
@@ -195,6 +198,14 @@ function resolveProcessVar(proc,key,ctx){
 function renderVarSlot(proc,keys,ctx){
  return (keys||[]).map(k=>resolveProcessVar(proc,k,ctx)).filter(Boolean).join(' · ');
 }
+// Igual ao renderVarSlot, mas para "campos do corpo" (capa/resumo): mostra "Rótulo: valor"
+// em vez do valor isolado — é o formato já usado nessas secções.
+function renderBodyFieldSlot(proc,keys,ctx){
+ return (keys||[]).map(k=>{
+  const v=resolveProcessVar(proc,k,ctx);
+  return v?`${processVarLabel(k)}: ${v}`:'';
+ }).filter(Boolean).join(' · ');
+}
 // Cabeçalho por defeito: 3 linhas. O traço contínuo fica entre a 2ª e a 3ª linha (não
 // entre a 1ª e a 2ª) — regra pedida explicitamente, para a 3ª linha ficar "solta" por
 // baixo do traço, disponível para conteúdo livre configurável.
@@ -249,8 +260,12 @@ function defaultState(){
   // e negrito próprios — o título imprime-se uma só vez por secção, independentemente do
   // nº de páginas que essa secção ocupe.
   modelDocs:[
-   {id:uid(),chave:'capa',titulo:'Capa de processo',fonte:'helvetica',tamanho:10,negrito:true,posicao:'esquerda'},
-   {id:uid(),chave:'resumoCronologia',titulo:'Resumo do processo',fonte:'helvetica',tamanho:10,negrito:true,posicao:'esquerda'},
+   {id:uid(),chave:'capa',titulo:'Capa de processo',fonte:'helvetica',tamanho:10,negrito:true,posicao:'esquerda',
+    corpoFonte:'helvetica',corpoTamanho:10,corpoNegrito:false,
+    linhas:[campoLinha('codigo'),campoLinha('numero'),campoLinha('solicitanteInstitucional'),campoLinha('designacaoInstitucional'),campoLinha('local')]},
+   {id:uid(),chave:'resumoCronologia',titulo:'Resumo do processo',fonte:'helvetica',tamanho:10,negrito:true,posicao:'esquerda',
+    corpoFonte:'helvetica',corpoTamanho:10,corpoNegrito:false,
+    linhas:[campoLinha('codigo'),campoLinha('numero'),campoLinha('solicitanteInstitucional'),campoLinha('designacaoInstitucional'),campoLinha('designacaoTag'),campoLinha('local'),campoLinha('coordenador'),campoLinha('assunto')]},
    {id:uid(),chave:'listaQuestoes',titulo:'A — Lista de questões colocadas',fonte:'helvetica',tamanho:10,negrito:true,posicao:'esquerda',mostrarStatus:true,incluirFotos:false},
    {id:uid(),chave:'custosPendentes',titulo:'Resumo de questões com apuramento de custos pendente',fonte:'helvetica',tamanho:10,negrito:true,posicao:'esquerda',mostrarStatus:true,incluirFotos:false},
    {id:uid(),chave:'listaAnalise',titulo:'B — Histórico de análise',fonte:'helvetica',tamanho:10,negrito:true,posicao:'esquerda',incluirFotos:true},
@@ -309,6 +324,10 @@ function loadState(){
   if(!m.posicao)m.posicao=def.posicao||'esquerda';
   if(def.mostrarStatus!=null&&m.mostrarStatus==null)m.mostrarStatus=def.mostrarStatus;
   if(def.incluirFotos!=null&&m.incluirFotos==null)m.incluirFotos=def.incluirFotos;
+  if(def.linhas&&!m.linhas)m.linhas=def.linhas.map(l=>({...l,id:uid()}));
+  if(def.corpoFonte&&!m.corpoFonte)m.corpoFonte=def.corpoFonte;
+  if(def.corpoTamanho!=null&&m.corpoTamanho==null)m.corpoTamanho=def.corpoTamanho;
+  if(def.corpoNegrito!=null&&m.corpoNegrito==null)m.corpoNegrito=def.corpoNegrito;
  });
  // cabecalho/rodape passaram de texto livre para caixas de seleção de variáveis —
  // repõe a estrutura nova caso ainda esteja no formato antigo (string).
@@ -2284,11 +2303,64 @@ function viewModelDocs(){
     <label class="inline"><input type="checkbox" data-bind-immediate data-bind="negrito" data-scope="modelDoc" data-scope-id="${m.id}" ${m.negrito?'checked':''}> Negrito</label>
     ${MODELDOC_STATUS_CHAVES.includes(m.chave)?`<label class="inline"><input type="checkbox" data-bind-immediate data-bind="mostrarStatus" data-scope="modelDoc" data-scope-id="${m.id}" ${m.mostrarStatus?'checked':''}> Mostrar o estado da questão (Confirma-se / Confirma-se parcialmente / Não se confirma / Sit. não identificada)</label>`:''}
     ${MODELDOC_FOTOS_CHAVES.includes(m.chave)||MODELDOC_STATUS_CHAVES.includes(m.chave)?`<label class="inline"><input type="checkbox" data-bind-immediate data-bind="incluirFotos" data-scope="modelDoc" data-scope-id="${m.id}" ${m.incluirFotos?'checked':''}> Incluir grelha de fotos ${MODELDOC_FOTOS_CHAVES.includes(m.chave)?'<span class=\"note\">(por defeito, ligado — ficha da questão a analisar)</span>':'<span class=\"note\">(opcional)</span>'}</label>`:''}
+    ${m.linhas?modelDocLinhasHtml(m):''}
    </div>
   `).join('')}
   ${returnLinkBtn()}
  `);
 }
+// Campos do corpo (capa / resumo): cada linha é uma caixa de validação E/C/D de variáveis
+// do processo, tal como o cabeçalho/rodapé — mas mostrada como "Rótulo: valor". Reordenável
+// (subir/descer), pode adicionar-se ou eliminar-se linhas.
+function modelDocLinhasHtml(m){
+ return `
+  <hr>
+  <h3>Campos do corpo <small class="note">(por defeito: os campos já usados nesta secção)</small></h3>
+  <div class="row3">
+   <div>${field('Fonte do corpo',`<select data-bind="corpoFonte" data-scope="modelDoc" data-scope-id="${m.id}">${FONT_OPTIONS.map(([k,label])=>`<option value="${k}" ${m.corpoFonte===k?'selected':''}>${esc(label)}</option>`).join('')}</select>`)}</div>
+   <div>${field('Tamanho do corpo (pt)',`<input type="number" min="6" max="24" step="0.5" data-bind="corpoTamanho" data-scope="modelDoc" data-scope-id="${m.id}" value="${m.corpoTamanho}">`)}</div>
+   <div><label class="inline" style="margin-top:28px"><input type="checkbox" data-bind-immediate data-bind="corpoNegrito" data-scope="modelDoc" data-scope-id="${m.id}" ${m.corpoNegrito?'checked':''}> Negrito</label></div>
+  </div>
+  ${m.linhas.map((l,i)=>`
+   <div class="order-row" style="flex-direction:column;align-items:stretch;gap:8px">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+     <span class="lbl">Linha ${i+1}</span>
+     <div class="order-btns">
+      <button type="button" data-action="moveModelDocLinha" data-model="${m.id}" data-linha="${l.id}" data-dir="up" ${i===0?'disabled':''}>▲</button>
+      <button type="button" data-action="moveModelDocLinha" data-model="${m.id}" data-linha="${l.id}" data-dir="down" ${i===m.linhas.length-1?'disabled':''}>▼</button>
+      <button type="button" class="danger" data-action="removeModelDocLinha" data-model="${m.id}" data-linha="${l.id}">🗑</button>
+     </div>
+    </div>
+    <div class="row3">
+     <div>${varSlotSelect(l.esquerda,'modelDocLinhaSlot',m.id+'|'+l.id,'esquerda')}</div>
+     <div>${varSlotSelect(l.centro,'modelDocLinhaSlot',m.id+'|'+l.id,'centro')}</div>
+     <div>${varSlotSelect(l.direita,'modelDocLinhaSlot',m.id+'|'+l.id,'direita')}</div>
+    </div>
+   </div>
+  `).join('')}
+  <div class="actions one"><button type="button" class="secondary" data-action="addModelDocLinha" data-model="${m.id}">➕ Adicionar linha</button></div>
+ `;
+}
+actions.moveModelDocLinha=(b)=>{
+ const m=app.modelDocs.find(x=>x.id===b.dataset.model);if(!m)return;
+ const i=m.linhas.findIndex(l=>l.id===b.dataset.linha);if(i<0)return;
+ const j=b.dataset.dir==='up'?i-1:i+1;
+ if(j<0||j>=m.linhas.length)return;
+ [m.linhas[i],m.linhas[j]]=[m.linhas[j],m.linhas[i]];
+ saveNow();render();
+};
+actions.addModelDocLinha=(b)=>{
+ const m=app.modelDocs.find(x=>x.id===b.dataset.model);if(!m)return;
+ m.linhas.push(campoLinha());
+ saveNow();render();
+};
+actions.removeModelDocLinha=(b)=>{
+ const m=app.modelDocs.find(x=>x.id===b.dataset.model);if(!m)return;
+ if(m.linhas.length<=1)return alert('Tem de existir pelo menos uma linha.');
+ if(!confirm('Eliminar esta linha do corpo?'))return;
+ m.linhas=m.linhas.filter(l=>l.id!==b.dataset.linha);
+ saveNow();render();
+};
 
 /* ---- Pendentes de resposta — filtro global por processo/perito (para insistir no feedback) ---- */
 function viewPendentesGlobal(params){
@@ -2655,6 +2727,16 @@ document.addEventListener('change',e=>{
   app.settings.rodape['linha'+t.dataset.line][t.dataset.pos]=vals;
   saveNow();
  }
+ if(t.dataset.actionInput==='modelDocLinhaSlot'){
+  const [modelId,linhaId]=t.dataset.line.split('|');
+  const m=app.modelDocs.find(x=>x.id===modelId);
+  const l=m&&m.linhas.find(x=>x.id===linhaId);
+  if(l){
+   const vals=Array.from(t.selectedOptions).map(o=>o.value);
+   l[t.dataset.pos]=vals;
+   saveNow();
+  }
+ }
 });
 actions.backupOut=async(b)=>{
  const st=$('backupState');st.textContent='A preparar ZIP...';
@@ -2782,6 +2864,23 @@ async function buildResumoPdf(proc,cfg){
   doc.text(m.titulo,x,y,{align});y+=ms*0.45+6;
   doc.setFont(F,'normal');doc.setFontSize(BS);
  };
+ // Campos do corpo (capa/resumo): cada linha tem posições E/C/D, "Rótulo: valor".
+ const drawModelDocLinhas=(chave)=>{
+  const m=getModelDoc(chave);
+  if(!m.linhas)return;
+  const cf=FONT_PDF_BASE[m.corpoFonte]||F,cs=Number(m.corpoTamanho)||10;
+  doc.setFont(cf,m.corpoNegrito?'bold':'normal');doc.setFontSize(cs);
+  m.linhas.forEach(l=>{
+   const le=renderBodyFieldSlot(proc,l.esquerda,{}),lc=renderBodyFieldSlot(proc,l.centro,{}),ld=renderBodyFieldSlot(proc,l.direita,{});
+   if(!le&&!lc&&!ld)return;
+   ensure(cs*0.5+2);
+   if(le)doc.text(le,mL,y);
+   if(lc)doc.text(lc,pageW/2,y,{align:'center'});
+   if(ld)doc.text(ld,pageW-mR,y,{align:'right'});
+   y+=cs*0.45+2;
+  });
+  doc.setFont(F,'normal');doc.setFontSize(BS);
+ };
  // Cabeçalho de grupo por autor — uma linha em branco antes e depois, uma só vez no início
  // do bloco contíguo de cada autor (não repetido por questão).
  const autorGroupHeaderPdf=(autorNome)=>{
@@ -2878,7 +2977,7 @@ async function buildResumoPdf(proc,cfg){
  if(cfg.capa){
   setTitulo('Capa');
   sectionTitleModel('capa');
-  [['Código de processo',proc.codigo],['Nº processo',proc.numero],['Solicitante institucional',proc.solicitanteInstitucional],['Contexto',proc.designacaoInstitucional],['Local',proc.local]].forEach(([k,v])=>kv(k,v));
+  drawModelDocLinhas('capa');
   y+=4;
   if(cfg.fotos)await drawPhotoGrid(capaPhotosForExport(proc),true);
   newPage();
@@ -2886,7 +2985,7 @@ async function buildResumoPdf(proc,cfg){
  if(cfg.resumoCronologia){
   setTitulo('Resumo e cronologia');
   sectionTitleModel('resumoCronologia');
-  [['Código de processo',proc.codigo],['Nº processo',proc.numero],['Solicitante institucional',proc.solicitanteInstitucional],['Contexto',proc.designacaoInstitucional],['Designação TAG',proc.designacaoTag],['Local',proc.local],['Coordenador',resolveProcessVar(proc,'coordenador',{})],['Resumo de situações a analisar',proc.assunto]].forEach(([k,v])=>kv(k,v));
+  drawModelDocLinhas('resumoCronologia');
   y+=3;label('Peritos');
   const peritos=peritosDoProcesso(proc);
   if(!peritos.length)plain('—');
@@ -3061,6 +3160,25 @@ async function buildResumoDocx(proc,cfg){
   const align=m.posicao==='centro'?'center':m.posicao==='direita'?'right':'left';
   parts.push(para(run(m.titulo,{bold:!!m.negrito,font:FONT_DOCX_NAME[m.fonte]||F,size:(Number(m.tamanho)||10)*2}),{after:180,align}));
  };
+ // Campos do corpo (capa/resumo): cada linha tem posições E/C/D, "Rótulo: valor".
+ const docxBodyFieldRuns=(keys,size,bold,fnt)=>{
+  const out=[];
+  (keys||[]).forEach((k,i)=>{
+   if(i>0)out.push(run(' · ',{font:fnt,size,bold}));
+   const v=resolveProcessVar(proc,k,{});
+   out.push(run(v?`${processVarLabel(k)}: ${v}`:'',{font:fnt,size,bold}));
+  });
+  return out.join('');
+ };
+ const drawModelDocLinhasDocx=(chave)=>{
+  const m=getModelDoc(chave);
+  if(!m.linhas)return;
+  const cf=FONT_DOCX_NAME[m.corpoFonte]||F,cs=(Number(m.corpoTamanho)||10)*2,cb=!!m.corpoNegrito;
+  m.linhas.forEach(l=>{
+   if(!l.esquerda.length&&!l.centro.length&&!l.direita.length)return;
+   parts.push(lcrParagraph(docxBodyFieldRuns(l.esquerda,cs,cb,cf),docxBodyFieldRuns(l.centro,cs,cb,cf),docxBodyFieldRuns(l.direita,cs,cb,cf),{after:60}));
+  });
+ };
  // Cabeçalho de grupo por autor — uma linha em branco antes e depois, uma só vez no início
  // do bloco contíguo de cada autor (não repetido por questão).
  const autorGroupHeaderDocx=(autorNome)=>{
@@ -3184,17 +3302,13 @@ async function buildResumoDocx(proc,cfg){
 
  if(cfg.capa){
   sectionTitleModelDocx('capa');
-  [['Código de processo',proc.codigo],['Nº processo',proc.numero],['Solicitante institucional',proc.solicitanteInstitucional],['Contexto',proc.designacaoInstitucional],['Local',proc.local]].forEach(([k,v])=>{
-   parts.push(para(run(k+': ',{bold:true,font:F})+run(String(v||'—'),{font:F})));
-  });
+  drawModelDocLinhasDocx('capa');
   if(cfg.fotos)await photoBlock(capaPhotosForExport(proc),true);
   pageBreak();
  }
  if(cfg.resumoCronologia){
   sectionTitleModelDocx('resumoCronologia');
-  [['Código de processo',proc.codigo],['Nº processo',proc.numero],['Solicitante institucional',proc.solicitanteInstitucional],['Contexto',proc.designacaoInstitucional],['Designação TAG',proc.designacaoTag],['Local',proc.local],['Coordenador',resolveProcessVar(proc,'coordenador',{})],['Resumo de situações a analisar',proc.assunto]].forEach(([k,v])=>{
-   parts.push(para(run(k+': ',{bold:true,font:F})+run(String(v||'—'),{font:F})));
-  });
+  drawModelDocLinhasDocx('resumoCronologia');
   parts.push(para(run('Peritos',{bold:true,font:F,size:szHead}),{after:100}));
   const peritos=peritosDoProcesso(proc);
   if(!peritos.length)parts.push(para(run('—',{font:F})));
