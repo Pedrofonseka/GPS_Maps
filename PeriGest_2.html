@@ -27,6 +27,7 @@ main{max-width:880px;margin:auto;padding:12px}
 label{display:block;font-weight:700;font-size:13.5px;margin:10px 0 5px}
 label.inline{display:flex;align-items:center;gap:8px;font-weight:400;margin:8px 0}
 input,select,textarea{width:100%;padding:11px;border:1px solid #b8c2cc;border-radius:8px;font:inherit;font-size:16px;background:#fff}
+input[type="checkbox"]{width:auto;flex:0 0 auto}
 textarea{min-height:70px;resize:vertical}
 button{border:0;border-radius:9px;padding:10px 12px;min-height:44px;background:var(--b);color:#fff;font-weight:700;font:inherit;font-size:14px;cursor:pointer;line-height:1.25}
 .secondary{background:#5b6b7d}
@@ -55,9 +56,10 @@ button{border:0;border-radius:9px;padding:10px 12px;min-height:44px;background:v
 .block-title:first-of-type{margin-top:4px}
 hr{border:0;border-top:1px solid var(--ln);margin:14px 0}
 .grid-cols{display:grid;gap:8px}
-.photo-cell{border:1px solid var(--ln);border-radius:10px;background:#fafbfc;padding:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
-.photo-cell img{width:100%;height:120px;object-fit:cover;border-radius:7px;display:block;cursor:pointer;background:#e3e8ee}
-.photo-cell .cap{font-size:11.5px;color:var(--muted);text-align:center;word-break:break-word}
+.photo-cell{border:1px solid var(--ln);border-radius:10px;background:#fafbfc;padding:6px;display:flex;flex-direction:column;align-items:stretch;justify-content:center;gap:4px}
+.photo-cell img{width:100%;height:120px;object-fit:cover;object-position:center;border-radius:7px;display:block;cursor:pointer;background:#e3e8ee}
+.photo-cell .seq{font-size:11px;font-weight:700;color:var(--b);text-align:left}
+.photo-cell .cap{font-size:11.5px;color:var(--muted);text-align:left;word-break:break-word}
 .photo-cell .flag{font-size:11px;color:var(--r);font-weight:700}
 .photo-actions{display:flex;gap:4px;flex-wrap:wrap;justify-content:center}
 .photo-actions button{width:auto;min-height:28px;padding:4px 8px;font-size:11px}
@@ -234,6 +236,12 @@ function questaoTitulo(q,a){return `${questaoCodigo(q,a)} – ${q.descricaoResum
 function peritosDoProcesso(proc){return (proc.peritos||[]).map(p=>({...p,interveniente:getInterveniente(p.intervenienteId)})).filter(p=>p.interveniente)}
 function fotosDaQuestao(proc,questaoId){return (proc.fotos||[]).filter(f=>f.questaoId===questaoId)}
 function fotosCapa(proc){return (proc.fotos||[]).filter(f=>f.isCapa)}
+// Número sequencial da foto dentro da sua questão — recalculado a partir da ordem
+// atual de proc.fotos, pelo que eliminar ou reordenar fotos ajusta-o automaticamente.
+function fotoSeq(proc,foto){
+ if(!foto.questaoId)return null;
+ return fotosDaQuestao(proc,foto.questaoId).findIndex(f=>f.id===foto.id)+1;
+}
 // Nomenclatura das fotos: {ordemAutor}_{sigla}_{numeroQuestao}_IMG_{sequência}
 function photoFileName(proc,foto,ext){
  ext=ext||'jpg';
@@ -241,7 +249,7 @@ function photoFileName(proc,foto,ext){
  if(!q)return foto.id+'.'+ext;
  const a=proc.autores.find(x=>x.id===q.autorId);
  const sg=siglaObj(q.siglaId);
- const seq=fotosDaQuestao(proc,q.id).findIndex(f=>f.id===foto.id)+1;
+ const seq=fotoSeq(proc,foto);
  return `${a?a.ordem:0}_${sg.sigla}_${pad(q.numero)}_IMG_${pad(seq,3)}.${ext}`;
 }
 // Fotos de capa: as marcadas manualmente; se não chegarem para o tamanho da grelha
@@ -647,7 +655,6 @@ function viewQuestaoForm(params){
  const q=proc.questoes.find(x=>x.id===params.id);if(!q)return card('Questão','<div class="note">Questão não encontrada.</div>');
  const a=proc.autores.find(x=>x.id===q.autorId);
  const outrosAutores=autoresDoProcesso(proc).filter(x=>x.id!==a.id);
- const fotos=fotosDaQuestao(proc,q.id);
  return card('🏷️ '+esc(questaoTitulo(q,a)), `
   <div class="note">Autor: ${a.ordem} — ${esc(a.nome)}</div>
   ${renderOrderedFields('questao',questaoFieldRenderers(proc,q))}
@@ -655,8 +662,7 @@ function viewQuestaoForm(params){
   ${outrosAutores.length?`<div style="margin-top:10px"><label>Mudar de autor</label><select data-action-input="moverAutor"><option value="">— manter —</option>${outrosAutores.map(o=>`<option value="${o.id}">${o.ordem} — ${esc(o.nome)}</option>`).join('')}</select></div>`:''}
   <hr>
   <h3>Fotografias associadas</h3>
-  <div class="note">${fotos.length} foto(s). Gestão completa em Fotografias.</div>
-  <div class="actions one"><button type="button" data-action="navTo" data-view="fotos" data-params='${esc(JSON.stringify({processoId:proc.id,questaoId:q.id}))}'>🖼️ Gerir fotos desta questão</button></div>
+  ${fotosBlockHtml(proc,q.id)}
   <div class="actions one" style="margin-top:14px"><button type="button" class="danger" data-action="apagarQuestao" data-processo="${proc.id}" data-id="${q.id}">🗑 Eliminar questão</button></div>
  `);
 }
@@ -940,6 +946,7 @@ function viewAnaliseQuestao(params){
    const iv=getInterveniente(h.intervenienteId);
    return `<div class="item"><b>${esc(iv?iv.nome:'—')} — ${esc(h.data)}</b><div class="meta">${nl2br(h.texto)}</div></div>`;
   }).join('')):''}
+ ${card('🖼️ Fotografias desta questão',fotosBlockHtml(proc,q.id))}
  `;
 }
 actions.registarPosicao=(b)=>{
@@ -1059,35 +1066,47 @@ actions.reformularPreview=(b)=>{
 };
 
 /* ---- Fotografias ---- */
-function viewFotos(params){
- const proc=getProcesso(params.processoId);if(!proc)return '';
- const questaoId=params.questaoId;
+// Bloco reutilizável: usado na vista dedicada de Fotos, e embutido junto da
+// própria questão (formulário da questão e análise), para não obrigar a saltar de ecrã.
+function fotosBlockHtml(proc,questaoId,opts){
+ opts=opts||{};
  const fotos=(proc.fotos||[]).filter(f=>!questaoId||f.questaoId===questaoId);
- const cols=app.settings.fotoGridCols||3;
- return card('🖼️ Fotografias'+(questaoId?' — questão':''), `
+ const cols=app.settings.fotoGridCols||2;
+ return `
   <div class="actions">
    <button type="button" data-action="carregarFotos" data-processo="${proc.id}" data-questao="${questaoId||''}">🖼 Carregar da fototeca</button>
    <button type="button" class="secondary" data-action="tirarFoto" data-processo="${proc.id}" data-questao="${questaoId||''}">📷 Tirar foto</button>
   </div>
   <input type="file" id="fotoGallery" accept="image/*" multiple hidden>
   <input type="file" id="fotoCamera" accept="image/*" capture="environment" hidden>
-  <div class="note">Resolução alvo: ${app.settings.fotoResolutionKB} KB por foto · grelha de ${cols} coluna(s) · orientação predominante por defeito: ${app.settings.fotoOrientacaoDefault==='paisagem'?'paisagem':'retrato'} (configurável em Configurações → Fotografias).</div>
-  ${!questaoId?'<div class="note">⚠ Sem questão associada — para a grelha ficar associada a uma questão, aceda a Fotografias a partir do formulário dessa questão.</div>':''}
+  ${opts.showNote!==false?`<div class="note">Resolução alvo: ${app.settings.fotoResolutionKB} KB por foto · grelha de ${cols} coluna(s) · orientação predominante por defeito: ${app.settings.fotoOrientacaoDefault==='paisagem'?'paisagem':'retrato'} (configurável em Configurações → Fotografias).</div>`:''}
+  ${!questaoId&&opts.showNote!==false?'<div class="note">⚠ Sem questão associada — para a grelha ficar associada a uma questão, aceda a Fotografias a partir do formulário dessa questão.</div>':''}
   <div class="grid-cols" style="grid-template-columns:repeat(${cols},1fr)">
-   ${fotos.map(f=>`
+   ${fotos.map((f,i)=>{
+    const seq=fotoSeq(proc,f);
+    return `
     <div class="photo-cell">
      <img data-photo-id="${f.id}" data-action="verFoto" data-id="${f.id}" alt="foto">
      ${f.captionFlagRotacao?'<div class="flag">⚠ orientação diferente</div>':''}
-     <div class="cap">${esc(f.caption||'(sem legenda)')}</div>
+     ${seq?`<div class="seq">IMG_${pad(seq,3)}</div>`:''}
+     ${f.isCapa?'<div class="cap">(foto de capa — sem legenda)</div>':`<div class="cap">${esc(f.caption||'(sem legenda)')}</div>`}
      <div class="photo-actions">
-      <button type="button" data-action="legendarFoto" data-id="${f.id}">✏️ Legenda</button>
+      <button type="button" data-action="moverFotoOrdem" data-id="${f.id}" data-questao="${questaoId||''}" data-dir="up" ${i===0?'disabled':''}>▲</button>
+      <button type="button" data-action="moverFotoOrdem" data-id="${f.id}" data-questao="${questaoId||''}" data-dir="down" ${i===fotos.length-1?'disabled':''}>▼</button>
+      ${!f.isCapa?`<button type="button" data-action="legendarFoto" data-id="${f.id}">✏️ Legenda</button>`:''}
       <button type="button" data-action="rodarFoto" data-id="${f.id}">↻ Rodar</button>
       <button type="button" class="${f.isCapa?'green':'secondary'}" data-action="toggleCapa" data-id="${f.id}">${f.isCapa?'★ Capa':'☆ Capa'}</button>
       <button type="button" class="danger" data-action="apagarFoto" data-id="${f.id}" data-processo="${proc.id}">🗑</button>
      </div>
-    </div>`).join('')||'<div class="note">Sem fotografias.</div>'}
+    </div>`;
+   }).join('')||'<div class="note">Sem fotografias.</div>'}
   </div>
- `);
+ `;
+}
+function viewFotos(params){
+ const proc=getProcesso(params.processoId);if(!proc)return '';
+ const questaoId=params.questaoId;
+ return card('🖼️ Fotografias'+(questaoId?' — questão':''), fotosBlockHtml(proc,questaoId));
 }
 actions.carregarFotos=(b)=>{const el=$('fotoGallery');el.dataset.processo=b.dataset.processo;el.dataset.questao=b.dataset.questao;el.click()};
 actions.tirarFoto=(b)=>{const el=$('fotoCamera');el.dataset.processo=b.dataset.processo;el.dataset.questao=b.dataset.questao;el.click()};
@@ -1198,6 +1217,19 @@ actions.toggleCapa=(b)=>{
  const max=Number(app.settings.capaGridSize)||4;
  if(!f.isCapa&&fotosCapa(proc).length>=max)return alert('Máximo de '+max+' fotos de capa (configurável em Configurações → Fotografias).');
  f.isCapa=!f.isCapa;
+ if(f.isCapa)f.caption=''; // fotos de capa nunca levam legenda
+ touch(proc);saveNow();render();
+};
+actions.moverFotoOrdem=(b)=>{
+ const proc=getProcesso(ui.params.processoId||ui.params.id);if(!proc)return;
+ const questaoId=b.dataset.questao||null;
+ const scoped=(proc.fotos||[]).filter(f=>questaoId?f.questaoId===questaoId:true);
+ const pos=scoped.findIndex(f=>f.id===b.dataset.id);
+ const neighborPos=b.dataset.dir==='up'?pos-1:pos+1;
+ if(pos<0||neighborPos<0||neighborPos>=scoped.length)return;
+ const idA=scoped[pos].id,idB=scoped[neighborPos].id;
+ const iA=proc.fotos.findIndex(f=>f.id===idA),iB=proc.fotos.findIndex(f=>f.id===idB);
+ [proc.fotos[iA],proc.fotos[iB]]=[proc.fotos[iB],proc.fotos[iA]];
  touch(proc);saveNow();render();
 };
 actions.apagarFoto=async(b)=>{
@@ -1699,7 +1731,7 @@ async function buildResumoPdf(proc,cfg){
  const plain=(t,sz)=>{doc.setFont(F,'normal');doc.setFontSize(sz||BS);const w=doc.splitTextToSize(t,contentW);ensure(w.length*(sz||BS)*0.45+2);doc.text(w,mL,y);y+=w.length*(sz||BS)*0.45+2};
  const kv=(k,v)=>plain(`${k}: ${v||'—'}`);
 
- const drawPhotoGrid=async(fotos)=>{
+ const drawPhotoGrid=async(fotos,noCaption)=>{
   if(!fotos.length)return;
   const gap=4,cellW=(contentW-gap*(cols-1))/cols,cellH=cellW*0.8,capH=8;
   for(let i=0;i<fotos.length;i+=cols){
@@ -1716,9 +1748,11 @@ async function buildResumoPdf(proc,cfg){
       doc.addImage(dataUrl,'JPEG',cx+(cellW-dw)/2,y+(cellH-dh)/2,dw,dh);
      }
     }catch(e){/* foto ilegível — ignora e segue */}
-    doc.setFont(F,'normal');doc.setFontSize(Math.max(6,BS-2));
-    const capText=photoFileName(proc,f).replace(/\.jpg$/,'')+(f.caption?' — '+f.caption:'');
-    doc.text(doc.splitTextToSize(capText,cellW).slice(0,2),cx,y+cellH+4);
+    if(!noCaption){
+     doc.setFont(F,'normal');doc.setFontSize(Math.max(6,BS-2));
+     const capText=photoFileName(proc,f).replace(/\.jpg$/,'')+(f.caption?' — '+f.caption:'');
+     doc.text(doc.splitTextToSize(capText,cellW).slice(0,2),cx,y+cellH+4);
+    }
    }
    y+=cellH+capH+4;
   }
@@ -1756,7 +1790,7 @@ async function buildResumoPdf(proc,cfg){
   sectionTitle('Capa de processo');
   [['Código de processo',proc.codigo],['Nº processo',proc.numero],['Solicitante institucional',proc.solicitanteInstitucional],['Designação',proc.designacaoInstitucional],['Local',proc.local]].forEach(([k,v])=>kv(k,v));
   y+=4;
-  if(cfg.fotos)await drawPhotoGrid(capaPhotosForExport(proc));
+  if(cfg.fotos)await drawPhotoGrid(capaPhotosForExport(proc),true);
   newPage();
  }
  if(cfg.resumoCronologia){
@@ -1874,14 +1908,18 @@ async function buildResumoDocx(proc,cfg){
   }
   return '<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/><w:tblLayout w:type="fixed"/></w:tblPr>'+rows+'</w:tbl>';
  };
- const photoBlock=async(fotos)=>{
+ const photoBlock=async(fotos,noCaption)=>{
   if(!fotos.length)return;
   const colCm=Math.max(1.5,(contentCm-0.2*(cols-1))/cols);
   const cells=[];
   for(const f of fotos){
    const img=await addImagePart(f.id);
-   const capText=photoFileName(proc,f).replace(/\.jpg$/,'')+(f.caption?' — '+f.caption:'');
-   cells.push(imageParagraph(img,Math.max(1,colCm-0.2),6)+para(run(capText,{font:F,size:szSmall,color:'5a5a5a'}),{align:'center',after:60}));
+   let cell=imageParagraph(img,Math.max(1,colCm-0.2),6);
+   if(!noCaption){
+    const capText=photoFileName(proc,f).replace(/\.jpg$/,'')+(f.caption?' — '+f.caption:'');
+    cell+=para(run(capText,{font:F,size:szSmall,color:'5a5a5a'}),{align:'center',after:60});
+   }
+   cells.push(cell);
   }
   parts.push(photoTable(cells,cols,colCm));
   parts.push(para('',{after:160}));
@@ -1908,7 +1946,7 @@ async function buildResumoDocx(proc,cfg){
   [['Código de processo',proc.codigo],['Nº processo',proc.numero],['Solicitante institucional',proc.solicitanteInstitucional],['Designação',proc.designacaoInstitucional],['Local',proc.local]].forEach(([k,v])=>{
    parts.push(para(run(k+': ',{bold:true,font:F})+run(String(v||'—'),{font:F})));
   });
-  if(cfg.fotos)await photoBlock(capaPhotosForExport(proc));
+  if(cfg.fotos)await photoBlock(capaPhotosForExport(proc),true);
   pageBreak();
  }
  if(cfg.resumoCronologia){
