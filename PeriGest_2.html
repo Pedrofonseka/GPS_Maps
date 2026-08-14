@@ -75,6 +75,10 @@ hr{border:0;border-top:1px solid var(--ln);margin:14px 0}
 .order-btns button{width:auto;min-width:0;min-height:36px;padding:6px 12px;font-size:14px}
 .justify{text-align:justify}
 .preview-frame{width:100%;height:60vh;border:1px solid var(--ln);border-radius:9px;background:#f7f8fa}
+.stat-tile{text-align:center;padding:12px 6px;background:#f5f7f9;border:1px solid var(--ln);border-radius:9px}
+.stat-tile b{display:block;font-size:24px;color:var(--b);line-height:1.15}
+.stat-tile span{font-size:11.5px;color:var(--muted)}
+.pending-group h3{margin:14px 0 6px}
 @media(max-width:620px){.row,.row3{grid-template-columns:1fr}.actions{grid-template-columns:1fr 1fr}.actions.three{grid-template-columns:1fr 1fr}.actions.four{grid-template-columns:1fr 1fr}}
 </style></head>
 <body>
@@ -547,6 +551,36 @@ function processoFieldRenderers(proc){
   siglaId:field('Sigla das questões deste processo',fieldWithLink(siglaSelectHtml(proc),'gerir siglas','siglas',{returnView:'processo',returnParams:{id:proc.id}}))
  };
 }
+// Painel de controlo de pendentes: total de perguntas, por comentar (por perito) e já fechadas.
+function pendentesPainelHtml(proc){
+ const todas=proc.questoes||[];
+ const fechadas=todas.filter(q=>q.fase==='relatorio');
+ const emAberto=todas.filter(q=>q.fase!=='relatorio');
+ const peritos=peritosDoProcesso(proc);
+ const porPerito=peritos.map(p=>({
+  perito:p,
+  pendentes:emAberto.filter(q=>{
+   const txt=q.respostas&&q.respostas[p.intervenienteId];
+   return !(txt&&txt.trim());
+  })
+ }));
+ return `
+  <div class="row3">
+   <div class="stat-tile"><b>${todas.length}</b><span>Total de perguntas</span></div>
+   <div class="stat-tile"><b>${emAberto.length}</b><span>Por comentar/validar</span></div>
+   <div class="stat-tile"><b>${fechadas.length}</b><span>Respostas fechadas</span></div>
+  </div>
+  ${peritos.length?porPerito.map(({perito,pendentes})=>`
+   <div class="pending-group">
+    <h3>${esc(perito.interveniente.nome)} — ${pendentes.length} por comentar</h3>
+    ${pendentes.length?pendentes.map(q=>{
+     const a=proc.autores.find(x=>x.id===q.autorId);
+     return `<div class="item" data-action="navTo" data-view="analiseQuestao" data-params='${esc(JSON.stringify({processoId:proc.id,id:q.id}))}'><b>${esc(questaoTitulo(q,a))}</b></div>`;
+    }).join(''):'<div class="note">Sem pendências.</div>'}
+   </div>
+  `).join(''):'<div class="note">Associe peritos ao processo para ver as pendências por perito.</div>'}
+ `;
+}
 function viewProcesso(params){
  const proc=getProcesso(params.id);
  if(!proc)return card('Processo','<div class="note">Processo não encontrado.</div>');
@@ -567,6 +601,7 @@ function viewProcesso(params){
   <div class="note">ON — em aberto · SBY — em stand-by (aguarda informação) · END — terminado · OFF — encerrado. Qualquer estado permite retomar, editar e acrescentar dados.</div>
   ${proc.status==='OFF'?field('Motivo / Observações','<textarea data-bind="motivo" data-scope="processo" data-scope-id="'+proc.id+'">'+esc(proc.motivo)+'</textarea>'):''}
  `)}
+ ${card('📋 Controlo de pendentes', pendentesPainelHtml(proc))}
  ${card('🧑‍🤝‍🧑 Autores &amp; Questões', `
   <div class="note">${autores.length} autor(es) · ${questoes.length} questão(ões)</div>
   <div class="actions one"><button type="button" data-action="navTo" data-view="questoes" data-params='${esc(JSON.stringify({processoId:proc.id}))}'>📑 Gerir autores e questões</button></div>
@@ -594,19 +629,24 @@ function viewProcesso(params){
  ${card('📤 Exportar', exportCardBody(proc))}
  `;
 }
+// Botões de exportação final — vivem sobretudo no ecrã de Pré-visualização (logo a seguir a
+// "Aceitar", que é a sequência lógica); mantidos também aqui como atalho de conveniência.
+function exportButtonsHtml(proc){
+ return `
+  <div class="actions one">
+   <button type="button" class="amber" data-action="exportarResumoPdf" data-id="${proc.id}">📄 Exportar PDF</button>
+   <button type="button" class="secondary" data-action="exportarResumoDocx" data-id="${proc.id}">📝 Exportar Word</button>
+   <button type="button" class="green" data-action="exportarZipProcesso" data-id="${proc.id}">📦 Exportar pasta do processo (ZIP)</button>
+  </div>
+  <div id="expState_${proc.id}" class="status">Pronto.</div>
+ `;
+}
 function exportCardBody(proc){
  const cfg=proc.exportConfig;
  const accepted=cfg&&cfg.accepted;
  return `
-  <div class="note">A pré-visualização em PDF serve para validar o conteúdo antes de exportar. Só depois de aceite ficam disponíveis o PDF final, o Word e o ZIP.</div>
-  <div class="actions one"><button type="button" data-action="navTo" data-view="preview" data-params='${esc(JSON.stringify({processoId:proc.id}))}'>👁️ Pré-visualizar / validar</button></div>
-  ${accepted?`
-  <div class="actions one" style="margin-top:8px">
-   <button type="button" class="amber" data-action="exportarResumoPdf" data-id="${proc.id}">📄 Exportar PDF</button>
-   <button type="button" class="secondary" data-action="exportarResumoDocx" data-id="${proc.id}">📝 Exportar Word</button>
-   <button type="button" class="green" data-action="exportarZipProcesso" data-id="${proc.id}">📦 Exportar pasta do processo (ZIP)</button>
-  </div>`:`<div class="status">⏳ Ainda sem pré-visualização aceite — use "Pré-visualizar / validar" primeiro.</div>`}
-  <div id="expState_${proc.id}" class="status">Pronto.</div>
+  <div class="note">A pré-visualização em PDF serve para validar o conteúdo antes de exportar. Depois de aceite, o PDF final, o Word e o ZIP ficam disponíveis logo a seguir a "Aceitar", nesse mesmo ecrã — é a sequência lógica.</div>
+  <div class="actions one"><button type="button" data-action="navTo" data-view="preview" data-params='${esc(JSON.stringify({processoId:proc.id}))}'>👁️ Pré-visualizar / validar${accepted?' / exportar':''}</button></div>
  `;
 }
 function siglaSelectHtml(proc){
@@ -1085,7 +1125,7 @@ function viewPreview(params){
   <div id="previewState" class="status">${ready?'Pré-visualização gerada. Reveja e Aceite ou Reformule.':'Ainda sem pré-visualização gerada nesta sessão.'}</div>
   ${ready?`<iframe class="preview-frame" src="${_previewUrl}" title="Pré-visualização do PDF"></iframe>`:''}
   ${ready?`<div class="actions" style="margin-top:10px"><button type="button" class="green" data-action="aceitarPreview" data-processo="${proc.id}">✔ Aceitar</button><button type="button" class="secondary" data-action="reformularPreview" data-processo="${proc.id}">↺ Reformular</button></div>`:''}
-  ${cfg.accepted?'<div class="status">✅ Configuração aceite — pode agora exportar PDF/Word/ZIP em "Exportar".</div>':'<div class="status">⏳ Ainda não aceite.</div>'}
+  ${cfg.accepted?`<div class="status">✅ Configuração aceite.</div><hr>${exportButtonsHtml(proc)}`:'<div class="status">⏳ Ainda não aceite.</div>'}
  `);
 }
 document.addEventListener('change',e=>{
