@@ -720,7 +720,7 @@ function viewPedidoForm(params){
   <hr>
   <label>Estado</label>
   <div class="actions four">
-   <button type="button" class="${p.status==='ON'?'green':'secondary'}" data-action="setPedidoStatus" data-id="${p.id}" data-status="ON">Processo</button>
+   <button type="button" class="${p.status==='ON'?'green':'secondary'}" data-action="setPedidoStatus" data-id="${p.id}" data-status="ON">ON -&gt; PROCESSO</button>
    <button type="button" class="${p.status==='SBY'?'amber':'secondary'}" data-action="setPedidoStatus" data-id="${p.id}" data-status="SBY">SBY</button>
    <button type="button" class="${p.status==='END'?'amber':'secondary'}" data-action="setPedidoStatus" data-id="${p.id}" data-status="END">END</button>
    <button type="button" class="${p.status==='OFF'?'danger':'secondary'}" data-action="setPedidoStatus" data-id="${p.id}" data-status="OFF">OFF</button>
