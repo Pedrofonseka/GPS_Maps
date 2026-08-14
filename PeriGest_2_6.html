@@ -605,8 +605,44 @@ function wireCommon(){
 // timing do evento varia por versão/embedding do Safari. Método adotado: os campos de
 // data/hora nunca gravam sozinhos — ficam sempre com um botão "✔ Confirmar" próprio, que o
 // utilizador toca quando termina de escolher. Sem dependência de timing nenhuma.
+const MESES_PT=[['01','Jan'],['02','Fev'],['03','Mar'],['04','Abr'],['05','Mai'],['06','Jun'],['07','Jul'],['08','Ago'],['09','Set'],['10','Out'],['11','Nov'],['12','Dez']];
+function selOptions(id,items,selected,blankLabel){
+ const opts=(blankLabel!=null?[['','— '+blankLabel+' —']]:[]).concat(items);
+ return `<select id="${id}">${opts.map(([v,l])=>`<option value="${v}" ${v===(selected||'')?'selected':''}>${esc(l)}</option>`).join('')}</select>`;
+}
+// Regra permanente: no iPhone (sobretudo dentro da WebView da aplicação onde isto abre,
+// com a faixa publicitária fixa) o seletor nativo de <input type="date"/"time"> revelou-se
+// não fiável — mesmo sem nenhum atraso, o problema persistiu. Método definitivo adotado:
+// deixar de usar qualquer picker nativo do sistema operativo. Datas e horas passam a
+// escolher-se com <select> simples (dia/mês/ano, hora/minuto) — elementos HTML comuns,
+// sempre visíveis na própria página, sem overlay nenhum e sem depender do comportamento
+// do SO/WebView. Só grava quando se toca em "✔ Confirmar".
 function dateFieldConfirm(inputId,value,btnDataAttrs,type){
- return `<input type="${type||'date'}" id="${inputId}" value="${esc(value||'')}"><div class="actions one"><button type="button" class="secondary" data-action="confirmDateField" data-input-id="${inputId}"${btnDataAttrs}>✔ Confirmar</button></div><div class="note" id="${inputId}_state"></div>`;
+ const isTime=type==='time';
+ if(isTime){
+  const [hh,mm]=(value||'').split(':');
+  const horas=Array.from({length:24},(_,i)=>{const v=pad(i,2);return [v,v]});
+  const minutos=Array.from({length:60},(_,i)=>{const v=pad(i,2);return [v,v]});
+  return `<div class="row">
+    <div>${selOptions(inputId+'_h',horas,hh,'hora')}</div>
+    <div>${selOptions(inputId+'_m',minutos,mm,'min')}</div>
+   </div>
+   <input type="hidden" id="${inputId}" value="${esc(value||'')}">
+   <div class="actions one"><button type="button" class="secondary" data-action="confirmDateField" data-input-id="${inputId}" data-time-select="1"${btnDataAttrs}>✔ Confirmar</button></div>
+   <div class="note" id="${inputId}_state"></div>`;
+ }
+ const [yy,mo,dd]=(value||'').split('-');
+ const curYear=new Date().getFullYear();
+ const dias=Array.from({length:31},(_,i)=>{const v=pad(i+1,2);return [v,v]});
+ const anos=Array.from({length:16},(_,i)=>{const v=String(curYear-5+i);return [v,v]});
+ return `<div class="row3">
+   <div>${selOptions(inputId+'_d',dias,dd,'dia')}</div>
+   <div>${selOptions(inputId+'_mo',MESES_PT,mo,'mês')}</div>
+   <div>${selOptions(inputId+'_y',anos,yy,'ano')}</div>
+  </div>
+  <input type="hidden" id="${inputId}" value="${esc(value||'')}">
+  <div class="actions one"><button type="button" class="secondary" data-action="confirmDateField" data-input-id="${inputId}"${btnDataAttrs}>✔ Confirmar</button></div>
+  <div class="note" id="${inputId}_state"></div>`;
 }
 function onClick(e){
  const b=e.target.closest('[data-action]');
@@ -650,8 +686,17 @@ function bindField(t){
 /* ===================== Ações ===================== */
 const actions={};
 actions.confirmDateField=(b)=>{
- const input=document.getElementById(b.dataset.inputId);if(!input)return;
- const val=input.value;
+ const inputId=b.dataset.inputId;
+ const input=document.getElementById(inputId);if(!input)return;
+ let val;
+ if(b.dataset.timeSelect){
+  const h=document.getElementById(inputId+'_h'),m=document.getElementById(inputId+'_m');
+  val=(h&&m&&h.value&&m.value)?(h.value+':'+m.value):'';
+ }else{
+  const d=document.getElementById(inputId+'_d'),mo=document.getElementById(inputId+'_mo'),y=document.getElementById(inputId+'_y');
+  val=(d&&mo&&y&&d.value&&mo.value&&y.value)?(y.value+'-'+mo.value+'-'+d.value):'';
+ }
+ input.value=val;
  const kind=b.dataset.kind;
  let proc;
  if(kind==='pedido'){
