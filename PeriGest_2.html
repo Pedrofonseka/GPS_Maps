@@ -265,7 +265,8 @@ function capaPhotosForExport(proc){
 }
 
 function ensureExportConfig(proc){
- if(!proc.exportConfig)proc.exportConfig={capa:false,resumoCronologia:false,listaAnalise:true,listaDraft:true,fotos:true,cols:app.settings.fotoGridCols||2,accepted:false};
+ if(!proc.exportConfig)proc.exportConfig={capa:false,resumoCronologia:false,listaQuestoes:true,listaAnalise:true,listaDraft:true,fotos:true,cols:app.settings.fotoGridCols||2,accepted:false};
+ if(proc.exportConfig.listaQuestoes==null)proc.exportConfig.listaQuestoes=true;
  return proc.exportConfig;
 }
 function logEvento(proc,msg){
@@ -1001,8 +1002,8 @@ document.addEventListener('change',e=>{
 function viewRelatorio(params){
  const proc=getProcesso(params.processoId);if(!proc)return '';
  const ordered=questoesOrdenadas(proc).filter(x=>x.q.fase==='relatorio');
- return card('📝 Draft de relatório', `
-  <div class="note">Questões já conciliadas (fechadas), ordenadas por bloco de autor e, dentro dele, pela sua ordem sequencial. Trazem consigo as fotografias associadas na fase de análise. Cada questão inicia página nova na exportação.</div>
+ return card('📝 Draft de relatório (Respostas validadas)', `
+  <div class="note">Questões com resposta validada, ordenadas por bloco de autor e, dentro dele, pela sua ordem sequencial. Trazem consigo as fotografias associadas na fase de análise. Cada questão inicia página nova na exportação.</div>
   ${ordered.length?ordered.map(({q,a})=>`
    <hr>
    <h3>${esc(questaoTitulo(q,a))}</h3>
@@ -1024,7 +1025,8 @@ function viewPreview(params){
   <div class="note">Gere a pré-visualização, confirme se está tudo OK e só depois siga para as restantes exportações (PDF, Word, ZIP). Pode reformular — incluindo mudar o nº de colunas da grelha de fotos — e repetir o ciclo.</div>
   <label class="inline"><input type="checkbox" data-action-input="cfgCapa" ${cfg.capa?'checked':''}> Incluir Capa de processo <span class="note">(opcional)</span></label>
   <label class="inline"><input type="checkbox" data-action-input="cfgResumoCron" ${cfg.resumoCronologia?'checked':''}> Incluir Resumo com cronologia <span class="note">(opcional)</span></label>
-  <label class="inline"><input type="checkbox" data-action-input="cfgListaAnalise" ${cfg.listaAnalise?'checked':''}> Incluir Histórico de Análise <span class="note">(por defeito)</span></label>
+  <label class="inline"><input type="checkbox" data-action-input="cfgListaQuestoes" ${cfg.listaQuestoes?'checked':''}> Incluir Lista de questões colocadas <span class="note">(por defeito)</span></label>
+  <label class="inline"><input type="checkbox" data-action-input="cfgListaAnalise" ${cfg.listaAnalise?'checked':''}> Incluir Histórico de análise <span class="note">(por defeito)</span></label>
   <label class="inline"><input type="checkbox" data-action-input="cfgListaDraft" ${cfg.listaDraft?'checked':''}> Incluir Draft de relatório <span class="note">(por defeito)</span></label>
   <label class="inline"><input type="checkbox" data-action-input="cfgFotos" ${cfg.fotos?'checked':''}> Incluir fotografias</label>
   ${field('Colunas da grelha de fotos nesta exportação',`<select data-action-input="cfgCols">${[1,2,3,4,5].map(n=>`<option value="${n}" ${cfg.cols==n?'selected':''}>${n} coluna(s)</option>`).join('')}</select>`)}
@@ -1040,7 +1042,7 @@ document.addEventListener('change',e=>{
  if(ui.view!=='preview')return;
  const proc=getProcesso(ui.params.processoId);if(!proc)return;
  const cfg=ensureExportConfig(proc);
- const map={cfgCapa:'capa',cfgResumoCron:'resumoCronologia',cfgListaAnalise:'listaAnalise',cfgListaDraft:'listaDraft',cfgFotos:'fotos'};
+ const map={cfgCapa:'capa',cfgResumoCron:'resumoCronologia',cfgListaQuestoes:'listaQuestoes',cfgListaAnalise:'listaAnalise',cfgListaDraft:'listaDraft',cfgFotos:'fotos'};
  if(map[t.dataset.actionInput]){cfg[map[t.dataset.actionInput]]=t.checked;cfg.accepted=false;touch(proc);saveNow();render()}
  if(t.dataset.actionInput==='cfgCols'){cfg.cols=Number(t.value);cfg.accepted=false;touch(proc);saveNow();render()}
 });
@@ -1126,13 +1128,26 @@ document.addEventListener('change',async e=>{
  t.value='';
  saveNow();render();
 });
+// Descodifica respeitando a orientação EXIF (fotos de câmara, sobretudo iPhone, trazem
+// muitas vezes um pixel "deitado" + uma flag EXIF a dizer para rodar ao mostrar; um
+// <img>/<canvas> nem sempre respeita essa flag de forma consistente entre browsers —
+// createImageBitmap com imageOrientation:'from-image' resolve isso de forma uniforme,
+// para a rotação ficar correta desde a compressão e propagar-se a todos os documentos gerados.
+async function decodeImageOriented(fileOrBlob){
+ if(window.createImageBitmap){
+  try{return await createImageBitmap(fileOrBlob,{imageOrientation:'from-image'})}
+  catch(e){/* sem suporte à opção — cai para o método alternativo */}
+ }
+ return await fileToImage(fileOrBlob);
+}
 async function compressImage(file,targetKB){
- const img=await fileToImage(file);
+ const img=await decodeImageOriented(file);
  let w=img.width,h=img.height;
  const maxSide=2000;
  if(Math.max(w,h)>maxSide){const s=maxSide/Math.max(w,h);w=Math.round(w*s);h=Math.round(h*s)}
  const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
  const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,w,h);
+ if(img.close)img.close();
  let q=0.85,blob=await canvasToBlob(canvas,q);
  if(targetKB!=='original'){
   const targetBytes=Number(targetKB)*1024;
@@ -1200,12 +1215,13 @@ actions.rodarFoto=async(b)=>{
  const proc=getProcesso(ui.params.processoId||ui.params.id);
  const f=(proc.fotos||[]).find(x=>x.id===b.dataset.id);if(!f)return;
  const blob=await idbGet(f.id);
- const img=await fileToImage(blob);
+ const img=await decodeImageOriented(blob);
  const canvas=document.createElement('canvas');
  canvas.width=img.height;canvas.height=img.width;
  const ctx=canvas.getContext('2d');
  ctx.translate(canvas.width/2,canvas.height/2);ctx.rotate(Math.PI/2);
  ctx.drawImage(img,-img.width/2,-img.height/2);
+ if(img.close)img.close();
  const newBlob=await canvasToBlob(canvas,0.85);
  await idbPut(f.id,newBlob);
  if(photoUrlCache[f.id]){URL.revokeObjectURL(photoUrlCache[f.id]);delete photoUrlCache[f.id]}
@@ -1693,7 +1709,7 @@ async function loadPhotoForDoc(fotoId){
  return await blobToDataUrl(blob);
 }
 
-/* ---- PDF: Capa (opc.) / Resumo+Cronologia (opc.) / A-Histórico de Análise (defeito) / B-Draft de relatório (defeito) ---- */
+/* ---- PDF: Capa (opc.) / Resumo+Cronologia (opc.) / A-Lista de questões / B-Histórico de análise / C-Draft de relatório (defeito) ---- */
 async function buildResumoPdf(proc,cfg){
  if(!(window.jspdf&&window.jspdf.jsPDF))throw new Error('O gerador de PDF ainda não carregou. Verifique a ligação à internet.');
  cfg=cfg||ensureExportConfig(proc);
@@ -1810,9 +1826,24 @@ async function buildResumoPdf(proc,cfg){
   log.forEach(e=>plain(`${new Date(e.at).toLocaleString('pt-PT')} — ${e.msg}`,Math.max(6,BS-1)));
   newPage();
  }
+ if(cfg.listaQuestoes){
+  setTitulo('Lista de questões colocadas');
+  sectionTitle('A — Lista de questões colocadas');
+  const todas=questoesOrdenadas(proc);
+  if(!todas.length)plain('Sem questões.');
+  todas.forEach(({q,a})=>{
+   doc.setFont(F,'bold');doc.setFontSize(BS);
+   const titulo=doc.splitTextToSize(questaoTitulo(q,a),contentW);
+   ensure(titulo.length*BS*0.45+2);doc.text(titulo,mL,y);y+=titulo.length*BS*0.45+1;
+   doc.setFont(F,'normal');doc.setFontSize(Math.max(6,BS-1));
+   const info=`Fase: ${q.fase==='relatorio'?'Draft de relatório':'Análise'} · Fotos: ${fotosDaQuestao(proc,q.id).length}`;
+   ensure(6);doc.text(info,mL,y);y+=7;
+  });
+  newPage();
+ }
  if(cfg.listaAnalise){
-  setTitulo('Histórico de Análise');
-  sectionTitle('A — Histórico de Análise às questões colocadas');
+  setTitulo('Histórico de análise');
+  sectionTitle('B — Histórico de análise');
   const emAnalise=questoesOrdenadas(proc).filter(x=>x.q.fase!=='relatorio');
   if(!emAnalise.length)plain('Sem questões em análise.');
   for(let i=0;i<emAnalise.length;i++){
@@ -1829,7 +1860,7 @@ async function buildResumoPdf(proc,cfg){
  }
  if(cfg.listaDraft){
   setTitulo('Draft de relatório');
-  sectionTitle('B — Draft de relatório (questões já fechadas)');
+  sectionTitle('C — Draft de relatório (Respostas validadas)');
   const fechadas=questoesOrdenadas(proc).filter(x=>x.q.fase==='relatorio');
   if(!fechadas.length)plain('Ainda nenhuma questão conciliada.');
   for(let i=0;i<fechadas.length;i++){
@@ -1967,8 +1998,18 @@ async function buildResumoDocx(proc,cfg){
   log.forEach(e=>parts.push(para(run(`${new Date(e.at).toLocaleString('pt-PT')} — ${e.msg}`,{font:F,size:szSmall}),{after:40})));
   pageBreak();
  }
+ if(cfg.listaQuestoes){
+  parts.push(para(run('A — Lista de questões colocadas',{bold:true,font:F,size:szTitle}),{after:180}));
+  const todas=questoesOrdenadas(proc);
+  if(!todas.length)parts.push(para(run('Sem questões.',{font:F})));
+  todas.forEach(({q,a})=>{
+   parts.push(para(run(questaoTitulo(q,a),{bold:true,font:F}),{after:20}));
+   parts.push(para(run(`Fase: ${q.fase==='relatorio'?'Draft de relatório':'Análise'} · Fotos: ${fotosDaQuestao(proc,q.id).length}`,{font:F,size:szSmall}),{after:100}));
+  });
+  pageBreak();
+ }
  if(cfg.listaAnalise){
-  parts.push(para(run('A — Histórico de Análise às questões colocadas',{bold:true,font:F,size:szTitle}),{after:180}));
+  parts.push(para(run('B — Histórico de análise',{bold:true,font:F,size:szTitle}),{after:180}));
   const emAnalise=questoesOrdenadas(proc).filter(x=>x.q.fase!=='relatorio');
   if(!emAnalise.length)parts.push(para(run('Sem questões em análise.',{font:F})));
   for(let i=0;i<emAnalise.length;i++){
@@ -1984,7 +2025,7 @@ async function buildResumoDocx(proc,cfg){
   pageBreak();
  }
  if(cfg.listaDraft){
-  parts.push(para(run('B — Draft de relatório (questões já fechadas)',{bold:true,font:F,size:szTitle}),{after:180}));
+  parts.push(para(run('C — Draft de relatório (Respostas validadas)',{bold:true,font:F,size:szTitle}),{after:180}));
   const fechadas=questoesOrdenadas(proc).filter(x=>x.q.fase==='relatorio');
   if(!fechadas.length)parts.push(para(run('Ainda nenhuma questão conciliada.',{font:F})));
   for(let i=0;i<fechadas.length;i++){
