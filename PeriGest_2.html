@@ -110,6 +110,47 @@ function defaultFieldOrder(){
  Object.keys(FIELD_DEFS).forEach(k=>{o[k]=FIELD_DEFS[k].map(f=>f[0])});
  return o;
 }
+// Variáveis gerais de caraterização do processo, disponíveis para compor as linhas de
+// cabeçalho e rodapé (caixas de seleção validadas — não é texto livre).
+const PROCESS_VARS=[
+ ['codigo','Código de processo'],
+ ['numero','Nº processo (institucional)'],
+ ['solicitanteInstitucional','Solicitante institucional'],
+ ['designacaoInstitucional','Designação institucional'],
+ ['designacaoTag','Designação TAG'],
+ ['local','Local'],
+ ['assunto','Resumo dos Temas de análise'],
+ ['data','Data de hoje'],
+ ['paginaTotal','Página / total de páginas']
+];
+function processVarLabel(key){const v=PROCESS_VARS.find(x=>x[0]===key);return v?v[1]:key}
+function resolveProcessVar(proc,key,ctx){
+ switch(key){
+  case 'codigo':return proc.codigo||'';
+  case 'numero':return proc.numero||'';
+  case 'solicitanteInstitucional':return proc.solicitanteInstitucional||'';
+  case 'designacaoInstitucional':return proc.designacaoInstitucional||'';
+  case 'designacaoTag':return proc.designacaoTag||'';
+  case 'local':return proc.local||'';
+  case 'assunto':return proc.assunto||'';
+  case 'data':return new Date().toLocaleDateString('pt-PT');
+  case 'paginaTotal':return (ctx&&ctx.pagina!=null)?`${ctx.pagina}/${ctx.paginas}`:'';
+  default:return '';
+ }
+}
+function renderVarSlot(proc,keys,ctx){
+ return (keys||[]).map(k=>resolveProcessVar(proc,k,ctx)).filter(Boolean).join(' · ');
+}
+function defaultCabecalho(){
+ return {
+  linha1:{esquerda:['codigo'],centro:[],direita:[]},
+  linha2:{esquerda:['numero','designacaoTag'],centro:[],direita:[]},
+  tamanho:9,tamanho2:8,negrito:true,negrito2:false
+ };
+}
+function defaultRodape(){
+ return {esquerda:['codigo'],centro:['paginaTotal'],direita:['data'],tamanho:8};
+}
 function defaultState(){
  return {
   schema:2,
@@ -131,8 +172,8 @@ function defaultState(){
    capaGridSize:4,
    fieldOrder:defaultFieldOrder(),
    layout:{pageSize:'a4',font:'helvetica',fontSize:10,marginLeft:2.0,marginTop:2.2,marginRight:1.5,marginBottom:1.5},
-   cabecalho:{linha1:'PeriGest',linha2Modo:'processo',tamanho:9,negrito:true},
-   rodape:{esquerda:'{processo}',centro:'{pagina}/{paginas}',direita:'{data}',tamanho:8}
+   cabecalho:defaultCabecalho(),
+   rodape:defaultRodape()
   }
  };
 }
@@ -157,6 +198,10 @@ function loadState(){
  if(!app.resolucoesFoto||!app.resolucoesFoto.length)app.resolucoesFoto=d.resolucoesFoto;
  if(!app.servicos||!app.servicos.length)app.servicos=d.servicos;
  if(!app.finalidades||!app.finalidades.length)app.finalidades=d.finalidades;
+ // cabecalho/rodape passaram de texto livre para caixas de seleção de variáveis —
+ // repõe a estrutura nova caso ainda esteja no formato antigo (string).
+ if(!app.settings.cabecalho||typeof app.settings.cabecalho.linha1!=='object')app.settings.cabecalho=d.settings.cabecalho;
+ if(!app.settings.rodape||!Array.isArray(app.settings.rodape.esquerda))app.settings.rodape=d.settings.rodape;
 }
 let saveTimer=null;
 function save(){
@@ -326,6 +371,12 @@ function fasePill(fase){return fase==='relatorio'?'<span class="pill relatorio">
 function fotoStatusPill(n){return n>0?`<span class="pill on">📷 ${n} foto(s)</span>`:'<span class="pill off">📷 sem fotos</span>'}
 function linkBtn(label,view,params){return `<button type="button" class="linklike" data-action="navTo" data-view="${view}" data-params='${esc(JSON.stringify(params||{}))}'>${esc(label)}</button>`}
 function fieldWithLink(selectHtml,linkLabel,view,params){return `<div class="fieldlink">${selectHtml}${linkBtn(linkLabel,view,params)}</div>`}
+// Caixa de validação (seleção múltipla) de variáveis de caraterização do processo,
+// usada nas posições esquerda/centro/direita das linhas de cabeçalho e rodapé.
+function varSlotSelect(selected,action,line,pos){
+ const lineAttr=line?` data-line="${line}"`:'';
+ return `<select multiple size="4" data-action-input="${action}"${lineAttr} data-pos="${pos}">${PROCESS_VARS.map(([k,label])=>`<option value="${k}" ${(selected||[]).includes(k)?'selected':''}>${esc(label)}</option>`).join('')}</select>`;
+}
 // Renderiza os campos de um formulário pela ordem configurada em Configurações → Ordem dos campos.
 function renderOrderedFields(kind,renderers){
  const order=(app.settings.fieldOrder&&app.settings.fieldOrder[kind])||Object.keys(renderers);
@@ -1619,26 +1670,54 @@ function viewSettings(){
 
  <div class="block-title">📋 Conteúdo de cabeçalho</div>
  ${card('Cabeçalho', `
-  ${field('Linha 1 (texto fixo)','<input data-bind="cabecalho.linha1" data-scope="settings" value="'+esc(s.cabecalho.linha1)+'">')}
+  <div class="note">Cada posição é uma caixa de validação — escolha uma ou mais variáveis de caraterização do processo (Ctrl/Cmd+clique, ou toque em cada uma no telemóvel). Vazio = posição livre/em branco.</div>
+  <h3>Linha 1 — acima do traço</h3>
+  <div class="row3">
+   <div>${field('Esquerda',varSlotSelect(s.cabecalho.linha1.esquerda,'cabSlot','1','esquerda'))}</div>
+   <div>${field('Centro',varSlotSelect(s.cabecalho.linha1.centro,'cabSlot','1','centro'))}</div>
+   <div>${field('Direita',varSlotSelect(s.cabecalho.linha1.direita,'cabSlot','1','direita'))}</div>
+  </div>
   <div class="row">
-   <div>${field('Tamanho (pt)','<input type="number" min="5" max="18" step="0.5" data-bind="cabecalho.tamanho" data-scope="settings" value="'+s.cabecalho.tamanho+'">')}</div>
+   <div>${field('Tamanho linha 1 (pt)','<input type="number" min="5" max="18" step="0.5" data-bind="cabecalho.tamanho" data-scope="settings" value="'+s.cabecalho.tamanho+'">')}</div>
    <div><label class="inline"><input type="checkbox" data-bind-immediate data-bind="cabecalho.negrito" data-scope="settings" ${s.cabecalho.negrito?'checked':''}> Negrito</label></div>
   </div>
-  <div class="note">Linha 2 mostra automaticamente o código do processo em cada documento gerado.</div>
+  <h3>Linha 2 — abaixo do traço <small class="note">(por defeito: Nº processo + TAG à esquerda)</small></h3>
+  <div class="row3">
+   <div>${field('Esquerda',varSlotSelect(s.cabecalho.linha2.esquerda,'cabSlot','2','esquerda'))}</div>
+   <div>${field('Centro',varSlotSelect(s.cabecalho.linha2.centro,'cabSlot','2','centro'))}</div>
+   <div>${field('Direita',varSlotSelect(s.cabecalho.linha2.direita,'cabSlot','2','direita'))}</div>
+  </div>
+  <div class="row">
+   <div>${field('Tamanho linha 2 (pt)','<input type="number" min="5" max="18" step="0.5" data-bind="cabecalho.tamanho2" data-scope="settings" value="'+s.cabecalho.tamanho2+'">')}</div>
+   <div><label class="inline"><input type="checkbox" data-bind-immediate data-bind="cabecalho.negrito2" data-scope="settings" ${s.cabecalho.negrito2?'checked':''}> Negrito</label></div>
+  </div>
  `)}
 
  <div class="block-title">📋 Conteúdo de rodapé</div>
  ${card('Rodapé', `
+  <div class="note">Tal como no cabeçalho, cada posição é uma caixa de validação de variáveis do processo.</div>
   <div class="row3">
-   <div>${field('Esquerda','<input data-bind="rodape.esquerda" data-scope="settings" value="'+esc(s.rodape.esquerda)+'">')}</div>
-   <div>${field('Centro','<input data-bind="rodape.centro" data-scope="settings" value="'+esc(s.rodape.centro)+'">')}</div>
-   <div>${field('Direita','<input data-bind="rodape.direita" data-scope="settings" value="'+esc(s.rodape.direita)+'">')}</div>
+   <div>${field('Esquerda',varSlotSelect(s.rodape.esquerda,'rodapeSlot',null,'esquerda'))}</div>
+   <div>${field('Centro',varSlotSelect(s.rodape.centro,'rodapeSlot',null,'centro'))}</div>
+   <div>${field('Direita',varSlotSelect(s.rodape.direita,'rodapeSlot',null,'direita'))}</div>
   </div>
   ${field('Tamanho (pt)','<input type="number" min="5" max="14" step="0.5" data-bind="rodape.tamanho" data-scope="settings" value="'+s.rodape.tamanho+'">')}
-  <div class="note">Marcadores disponíveis: {processo} {pagina} {paginas} {data}</div>
  `)}
  `;
 }
+document.addEventListener('change',e=>{
+ const t=e.target;
+ if(t.dataset.actionInput==='cabSlot'){
+  const vals=Array.from(t.selectedOptions).map(o=>o.value);
+  app.settings.cabecalho['linha'+t.dataset.line][t.dataset.pos]=vals;
+  saveNow();
+ }
+ if(t.dataset.actionInput==='rodapeSlot'){
+  const vals=Array.from(t.selectedOptions).map(o=>o.value);
+  app.settings.rodape[t.dataset.pos]=vals;
+  saveNow();
+ }
+});
 actions.backupOut=async(b)=>{
  const st=$('backupState');st.textContent='A preparar ZIP...';
  try{
@@ -1693,9 +1772,6 @@ actions.apagarTudo=async()=>{
 };
 
 /* ===================== Exportação PDF / Word / ZIP ===================== */
-function fillFooterTemplate(tpl,ctx){
- return String(tpl||'').replace(/\{processo\}/g,ctx.processo||'').replace(/\{pagina\}/g,ctx.pagina||'').replace(/\{paginas\}/g,ctx.paginas||'').replace(/\{data\}/g,ctx.data||'');
-}
 /* ---- Auxiliares de imagem (fotos → dataURL para jsPDF / docx) ---- */
 function blobToDataUrl(blob){
  return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(blob)});
@@ -1721,16 +1797,12 @@ async function buildResumoPdf(proc,cfg){
  const pageW=doc.internal.pageSize.getWidth(),pageH=doc.internal.pageSize.getHeight(),contentW=pageW-mL-mR;
  const cols=Math.max(1,Math.min(5,Number(cfg.cols)||app.settings.fotoGridCols||2));
  let y=mT,currentTitulo='';
- const drawHeader=()=>{
-  doc.setFont(F,s.cabecalho.negrito?'bold':'normal');doc.setFontSize(s.cabecalho.tamanho||9);
-  doc.text(s.cabecalho.linha1||'PeriGest',mL,mT-6);
-  doc.text((proc.codigo||'')+(currentTitulo?' · '+currentTitulo:''),pageW-mR,mT-6,{align:'right'});
-  doc.setDrawColor(180);doc.line(mL,mT-3,pageW-mR,mT-3);
- };
- const newPage=()=>{doc.addPage();drawHeader();y=mT+6};
+ // Cabeçalho e rodapé são desenhados numa passagem final (após gerar todo o conteúdo),
+ // para que a variável "Página / total de páginas" tenha o total já conhecido em qualquer posição.
+ const newPage=()=>{doc.addPage();y=mT+6};
  const ensure=(needed)=>{if(y+needed>pageH-mB)newPage()};
  const setTitulo=(t)=>{currentTitulo=t};
- drawHeader();y=mT+6;
+ y=mT+6;
 
  // parágrafo: justificado, salvo quando cabe numa só linha (alinhado à esquerda nesse caso)
  const writeParagraph=(text,fontSize,x,w)=>{
@@ -1778,10 +1850,12 @@ async function buildResumoPdf(proc,cfg){
  };
 
  // bloco de questão: "------" / Autor / Questão / "Resposta" / entradas indentadas e justificadas / fotos no fim
- const drawQuestionBlock=async(q,a,entradas,semFotoAviso)=>{
+ const drawQuestionBlock=async(q,a,entradas,semFotoAviso,startsNewPage)=>{
   ensure(8);
-  doc.setFont(F,'normal');doc.setFontSize(BS);
-  doc.text('------------------------------------------------------------',mL,y);y+=6;
+  if(!startsNewPage){
+   doc.setFont(F,'normal');doc.setFontSize(BS);
+   doc.text('------------------------------------------------------------',mL,y);y+=6;
+  }
   doc.setFont(F,'bold');doc.setFontSize(BS);
   doc.text(`Autor ${a.ordem} — ${a.nome}`,mL,y);y+=6;
   const titulo=doc.splitTextToSize(questaoTitulo(q,a),contentW);
@@ -1854,7 +1928,7 @@ async function buildResumoPdf(proc,cfg){
     const iv=getInterveniente(h.intervenienteId);
     return {titulo:`${iv?iv.nome:'—'}${h.data?' — '+h.data:''}:`,texto:h.texto};
    });
-   await drawQuestionBlock(q,a,entradas,fotosDaQuestao(proc,q.id).length===0);
+   await drawQuestionBlock(q,a,entradas,fotosDaQuestao(proc,q.id).length===0,i>0);
   }
   newPage();
  }
@@ -1866,21 +1940,36 @@ async function buildResumoPdf(proc,cfg){
   for(let i=0;i<fechadas.length;i++){
    const {q,a}=fechadas[i];
    if(i>0)newPage();
-   await drawQuestionBlock(q,a,[{titulo:'',texto:q.conciliada.texto||'(sem texto conciliado)'}],fotosDaQuestao(proc,q.id).length===0);
+   await drawQuestionBlock(q,a,[{titulo:'',texto:q.conciliada.texto||'(sem texto conciliado)'}],fotosDaQuestao(proc,q.id).length===0,i>0);
   }
  }
 
  const total=doc.internal.getNumberOfPages();
- const drawFooter=(p,tot)=>{
-  const ctx={processo:proc.codigo,pagina:String(p),paginas:String(tot),data:new Date().toLocaleDateString('pt-PT')};
+ const drawHeaderFooter=(p,tot)=>{
+  const ctx={pagina:p,paginas:tot};
+  // Linha 1 — acima do traço
+  doc.setFont(F,s.cabecalho.negrito?'bold':'normal');doc.setFontSize(s.cabecalho.tamanho||9);
+  const l1=renderVarSlot(proc,s.cabecalho.linha1.esquerda,ctx),c1=renderVarSlot(proc,s.cabecalho.linha1.centro,ctx),r1=renderVarSlot(proc,s.cabecalho.linha1.direita,ctx);
+  if(l1)doc.text(l1,mL,mT-11);
+  if(c1)doc.text(c1,pageW/2,mT-11,{align:'center'});
+  if(r1)doc.text(r1,pageW-mR,mT-11,{align:'right'});
+  doc.setDrawColor(180);doc.line(mL,mT-7,pageW-mR,mT-7);
+  // Linha 2 — abaixo do traço
+  doc.setFont(F,s.cabecalho.negrito2?'bold':'normal');doc.setFontSize(s.cabecalho.tamanho2||8);
+  const l2=renderVarSlot(proc,s.cabecalho.linha2.esquerda,ctx),c2=renderVarSlot(proc,s.cabecalho.linha2.centro,ctx),r2=renderVarSlot(proc,s.cabecalho.linha2.direita,ctx);
+  if(l2)doc.text(l2,mL,mT-3);
+  if(c2)doc.text(c2,pageW/2,mT-3,{align:'center'});
+  if(r2)doc.text(r2,pageW-mR,mT-3,{align:'right'});
+  // Rodapé
   doc.setFont(F,'normal');doc.setFontSize(s.rodape.tamanho||8);doc.setTextColor(90);
   const fy=pageH-mB+8;
-  doc.text(fillFooterTemplate(s.rodape.esquerda,ctx),mL,fy);
-  doc.text(fillFooterTemplate(s.rodape.centro,ctx),pageW/2,fy,{align:'center'});
-  doc.text(fillFooterTemplate(s.rodape.direita,ctx),pageW-mR,fy,{align:'right'});
+  const lf=renderVarSlot(proc,s.rodape.esquerda,ctx),cf=renderVarSlot(proc,s.rodape.centro,ctx),rf=renderVarSlot(proc,s.rodape.direita,ctx);
+  if(lf)doc.text(lf,mL,fy);
+  if(cf)doc.text(cf,pageW/2,fy,{align:'center'});
+  if(rf)doc.text(rf,pageW-mR,fy,{align:'right'});
   doc.setTextColor(0);
  };
- for(let p=1;p<=total;p++){doc.setPage(p);drawFooter(p,total)}
+ for(let p=1;p<=total;p++){doc.setPage(p);drawHeaderFooter(p,total)}
  return doc.output('blob');
 }
 
@@ -1910,6 +1999,35 @@ async function buildResumoDocx(proc,cfg){
  const paraAuto=(text,o)=>{o=o||{};const align=willWrap(text)?'both':'left';return para(run(text,{font:F,size:szBody}),{align,indent:o.indent,after:o.after!=null?o.after:140})};
  const parts=[];
  const pageBreak=()=>parts.push('<w:p><w:r><w:br w:type="page"/></w:r></w:p>');
+
+ // Campo dinâmico do Word (PAGE / NUMPAGES) — usado quando a variável "Página / total de páginas" é escolhida.
+ const docxFieldRun=(code,size,bold)=>{
+  let rpr='<w:rPr>';if(F)rpr+='<w:rFonts w:ascii="'+F+'" w:hAnsi="'+F+'"/>';if(bold)rpr+='<w:b/>';rpr+='<w:sz w:val="'+size+'"/><w:szCs w:val="'+size+'"/></w:rPr>';
+  return '<w:r>'+rpr+'<w:fldChar w:fldCharType="begin"/></w:r>'
+   +'<w:r>'+rpr+'<w:instrText xml:space="preserve"> '+code+' </w:instrText></w:r>'
+   +'<w:r>'+rpr+'<w:fldChar w:fldCharType="separate"/></w:r>'
+   +'<w:r>'+rpr+'<w:t>1</w:t></w:r>'
+   +'<w:r>'+rpr+'<w:fldChar w:fldCharType="end"/></w:r>';
+ };
+ // Runs de uma posição do cabeçalho/rodapé — uma ou mais variáveis do processo, unidas por " · ".
+ const docxVarRuns=(keys,size,bold)=>{
+  const out=[];
+  (keys||[]).forEach((k,i)=>{
+   if(i>0)out.push(run(' · ',{font:F,size,bold}));
+   if(k==='paginaTotal'){out.push(docxFieldRun('PAGE',size,bold));out.push(run('/',{font:F,size,bold}));out.push(docxFieldRun('NUMPAGES',size,bold))}
+   else out.push(run(resolveProcessVar(proc,k,{}),{font:F,size,bold}));
+  });
+  return out.join('');
+ };
+ // Parágrafo com 3 posições (esquerda/tab-centro/tab-direita), usado no cabeçalho e rodapé.
+ const lcrParagraph=(leftXml,centerXml,rightXml,opts)=>{
+  opts=opts||{};
+  const centerPos=Math.round(contentTwips/2),rightPos=contentTwips;
+  let ppr='<w:pPr><w:tabs><w:tab w:val="center" w:pos="'+centerPos+'"/><w:tab w:val="right" w:pos="'+rightPos+'"/></w:tabs>';
+  if(opts.borderBottom)ppr+='<w:pBdr><w:bottom w:val="single" w:sz="4" w:space="4" w:color="999999"/></w:pBdr>';
+  ppr+='<w:spacing w:after="'+(opts.after||0)+'"/></w:pPr>';
+  return '<w:p>'+ppr+leftXml+'<w:r><w:tab/></w:r>'+centerXml+'<w:r><w:tab/></w:r>'+rightXml+'</w:p>';
+ };
 
  let mediaIdx=0,relIdx=1,drawingId=0;
  const mediaRels=[];
@@ -1959,8 +2077,8 @@ async function buildResumoDocx(proc,cfg){
   parts.push(para('',{after:160}));
  };
 
- const drawQuestionBlockDocx=async(q,a,entradas,semFotoAviso)=>{
-  parts.push(para(run('------------------------------------------------------------',{font:F,size:szSmall,color:'888888'}),{after:60}));
+ const drawQuestionBlockDocx=async(q,a,entradas,semFotoAviso,startsNewPage)=>{
+  if(!startsNewPage)parts.push(para(run('------------------------------------------------------------',{font:F,size:szSmall,color:'888888'}),{after:60}));
   parts.push(para(run(`Autor ${a.ordem} — ${a.nome}`,{bold:true,font:F}),{after:40}));
   parts.push(para(run(questaoTitulo(q,a),{bold:true,font:F}),{after:80}));
   parts.push(para(run('Resposta',{bold:true,font:F}),{after:60}));
@@ -2020,7 +2138,7 @@ async function buildResumoDocx(proc,cfg){
     const iv=getInterveniente(h.intervenienteId);
     return {titulo:`${iv?iv.nome:'—'}${h.data?' — '+h.data:''}:`,texto:h.texto};
    });
-   await drawQuestionBlockDocx(q,a,entradas,fotosDaQuestao(proc,q.id).length===0);
+   await drawQuestionBlockDocx(q,a,entradas,fotosDaQuestao(proc,q.id).length===0,i>0);
   }
   pageBreak();
  }
@@ -2031,19 +2149,36 @@ async function buildResumoDocx(proc,cfg){
   for(let i=0;i<fechadas.length;i++){
    const {q,a}=fechadas[i];
    if(i>0)pageBreak();
-   await drawQuestionBlockDocx(q,a,[{titulo:'',texto:q.conciliada.texto||'(sem texto conciliado)'}],fotosDaQuestao(proc,q.id).length===0);
+   await drawQuestionBlockDocx(q,a,[{titulo:'',texto:q.conciliada.texto||'(sem texto conciliado)'}],fotosDaQuestao(proc,q.id).length===0,i>0);
   }
  }
 
+ // Cabeçalho (linha 1 acima do traço / linha 2 abaixo) e rodapé — cabeçalho/rodapé "vivos", em todas as páginas.
+ const hSize1=(Number(s.cabecalho.tamanho)||9)*2,hBold1=!!s.cabecalho.negrito;
+ const hSize2=(Number(s.cabecalho.tamanho2)||8)*2,hBold2=!!s.cabecalho.negrito2;
+ const headerXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+  +lcrParagraph(docxVarRuns(s.cabecalho.linha1.esquerda,hSize1,hBold1),docxVarRuns(s.cabecalho.linha1.centro,hSize1,hBold1),docxVarRuns(s.cabecalho.linha1.direita,hSize1,hBold1),{borderBottom:true,after:60})
+  +lcrParagraph(docxVarRuns(s.cabecalho.linha2.esquerda,hSize2,hBold2),docxVarRuns(s.cabecalho.linha2.centro,hSize2,hBold2),docxVarRuns(s.cabecalho.linha2.direita,hSize2,hBold2),{})
+  +'</w:hdr>';
+ zip.file('word/header1.xml',headerXml);
+ const fSize=(Number(s.rodape.tamanho)||8)*2;
+ const footerXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+  +lcrParagraph(docxVarRuns(s.rodape.esquerda,fSize,false),docxVarRuns(s.rodape.centro,fSize,false),docxVarRuns(s.rodape.direita,fSize,false),{})
+  +'</w:ftr>';
+ zip.file('word/footer1.xml',footerXml);
+
  const documentXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:body>'
   +parts.join('')
-  +'<w:sectPr><w:pgSz w:w="'+pgW+'" w:h="'+pgH+'"/><w:pgMar w:top="'+mT+'" w:right="'+mR+'" w:bottom="'+mB+'" w:left="'+mL+'"/></w:sectPr></w:body></w:document>';
+  +'<w:sectPr><w:headerReference w:type="default" r:id="rIdHeader1"/><w:footerReference w:type="default" r:id="rIdFooter1"/><w:pgSz w:w="'+pgW+'" w:h="'+pgH+'"/><w:pgMar w:top="'+mT+'" w:right="'+mR+'" w:bottom="'+mB+'" w:left="'+mL+'" w:header="720" w:footer="'+Math.round(mB/2)+'" w:gutter="0"/></w:sectPr></w:body></w:document>';
  zip.file('word/document.xml',documentXml);
  const imgContentType=mediaRels.length?'<Default Extension="jpg" ContentType="image/jpeg"/>':'';
- zip.file('[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>'+imgContentType+'<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
+ zip.file('[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>'+imgContentType+'<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>');
  zip.file('_rels/.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
  const imgRels=mediaRels.map(m=>`<Relationship Id="${m.rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${m.name}"/>`).join('');
- zip.file('word/_rels/document.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+imgRels+'</Relationships>');
+ zip.file('word/_rels/document.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+  +'<Relationship Id="rIdHeader1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>'
+  +'<Relationship Id="rIdFooter1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>'
+  +imgRels+'</Relationships>');
  return await zip.generateAsync({type:'blob'});
 }
 function shareOrDownload(blob,filename){
