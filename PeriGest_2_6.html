@@ -212,9 +212,10 @@ function defaultCabecalho(){
 // toda a zona de rodapé (antes da 1ª linha).
 function defaultRodape(){
  return {
+  linhaReserva:{esquerda:[],centro:[],direita:[]},
   linha1:{esquerda:['gabineteUnico'],centro:[],direita:[]},
   linha2:{esquerda:['codigo'],centro:['data'],direita:['paginaTotal']},
-  tamanho:8,tamanho2:8
+  tamanhoReserva:8,tamanho:8,tamanho2:8
  };
 }
 function defaultState(){
@@ -248,13 +249,13 @@ function defaultState(){
   // e negrito próprios — o título imprime-se uma só vez por secção, independentemente do
   // nº de páginas que essa secção ocupe.
   modelDocs:[
-   {id:uid(),chave:'capa',titulo:'Capa de processo',fonte:'helvetica',tamanho:10,negrito:true},
-   {id:uid(),chave:'resumoCronologia',titulo:'Resumo do processo',fonte:'helvetica',tamanho:10,negrito:true},
-   {id:uid(),chave:'listaQuestoes',titulo:'A — Lista de questões colocadas',fonte:'helvetica',tamanho:10,negrito:true},
-   {id:uid(),chave:'custosPendentes',titulo:'Resumo de questões com apuramento de custos pendente',fonte:'helvetica',tamanho:10,negrito:true},
-   {id:uid(),chave:'listaAnalise',titulo:'B — Histórico de análise',fonte:'helvetica',tamanho:10,negrito:true},
-   {id:uid(),chave:'listaDraft',titulo:'C — Draft de relatório (Respostas validadas)',fonte:'helvetica',tamanho:10,negrito:true},
-   {id:uid(),chave:'listaDraftFinal',titulo:'C — Relatório final (Respostas validadas)',fonte:'helvetica',tamanho:10,negrito:true}
+   {id:uid(),chave:'capa',titulo:'Capa de processo',fonte:'helvetica',tamanho:10,negrito:true,posicao:'esquerda'},
+   {id:uid(),chave:'resumoCronologia',titulo:'Resumo do processo',fonte:'helvetica',tamanho:10,negrito:true,posicao:'esquerda'},
+   {id:uid(),chave:'listaQuestoes',titulo:'A — Lista de questões colocadas',fonte:'helvetica',tamanho:10,negrito:true,posicao:'esquerda',mostrarStatus:true,incluirFotos:false},
+   {id:uid(),chave:'custosPendentes',titulo:'Resumo de questões com apuramento de custos pendente',fonte:'helvetica',tamanho:10,negrito:true,posicao:'esquerda',mostrarStatus:true,incluirFotos:false},
+   {id:uid(),chave:'listaAnalise',titulo:'B — Histórico de análise',fonte:'helvetica',tamanho:10,negrito:true,posicao:'esquerda',incluirFotos:true},
+   {id:uid(),chave:'listaDraft',titulo:'C — Draft de relatório (Respostas validadas)',fonte:'helvetica',tamanho:10,negrito:true,posicao:'esquerda',incluirFotos:true},
+   {id:uid(),chave:'listaDraftFinal',titulo:'C — Relatório final (Respostas validadas)',fonte:'helvetica',tamanho:10,negrito:true,posicao:'esquerda',incluirFotos:true}
   ],
   settings:{
    release:'2.6',
@@ -302,7 +303,13 @@ function loadState(){
  if(!app.tiposDocumento||!app.tiposDocumento.length)app.tiposDocumento=d.tiposDocumento;
  if(!app.designacoesQuestao||!app.designacoesQuestao.length)app.designacoesQuestao=d.designacoesQuestao;
  if(!app.modelDocs||!app.modelDocs.length)app.modelDocs=d.modelDocs;
- d.modelDocs.forEach(def=>{if(!app.modelDocs.some(m=>m.chave===def.chave))app.modelDocs.push({...def})});
+ d.modelDocs.forEach(def=>{
+  const m=app.modelDocs.find(x=>x.chave===def.chave);
+  if(!m){app.modelDocs.push({...def});return}
+  if(!m.posicao)m.posicao=def.posicao||'esquerda';
+  if(def.mostrarStatus!=null&&m.mostrarStatus==null)m.mostrarStatus=def.mostrarStatus;
+  if(def.incluirFotos!=null&&m.incluirFotos==null)m.incluirFotos=def.incluirFotos;
+ });
  // cabecalho/rodape passaram de texto livre para caixas de seleção de variáveis —
  // repõe a estrutura nova caso ainda esteja no formato antigo (string).
  if(!app.settings.cabecalho||typeof app.settings.cabecalho.linha1!=='object')app.settings.cabecalho=d.settings.cabecalho;
@@ -312,6 +319,8 @@ function loadState(){
  // repõe a estrutura nova caso ainda esteja no formato antigo (achatado, uma só linha).
  if(!app.settings.rodape||typeof app.settings.rodape.linha1!=='object')app.settings.rodape=d.settings.rodape;
  if(app.settings.rodape.tamanho2==null)app.settings.rodape.tamanho2=8;
+ if(!app.settings.rodape.linhaReserva)app.settings.rodape.linhaReserva={esquerda:[],centro:[],direita:[]};
+ if(app.settings.rodape.tamanhoReserva==null)app.settings.rodape.tamanhoReserva=8;
  if(!app.tiposEvento.some(t=>t.chave==='comunicacao'||t.chave==='comunicacoes'))app.tiposEvento.push({id:uid(),chave:'comunicacao',nome:'Comunicação',semPresencas:true});
 }
 let saveTimer=null;
@@ -2207,24 +2216,29 @@ function getDesignacaoQuestao(proc){
  return app.designacoesQuestao.find(x=>x.id===proc.designacaoQuestaoId)||app.designacoesQuestao.find(x=>x.isDefault)||app.designacoesQuestao[0]||{nome:'Quesito',plural:'Quesitos',genero:'m'};
 }
 function autorGroupHeaderText(desig,autorNome){
- return `${desig.plural} ${desig.genero==='f'?'apresentadas':'apresentados'} por: ${autorNome}`;
+ return `- ${autorNome} - ${desig.plural} ${desig.genero==='f'?'colocadas':'colocados'}:`;
 }
 function getModelDoc(chave){
  return app.modelDocs.find(m=>m.chave===chave)||{titulo:chave,fonte:'helvetica',tamanho:10,negrito:true};
 }
 
 /* ---- Model docs: título/fonte/tamanho/negrito de cada secção dos documentos gerados ---- */
+const MODELDOC_STATUS_CHAVES=['listaQuestoes','custosPendentes'];
+const MODELDOC_FOTOS_CHAVES=['listaAnalise','listaDraft','listaDraftFinal'];
 function viewModelDocs(){
- return card('📄 Títulos dos documentos gerados (model docs)', `
-  <div class="note">Cada secção dos documentos exportados (PDF/Word) tem um título configurável, com o seu próprio tipo de letra, tamanho e negrito. O título aparece uma só vez por secção, independentemente do número de páginas que ocupe. Por defeito: tamanho 10, negrito.</div>
+ return card('📄 Títulos e conteúdo dos documentos gerados (model docs)', `
+  <div class="note">Cada secção dos documentos exportados (PDF/Word) — o "Out Model" — tem um título configurável: texto, posição na linha (E/C/D), tipo de letra, tamanho e negrito. O título aparece uma só vez por secção, independentemente do número de páginas que ocupe. Por defeito: tamanho 10, negrito, à esquerda.</div>
   ${app.modelDocs.map(m=>`
    <div class="item">
     ${field('Título',`<input data-bind="titulo" data-scope="modelDoc" data-scope-id="${m.id}" value="${esc(m.titulo)}">`)}
     <div class="row3">
+     <div>${field('Posição',`<select data-bind="posicao" data-scope="modelDoc" data-scope-id="${m.id}"><option value="esquerda" ${m.posicao==='esquerda'?'selected':''}>Esquerda (E)</option><option value="centro" ${m.posicao==='centro'?'selected':''}>Centro (C)</option><option value="direita" ${m.posicao==='direita'?'selected':''}>Direita (D)</option></select>`)}</div>
      <div>${field('Fonte',`<select data-bind="fonte" data-scope="modelDoc" data-scope-id="${m.id}">${FONT_OPTIONS.map(([k,label])=>`<option value="${k}" ${m.fonte===k?'selected':''}>${esc(label)}</option>`).join('')}</select>`)}</div>
      <div>${field('Tamanho (pt)',`<input type="number" min="6" max="24" step="0.5" data-bind="tamanho" data-scope="modelDoc" data-scope-id="${m.id}" value="${m.tamanho}">`)}</div>
-     <div><label class="inline" style="margin-top:28px"><input type="checkbox" data-bind-immediate data-bind="negrito" data-scope="modelDoc" data-scope-id="${m.id}" ${m.negrito?'checked':''}> Negrito</label></div>
     </div>
+    <label class="inline"><input type="checkbox" data-bind-immediate data-bind="negrito" data-scope="modelDoc" data-scope-id="${m.id}" ${m.negrito?'checked':''}> Negrito</label>
+    ${MODELDOC_STATUS_CHAVES.includes(m.chave)?`<label class="inline"><input type="checkbox" data-bind-immediate data-bind="mostrarStatus" data-scope="modelDoc" data-scope-id="${m.id}" ${m.mostrarStatus?'checked':''}> Mostrar o estado da questão (Confirma-se / Confirma-se parcialmente / Não se confirma / Sit. não identificada)</label>`:''}
+    ${MODELDOC_FOTOS_CHAVES.includes(m.chave)||MODELDOC_STATUS_CHAVES.includes(m.chave)?`<label class="inline"><input type="checkbox" data-bind-immediate data-bind="incluirFotos" data-scope="modelDoc" data-scope-id="${m.id}" ${m.incluirFotos?'checked':''}> Incluir grelha de fotos ${MODELDOC_FOTOS_CHAVES.includes(m.chave)?'<span class=\"note\">(por defeito, ligado — ficha da questão a analisar)</span>':'<span class=\"note\">(opcional)</span>'}</label>`:''}
    </div>
   `).join('')}
   ${returnLinkBtn()}
@@ -2556,8 +2570,16 @@ function viewSettings(){
  `)}
 
  <div class="block-title">📋 Conteúdo de rodapé</div>
- ${card('Rodapé (2 linhas)', `
+ ${card('Rodapé (linha de reserva + 2 linhas)', `
   <div class="note">Tal como no cabeçalho, cada posição é uma caixa de validação de variáveis do processo. Fica sempre um traço contínuo acima de toda a zona de rodapé.</div>
+  <h3>Linha de reserva <small class="note">(fundo da página, antes do rodapé — em branco por defeito, mas pode levar informação fixa)</small></h3>
+  <div class="row3">
+   <div>${field('Esquerda (E)',varSlotSelect(s.rodape.linhaReserva.esquerda,'rodapeSlot','Reserva','esquerda'))}</div>
+   <div>${field('Centro (C)',varSlotSelect(s.rodape.linhaReserva.centro,'rodapeSlot','Reserva','centro'))}</div>
+   <div>${field('Direita (D)',varSlotSelect(s.rodape.linhaReserva.direita,'rodapeSlot','Reserva','direita'))}</div>
+  </div>
+  ${field('Tamanho da linha de reserva (pt)','<input type="number" min="5" max="14" step="0.5" data-bind="rodape.tamanhoReserva" data-scope="settings" value="'+s.rodape.tamanhoReserva+'">')}
+  <hr>
   <h3>Linha 1 <small class="note">(por defeito: gabinete, à esquerda — só aparece em peritagem de perito único)</small></h3>
   <div class="row3">
    <div>${field('Esquerda (E)',varSlotSelect(s.rodape.linha1.esquerda,'rodapeSlot','1','esquerda'))}</div>
@@ -2710,7 +2732,9 @@ async function buildResumoPdf(proc,cfg){
   const m=getModelDoc(chave);
   const mf=FONT_PDF_BASE[m.fonte]||F,ms=Number(m.tamanho)||10;
   ensure(ms*0.5+4);doc.setFont(mf,m.negrito?'bold':'normal');doc.setFontSize(ms);
-  doc.text(m.titulo,mL,y);y+=ms*0.45+6;
+  const x=m.posicao==='centro'?pageW/2:m.posicao==='direita'?pageW-mR:mL;
+  const align=m.posicao==='centro'?'center':m.posicao==='direita'?'right':'left';
+  doc.text(m.titulo,x,y,{align});y+=ms*0.45+6;
   doc.setFont(F,'normal');doc.setFontSize(BS);
  };
  // Cabeçalho de grupo por autor — uma linha em branco antes e depois, uma só vez no início
@@ -2754,7 +2778,7 @@ async function buildResumoPdf(proc,cfg){
 
  // bloco de questão: "------" / Autor / Questão / descrição integral / "Resposta(s)" / entradas
  // indentadas e justificadas / proposta de resposta conciliada (opcional) / fotos no fim
- const drawQuestionBlock=async(q,a,entradas,semFotoAviso,startsNewPage,conciliadaTexto,respostaLabel)=>{
+ const drawQuestionBlock=async(q,a,entradas,semFotoAviso,startsNewPage,conciliadaTexto,respostaLabel,modelChave)=>{
   ensure(8);
   if(!startsNewPage){
    doc.setFont(F,'normal');doc.setFontSize(BS);
@@ -2787,7 +2811,7 @@ async function buildResumoPdf(proc,cfg){
    ensure(6);doc.text('⚠ Esta questão não tem fotografias associadas.',mL+indent,y);y+=6;
    doc.setTextColor(0);
   }
-  if(cfg.fotos)await drawPhotoGrid(fotosDaQuestao(proc,q.id));
+  if(cfg.fotos&&(!modelChave||getModelDoc(modelChave).incluirFotos))await drawPhotoGrid(fotosDaQuestao(proc,q.id));
  };
 
  // Fecho do relatório final: data, nome dos peritos e espaço para assinatura eletrónica.
@@ -2831,35 +2855,43 @@ async function buildResumoPdf(proc,cfg){
  if(cfg.listaQuestoes){
   setTitulo('Lista de questões colocadas');
   sectionTitleModel('listaQuestoes');
+  const mLQ=getModelDoc('listaQuestoes');
   const todas=questoesOrdenadas(proc);
   if(!todas.length)plain('Sem questões.');
   let lastAutorA=null;
-  todas.forEach(({q,a})=>{
+  for(const {q,a} of todas){
    if(a.id!==lastAutorA){lastAutorA=a.id;autorGroupHeaderPdf(a.nome)}
    doc.setFont(F,'bold');doc.setFontSize(BS);
    const titulo=doc.splitTextToSize(questaoTitulo(q,a),contentW);
    ensure(titulo.length*BS*0.45+2);doc.text(titulo,mL,y);y+=titulo.length*BS*0.45+1;
-   doc.setFont(F,'normal');doc.setFontSize(Math.max(6,BS-1));
-   const info=`Fase: ${q.fase==='relatorio'?'Draft de relatório':'Análise'} · Fotos: ${fotosDaQuestao(proc,q.id).length}`;
-   ensure(6);doc.text(info,mL,y);y+=7;
-  });
+   if(mLQ.mostrarStatus){
+    doc.setFont(F,'normal');doc.setFontSize(Math.max(6,BS-1));
+    const info=`Estado: ${veredictoLabel(q.veredito)||'—'} · Fase: ${q.fase==='relatorio'?'Draft de relatório':'Análise'} · Fotos: ${fotosDaQuestao(proc,q.id).length}`;
+    ensure(6);doc.text(info,mL,y);y+=7;
+   }
+   if(cfg.fotos&&mLQ.incluirFotos)await drawPhotoGrid(fotosDaQuestao(proc,q.id));
+  }
   newPage();
  }
  if(cfg.custosPendentes){
   setTitulo('Custos pendentes');
   sectionTitleModel('custosPendentes');
+  const mCP=getModelDoc('custosPendentes');
   const custos=questoesComCustosPendentes(proc);
   if(!custos.length)plain('Sem questões pendentes de apuramento de custos.');
   let lastAutorCP=null;
-  custos.forEach(q=>{
+  for(const q of custos){
    const a=proc.autores.find(x=>x.id===q.autorId);
    if(a.id!==lastAutorCP){lastAutorCP=a.id;autorGroupHeaderPdf(a.nome)}
    doc.setFont(F,'bold');doc.setFontSize(BS);
    const titulo=doc.splitTextToSize(questaoTitulo(q,a),contentW);
    ensure(titulo.length*BS*0.45+2);doc.text(titulo,mL,y);y+=titulo.length*BS*0.45+1;
-   doc.setFont(F,'normal');doc.setFontSize(Math.max(6,BS-1));
-   ensure(6);doc.text(`Fase: ${q.fase==='relatorio'?'Draft de relatório':'Análise'}`,mL,y);y+=7;
-  });
+   if(mCP.mostrarStatus){
+    doc.setFont(F,'normal');doc.setFontSize(Math.max(6,BS-1));
+    ensure(6);doc.text(`Estado: ${veredictoLabel(q.veredito)||'—'} · Fase: ${q.fase==='relatorio'?'Draft de relatório':'Análise'}`,mL,y);y+=7;
+   }
+   if(cfg.fotos&&mCP.incluirFotos)await drawPhotoGrid(fotosDaQuestao(proc,q.id));
+  }
   newPage();
  }
  if(cfg.listaAnalise){
@@ -2879,7 +2911,7 @@ async function buildResumoPdf(proc,cfg){
     const texto=h.texto+(nota&&nota.trim()?`\n\nAnotações: ${nota}`:'');
     return {titulo:`${iv?iv.nome:'—'}${h.data?' — '+h.data:''}:`,texto};
    });
-   await drawQuestionBlock(q,a,entradas,fotosDaQuestao(proc,q.id).length===0,true,(q.conciliada&&q.conciliada.texto)||'','Proposta(s) de resposta');
+   await drawQuestionBlock(q,a,entradas,fotosDaQuestao(proc,q.id).length===0,true,(q.conciliada&&q.conciliada.texto)||'','Proposta(s) de resposta','listaAnalise');
   }
   newPage();
  }
@@ -2894,7 +2926,7 @@ async function buildResumoPdf(proc,cfg){
    const {q,a}=fechadas[i];
    if(i>0)newPage();
    if(a.id!==lastAutorC){lastAutorC=a.id;autorGroupHeaderPdf(a.nome)}
-   await drawQuestionBlock(q,a,[{titulo:'',texto:q.conciliada.texto||'(sem texto conciliado)'}],fotosDaQuestao(proc,q.id).length===0,true,null,'Resposta(s)');
+   await drawQuestionBlock(q,a,[{titulo:'',texto:q.conciliada.texto||'(sem texto conciliado)'}],fotosDaQuestao(proc,q.id).length===0,true,null,'Resposta(s)',relFinal?'listaDraftFinal':'listaDraft');
   }
   if(relFinal)drawFechoRelatorioFinal();
  }
@@ -2924,16 +2956,23 @@ async function buildResumoPdf(proc,cfg){
   if(r3)doc.text(r3,pageW-mR,mT-3,{align:'right'});
   // Traço contínuo acima de toda a zona de rodapé
   doc.setDrawColor(20);doc.line(mL,pageH-mB+3,pageW-mR,pageH-mB+3);
+  // Rodapé — linha de reserva (fundo da página, antes do rodapé — em branco por defeito)
+  doc.setFont(F,'normal');doc.setFontSize(s.rodape.tamanhoReserva||8);doc.setTextColor(90);
+  const fy0=pageH-mB+6;
+  const lf0=renderVarSlot(proc,s.rodape.linhaReserva.esquerda,ctx),cf0=renderVarSlot(proc,s.rodape.linhaReserva.centro,ctx),rf0=renderVarSlot(proc,s.rodape.linhaReserva.direita,ctx);
+  if(lf0)doc.text(lf0,mL,fy0);
+  if(cf0)doc.text(cf0,pageW/2,fy0,{align:'center'});
+  if(rf0)doc.text(rf0,pageW-mR,fy0,{align:'right'});
   // Rodapé — linha 1 (gabinete, só em peritagem de perito único)
-  doc.setFont(F,'normal');doc.setFontSize(s.rodape.tamanho||8);doc.setTextColor(90);
-  const fy1=pageH-mB+7;
+  doc.setFontSize(s.rodape.tamanho||8);
+  const fy1=pageH-mB+9;
   const lf1=renderVarSlot(proc,s.rodape.linha1.esquerda,ctx),cf1=renderVarSlot(proc,s.rodape.linha1.centro,ctx),rf1=renderVarSlot(proc,s.rodape.linha1.direita,ctx);
   if(lf1)doc.text(lf1,mL,fy1);
   if(cf1)doc.text(cf1,pageW/2,fy1,{align:'center'});
   if(rf1)doc.text(rf1,pageW-mR,fy1,{align:'right'});
   // Rodapé — linha 2 (código/data/páginas)
   doc.setFontSize(s.rodape.tamanho2||8);
-  const fy2=pageH-mB+11;
+  const fy2=pageH-mB+12;
   const lf2=renderVarSlot(proc,s.rodape.linha2.esquerda,ctx),cf2=renderVarSlot(proc,s.rodape.linha2.centro,ctx),rf2=renderVarSlot(proc,s.rodape.linha2.direita,ctx);
   if(lf2)doc.text(lf2,mL,fy2);
   if(cf2)doc.text(cf2,pageW/2,fy2,{align:'center'});
@@ -2974,7 +3013,8 @@ async function buildResumoDocx(proc,cfg){
  // Título de secção configurável (model docs) — imprime-se uma só vez, à entrada da secção.
  const sectionTitleModelDocx=(chave)=>{
   const m=getModelDoc(chave);
-  parts.push(para(run(m.titulo,{bold:!!m.negrito,font:FONT_DOCX_NAME[m.fonte]||F,size:(Number(m.tamanho)||10)*2}),{after:180}));
+  const align=m.posicao==='centro'?'center':m.posicao==='direita'?'right':'left';
+  parts.push(para(run(m.titulo,{bold:!!m.negrito,font:FONT_DOCX_NAME[m.fonte]||F,size:(Number(m.tamanho)||10)*2}),{after:180,align}));
  };
  // Cabeçalho de grupo por autor — uma linha em branco antes e depois, uma só vez no início
  // do bloco contíguo de cada autor (não repetido por questão).
@@ -3065,9 +3105,8 @@ async function buildResumoDocx(proc,cfg){
   parts.push(para('',{after:160}));
  };
 
- const drawQuestionBlockDocx=async(q,a,entradas,semFotoAviso,startsNewPage,conciliadaTexto,respostaLabel)=>{
+ const drawQuestionBlockDocx=async(q,a,entradas,semFotoAviso,startsNewPage,conciliadaTexto,respostaLabel,modelChave)=>{
   if(!startsNewPage)parts.push(para(run('------------------------------------------------------------',{font:F,size:szSmall,color:'888888'}),{after:60}));
-  parts.push(para(run(`Autor ${a.ordem} — ${a.nome}`,{bold:true,font:F}),{after:40}));
   parts.push(para(run(questaoTitulo(q,a),{bold:true,font:F}),{after:80}));
   if(q.descricaoCompleta&&q.descricaoCompleta.trim())parts.push(paraAuto(q.descricaoCompleta,{after:140}));
   parts.push(para(run(respostaLabel||'Resposta(s)',{bold:true,font:F}),{after:60}));
@@ -3081,7 +3120,7 @@ async function buildResumoDocx(proc,cfg){
    parts.push(paraAuto(conciliadaTexto||'(sem proposta ainda)',{indent:280,after:140}));
   }
   if(semFotoAviso)parts.push(para(run('⚠ Esta questão não tem fotografias associadas.',{font:F,italic:true,color:'a02020',size:szSmall}),{indent:280,after:120}));
-  if(cfg.fotos)await photoBlock(fotosDaQuestao(proc,q.id));
+  if(cfg.fotos&&(!modelChave||getModelDoc(modelChave).incluirFotos))await photoBlock(fotosDaQuestao(proc,q.id));
  };
  // Fecho do relatório final: data, nome dos peritos e espaço para assinatura eletrónica.
  const drawFechoRelatorioFinalDocx=()=>{
@@ -3123,27 +3162,31 @@ async function buildResumoDocx(proc,cfg){
  }
  if(cfg.listaQuestoes){
   sectionTitleModelDocx('listaQuestoes');
+  const mLQd=getModelDoc('listaQuestoes');
   const todas=questoesOrdenadas(proc);
   if(!todas.length)parts.push(para(run('Sem questões.',{font:F})));
   let lastAutorA=null;
-  todas.forEach(({q,a})=>{
+  for(const {q,a} of todas){
    if(a.id!==lastAutorA){lastAutorA=a.id;autorGroupHeaderDocx(a.nome)}
    parts.push(para(run(questaoTitulo(q,a),{bold:true,font:F}),{after:20}));
-   parts.push(para(run(`Fase: ${q.fase==='relatorio'?'Draft de relatório':'Análise'} · Fotos: ${fotosDaQuestao(proc,q.id).length}`,{font:F,size:szSmall}),{after:100}));
-  });
+   if(mLQd.mostrarStatus)parts.push(para(run(`Estado: ${veredictoLabel(q.veredito)||'—'} · Fase: ${q.fase==='relatorio'?'Draft de relatório':'Análise'} · Fotos: ${fotosDaQuestao(proc,q.id).length}`,{font:F,size:szSmall}),{after:100}));
+   if(cfg.fotos&&mLQd.incluirFotos)await photoBlock(fotosDaQuestao(proc,q.id));
+  }
   pageBreak();
  }
  if(cfg.custosPendentes){
   sectionTitleModelDocx('custosPendentes');
+  const mCPd=getModelDoc('custosPendentes');
   const custos=questoesComCustosPendentes(proc);
   if(!custos.length)parts.push(para(run('Sem questões pendentes de apuramento de custos.',{font:F})));
   let lastAutorCP=null;
-  custos.forEach(q=>{
+  for(const q of custos){
    const a=proc.autores.find(x=>x.id===q.autorId);
    if(a.id!==lastAutorCP){lastAutorCP=a.id;autorGroupHeaderDocx(a.nome)}
    parts.push(para(run(questaoTitulo(q,a),{bold:true,font:F}),{after:20}));
-   parts.push(para(run(`Fase: ${q.fase==='relatorio'?'Draft de relatório':'Análise'}`,{font:F,size:szSmall}),{after:100}));
-  });
+   if(mCPd.mostrarStatus)parts.push(para(run(`Estado: ${veredictoLabel(q.veredito)||'—'} · Fase: ${q.fase==='relatorio'?'Draft de relatório':'Análise'}`,{font:F,size:szSmall}),{after:100}));
+   if(cfg.fotos&&mCPd.incluirFotos)await photoBlock(fotosDaQuestao(proc,q.id));
+  }
   pageBreak();
  }
  if(cfg.listaAnalise){
@@ -3162,7 +3205,7 @@ async function buildResumoDocx(proc,cfg){
     const texto=h.texto+(nota&&nota.trim()?`\n\nAnotações: ${nota}`:'');
     return {titulo:`${iv?iv.nome:'—'}${h.data?' — '+h.data:''}:`,texto};
    });
-   await drawQuestionBlockDocx(q,a,entradas,fotosDaQuestao(proc,q.id).length===0,true,(q.conciliada&&q.conciliada.texto)||'','Proposta(s) de resposta');
+   await drawQuestionBlockDocx(q,a,entradas,fotosDaQuestao(proc,q.id).length===0,true,(q.conciliada&&q.conciliada.texto)||'','Proposta(s) de resposta','listaAnalise');
   }
   pageBreak();
  }
@@ -3176,7 +3219,7 @@ async function buildResumoDocx(proc,cfg){
    const {q,a}=fechadas[i];
    if(i>0)pageBreak();
    if(a.id!==lastAutorC){lastAutorC=a.id;autorGroupHeaderDocx(a.nome)}
-   await drawQuestionBlockDocx(q,a,[{titulo:'',texto:q.conciliada.texto||'(sem texto conciliado)'}],fotosDaQuestao(proc,q.id).length===0,true,null,'Resposta(s)');
+   await drawQuestionBlockDocx(q,a,[{titulo:'',texto:q.conciliada.texto||'(sem texto conciliado)'}],fotosDaQuestao(proc,q.id).length===0,true,null,'Resposta(s)',relFinalDocx?'listaDraftFinal':'listaDraft');
   }
   if(relFinalDocx){pageBreak();drawFechoRelatorioFinalDocx()}
  }
@@ -3192,9 +3235,10 @@ async function buildResumoDocx(proc,cfg){
   +lcrParagraph(docxVarRuns(s.cabecalho.linha3.esquerda,hSize3,hBold3),docxVarRuns(s.cabecalho.linha3.centro,hSize3,hBold3),docxVarRuns(s.cabecalho.linha3.direita,hSize3,hBold3),{})
   +'</w:hdr>';
  zip.file('word/header1.xml',headerXml);
- const fSize1=(Number(s.rodape.tamanho)||8)*2,fSize2=(Number(s.rodape.tamanho2)||8)*2;
+ const fSizeR=(Number(s.rodape.tamanhoReserva)||8)*2,fSize1=(Number(s.rodape.tamanho)||8)*2,fSize2=(Number(s.rodape.tamanho2)||8)*2;
  const footerXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
-  +lcrParagraph(docxVarRuns(s.rodape.linha1.esquerda,fSize1,false),docxVarRuns(s.rodape.linha1.centro,fSize1,false),docxVarRuns(s.rodape.linha1.direita,fSize1,false),{borderTop:true,after:40})
+  +lcrParagraph(docxVarRuns(s.rodape.linhaReserva.esquerda,fSizeR,false),docxVarRuns(s.rodape.linhaReserva.centro,fSizeR,false),docxVarRuns(s.rodape.linhaReserva.direita,fSizeR,false),{borderTop:true,after:40})
+  +lcrParagraph(docxVarRuns(s.rodape.linha1.esquerda,fSize1,false),docxVarRuns(s.rodape.linha1.centro,fSize1,false),docxVarRuns(s.rodape.linha1.direita,fSize1,false),{after:40})
   +lcrParagraph(docxVarRuns(s.rodape.linha2.esquerda,fSize2,false),docxVarRuns(s.rodape.linha2.centro,fSize2,false),docxVarRuns(s.rodape.linha2.direita,fSize2,false),{})
   +'</w:ftr>';
  zip.file('word/footer1.xml',footerXml);
