@@ -322,6 +322,7 @@ function card(title,body){return `<div class="card"><h2>${title}</h2>${body}</di
 function field(label,inner,note){return `<label>${esc(label)}${note?` <small class="note">${esc(note)}</small>`:''}</label>${inner}`}
 function statusPill(status){const map={ON:'on',SBY:'sby',END:'end',OFF:'off'};return status?`<span class="pill ${map[status]||''}">${status}</span>`:''}
 function fasePill(fase){return fase==='relatorio'?'<span class="pill relatorio">Relatório</span>':'<span class="pill analise">Análise</span>'}
+function fotoStatusPill(n){return n>0?`<span class="pill on">📷 ${n} foto(s)</span>`:'<span class="pill off">📷 sem fotos</span>'}
 function linkBtn(label,view,params){return `<button type="button" class="linklike" data-action="navTo" data-view="${view}" data-params='${esc(JSON.stringify(params||{}))}'>${esc(label)}</button>`}
 function fieldWithLink(selectHtml,linkLabel,view,params){return `<div class="fieldlink">${selectHtml}${linkBtn(linkLabel,view,params)}</div>`}
 // Renderiza os campos de um formulário pela ordem configurada em Configurações → Ordem dos campos.
@@ -626,7 +627,7 @@ function viewQuestoes(params){
    <div>${qs.length?qs.map(q=>`
     <div class="item" data-action="navTo" data-view="questaoForm" data-params='${esc(JSON.stringify({processoId:proc.id,id:q.id}))}'>
      <b>${esc(questaoTitulo(q,a))}</b>
-     <div class="meta">${fasePill(q.fase||'analise')} · ${fotosDaQuestao(proc,q.id).length} foto(s)</div>
+     <div class="meta">${fasePill(q.fase||'analise')} ${fotoStatusPill(fotosDaQuestao(proc,q.id).length)}</div>
     </div>`).join(''):'<div class="note">Sem questões neste autor.</div>'}</div>
    <div class="actions one"><button type="button" data-action="novaQuestao" data-processo="${proc.id}" data-autor="${a.id}">➕ Nova questão</button></div>
   `);
@@ -914,7 +915,8 @@ function viewAnalise(params){
   <div>${ordered.length?ordered.map(({q,a})=>`
    <div class="item" data-action="navTo" data-view="analiseQuestao" data-params='${esc(JSON.stringify({processoId:proc.id,id:q.id}))}'>
     <b>${esc(questaoTitulo(q,a))}</b>
-    <div class="meta">${fasePill(q.fase||'analise')} · ${(proc.peritos||[]).length} perito(s) a responder</div>
+    <div class="meta">${fasePill(q.fase||'analise')} ${fotoStatusPill(fotosDaQuestao(proc,q.id).length)}</div>
+    <div class="meta">${(proc.peritos||[]).length} perito(s) a responder</div>
    </div>`).join(''):'<div class="note">Sem questões.</div>'}</div>
  `);
 }
@@ -929,7 +931,7 @@ function viewAnaliseQuestao(params){
  const single=peritos.length===1;
  const fotos=fotosDaQuestao(proc,q.id);
  return `
- ${card('🔎 '+esc(questaoTitulo(q,a)), `<div class="note">${esc(q.descricaoCompleta||'')}</div>${fasePill(q.fase||'analise')}${!fotos.length?'<div class="note" style="color:var(--r);margin-top:6px">⚠ Esta questão ainda não tem fotografias.</div>':''}`)}
+ ${card('🔎 '+esc(questaoTitulo(q,a)), `<div class="note">${esc(q.descricaoCompleta||'')}</div><div style="margin-top:6px">${fasePill(q.fase||'analise')} ${fotoStatusPill(fotos.length)}</div>`)}
  ${!peritos.length?'<div class="card"><div class="note">Associe peritos ao processo para registar respostas individuais.</div></div>':''}
  ${single?'<div class="card"><div class="note">Peritagem com um só perito: a resposta avança diretamente para o Draft de relatório, sem proposta conciliada intermédia.</div></div>':''}
  ${peritos.map(p=>card('🧑‍⚖️ Resposta — '+esc(p.interveniente.nome), `
