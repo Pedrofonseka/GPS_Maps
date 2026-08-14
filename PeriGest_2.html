@@ -231,8 +231,9 @@ function questoesOrdenadas(proc){
  autores.forEach(a=>{questoesDoAutor(proc,a.id).forEach(q=>out.push({q,a}))});
  return out;
 }
-function questaoCodigo(q,a){const sg=siglaObj(q.siglaId);return `${a.ordem}-${sg.sigla}_${pad(q.numero)}`}
-function questaoTitulo(q,a){return `${questaoCodigo(q,a)} – ${q.descricaoResumida||'(sem descrição)'}`}
+// Código da questão: {autor}_{número sequencial a 3 dígitos}_({referência livre do autor})
+function questaoCodigo(q,a){return `${a.ordem}_${pad(q.numero,3)}_(${q.referencia&&q.referencia.trim()?q.referencia.trim():''})`}
+function questaoTitulo(q,a){return `${questaoCodigo(q,a)} - ${q.descricaoResumida||'(sem descrição)'}`}
 function peritosDoProcesso(proc){return (proc.peritos||[]).map(p=>({...p,interveniente:getInterveniente(p.intervenienteId)})).filter(p=>p.interveniente)}
 function fotosDaQuestao(proc,questaoId){return (proc.fotos||[]).filter(f=>f.questaoId===questaoId)}
 function fotosCapa(proc){return (proc.fotos||[]).filter(f=>f.isCapa)}
