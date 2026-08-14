@@ -1173,11 +1173,15 @@ document.addEventListener('change',async e=>{
  const questaoId=t.dataset.questao||null;
  const files=Array.from(t.files||[]);
  if(!files.length)return;
+ const addedIds=[];
  for(const file of files){
-  await processarNovaFoto(proc,questaoId,file);
+  addedIds.push(await processarNovaFoto(proc,questaoId,file));
  }
  t.value='';
  saveNow();render();
+ // Fotos deste lote que não cumprem a orientação por defeito — pergunta uma a uma: rodar/eliminar/manter.
+ const naoConformes=addedIds.map(id=>(proc.fotos||[]).find(f=>f.id===id)).filter(f=>f&&f.captionFlagRotacao);
+ if(naoConformes.length)await reviewOrientation(proc,naoConformes,0);
 });
 // Descodifica respeitando a orientação EXIF (fotos de câmara, sobretudo iPhone, trazem
 // muitas vezes um pixel "deitado" + uma flag EXIF a dizer para rodar ao mostrar; um
@@ -1222,15 +1226,14 @@ async function processarNovaFoto(proc,questaoId,file){
  const id=uid();
  await idbPut(id,blob);
  const orientacao=height>=width?'portrait':'landscape';
- const existentes=(proc.fotos||[]).filter(f=>questaoId?f.questaoId===questaoId:true);
- const counts={portrait:0,landscape:0};
- existentes.forEach(f=>{counts[f.orientacao]=(counts[f.orientacao]||0)+1});
- const orientacaoDefault=app.settings.fotoOrientacaoDefault==='paisagem'?'landscape':'portrait';
- const dominante=existentes.length?(counts.portrait>=counts.landscape?'portrait':'landscape'):orientacaoDefault;
+ // A orientação por defeito configurada em Configurações → Fotografias é sempre a referência
+ // (não a maioria das fotos já carregadas) — é contra ela que cada foto nova é controlada.
+ const dominante=app.settings.fotoOrientacaoDefault==='paisagem'?'landscape':'portrait';
  const flag=orientacao!==dominante;
  if(!proc.fotos)proc.fotos=[];
  proc.fotos.push({id,questaoId,caption:'',isCapa:false,width,height,orientacao,captionFlagRotacao:flag,createdAt:new Date().toISOString()});
  touch(proc);logEvento(proc,'Foto adicionada'+(questaoId?' à questão':''));
+ return id;
 }
 actions.verFoto=async(b)=>{
  const url=await getPhotoUrl(b.dataset.id);
@@ -1262,9 +1265,8 @@ function abrirModal(html){
  hydratePhotos(ov);
 }
 function fecharModal(){const ov=$('modalOverlay');if(ov)ov.remove()}
-actions.rodarFoto=async(b)=>{
- const proc=getProcesso(ui.params.processoId||ui.params.id);
- const f=(proc.fotos||[]).find(x=>x.id===b.dataset.id);if(!f)return;
+async function rotatePhotoById(proc,fotoId){
+ const f=(proc.fotos||[]).find(x=>x.id===fotoId);if(!f)return;
  const blob=await idbGet(f.id);
  const img=await decodeImageOriented(blob);
  const canvas=document.createElement('canvas');
@@ -1279,7 +1281,54 @@ actions.rodarFoto=async(b)=>{
  const w=f.width,h=f.height;f.width=h;f.height=w;
  f.orientacao=f.height>=f.width?'portrait':'landscape';
  f.captionFlagRotacao=false;
- touch(proc);saveNow();render();
+ touch(proc);
+}
+async function deletePhotoById(proc,fotoId){
+ await idbDel(fotoId);
+ if(photoUrlCache[fotoId]){URL.revokeObjectURL(photoUrlCache[fotoId]);delete photoUrlCache[fotoId]}
+ proc.fotos=proc.fotos.filter(f=>f.id!==fotoId);
+ touch(proc);
+}
+actions.rodarFoto=async(b)=>{
+ const proc=getProcesso(ui.params.processoId||ui.params.id);
+ await rotatePhotoById(proc,b.dataset.id);
+ saveNow();render();
+};
+/* ---- Revisão de orientação: fotos que não cumprem a orientação por defeito, uma a uma ---- */
+let _reviewProc=null,_reviewList=null;
+async function reviewOrientation(proc,list,idx){
+ if(idx>=list.length){_reviewProc=null;_reviewList=null;fecharModal();return}
+ const f=(proc.fotos||[]).find(x=>x.id===list[idx].id);
+ if(!f){await reviewOrientation(proc,list,idx+1);return}
+ _reviewProc=proc;_reviewList=list;
+ const url=await getPhotoUrl(f.id);
+ const defaultLabel=app.settings.fotoOrientacaoDefault==='paisagem'?'paisagem':'retrato';
+ const fotoLabel=f.orientacao==='landscape'?'paisagem':'retrato';
+ abrirModal(`
+  <div class="note" style="margin-bottom:8px">⚠ Foto ${idx+1}/${list.length}: está em <b>${fotoLabel}</b>, mas a orientação por defeito é <b>${defaultLabel}</b>. O que pretende fazer?</div>
+  <img class="big" src="${url}" alt="foto">
+  <div class="actions">
+   <button type="button" data-action="reviewRodar" data-id="${f.id}" data-idx="${idx}">↻ Rodar</button>
+   <button type="button" class="danger" data-action="reviewEliminar" data-id="${f.id}" data-idx="${idx}">🗑 Eliminar</button>
+   <button type="button" class="secondary" data-action="reviewManter" data-id="${f.id}" data-idx="${idx}">✔ Manter assim</button>
+  </div>
+ `);
+}
+actions.reviewRodar=async(b)=>{
+ await rotatePhotoById(_reviewProc,b.dataset.id);
+ saveNow();render();
+ await reviewOrientation(_reviewProc,_reviewList,Number(b.dataset.idx)+1);
+};
+actions.reviewEliminar=async(b)=>{
+ await deletePhotoById(_reviewProc,b.dataset.id);
+ saveNow();render();
+ await reviewOrientation(_reviewProc,_reviewList,Number(b.dataset.idx)+1);
+};
+actions.reviewManter=async(b)=>{
+ const f=(_reviewProc.fotos||[]).find(x=>x.id===b.dataset.id);
+ if(f)f.captionFlagRotacao=false;
+ touch(_reviewProc);saveNow();render();
+ await reviewOrientation(_reviewProc,_reviewList,Number(b.dataset.idx)+1);
 };
 actions.toggleCapa=(b)=>{
  const proc=getProcesso(ui.params.processoId||ui.params.id);
@@ -1305,10 +1354,8 @@ actions.moverFotoOrdem=(b)=>{
 actions.apagarFoto=async(b)=>{
  if(!confirm('Eliminar esta fotografia?'))return;
  const proc=getProcesso(b.dataset.processo);
- await idbDel(b.dataset.id);
- if(photoUrlCache[b.dataset.id]){URL.revokeObjectURL(photoUrlCache[b.dataset.id]);delete photoUrlCache[b.dataset.id]}
- proc.fotos=proc.fotos.filter(f=>f.id!==b.dataset.id);
- touch(proc);saveNow();render();
+ await deletePhotoById(proc,b.dataset.id);
+ saveNow();render();
 };
 
 /* ---- Intervenientes / Funções / Siglas (tabelas globais, padrão "link e regressar") ---- */
@@ -1849,8 +1896,9 @@ async function buildResumoPdf(proc,cfg){
   }
  };
 
- // bloco de questão: "------" / Autor / Questão / "Resposta" / entradas indentadas e justificadas / fotos no fim
- const drawQuestionBlock=async(q,a,entradas,semFotoAviso,startsNewPage)=>{
+ // bloco de questão: "------" / Autor / Questão / descrição integral / "Resposta(s)" / entradas
+ // indentadas e justificadas / proposta de resposta conciliada (opcional) / fotos no fim
+ const drawQuestionBlock=async(q,a,entradas,semFotoAviso,startsNewPage,conciliadaTexto)=>{
   ensure(8);
   if(!startsNewPage){
    doc.setFont(F,'normal');doc.setFontSize(BS);
@@ -1860,7 +1908,11 @@ async function buildResumoPdf(proc,cfg){
   doc.text(`Autor ${a.ordem} — ${a.nome}`,mL,y);y+=6;
   const titulo=doc.splitTextToSize(questaoTitulo(q,a),contentW);
   ensure(titulo.length*BS*0.45+2);doc.text(titulo,mL,y);y+=titulo.length*BS*0.45+3;
-  label('Resposta');
+  if(q.descricaoCompleta&&q.descricaoCompleta.trim()){
+   writeParagraph(q.descricaoCompleta,BS,mL,contentW);
+   y+=2;
+  }
+  label('Resposta(s)');
   const indent=6;
   if(!entradas.length){
    doc.setFont(F,'italic');doc.setFontSize(BS);ensure(6);doc.text('(sem resposta registada)',mL+indent,y);y+=6;
@@ -1870,6 +1922,12 @@ async function buildResumoPdf(proc,cfg){
    writeParagraph(en.texto,BS,mL+indent,contentW-indent);
    y+=2;
   });
+  if(conciliadaTexto!=null){
+   y+=2;
+   label('Proposta de resposta conciliada');
+   writeParagraph(conciliadaTexto||'(sem proposta ainda)',BS,mL+indent,contentW-indent);
+   y+=2;
+  }
   if(semFotoAviso){
    doc.setFont(F,'italic');doc.setFontSize(Math.max(6,BS-1));doc.setTextColor(160,40,40);
    ensure(6);doc.text('⚠ Esta questão não tem fotografias associadas.',mL+indent,y);y+=6;
@@ -1928,7 +1986,7 @@ async function buildResumoPdf(proc,cfg){
     const iv=getInterveniente(h.intervenienteId);
     return {titulo:`${iv?iv.nome:'—'}${h.data?' — '+h.data:''}:`,texto:h.texto};
    });
-   await drawQuestionBlock(q,a,entradas,fotosDaQuestao(proc,q.id).length===0,i>0);
+   await drawQuestionBlock(q,a,entradas,fotosDaQuestao(proc,q.id).length===0,i>0,(q.conciliada&&q.conciliada.texto)||'');
   }
   newPage();
  }
@@ -2077,16 +2135,21 @@ async function buildResumoDocx(proc,cfg){
   parts.push(para('',{after:160}));
  };
 
- const drawQuestionBlockDocx=async(q,a,entradas,semFotoAviso,startsNewPage)=>{
+ const drawQuestionBlockDocx=async(q,a,entradas,semFotoAviso,startsNewPage,conciliadaTexto)=>{
   if(!startsNewPage)parts.push(para(run('------------------------------------------------------------',{font:F,size:szSmall,color:'888888'}),{after:60}));
   parts.push(para(run(`Autor ${a.ordem} — ${a.nome}`,{bold:true,font:F}),{after:40}));
   parts.push(para(run(questaoTitulo(q,a),{bold:true,font:F}),{after:80}));
-  parts.push(para(run('Resposta',{bold:true,font:F}),{after:60}));
+  if(q.descricaoCompleta&&q.descricaoCompleta.trim())parts.push(paraAuto(q.descricaoCompleta,{after:140}));
+  parts.push(para(run('Resposta(s)',{bold:true,font:F}),{after:60}));
   if(!entradas.length)parts.push(para(run('(sem resposta registada)',{font:F,italic:true}),{indent:280,after:120}));
   entradas.forEach(en=>{
    if(en.titulo)parts.push(para(run(en.titulo,{bold:true,font:F,size:szSmall}),{indent:280,after:40}));
    parts.push(paraAuto(en.texto,{indent:280,after:140}));
   });
+  if(conciliadaTexto!=null){
+   parts.push(para(run('Proposta de resposta conciliada',{bold:true,font:F}),{after:60}));
+   parts.push(paraAuto(conciliadaTexto||'(sem proposta ainda)',{indent:280,after:140}));
+  }
   if(semFotoAviso)parts.push(para(run('⚠ Esta questão não tem fotografias associadas.',{font:F,italic:true,color:'a02020',size:szSmall}),{indent:280,after:120}));
   if(cfg.fotos)await photoBlock(fotosDaQuestao(proc,q.id));
  };
@@ -2138,7 +2201,7 @@ async function buildResumoDocx(proc,cfg){
     const iv=getInterveniente(h.intervenienteId);
     return {titulo:`${iv?iv.nome:'—'}${h.data?' — '+h.data:''}:`,texto:h.texto};
    });
-   await drawQuestionBlockDocx(q,a,entradas,fotosDaQuestao(proc,q.id).length===0,i>0);
+   await drawQuestionBlockDocx(q,a,entradas,fotosDaQuestao(proc,q.id).length===0,i>0,(q.conciliada&&q.conciliada.texto)||'');
   }
   pageBreak();
  }
