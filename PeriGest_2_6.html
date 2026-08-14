@@ -237,7 +237,7 @@ function defaultState(){
   intervenientes:[],
   funcoes:[{id:uid(),nome:'Perito'},{id:uid(),nome:'Mandatário'},{id:uid(),nome:'Topógrafo'}],
   siglasQuestao:[{id:uid(),sigla:'Qs',nome:'Questão'},{id:uid(),sigla:'Tm',nome:'Tema'}],
-  tiposEvento:[{id:uid(),chave:'reuniao',nome:'Reunião'},{id:uid(),chave:'comunicacao',nome:'Comunicação',semPresencas:true},{id:uid(),chave:'informacao',nome:'Informação',semPresencas:true},{id:uid(),chave:'visita',nome:'Visita'}],
+  tiposEvento:[{id:uid(),chave:'comunicacao',nome:'Comunicação',semPresencas:true},{id:uid(),chave:'visita',nome:'Visita'},{id:uid(),chave:'reuniao',nome:'Reunião'},{id:uid(),chave:'informacao',nome:'Informação',semPresencas:true}],
   representacoes:[{id:uid(),nome:'Parte A'},{id:uid(),nome:'Parte B'},{id:uid(),nome:'Nenhuma (coordenador)',isDefault:true}],
   resolucoesFoto:[{id:uid(),kb:150,nome:'150 KB'},{id:uid(),kb:300,nome:'300 KB',isDefault:true},{id:uid(),kb:500,nome:'500 KB'},{id:uid(),kb:800,nome:'800 KB'},{id:uid(),kb:'original',nome:'Original (sem compressão)'}],
   servicos:[{id:uid(),nome:'Peritagem'},{id:uid(),nome:'Inspeção'},{id:uid(),nome:'Parecer técnico'}],
@@ -512,7 +512,7 @@ function cronologiaEntradas(proc){
  const evs=(proc.eventos||[]).map(e=>{
   const tipo=app.tiposEvento.find(t=>t.id===e.tipoId);
   const at=(e.data||'')+'T'+(e.hora||'00:00');
-  let texto=`${tipo?tipo.nome:'Evento'}${e.hora?' às '+e.hora:''} — ${e.descricaoResumida||'(sem descrição resumida)'}`;
+  let texto=`${eventoRotulo(tipo,e)}${e.hora?' às '+e.hora:''} — ${e.descricaoResumida||'(sem descrição resumida)'}`;
   if(e.constrangimentos&&e.constrangimentos.trim())texto+=` · Constrangimentos: ${e.constrangimentos}`;
   return {at,texto};
  });
@@ -619,50 +619,32 @@ function wireCommon(){
  document.addEventListener('input',onInput);
  document.addEventListener('change',onChange);
 }
-// Regra permanente: no iPhone, gravar automaticamente ao "change" de um <input type="date"/
-// "time"> não dá tempo de sobra ao seletor nativo (roda giratória) — mesmo com um atraso, o
-// timing do evento varia por versão/embedding do Safari. Método adotado: os campos de
-// data/hora nunca gravam sozinhos — ficam sempre com um botão "✔ Confirmar" próprio, que o
-// utilizador toca quando termina de escolher. Sem dependência de timing nenhuma.
-const MESES_PT=[['01','Jan'],['02','Fev'],['03','Mar'],['04','Abr'],['05','Mai'],['06','Jun'],['07','Jul'],['08','Ago'],['09','Set'],['10','Out'],['11','Nov'],['12','Dez']];
-function selOptions(id,items,selected,blankLabel){
- const opts=(blankLabel!=null?[['','— '+blankLabel+' —']]:[]).concat(items);
- return `<select id="${id}">${opts.map(([v,l])=>`<option value="${v}" ${v===(selected||'')?'selected':''}>${esc(l)}</option>`).join('')}</select>`;
-}
-// Regra permanente: no iPhone (sobretudo dentro da WebView da aplicação onde isto abre,
-// com a faixa publicitária fixa) o seletor nativo de <input type="date"/"time"> revelou-se
-// não fiável — mesmo sem nenhum atraso, o problema persistiu. Método definitivo adotado:
-// deixar de usar qualquer picker nativo do sistema operativo. Datas e horas passam a
-// escolher-se com <select> simples (dia/mês/ano, hora/minuto) — elementos HTML comuns,
-// sempre visíveis na própria página, sem overlay nenhum e sem depender do comportamento
-// do SO/WebView. Só grava quando se toca em "✔ Confirmar".
+// Datas/horas: <input type="date"/"time"> nativo e direto — grava logo ao mudar, tal como
+// qualquer outro campo do formulário. Se o valor ficar errado (seletor nativo do iPhone
+// interrompido), o próprio campo continua editável a qualquer momento: toca outra vez e
+// corrige — sem passos extra, sem botão de confirmação, sem selects separados.
 function dateFieldConfirm(inputId,value,btnDataAttrs,type){
- const isTime=type==='time';
- if(isTime){
-  const [hh,mm]=(value||'').split(':');
-  const horas=Array.from({length:24},(_,i)=>{const v=pad(i,2);return [v,v]});
-  const minutos=Array.from({length:60},(_,i)=>{const v=pad(i,2);return [v,v]});
-  return `<div class="row">
-    <div>${selOptions(inputId+'_h',horas,hh,'hora')}</div>
-    <div>${selOptions(inputId+'_m',minutos,mm,'min')}</div>
-   </div>
-   <input type="hidden" id="${inputId}" value="${esc(value||'')}">
-   <div class="actions one"><button type="button" class="secondary" data-action="confirmDateField" data-input-id="${inputId}" data-time-select="1"${btnDataAttrs}>✔ Confirmar</button></div>
-   <div class="note" id="${inputId}_state"></div>`;
- }
- const [yy,mo,dd]=(value||'').split('-');
- const curYear=new Date().getFullYear();
- const dias=Array.from({length:31},(_,i)=>{const v=pad(i+1,2);return [v,v]});
- const anos=Array.from({length:16},(_,i)=>{const v=String(curYear-5+i);return [v,v]});
- return `<div class="row3">
-   <div>${selOptions(inputId+'_d',dias,dd,'dia')}</div>
-   <div>${selOptions(inputId+'_mo',MESES_PT,mo,'mês')}</div>
-   <div>${selOptions(inputId+'_y',anos,yy,'ano')}</div>
-  </div>
-  <input type="hidden" id="${inputId}" value="${esc(value||'')}">
-  <div class="actions one"><button type="button" class="secondary" data-action="confirmDateField" data-input-id="${inputId}"${btnDataAttrs}>✔ Confirmar</button></div>
-  <div class="note" id="${inputId}_state"></div>`;
+ return `<input type="${type||'date'}" id="${inputId}" value="${esc(value||'')}" data-action-input="dateFieldDirect"${btnDataAttrs}>`;
 }
+function commitDateFieldFromDataset(ds,val){
+ if(ds.kind==='pedido'){
+  const p=getPedido(ds.pedidoId);if(!p)return;
+  p[ds.field]=val;save();
+ }else if(ds.kind==='evento'){
+  const proc=getProcesso(ds.processoId);if(!proc)return;
+  const ev=(proc.eventos||[]).find(x=>x.id===ds.eventoId);if(!ev)return;
+  ev[ds.field]=val;touch(proc);save();
+ }else if(ds.kind==='questao'){
+  const proc=getProcesso(ds.processoId);if(!proc)return;
+  const q=(proc.questoes||[]).find(x=>x.id===ds.questaoId);if(!q)return;
+  q[ds.field]=val;touch(proc);saveNow();
+ }
+}
+document.addEventListener('change',e=>{
+ const t=e.target;
+ if(t.dataset.actionInput!=='dateFieldDirect')return;
+ commitDateFieldFromDataset(t.dataset,t.value);
+});
 function onClick(e){
  const b=e.target.closest('[data-action]');
  if(!b)return;
@@ -704,35 +686,6 @@ function bindField(t){
 
 /* ===================== Ações ===================== */
 const actions={};
-actions.confirmDateField=(b)=>{
- const inputId=b.dataset.inputId;
- const input=document.getElementById(inputId);if(!input)return;
- let val;
- if(b.dataset.timeSelect){
-  const h=document.getElementById(inputId+'_h'),m=document.getElementById(inputId+'_m');
-  val=(h&&m&&h.value&&m.value)?(h.value+':'+m.value):'';
- }else{
-  const d=document.getElementById(inputId+'_d'),mo=document.getElementById(inputId+'_mo'),y=document.getElementById(inputId+'_y');
-  val=(d&&mo&&y&&d.value&&mo.value&&y.value)?(y.value+'-'+mo.value+'-'+d.value):'';
- }
- input.value=val;
- const kind=b.dataset.kind;
- let proc;
- if(kind==='pedido'){
-  const p=getPedido(b.dataset.pedidoId);if(!p)return;
-  p[b.dataset.field]=val;saveNow();
- }else if(kind==='evento'){
-  proc=getProcesso(b.dataset.processoId);if(!proc)return;
-  const ev=(proc.eventos||[]).find(x=>x.id===b.dataset.eventoId);if(!ev)return;
-  ev[b.dataset.field]=val;touch(proc);saveNow();
- }else if(kind==='questao'){
-  proc=getProcesso(b.dataset.processoId);if(!proc)return;
-  const q=(proc.questoes||[]).find(x=>x.id===b.dataset.questaoId);if(!q)return;
-  q[b.dataset.field]=val;touch(proc);saveNow();
- }else return;
- const st=document.getElementById(b.dataset.inputId+'_state');
- if(st)st.textContent=val?'✔ Guardado: '+val:'✔ Guardado (vazio).';
-};
 actions.goHome=()=>goHome();
 actions.goSettings=()=>goSettings();
 actions.back=()=>back();
@@ -1247,14 +1200,17 @@ actions.removerPerito=(b)=>{
 };
 
 /* ---- Eventos ---- */
+// Número de ordem do evento, atribuído na criação: "{Tipo} {01}" — sequencial dentro do
+// mesmo processo, por tipo de evento (a 1ª Reunião é 01, a 2ª é 02, etc.).
+function eventoRotulo(tipo,e){return `${tipo?tipo.nome:'Evento'} ${pad(e.numero||1,2)}`}
 function viewEventos(params){
  const proc=getProcesso(params.processoId);if(!proc)return '';
  return app.tiposEvento.map(tipo=>{
-  const evs=(proc.eventos||[]).filter(e=>e.tipoId===tipo.id).sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+  const evs=(proc.eventos||[]).filter(e=>e.tipoId===tipo.id).sort((a,b)=>(b.numero||0)-(a.numero||0));
   return card(`🗓️ ${esc(tipo.nome)}s`, `
    <div>${evs.length?evs.map(e=>`
     <div class="item" data-action="navTo" data-view="eventoForm" data-params='${esc(JSON.stringify({processoId:proc.id,id:e.id}))}'>
-     <b>${esc(e.data||'(sem data)')}${e.hora?' '+esc(e.hora):''}</b>
+     <b>${esc(eventoRotulo(tipo,e))} — ${esc(e.data||'(sem data)')}${e.hora?' '+esc(e.hora):''}</b>
      <div class="meta">${esc((e.descricaoResumida||'').slice(0,80)||'(sem descrição resumida)')}</div>
      ${!tipo.semPresencas?`<div class="meta">${(e.presencas||[]).length} presença(s)</div>`:''}
     </div>`).join(''):'<div class="note">Sem registos.</div>'}</div>
@@ -1264,8 +1220,9 @@ function viewEventos(params){
 }
 actions.novoEvento=(b)=>{
  const proc=getProcesso(b.dataset.processo);
- const e={id:uid(),tipoId:b.dataset.tipo,data:todayISO(),hora:'',descricaoResumida:'',anotacoes:'',constrangimentos:'',presencas:[]};
  if(!proc.eventos)proc.eventos=[];
+ const numero=proc.eventos.filter(x=>x.tipoId===b.dataset.tipo).reduce((m,x)=>Math.max(m,x.numero||0),0)+1;
+ const e={id:uid(),tipoId:b.dataset.tipo,numero,data:todayISO(),hora:'',descricaoResumida:'',anotacoes:'',constrangimentos:'',presencas:[]};
  proc.eventos.push(e);
  touch(proc);logEvento(proc,'Evento criado');saveNow();
  nav('eventoForm',{processoId:proc.id,id:e.id});
@@ -1274,7 +1231,7 @@ function viewEventoForm(params){
  const proc=getProcesso(params.processoId);if(!proc)return '';
  const e=proc.eventos.find(x=>x.id===params.id);if(!e)return card('Evento','<div class="note">Não encontrado.</div>');
  const tipo=app.tiposEvento.find(t=>t.id===e.tipoId)||{nome:'Evento',semPresencas:false};
- return card('🗓️ '+esc(tipo.nome), `
+ return card('🗓️ '+esc(eventoRotulo(tipo,e)), `
   <div class="note">Este evento integra a cronologia do processo (Exportar → Resumo com cronologia).</div>
   ${field('Descrição resumida','<input data-action-input="eventoDescResumida" value="'+esc(e.descricaoResumida)+'">')}
   <div class="row">
