@@ -1,0 +1,2025 @@
+<!doctype html>
+<html lang="pt-PT"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>PeriGest 2</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
+<style>
+:root{--b:#2b4c8c;--g:#2f9161;--r:#a62c2c;--amber:#c88a15;--bg:#eef1f6;--ln:#d7dde3;--ink:#1f2933;--muted:#637381;--card:#fff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--ink);padding-bottom:24px}
+header{position:sticky;top:0;z-index:6;background:#132a52;color:#fff;padding:10px 14px}
+header h1{margin:0;font-size:20px;display:flex;align-items:center;gap:8px}
+header .rel{font-size:11px;background:#26407a;padding:2px 8px;border-radius:10px;font-weight:600}
+header .ctx{opacity:.9;font-size:12.5px;margin-top:3px}
+nav.tabbar{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px 12px;background:#fff;border-bottom:1px solid var(--ln)}
+nav.tabbar button{min-height:46px}
+.crumbbar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#fff;border-bottom:1px solid var(--ln);font-size:13px;color:var(--muted);flex-wrap:wrap}
+.crumbbar button{width:auto;min-height:32px;padding:5px 10px;font-size:12.5px}
+main{max-width:880px;margin:auto;padding:12px}
+.card{background:var(--card);border:1px solid var(--ln);border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 2px 7px #0000000d}
+.card h2{margin:0 0 10px;font-size:16px}
+.card h3{margin:14px 0 8px;font-size:14px;color:var(--b)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.actions.one{grid-template-columns:1fr}
+.actions.three{grid-template-columns:repeat(3,1fr)}
+.actions.four{grid-template-columns:repeat(4,1fr)}
+label{display:block;font-weight:700;font-size:13.5px;margin:10px 0 5px}
+label.inline{display:flex;align-items:center;gap:8px;font-weight:400;margin:8px 0}
+input,select,textarea{width:100%;padding:11px;border:1px solid #b8c2cc;border-radius:8px;font:inherit;font-size:16px;background:#fff}
+textarea{min-height:70px;resize:vertical}
+button{border:0;border-radius:9px;padding:10px 12px;min-height:44px;background:var(--b);color:#fff;font-weight:700;font:inherit;font-size:14px;cursor:pointer;line-height:1.25}
+.secondary{background:#5b6b7d}
+.green{background:var(--g)}
+.amber{background:var(--amber)}
+.danger{background:var(--r)}
+.linklike{background:none;border:0;padding:0;min-height:auto;color:var(--b);text-decoration:underline;font-weight:600;font-size:12.5px;cursor:pointer}
+.fieldlink{display:flex;align-items:center;gap:8px}
+.fieldlink select{flex:1}
+.status{padding:9px 10px;background:#f5f7f9;border:1px solid var(--ln);border-radius:8px;color:var(--muted);font-size:13px;margin:8px 0}
+.note{font-size:12px;color:var(--muted)}
+.pill{display:inline-block;padding:3px 9px;border-radius:11px;font-size:11.5px;font-weight:700;color:#fff;margin-left:6px}
+.pill.on{background:var(--g)}
+.pill.off{background:var(--r)}
+.pill.end{background:#5b6b7d}
+.pill.sby{background:var(--amber);color:#3a2a00}
+.pill.analise{background:var(--amber)}
+.pill.relatorio{background:var(--b)}
+.item{border:1px solid var(--ln);border-radius:10px;padding:11px;margin:8px 0;cursor:pointer;background:#fbfcfd}
+.item:active{background:#f0f3f7}
+.item b{display:block;font-size:14.5px}
+.item .meta{font-size:12px;color:var(--muted);margin-top:2px}
+.item-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
+.item-actions button{width:auto;min-width:0;padding:6px 12px;font-size:12.5px;min-height:34px}
+.block-title{margin:22px 0 10px;padding:9px 12px;background:#132a52;color:#fff;border-radius:9px;font-size:14.5px;font-weight:800}
+.block-title:first-of-type{margin-top:4px}
+hr{border:0;border-top:1px solid var(--ln);margin:14px 0}
+.grid-cols{display:grid;gap:8px}
+.photo-cell{border:1px solid var(--ln);border-radius:10px;background:#fafbfc;padding:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+.photo-cell img{width:100%;height:120px;object-fit:cover;border-radius:7px;display:block;cursor:pointer;background:#e3e8ee}
+.photo-cell .cap{font-size:11.5px;color:var(--muted);text-align:center;word-break:break-word}
+.photo-cell .flag{font-size:11px;color:var(--r);font-weight:700}
+.photo-actions{display:flex;gap:4px;flex-wrap:wrap;justify-content:center}
+.photo-actions button{width:auto;min-height:28px;padding:4px 8px;font-size:11px}
+.modal-overlay{position:fixed;inset:0;background:#0009;z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.modal-box{background:#fff;border-radius:14px 14px 0 0;padding:16px;width:100%;max-width:640px;max-height:92vh;overflow:auto}
+@media(min-width:640px){.modal-overlay{align-items:center}.modal-box{border-radius:14px}}
+.modal-box img.big{width:100%;max-height:46vh;object-fit:contain;border-radius:10px;background:#eee;margin-bottom:10px}
+.hidden{display:none!important}
+.searchbar{position:sticky;top:0;background:var(--bg);padding:6px 0 10px;z-index:3}
+.order-row{display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--ln);border-radius:9px;padding:9px 11px;margin:6px 0;background:#fbfcfd}
+.order-row .lbl{font-weight:600;font-size:13.5px}
+.order-btns{display:flex;gap:6px}
+.order-btns button{width:auto;min-width:0;min-height:36px;padding:6px 12px;font-size:14px}
+.justify{text-align:justify}
+.preview-frame{width:100%;height:60vh;border:1px solid var(--ln);border-radius:9px;background:#f7f8fa}
+@media(max-width:620px){.row,.row3{grid-template-columns:1fr}.actions{grid-template-columns:1fr 1fr}.actions.three{grid-template-columns:1fr 1fr}.actions.four{grid-template-columns:1fr 1fr}}
+</style></head>
+<body>
+<header>
+<h1>🧭 PeriGest <span class="rel" id="relBadge">v2 · rel 2.0</span></h1>
+<div class="ctx" id="headCtx">Sem contexto ativo</div>
+</header>
+<nav class="tabbar">
+<button type="button" data-action="goHome">🏠 Pedidos &amp; Processos</button>
+<button type="button" class="secondary" data-action="goSettings">⚙️ Configurações</button>
+</nav>
+<div class="crumbbar" id="crumbbar"></div>
+<main id="main"></main>
+
+<script>
+/* ===================== Estado / Persistência ===================== */
+const LS_KEY='perigest_v2_state';
+const DB_NAME='perigest_v2_photos', STORE='photos';
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
+function pad(n,l){n=String(n);while(n.length<(l||2))n='0'+n;return n}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function nl2br(s){return esc(s).replace(/\n/g,'<br>')}
+function todayISO(){return new Date().toISOString().slice(0,10)}
+
+// Campos orientáveis (ordem configurável) de cada formulário principal.
+const FIELD_DEFS={
+ pedido:[['codigo','Código provisório'],['solicitante','Solicitante'],['contacto','Contacto telefónico'],['email','E-mail'],['dataPedido','Data do pedido'],['prazo','Prazo'],['servicoId','Serviço solicitado'],['finalidadeId','Finalidade'],['assunto','Situação a analisar'],['local','Local']],
+ processo:[['codigo','Código de processo'],['numero','Nº processo (institucional)'],['solicitanteInstitucional','Solicitante institucional'],['designacaoInstitucional','Designação institucional'],['designacaoTag','Designação TAG'],['local','Local'],['assunto','Resumo dos Temas de análise'],['siglaId','Sigla das questões']],
+ questao:[['numero','Número na sequência do autor'],['siglaId','Sigla'],['referencia','Referência/código do autor (livre)'],['descricaoResumida','Descrição resumida'],['descricaoCompleta','Descrição completa']]
+};
+function defaultFieldOrder(){
+ const o={};
+ Object.keys(FIELD_DEFS).forEach(k=>{o[k]=FIELD_DEFS[k].map(f=>f[0])});
+ return o;
+}
+function defaultState(){
+ return {
+  schema:2,
+  pedidos:[],
+  processos:[],
+  intervenientes:[],
+  funcoes:[{id:uid(),nome:'Perito'},{id:uid(),nome:'Mandatário'},{id:uid(),nome:'Topógrafo'}],
+  siglasQuestao:[{id:uid(),sigla:'Qs',nome:'Questão'},{id:uid(),sigla:'Tm',nome:'Tema'}],
+  tiposEvento:[{id:uid(),chave:'reuniao',nome:'Reunião'},{id:uid(),chave:'visita',nome:'Visita'},{id:uid(),chave:'informacao',nome:'Informação',semPresencas:true}],
+  representacoes:[{id:uid(),nome:'Parte A'},{id:uid(),nome:'Parte B'},{id:uid(),nome:'Nenhuma (coordenador)',isDefault:true}],
+  resolucoesFoto:[{id:uid(),kb:150,nome:'150 KB'},{id:uid(),kb:300,nome:'300 KB',isDefault:true},{id:uid(),kb:500,nome:'500 KB'},{id:uid(),kb:800,nome:'800 KB'},{id:uid(),kb:'original',nome:'Original (sem compressão)'}],
+  servicos:[{id:uid(),nome:'Peritagem'},{id:uid(),nome:'Inspeção'},{id:uid(),nome:'Parecer técnico'}],
+  finalidades:[{id:uid(),nome:'Particular'},{id:uid(),nome:'Em contexto judicial'}],
+  settings:{
+   release:'2.0',
+   fotoGridCols:2,
+   fotoResolutionKB:300,
+   fotoOrientacaoDefault:'retrato',
+   capaGridSize:4,
+   fieldOrder:defaultFieldOrder(),
+   layout:{pageSize:'a4',font:'helvetica',fontSize:10,marginLeft:2.0,marginTop:2.2,marginRight:1.5,marginBottom:1.5},
+   cabecalho:{linha1:'PeriGest',linha2Modo:'processo',tamanho:9,negrito:true},
+   rodape:{esquerda:'{processo}',centro:'{pagina}/{paginas}',direita:'{data}',tamanho:8}
+  }
+ };
+}
+let app=null;
+function loadState(){
+ try{const raw=localStorage.getItem(LS_KEY);app=raw?JSON.parse(raw):defaultState()}catch(e){console.error('Falha a ler estado local',e);app=defaultState()}
+ const d=defaultState();
+ if(!app.settings)app.settings=d.settings;
+ if(!app.settings.fieldOrder)app.settings.fieldOrder=d.settings.fieldOrder;
+ Object.keys(FIELD_DEFS).forEach(k=>{
+  if(!app.settings.fieldOrder[k])app.settings.fieldOrder[k]=d.settings.fieldOrder[k];
+  // acrescenta no fim quaisquer campos novos que ainda não estejam na ordem gravada
+  FIELD_DEFS[k].forEach(([key])=>{if(!app.settings.fieldOrder[k].includes(key))app.settings.fieldOrder[k].push(key)});
+ });
+ if(app.settings.fotoGridCols==null)app.settings.fotoGridCols=d.settings.fotoGridCols;
+ if(!app.settings.fotoOrientacaoDefault)app.settings.fotoOrientacaoDefault=d.settings.fotoOrientacaoDefault;
+ if(!app.settings.capaGridSize)app.settings.capaGridSize=d.settings.capaGridSize;
+ if(!app.funcoes||!app.funcoes.length)app.funcoes=d.funcoes;
+ if(!app.siglasQuestao||!app.siglasQuestao.length)app.siglasQuestao=d.siglasQuestao;
+ if(!app.tiposEvento||!app.tiposEvento.length)app.tiposEvento=d.tiposEvento;
+ if(!app.representacoes||!app.representacoes.length)app.representacoes=d.representacoes;
+ if(!app.resolucoesFoto||!app.resolucoesFoto.length)app.resolucoesFoto=d.resolucoesFoto;
+ if(!app.servicos||!app.servicos.length)app.servicos=d.servicos;
+ if(!app.finalidades||!app.finalidades.length)app.finalidades=d.finalidades;
+}
+let saveTimer=null;
+function save(){
+ clearTimeout(saveTimer);
+ saveTimer=setTimeout(()=>{try{localStorage.setItem(LS_KEY,JSON.stringify(app))}catch(e){alert('Não foi possível gravar: espaço local esgotado. Faça Backup_OUT e considere eliminar fotos antigas.')}},350);
+}
+function saveNow(){clearTimeout(saveTimer);try{localStorage.setItem(LS_KEY,JSON.stringify(app))}catch(e){alert('Não foi possível gravar: espaço local esgotado.')}}
+
+/* ===================== IndexedDB (fotos) ===================== */
+let _dbP=null;
+function idb(){
+ if(_dbP)return _dbP;
+ _dbP=new Promise((res,rej)=>{
+  const rq=indexedDB.open(DB_NAME,1);
+  rq.onupgradeneeded=()=>rq.result.createObjectStore(STORE);
+  rq.onsuccess=()=>res(rq.result);
+  rq.onerror=()=>rej(rq.error);
+ });
+ return _dbP;
+}
+async function idbPut(k,v){const d=await idb();return new Promise((res,rej)=>{const tx=d.transaction(STORE,'readwrite');tx.objectStore(STORE).put(v,k);tx.oncomplete=res;tx.onerror=()=>rej(tx.error)})}
+async function idbGet(k){const d=await idb();return new Promise((res,rej)=>{const tx=d.transaction(STORE,'readonly');const r=tx.objectStore(STORE).get(k);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+async function idbDel(k){const d=await idb();return new Promise((res,rej)=>{const tx=d.transaction(STORE,'readwrite');tx.objectStore(STORE).delete(k);tx.oncomplete=res;tx.onerror=()=>rej(tx.error)})}
+const photoUrlCache={};
+async function getPhotoUrl(id){
+ if(photoUrlCache[id])return photoUrlCache[id];
+ const blob=await idbGet(id);
+ if(!blob)return '';
+ const url=URL.createObjectURL(blob);
+ photoUrlCache[id]=url;
+ return url;
+}
+async function hydratePhotos(root){
+ const imgs=(root||document).querySelectorAll('img[data-photo-id]:not([data-hydrated])');
+ for(const img of imgs){
+  img.setAttribute('data-hydrated','1');
+  const url=await getPhotoUrl(img.getAttribute('data-photo-id'));
+  if(url)img.src=url;
+ }
+}
+
+/* ===================== Navegação ===================== */
+const ui={view:'pedidos',params:{},stack:[]};
+function nav(view,params){
+ params=params||{};
+ if(params.returnView&&params._backLen==null)params._backLen=ui.stack.length;
+ ui.stack.push({view:ui.view,params:ui.params});ui.view=view;ui.params=params;render()
+}
+function navReplace(view,params){ui.view=view;ui.params=params||{};render()}
+function back(){const p=ui.stack.pop();if(p){ui.view=p.view;ui.params=p.params}else{ui.view='pedidos';ui.params={}}render()}
+function goHome(){ui.stack=[];ui.view='pedidos';ui.params={};render()}
+function goSettings(){nav('settings',{})}
+// "Voltar ao formulário anterior" (padrão link→tabela→regresso): trunca a pilha até
+// ao ponto anterior ao desvio, para o "Voltar" global não repetir esse desvio.
+function navReturn(view,params,backLen){
+ if(backLen!=null&&!isNaN(backLen))ui.stack.length=Math.max(0,backLen);
+ ui.view=view;ui.params=params||{};render();
+}
+
+/* ===================== Helpers de dados ===================== */
+function getPedido(id){return app.pedidos.find(p=>p.id===id)}
+function getProcesso(id){return app.processos.find(p=>p.id===id)}
+function processoDoPedido(pedidoId){return app.processos.find(p=>p.pedidoId===pedidoId)}
+function getInterveniente(id){return app.intervenientes.find(i=>i.id===id)}
+function getFuncaoNome(id){const f=app.funcoes.find(x=>x.id===id);return f?f.nome:'—'}
+function siglaObj(id){return app.siglasQuestao.find(s=>s.id===id)||app.siglasQuestao[0]}
+function autoresDoProcesso(proc){return (proc.autores||[]).slice().sort((a,b)=>a.ordem-b.ordem)}
+function questoesDoAutor(proc,autorId){return (proc.questoes||[]).filter(q=>q.autorId===autorId).sort((a,b)=>a.numero-b.numero)}
+function questoesOrdenadas(proc){
+ const autores=autoresDoProcesso(proc);
+ let out=[];
+ autores.forEach(a=>{questoesDoAutor(proc,a.id).forEach(q=>out.push({q,a}))});
+ return out;
+}
+function questaoCodigo(q,a){const sg=siglaObj(q.siglaId);return `${a.ordem}-${sg.sigla}_${pad(q.numero)}`}
+function questaoTitulo(q,a){return `${questaoCodigo(q,a)} – ${q.descricaoResumida||'(sem descrição)'}`}
+function peritosDoProcesso(proc){return (proc.peritos||[]).map(p=>({...p,interveniente:getInterveniente(p.intervenienteId)})).filter(p=>p.interveniente)}
+function fotosDaQuestao(proc,questaoId){return (proc.fotos||[]).filter(f=>f.questaoId===questaoId)}
+function fotosCapa(proc){return (proc.fotos||[]).filter(f=>f.isCapa)}
+// Nomenclatura das fotos: {ordemAutor}_{sigla}_{numeroQuestao}_IMG_{sequência}
+function photoFileName(proc,foto,ext){
+ ext=ext||'jpg';
+ const q=foto.questaoId?proc.questoes.find(x=>x.id===foto.questaoId):null;
+ if(!q)return foto.id+'.'+ext;
+ const a=proc.autores.find(x=>x.id===q.autorId);
+ const sg=siglaObj(q.siglaId);
+ const seq=fotosDaQuestao(proc,q.id).findIndex(f=>f.id===foto.id)+1;
+ return `${a?a.ordem:0}_${sg.sigla}_${pad(q.numero)}_IMG_${pad(seq,3)}.${ext}`;
+}
+// Fotos de capa: as marcadas manualmente; se não chegarem para o tamanho da grelha
+// por defeito, completa aleatoriamente com fotos das restantes questões.
+function capaPhotosForExport(proc){
+ const max=Number(app.settings.capaGridSize)||4;
+ const marcadas=fotosCapa(proc);
+ if(marcadas.length>=max)return marcadas.slice(0,max);
+ const outras=(proc.fotos||[]).filter(f=>!f.isCapa);
+ const baralhadas=outras.slice().sort(()=>Math.random()-0.5);
+ return marcadas.concat(baralhadas.slice(0,max-marcadas.length));
+}
+
+function ensureExportConfig(proc){
+ if(!proc.exportConfig)proc.exportConfig={capa:false,resumoCronologia:false,listaAnalise:true,listaDraft:true,fotos:true,cols:app.settings.fotoGridCols||2,accepted:false};
+ return proc.exportConfig;
+}
+function logEvento(proc,msg){
+ if(!proc.log)proc.log=[];
+ proc.log.push({at:new Date().toISOString(),msg});
+}
+function touch(proc){proc.updatedAt=new Date().toISOString()}
+
+/* ===================== Render raiz ===================== */
+function $(id){return document.getElementById(id)}
+function render(){
+ $('relBadge').textContent=`v1 · rel ${app.settings.release||'1.0'}`;
+ renderCrumb();
+ renderCtx();
+ const views={
+  pedidos:viewPedidos, pedidoForm:viewPedidoForm,
+  processos:viewProcessos, processo:viewProcesso,
+  autores:viewAutores,
+  questoes:viewQuestoes, questaoForm:viewQuestaoForm, importQuestoes:viewImportQuestoes,
+  peritos:viewPeritos,
+  eventos:viewEventos, eventoForm:viewEventoForm,
+  analise:viewAnalise, analiseQuestao:viewAnaliseQuestao,
+  relatorio:viewRelatorio,
+  fotos:viewFotos,
+  settings:viewSettings,
+  intervenientes:viewIntervenientes, intervenienteForm:viewIntervenienteForm,
+  funcoes:viewFuncoes, siglas:viewSiglas,
+  tiposEvento:viewTiposEvento, representacoes:viewRepresentacoes, resolucoesFoto:viewResolucoesFoto,
+  fieldOrder:viewFieldOrder, preview:viewPreview,
+  servicos:viewServicos, finalidades:viewFinalidades
+ };
+ const fn=views[ui.view]||viewPedidos;
+ $('main').innerHTML=fn(ui.params||{});
+ wireCommon();
+ hydratePhotos($('main'));
+}
+function renderCrumb(){
+ const bar=$('crumbbar');
+ const labels={pedidos:'Pedidos',pedidoForm:'Pedido',processos:'Processos',processo:'Processo',autores:'Autores',questoes:'Questões',questaoForm:'Questão',importQuestoes:'Importar questões',peritos:'Peritos',eventos:'Eventos',eventoForm:'Evento',analise:'Análise',analiseQuestao:'Análise da questão',relatorio:'Relatório provisório',fotos:'Fotografias',settings:'Configurações',intervenientes:'Intervenientes',intervenienteForm:'Interveniente',funcoes:'Funções',siglas:'Siglas de questão',tiposEvento:'Tipos de evento',representacoes:'Representações',resolucoesFoto:'Resoluções de foto',fieldOrder:'Ordem dos campos',preview:'Pré-visualização',servicos:'Serviço solicitado',finalidades:'Finalidade'};
+ if(ui.stack.length===0){bar.innerHTML='';return}
+ bar.innerHTML=`<button type="button" data-action="back">‹ Voltar</button><span>${esc(labels[ui.view]||'')}</span>`;
+}
+function renderCtx(){
+ const el=$('headCtx');
+ if(ui.view==='processo'||ui.params.processoId){
+  const proc=getProcesso(ui.params.processoId||(ui.view==='processo'?ui.params.id:null));
+  if(proc){el.textContent=`Processo: ${proc.codigo||'(sem código)'} ${proc.local?('· '+proc.local):''}`;return}
+ }
+ el.textContent='Sem contexto ativo';
+}
+
+/* ===================== UI helpers ===================== */
+function card(title,body){return `<div class="card"><h2>${title}</h2>${body}</div>`}
+function field(label,inner,note){return `<label>${esc(label)}${note?` <small class="note">${esc(note)}</small>`:''}</label>${inner}`}
+function statusPill(status){const map={ON:'on',SBY:'sby',END:'end',OFF:'off'};return status?`<span class="pill ${map[status]||''}">${status}</span>`:''}
+function fasePill(fase){return fase==='relatorio'?'<span class="pill relatorio">Relatório</span>':'<span class="pill analise">Análise</span>'}
+function linkBtn(label,view,params){return `<button type="button" class="linklike" data-action="navTo" data-view="${view}" data-params='${esc(JSON.stringify(params||{}))}'>${esc(label)}</button>`}
+function fieldWithLink(selectHtml,linkLabel,view,params){return `<div class="fieldlink">${selectHtml}${linkBtn(linkLabel,view,params)}</div>`}
+// Renderiza os campos de um formulário pela ordem configurada em Configurações → Ordem dos campos.
+function renderOrderedFields(kind,renderers){
+ const order=(app.settings.fieldOrder&&app.settings.fieldOrder[kind])||Object.keys(renderers);
+ return order.filter(k=>renderers[k]!=null).map(k=>renderers[k]).join('');
+}
+
+/* ===================== Wiring genérico (delegação de eventos) ===================== */
+let wired=false;
+function wireCommon(){
+ if(wired)return;wired=true;
+ document.addEventListener('click',onClick);
+ document.addEventListener('input',onInput);
+ document.addEventListener('change',onChange);
+}
+function onClick(e){
+ const b=e.target.closest('[data-action]');
+ if(!b)return;
+ const action=b.dataset.action;
+ const handler=actions[action];
+ if(handler)handler(b,e);
+}
+function onInput(e){
+ const t=e.target;
+ if(t.matches('[data-bind]'))bindField(t);
+}
+function onChange(e){
+ const t=e.target;
+ if(t.matches('[data-bind]'))bindField(t);
+ if(t.matches('[data-bind-immediate]'))bindField(t,true);
+}
+function pathGet(obj,path){return path.split('.').reduce((o,k)=>o==null?o:o[k],obj)}
+function pathSet(obj,path,val){const ks=path.split('.');let o=obj;for(let i=0;i<ks.length-1;i++){if(o[ks[i]]==null)o[ks[i]]={};o=o[ks[i]]}o[ks[ks.length-1]]=val}
+function resolveBindRoot(t){
+ const scope=t.dataset.scope;
+ if(scope==='processo')return getProcesso(t.dataset.scopeId||ui.params.processoId||ui.params.id);
+ if(scope==='pedido')return getPedido(t.dataset.scopeId||ui.params.id);
+ if(scope==='settings')return app.settings;
+ if(scope==='interveniente')return getInterveniente(t.dataset.scopeId);
+ return app;
+}
+function bindField(t){
+ const root=resolveBindRoot(t);
+ if(!root)return;
+ let val=t.type==='checkbox'?t.checked:t.value;
+ if(t.type==='number')val=val===''?'':Number(val);
+ pathSet(root,t.dataset.bind,val);
+ if(t.dataset.scope==='processo'){const p=getProcesso(t.dataset.scopeId||ui.params.processoId||ui.params.id);if(p)touch(p)}
+ save();
+}
+
+/* ===================== Ações ===================== */
+const actions={};
+actions.goHome=()=>goHome();
+actions.goSettings=()=>goSettings();
+actions.back=()=>back();
+actions.navTo=(b)=>{const view=b.dataset.view;const params=JSON.parse(b.dataset.params||'{}');nav(view,params)};
+actions.navReturn=(b)=>{const view=b.dataset.view;const params=JSON.parse(b.dataset.params||'{}');navReturn(view,params,Number(b.dataset.backlen))};
+
+/* ---- Pedidos ---- */
+function viewPedidos(){
+ const list=app.pedidos.slice().sort((a,b)=>(b.dataPedido||'').localeCompare(a.dataPedido||''));
+ return card('📋 Pedidos de peritagem', `
+  <div class="actions one"><button type="button" data-action="novoPedido">➕ Novo pedido</button></div>
+  <div>${list.length?list.map(p=>`
+   <div class="item" data-action="abrirPedido" data-id="${p.id}">
+    <b>${esc(p.codigo||'(sem código)')} — ${esc(p.solicitante||'(sem solicitante)')} ${statusPill(p.status)}</b>
+    <div class="meta">${esc(p.assunto||'')}</div>
+    <div class="meta">Local: ${esc(p.local||'—')} · Data: ${esc(p.dataPedido||'—')} · Prazo: ${esc(p.prazo||'—')}</div>
+   </div>`).join(''):'<div class="note">Ainda não há pedidos.</div>'}</div>
+  <div class="actions one" style="margin-top:14px"><button type="button" class="secondary" data-action="navProcessos">📁 Ver processos</button></div>
+ `);
+}
+actions.navProcessos=()=>nav('processos',{});
+actions.novoPedido=()=>{
+ const p={id:uid(),codigo:'PED-'+pad(app.pedidos.length+1,3),solicitante:'',contacto:'',email:'',dataPedido:todayISO(),servicoId:app.servicos[0]?app.servicos[0].id:'',finalidadeId:app.finalidades[0]?app.finalidades[0].id:'',assunto:'',local:'',prazo:'',status:'',motivo:'',createdAt:new Date().toISOString()};
+ app.pedidos.push(p);saveNow();
+ nav('pedidoForm',{id:p.id});
+};
+document.addEventListener('change',e=>{
+ const t=e.target;
+ if(ui.view!=='pedidoForm')return;
+ const p=getPedido(ui.params.id);if(!p)return;
+ if(t.dataset.actionInput==='pedidoServico'){p.servicoId=t.value;saveNow()}
+ if(t.dataset.actionInput==='pedidoFinalidade'){p.finalidadeId=t.value;saveNow()}
+});
+actions.abrirPedido=(b)=>nav('pedidoForm',{id:b.dataset.id});
+
+function pedidoFieldRenderers(p){
+ return {
+  codigo:field('Código provisório','<input data-bind="codigo" data-scope="pedido" data-scope-id="'+p.id+'" value="'+esc(p.codigo)+'">'),
+  solicitante:field('Solicitante','<input data-bind="solicitante" data-scope="pedido" data-scope-id="'+p.id+'" value="'+esc(p.solicitante)+'">'),
+  contacto:field('Contacto telefónico','<input data-bind="contacto" data-scope="pedido" data-scope-id="'+p.id+'" value="'+esc(p.contacto)+'">'),
+  email:field('E-mail','<input type="email" data-bind="email" data-scope="pedido" data-scope-id="'+p.id+'" value="'+esc(p.email)+'">'),
+  dataPedido:field('Data do pedido','<input type="date" data-bind="dataPedido" data-scope="pedido" data-scope-id="'+p.id+'" value="'+esc(p.dataPedido)+'">'),
+  prazo:field('Prazo','<input type="date" data-bind="prazo" data-scope="pedido" data-scope-id="'+p.id+'" value="'+esc(p.prazo)+'">'),
+  servicoId:field('Serviço solicitado',fieldWithLink(`<select data-action-input="pedidoServico">${app.servicos.map(s=>`<option value="${s.id}" ${p.servicoId===s.id?'selected':''}>${esc(s.nome)}</option>`).join('')}</select>`,'gerir serviços','servicos',{returnView:'pedidoForm',returnParams:{id:p.id}})),
+  finalidadeId:field('Finalidade',fieldWithLink(`<select data-action-input="pedidoFinalidade">${app.finalidades.map(f=>`<option value="${f.id}" ${p.finalidadeId===f.id?'selected':''}>${esc(f.nome)}</option>`).join('')}</select>`,'gerir finalidades','finalidades',{returnView:'pedidoForm',returnParams:{id:p.id}})),
+  assunto:field('Situação a analisar','<textarea data-bind="assunto" data-scope="pedido" data-scope-id="'+p.id+'">'+esc(p.assunto)+'</textarea>'),
+  local:field('Local','<input data-bind="local" data-scope="pedido" data-scope-id="'+p.id+'" value="'+esc(p.local)+'">')
+ };
+}
+function viewPedidoForm(params){
+ const p=getPedido(params.id);
+ if(!p)return card('Pedido','<div class="note">Pedido não encontrado.</div>');
+ const proc=processoDoPedido(p.id);
+ return card(`📋 Pedido — ${esc(p.codigo)}`, `
+  ${renderOrderedFields('pedido',pedidoFieldRenderers(p))}
+  <hr>
+  <label>Estado</label>
+  <div class="actions four">
+   <button type="button" class="${p.status==='ON'?'green':'secondary'}" data-action="setPedidoStatus" data-id="${p.id}" data-status="ON">ON</button>
+   <button type="button" class="${p.status==='SBY'?'amber':'secondary'}" data-action="setPedidoStatus" data-id="${p.id}" data-status="SBY">SBY</button>
+   <button type="button" class="${p.status==='END'?'amber':'secondary'}" data-action="setPedidoStatus" data-id="${p.id}" data-status="END">END</button>
+   <button type="button" class="${p.status==='OFF'?'danger':'secondary'}" data-action="setPedidoStatus" data-id="${p.id}" data-status="OFF">OFF</button>
+  </div>
+  <div class="note">ON — em aberto · SBY — em stand-by (aguarda informação) · END — terminado · OFF — encerrado</div>
+  ${p.status==='OFF'?field('Motivo / Observações','<textarea data-bind="motivo" data-scope="pedido" data-scope-id="'+p.id+'">'+esc(p.motivo)+'</textarea>'):''}
+  ${proc?`<div class="status">Processo criado: <b>${esc(proc.codigo)}</b> — ${linkBtn('abrir processo','processo',{id:proc.id})}</div>`:'<div class="note">Ao colocar o estado em ON é criado automaticamente o processo correspondente.</div>'}
+  <div class="actions one" style="margin-top:10px"><button type="button" class="danger" data-action="apagarPedido" data-id="${p.id}">🗑 Eliminar pedido</button></div>
+ `);
+}
+actions.setPedidoStatus=(b)=>{
+ const p=getPedido(b.dataset.id);if(!p)return;
+ p.status=b.dataset.status;
+ if(p.status==='ON'){
+  let proc=processoDoPedido(p.id);
+  if(!proc){
+   proc={id:uid(),pedidoId:p.id,codigo:p.codigo?p.codigo.replace(/^PED/,'PROC'):('PROC-'+pad(app.processos.length+1,3)),numero:'',solicitanteInstitucional:p.solicitante,designacaoInstitucional:'',designacaoTag:'',local:p.local,assunto:p.assunto,siglaId:app.siglasQuestao[0]?app.siglasQuestao[0].id:'',status:'ON',motivo:'',autores:[],questoes:[],peritos:[],eventos:[],fotos:[],log:[],createdAt:new Date().toISOString()};
+   app.processos.push(proc);
+   logEvento(proc,'Processo criado a partir do pedido '+p.codigo);
+  }
+ }
+ saveNow();render();
+};
+actions.apagarPedido=(b)=>{
+ if(!confirm('Eliminar este pedido? (o processo associado, se existir, mantém-se acessível em Processos)'))return;
+ app.pedidos=app.pedidos.filter(p=>p.id!==b.dataset.id);
+ saveNow();goHome();
+};
+
+/* ---- Processos ---- */
+function viewProcessos(){
+ const list=app.processos.slice().sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+ return card('📁 Processos', `
+  <div>${list.length?list.map(pr=>{
+   const nq=(pr.questoes||[]).length, nr=(pr.questoes||[]).filter(q=>q.fase==='relatorio').length;
+   return `<div class="item" data-action="navTo" data-view="processo" data-params='${esc(JSON.stringify({id:pr.id}))}'>
+    <b>${esc(pr.codigo)} ${statusPill(pr.status)}</b>
+    <div class="meta">${esc(pr.solicitanteInstitucional||'')} · ${esc(pr.local||'')}</div>
+    <div class="meta">${nq} questões · ${nr} em relatório provisório</div>
+   </div>`}).join(''):'<div class="note">Ainda não há processos. Crie um pedido e coloque o estado em ON.</div>'}</div>
+ `);
+}
+
+function processoHeaderInfo(proc){
+ const pedido=getPedido(proc.pedidoId);
+ return `<div class="note">Pedido de origem: ${pedido?esc(pedido.codigo):'—'} ${pedido?linkBtn('ver pedido','pedidoForm',{id:pedido.id}):''}</div>`;
+}
+function processoFieldRenderers(proc){
+ return {
+  codigo:field('Código de processo','<input data-bind="codigo" data-scope="processo" data-scope-id="'+proc.id+'" value="'+esc(proc.codigo)+'">'),
+  numero:field('Nº processo (institucional)','<input data-bind="numero" data-scope="processo" data-scope-id="'+proc.id+'" value="'+esc(proc.numero)+'">'),
+  solicitanteInstitucional:field('Solicitante institucional','<input data-bind="solicitanteInstitucional" data-scope="processo" data-scope-id="'+proc.id+'" value="'+esc(proc.solicitanteInstitucional)+'">'),
+  designacaoInstitucional:field('Designação institucional','<input data-bind="designacaoInstitucional" data-scope="processo" data-scope-id="'+proc.id+'" value="'+esc(proc.designacaoInstitucional)+'">'),
+  designacaoTag:field('Designação TAG','<input data-bind="designacaoTag" data-scope="processo" data-scope-id="'+proc.id+'" value="'+esc(proc.designacaoTag)+'">'),
+  local:field('Local','<input data-bind="local" data-scope="processo" data-scope-id="'+proc.id+'" value="'+esc(proc.local)+'">'),
+  assunto:field('Resumo dos Temas de análise','<textarea data-bind="assunto" data-scope="processo" data-scope-id="'+proc.id+'">'+esc(proc.assunto)+'</textarea>'),
+  siglaId:field('Sigla das questões deste processo',fieldWithLink(siglaSelectHtml(proc),'gerir siglas','siglas',{returnView:'processo',returnParams:{id:proc.id}}))
+ };
+}
+function viewProcesso(params){
+ const proc=getProcesso(params.id);
+ if(!proc)return card('Processo','<div class="note">Processo não encontrado.</div>');
+ const autores=autoresDoProcesso(proc), questoes=proc.questoes||[];
+ const peritos=peritosDoProcesso(proc);
+ return `
+ ${card('📁 Dados do processo — '+esc(proc.codigo)+' '+statusPill(proc.status), `
+  ${processoHeaderInfo(proc)}
+  ${renderOrderedFields('processo',processoFieldRenderers(proc))}
+  <hr>
+  <label>Estado do processo</label>
+  <div class="actions four">
+   <button type="button" class="${proc.status==='ON'?'green':'secondary'}" data-action="setProcessoStatus" data-id="${proc.id}" data-status="ON">ON</button>
+   <button type="button" class="${proc.status==='SBY'?'amber':'secondary'}" data-action="setProcessoStatus" data-id="${proc.id}" data-status="SBY">SBY</button>
+   <button type="button" class="${proc.status==='END'?'amber':'secondary'}" data-action="setProcessoStatus" data-id="${proc.id}" data-status="END">END</button>
+   <button type="button" class="${proc.status==='OFF'?'danger':'secondary'}" data-action="setProcessoStatus" data-id="${proc.id}" data-status="OFF">OFF</button>
+  </div>
+  <div class="note">ON — em aberto · SBY — em stand-by (aguarda informação) · END — terminado · OFF — encerrado. Qualquer estado permite retomar, editar e acrescentar dados.</div>
+  ${proc.status==='OFF'?field('Motivo / Observações','<textarea data-bind="motivo" data-scope="processo" data-scope-id="'+proc.id+'">'+esc(proc.motivo)+'</textarea>'):''}
+ `)}
+ ${card('🧑‍🤝‍🧑 Autores &amp; Questões', `
+  <div class="note">${autores.length} autor(es) · ${questoes.length} questão(ões)</div>
+  <div class="actions one"><button type="button" data-action="navTo" data-view="questoes" data-params='${esc(JSON.stringify({processoId:proc.id}))}'>📑 Gerir autores e questões</button></div>
+ `)}
+ ${card('⚖️ Peritos', `
+  <div class="note">${peritos.length?peritos.map(p=>esc(p.interveniente.nome)+' ('+esc(representacaoNome(p.representacaoId))+')').join(', '):'Nenhum perito associado ainda.'}</div>
+  <div class="actions one"><button type="button" data-action="navTo" data-view="peritos" data-params='${esc(JSON.stringify({processoId:proc.id}))}'>⚖️ Gerir peritos</button></div>
+ `)}
+ ${card('🗓️ Eventos', `
+  <div class="note">${(proc.eventos||[]).length} evento(s) registados (reuniões, visitas, informações)</div>
+  <div class="actions one"><button type="button" data-action="navTo" data-view="eventos" data-params='${esc(JSON.stringify({processoId:proc.id}))}'>🗓️ Gerir eventos</button></div>
+ `)}
+ ${card('🔎 Análise', `
+  <div class="note">Respostas de cada perito e proposta conciliada, por questão.</div>
+  <div class="actions one"><button type="button" data-action="navTo" data-view="analise" data-params='${esc(JSON.stringify({processoId:proc.id}))}'>🔎 Abrir análise</button></div>
+ `)}
+ ${card('📝 Relatório provisório', `
+  <div class="note">${questoes.filter(q=>q.fase==='relatorio').length} questão(ões) já com resposta conciliada aceite.</div>
+  <div class="actions one"><button type="button" data-action="navTo" data-view="relatorio" data-params='${esc(JSON.stringify({processoId:proc.id}))}'>📝 Ver / exportar relatório</button></div>
+ `)}
+ ${card('🖼️ Fotografias', `
+  <div class="note">${(proc.fotos||[]).length} foto(s) carregada(s).</div>
+  <div class="actions one"><button type="button" data-action="navTo" data-view="fotos" data-params='${esc(JSON.stringify({processoId:proc.id}))}'>🖼️ Gerir fotografias</button></div>
+ `)}
+ ${card('📤 Exportar', exportCardBody(proc))}
+ `;
+}
+function exportCardBody(proc){
+ const cfg=proc.exportConfig;
+ const accepted=cfg&&cfg.accepted;
+ return `
+  <div class="note">A pré-visualização em PDF serve para validar o conteúdo antes de exportar. Só depois de aceite ficam disponíveis o PDF final, o Word e o ZIP.</div>
+  <div class="actions one"><button type="button" data-action="navTo" data-view="preview" data-params='${esc(JSON.stringify({processoId:proc.id}))}'>👁️ Pré-visualizar / validar</button></div>
+  ${accepted?`
+  <div class="actions one" style="margin-top:8px">
+   <button type="button" class="amber" data-action="exportarResumoPdf" data-id="${proc.id}">📄 Exportar PDF</button>
+   <button type="button" class="secondary" data-action="exportarResumoDocx" data-id="${proc.id}">📝 Exportar Word</button>
+   <button type="button" class="green" data-action="exportarZipProcesso" data-id="${proc.id}">📦 Exportar pasta do processo (ZIP)</button>
+  </div>`:`<div class="status">⏳ Ainda sem pré-visualização aceite — use "Pré-visualizar / validar" primeiro.</div>`}
+  <div id="expState_${proc.id}" class="status">Pronto.</div>
+ `;
+}
+function siglaSelectHtml(proc){
+ return `<select data-bind="siglaId" data-scope="processo" data-scope-id="${proc.id}">${app.siglasQuestao.map(s=>`<option value="${s.id}" ${proc.siglaId===s.id?'selected':''}>${esc(s.sigla)} — ${esc(s.nome)}</option>`).join('')}</select>`;
+}
+actions.setProcessoStatus=(b)=>{
+ const proc=getProcesso(b.dataset.id);if(!proc)return;
+ proc.status=b.dataset.status;
+ touch(proc);logEvento(proc,'Estado do processo alterado para '+proc.status);
+ saveNow();render();
+};
+
+/* ---- Autores & Questões ---- */
+function viewAutores(params){
+ const proc=getProcesso(params.processoId);if(!proc)return '';
+ const autores=autoresDoProcesso(proc);
+ return card('🧑‍🤝‍🧑 Autores', `
+  <div>${autores.length?autores.map(a=>`
+   <div class="item">
+    <b>${a.ordem} — ${esc(a.nome)}</b>
+    <div class="meta">${questoesDoAutor(proc,a.id).length} questão(ões)</div>
+    <div class="item-actions">
+     <button type="button" class="secondary" data-action="editarAutor" data-processo="${proc.id}" data-id="${a.id}">✏️ Editar</button>
+     <button type="button" class="danger" data-action="apagarAutor" data-processo="${proc.id}" data-id="${a.id}">🗑 Eliminar</button>
+    </div>
+   </div>`).join(''):'<div class="note">Ainda não há autores.</div>'}</div>
+  <div class="actions one"><button type="button" data-action="novoAutor" data-processo="${proc.id}">➕ Novo autor</button></div>
+ `);
+}
+actions.novoAutor=(b)=>{
+ const proc=getProcesso(b.dataset.processo);
+ const nome=prompt('Nome / referência do autor das questões:');
+ if(!nome)return;
+ const ordem=(proc.autores||[]).reduce((m,a)=>Math.max(m,a.ordem),0)+1;
+ if(!proc.autores)proc.autores=[];
+ proc.autores.push({id:uid(),nome,ordem});
+ touch(proc);logEvento(proc,'Autor "'+nome+'" criado');saveNow();render();
+};
+actions.editarAutor=(b)=>{
+ const proc=getProcesso(b.dataset.processo);
+ const a=proc.autores.find(x=>x.id===b.dataset.id);if(!a)return;
+ const nome=prompt('Nome do autor:',a.nome);if(nome==null)return;
+ const ordem=prompt('Ordem do autor (número):',a.ordem);if(ordem==null)return;
+ a.nome=nome;a.ordem=Number(ordem)||a.ordem;
+ touch(proc);saveNow();render();
+};
+actions.apagarAutor=(b)=>{
+ const proc=getProcesso(b.dataset.processo);
+ if(!confirm('Eliminar este autor? As suas questões também serão eliminadas.'))return;
+ const qIds=questoesDoAutor(proc,b.dataset.id).map(q=>q.id);
+ proc.questoes=(proc.questoes||[]).filter(q=>!qIds.includes(q.id));
+ proc.fotos=(proc.fotos||[]).filter(f=>!qIds.includes(f.questaoId));
+ proc.autores=proc.autores.filter(a=>a.id!==b.dataset.id);
+ touch(proc);saveNow();render();
+};
+
+function viewQuestoes(params){
+ const proc=getProcesso(params.processoId);if(!proc)return '';
+ const autores=autoresDoProcesso(proc);
+ return `
+ ${card('🏷️ Autores & Questões', `
+  <div class="actions">
+   <button type="button" data-action="navTo" data-view="autores" data-params='${esc(JSON.stringify({processoId:proc.id}))}'>🧑‍🤝‍🧑 Gerir autores</button>
+   <button type="button" class="secondary" data-action="navTo" data-view="importQuestoes" data-params='${esc(JSON.stringify({processoId:proc.id}))}'>📥 Importar questões</button>
+  </div>
+ `)}
+ ${autores.length?autores.map(a=>{
+  const qs=questoesDoAutor(proc,a.id);
+  return card(`${a.ordem} — ${esc(a.nome)}`, `
+   <div>${qs.length?qs.map(q=>`
+    <div class="item" data-action="navTo" data-view="questaoForm" data-params='${esc(JSON.stringify({processoId:proc.id,id:q.id}))}'>
+     <b>${esc(questaoTitulo(q,a))}</b>
+     <div class="meta">${fasePill(q.fase||'analise')} · ${fotosDaQuestao(proc,q.id).length} foto(s)</div>
+    </div>`).join(''):'<div class="note">Sem questões neste autor.</div>'}</div>
+   <div class="actions one"><button type="button" data-action="novaQuestao" data-processo="${proc.id}" data-autor="${a.id}">➕ Nova questão</button></div>
+  `);
+ }).join(''):card('Questões','<div class="note">Crie primeiro um autor.</div>')}
+ `;
+}
+actions.novaQuestao=(b)=>{
+ const proc=getProcesso(b.dataset.processo),autorId=b.dataset.autor;
+ const numero=questoesDoAutor(proc,autorId).reduce((m,q)=>Math.max(m,q.numero),0)+1;
+ const q={id:uid(),autorId,numero,siglaId:proc.siglaId||(app.siglasQuestao[0]&&app.siglasQuestao[0].id),referencia:'',descricaoResumida:'',descricaoCompleta:'',fase:'analise',respostas:{},historico:[],conciliada:{texto:'',aceite:false},createdAt:new Date().toISOString()};
+ if(!proc.questoes)proc.questoes=[];
+ proc.questoes.push(q);
+ touch(proc);logEvento(proc,'Questão '+questaoCodigo(q,proc.autores.find(a=>a.id===autorId))+' criada');saveNow();
+ nav('questaoForm',{processoId:proc.id,id:q.id});
+};
+function questaoFieldRenderers(proc,q){
+ return {
+  numero:field('Número na sequência do autor','<input type="number" min="1" value="'+q.numero+'" data-action-input="numeroQuestao">','ordem de exibição dentro do bloco do autor'),
+  siglaId:field('Sigla',`<select data-action-input="siglaQuestao">${app.siglasQuestao.map(s=>`<option value="${s.id}" ${q.siglaId===s.id?'selected':''}>${esc(s.sigla)} — ${esc(s.nome)}</option>`).join('')}</select>`),
+  referencia:field('Referência/código do autor','<input value="'+esc(q.referencia)+'" data-action-input="refQuestao">','livre — ex.: 1, 5, Q_35; nem sempre é sequencial'),
+  descricaoResumida:field('Descrição resumida (usada no cartão)','<input value="'+esc(q.descricaoResumida)+'" data-action-input="descResumida">'),
+  descricaoCompleta:field('Descrição completa','<textarea data-action-input="descCompleta" rows="4">'+esc(q.descricaoCompleta)+'</textarea>')
+ };
+}
+function viewQuestaoForm(params){
+ const proc=getProcesso(params.processoId);if(!proc)return '';
+ const q=proc.questoes.find(x=>x.id===params.id);if(!q)return card('Questão','<div class="note">Questão não encontrada.</div>');
+ const a=proc.autores.find(x=>x.id===q.autorId);
+ const outrosAutores=autoresDoProcesso(proc).filter(x=>x.id!==a.id);
+ const fotos=fotosDaQuestao(proc,q.id);
+ return card('🏷️ '+esc(questaoTitulo(q,a)), `
+  <div class="note">Autor: ${a.ordem} — ${esc(a.nome)}</div>
+  ${renderOrderedFields('questao',questaoFieldRenderers(proc,q))}
+  ${fasePill(q.fase||'analise')}
+  ${outrosAutores.length?`<div style="margin-top:10px"><label>Mudar de autor</label><select data-action-input="moverAutor"><option value="">— manter —</option>${outrosAutores.map(o=>`<option value="${o.id}">${o.ordem} — ${esc(o.nome)}</option>`).join('')}</select></div>`:''}
+  <hr>
+  <h3>Fotografias associadas</h3>
+  <div class="note">${fotos.length} foto(s). Gestão completa em Fotografias.</div>
+  <div class="actions one"><button type="button" data-action="navTo" data-view="fotos" data-params='${esc(JSON.stringify({processoId:proc.id,questaoId:q.id}))}'>🖼️ Gerir fotos desta questão</button></div>
+  <div class="actions one" style="margin-top:14px"><button type="button" class="danger" data-action="apagarQuestao" data-processo="${proc.id}" data-id="${q.id}">🗑 Eliminar questão</button></div>
+ `);
+}
+actions.apagarQuestao=(b)=>{
+ const proc=getProcesso(b.dataset.processo);
+ if(!confirm('Eliminar esta questão e as respetivas fotos?'))return;
+ proc.fotos=(proc.fotos||[]).filter(f=>f.questaoId!==b.dataset.id);
+ proc.questoes=proc.questoes.filter(q=>q.id!==b.dataset.id);
+ touch(proc);saveNow();back();
+};
+// campos de texto da questão: usar delegação simples por atributo data-action-input
+document.addEventListener('input',e=>{
+ const t=e.target;
+ if(!t.matches('[data-action-input]'))return;
+ if(ui.view!=='questaoForm')return;
+ const proc=getProcesso(ui.params.processoId);if(!proc)return;
+ const q=proc.questoes.find(x=>x.id===ui.params.id);if(!q)return;
+ const kind=t.dataset.actionInput;
+ if(kind==='descResumida')q.descricaoResumida=t.value;
+ if(kind==='descCompleta')q.descricaoCompleta=t.value;
+ if(kind==='refQuestao')q.referencia=t.value;
+ if(kind==='numeroQuestao')q.numero=Number(t.value)||q.numero;
+ touch(proc);save();
+});
+document.addEventListener('change',e=>{
+ const t=e.target;
+ if(t.dataset.actionInput==='siglaQuestao'&&ui.view==='questaoForm'){
+  const proc=getProcesso(ui.params.processoId);
+  const q=proc.questoes.find(x=>x.id===ui.params.id);
+  if(q){q.siglaId=t.value;touch(proc);saveNow();render()}
+ }
+ if(t.dataset.actionInput==='moverAutor'&&t.value){
+  const proc=getProcesso(ui.params.processoId);
+  const q=proc.questoes.find(x=>x.id===ui.params.id);
+  const novoAutor=proc.autores.find(a=>a.id===t.value);
+  q.autorId=t.value;
+  q.numero=questoesDoAutor(proc,t.value).reduce((m,x)=>Math.max(m,x.numero),0)+1;
+  touch(proc);logEvento(proc,'Questão movida para autor '+novoAutor.nome);saveNow();render();
+ }
+});
+
+/* ---- Importar questões (texto simples / .docx / .xlsx) ---- */
+function viewImportQuestoes(params){
+ const proc=getProcesso(params.processoId);if(!proc)return '';
+ const autores=autoresDoProcesso(proc);
+ return card('📥 Importar questões', `
+  <div class="note">Cada linha (texto), parágrafo (Word) ou célula da 1ª coluna (Excel) torna-se uma questão nova, atribuída ao autor escolhido.</div>
+  ${field('Autor de destino',`<select id="importAutor">${autores.map(a=>`<option value="${a.id}">${a.ordem} — ${esc(a.nome)}</option>`).join('')}</select>`)}
+  <label>Colar lista (manual)</label>
+  <textarea id="importText" rows="6" placeholder="Uma questão por linha..."></textarea>
+  <div class="actions one"><button type="button" data-action="importarTexto" data-processo="${proc.id}">➕ Importar texto colado</button></div>
+  <hr>
+  <label>Importar ficheiro (.docx, .xlsx, .txt, .csv)</label>
+  <input type="file" id="importFile" accept=".docx,.xlsx,.txt,.csv">
+  <div class="actions one"><button type="button" class="secondary" data-action="importarFicheiro" data-processo="${proc.id}">📥 Importar ficheiro</button></div>
+  <div id="importState" class="status">Automático (número sequencial) · Manual (colar texto) · Importação (ficheiro).</div>
+ `);
+}
+function addQuestoesFromLines(proc,autorId,lines){
+ let n=questoesDoAutor(proc,autorId).reduce((m,q)=>Math.max(m,q.numero),0);
+ let count=0;
+ lines.map(l=>l.trim()).filter(Boolean).forEach(txt=>{
+  n++;count++;
+  proc.questoes.push({id:uid(),autorId,numero:n,siglaId:proc.siglaId,referencia:'',descricaoResumida:txt.slice(0,140),descricaoCompleta:txt,fase:'analise',respostas:{},historico:[],conciliada:{texto:'',aceite:false},createdAt:new Date().toISOString()});
+ });
+ touch(proc);logEvento(proc,count+' questão(ões) importada(s)');
+ return count;
+}
+actions.importarTexto=(b)=>{
+ const proc=getProcesso(b.dataset.processo);
+ const autorId=$('importAutor').value;
+ const lines=$('importText').value.split('\n');
+ const n=addQuestoesFromLines(proc,autorId,lines);
+ saveNow();
+ $('importText').value='';
+ $('importState').textContent=n+' questão(ões) importada(s) com sucesso.';
+ render();
+};
+actions.importarFicheiro=async(b)=>{
+ const proc=getProcesso(b.dataset.processo);
+ const autorId=$('importAutor').value;
+ const file=$('importFile').files[0];
+ if(!file){alert('Escolha um ficheiro.');return}
+ const st=$('importState');st.textContent='A processar...';
+ try{
+  let lines=[];
+  const name=file.name.toLowerCase();
+  if(name.endsWith('.txt')||name.endsWith('.csv')){
+   const txt=await file.text();
+   lines=txt.split('\n').map(l=>l.split(',')[0]);
+  }else if(name.endsWith('.docx')){
+   const zip=await JSZip.loadAsync(file);
+   const xml=await zip.file('word/document.xml').async('text');
+   lines=xml.split('</w:p>').map(p=>p.replace(/<[^>]+>/g,'')).map(s=>s.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').trim());
+  }else if(name.endsWith('.xlsx')){
+   const zip=await JSZip.loadAsync(file);
+   let shared=[];
+   const sharedFile=zip.file('xl/sharedStrings.xml');
+   if(sharedFile){
+    const sxml=await sharedFile.async('text');
+    shared=(sxml.match(/<t[^>]*>([\s\S]*?)<\/t>/g)||[]).map(t=>t.replace(/<[^>]+>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>'));
+   }
+   const sheetFile=zip.file('xl/worksheets/sheet1.xml');
+   const sxml=sheetFile?await sheetFile.async('text'):'';
+   const rows=sxml.split('</row>');
+   rows.forEach(row=>{
+    const m=row.match(/<c[^>]*r="A\d+"[^>]*>([\s\S]*?)<\/c>/);
+    if(!m)return;
+    const isShared=/t="s"/.test(m[0]);
+    const vMatch=m[1].match(/<v>([\s\S]*?)<\/v>/);
+    if(!vMatch)return;
+    const val=isShared?shared[Number(vMatch[1])]:vMatch[1];
+    if(val)lines.push(val);
+   });
+  }else{
+   alert('Formato não suportado.');st.textContent='';return;
+  }
+  const n=addQuestoesFromLines(proc,autorId,lines);
+  saveNow();
+  st.textContent=n+' questão(ões) importada(s) de '+file.name+'.';
+  render();
+ }catch(err){
+  console.error(err);
+  st.textContent='Erro ao importar: '+(err.message||err);
+ }
+};
+
+/* ---- Peritos ---- */
+function viewPeritos(params){
+ const proc=getProcesso(params.processoId);if(!proc)return '';
+ const peritos=peritosDoProcesso(proc);
+ const funcaoPerito=app.funcoes.find(f=>f.nome==='Perito');
+ const candidatos=app.intervenientes.filter(i=>i.funcaoId===(funcaoPerito&&funcaoPerito.id));
+ return card('⚖️ Peritos do processo', `
+  <div class="note">${peritos.length<=1?'Peritagem com um só perito — a fase de análise avança diretamente para o Draft de relatório.':'Peritagem com vários peritos.'}</div>
+  <div>${peritos.length?peritos.map(p=>`
+   <div class="item">
+    <b>${esc(p.interveniente.nome)}</b>
+    <div class="meta">Representa: ${esc(representacaoNome(p.representacaoId))}</div>
+    <div class="item-actions">
+     <button type="button" class="danger" data-action="removerPerito" data-processo="${proc.id}" data-id="${p.id}">🗑 Remover</button>
+    </div>
+    <label style="margin-top:8px">Representação</label>
+    <select data-action-input="representacaoPerito" data-perito="${p.id}">${app.representacoes.map(r=>`<option value="${r.id}" ${p.representacaoId===r.id?'selected':''}>${esc(r.nome)}</option>`).join('')}</select>
+   </div>`).join(''):'<div class="note">Nenhum perito associado.</div>'}</div>
+  <hr>
+  ${field('Adicionar perito (interveniente com função "Perito")',fieldWithLink(`<select id="novoPeritoSel">${candidatos.length?candidatos.map(c=>`<option value="${c.id}">${esc(c.nome)}</option>`).join(''):'<option value="">— sem candidatos —</option>'}</select>`,'gerir intervenientes','intervenientes',{returnView:'peritos',returnParams:{processoId:proc.id}}))}
+  <div class="actions one"><button type="button" data-action="adicionarPerito" data-processo="${proc.id}">➕ Adicionar perito</button></div>
+  <div class="actions one"><button type="button" class="linklike" data-action="navTo" data-view="representacoes" data-params='${esc(JSON.stringify({}))}'>gerir tabela de representações</button></div>
+ `);
+}
+function representacaoNome(id){const r=app.representacoes.find(x=>x.id===id);return r?r.nome:'—'}
+function representacaoDefaultId(){const r=app.representacoes.find(x=>x.isDefault)||app.representacoes[0];return r?r.id:''}
+actions.adicionarPerito=(b)=>{
+ const proc=getProcesso(b.dataset.processo);
+ const sel=$('novoPeritoSel');
+ if(!sel||!sel.value)return;
+ if((proc.peritos||[]).some(p=>p.intervenienteId===sel.value))return alert('Este perito já está associado.');
+ if(!proc.peritos)proc.peritos=[];
+ proc.peritos.push({id:uid(),intervenienteId:sel.value,representacaoId:representacaoDefaultId()});
+ touch(proc);saveNow();render();
+};
+document.addEventListener('change',e=>{
+ const t=e.target;
+ if(t.dataset.actionInput==='representacaoPerito'){
+  const proc=getProcesso(ui.params.processoId);if(!proc)return;
+  const p=proc.peritos.find(x=>x.id===t.dataset.perito);if(!p)return;
+  p.representacaoId=t.value;touch(proc);saveNow();
+ }
+});
+actions.removerPerito=(b)=>{
+ const proc=getProcesso(b.dataset.processo);
+ proc.peritos=proc.peritos.filter(p=>p.id!==b.dataset.id);
+ touch(proc);saveNow();render();
+};
+
+/* ---- Eventos ---- */
+function viewEventos(params){
+ const proc=getProcesso(params.processoId);if(!proc)return '';
+ return app.tiposEvento.map(tipo=>{
+  const evs=(proc.eventos||[]).filter(e=>e.tipoId===tipo.id).sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+  return card(`🗓️ ${esc(tipo.nome)}s`, `
+   <div>${evs.length?evs.map(e=>`
+    <div class="item" data-action="navTo" data-view="eventoForm" data-params='${esc(JSON.stringify({processoId:proc.id,id:e.id}))}'>
+     <b>${esc(e.data||'(sem data)')}</b>
+     <div class="meta">${esc((e.descricao||'').slice(0,80))}</div>
+     ${!tipo.semPresencas?`<div class="meta">${(e.presencas||[]).length} presença(s)</div>`:''}
+    </div>`).join(''):'<div class="note">Sem registos.</div>'}</div>
+   <div class="actions one"><button type="button" data-action="novoEvento" data-processo="${proc.id}" data-tipo="${tipo.id}">➕ Novo(a) ${esc(tipo.nome.toLowerCase())}</button></div>
+  `);
+ }).join('')+card('🏷️ Tipos de evento', `<div class="actions one">${linkBtn('gerir tipos de evento','tiposEvento',{})}</div>`);
+}
+actions.novoEvento=(b)=>{
+ const proc=getProcesso(b.dataset.processo);
+ const e={id:uid(),tipoId:b.dataset.tipo,data:todayISO(),descricao:'',presencas:[]};
+ if(!proc.eventos)proc.eventos=[];
+ proc.eventos.push(e);
+ touch(proc);saveNow();
+ nav('eventoForm',{processoId:proc.id,id:e.id});
+};
+function viewEventoForm(params){
+ const proc=getProcesso(params.processoId);if(!proc)return '';
+ const e=proc.eventos.find(x=>x.id===params.id);if(!e)return card('Evento','<div class="note">Não encontrado.</div>');
+ const tipo=app.tiposEvento.find(t=>t.id===e.tipoId)||{nome:'Evento',semPresencas:false};
+ return card('🗓️ '+esc(tipo.nome), `
+  ${field('Data','<input type="date" data-action-input="eventoData" value="'+esc(e.data)+'">')}
+  ${field('Descrição','<textarea data-action-input="eventoDesc" rows="4">'+esc(e.descricao)+'</textarea>')}
+  ${!tipo.semPresencas?field('Presenças',fieldWithLink(presencasChecklist(proc,e),'gerir intervenientes','intervenientes',{returnView:'eventoForm',returnParams:params})):''}
+  <div class="actions one" style="margin-top:14px"><button type="button" class="danger" data-action="apagarEvento" data-processo="${proc.id}" data-id="${e.id}">🗑 Eliminar evento</button></div>
+ `);
+}
+function presencasChecklist(proc,e){
+ if(!app.intervenientes.length)return '<div class="note">Sem intervenientes registados.</div>';
+ return `<div>${app.intervenientes.map(i=>`<label class="inline"><input type="checkbox" data-action-input="presenca" data-iv="${i.id}" ${(e.presencas||[]).includes(i.id)?'checked':''}> ${esc(i.nome)} <span class="note">(${esc(getFuncaoNome(i.funcaoId))})</span></label>`).join('')}</div>`;
+}
+document.addEventListener('input',e=>{
+ const t=e.target;
+ if(ui.view!=='eventoForm')return;
+ const proc=getProcesso(ui.params.processoId);if(!proc)return;
+ const ev=proc.eventos.find(x=>x.id===ui.params.id);if(!ev)return;
+ if(t.dataset.actionInput==='eventoDesc'){ev.descricao=t.value;touch(proc);save()}
+});
+document.addEventListener('change',e=>{
+ const t=e.target;
+ if(ui.view!=='eventoForm')return;
+ const proc=getProcesso(ui.params.processoId);if(!proc)return;
+ const ev=proc.eventos.find(x=>x.id===ui.params.id);if(!ev)return;
+ if(t.dataset.actionInput==='eventoData'){ev.data=t.value;touch(proc);save()}
+ if(t.dataset.actionInput==='presenca'){
+  if(!ev.presencas)ev.presencas=[];
+  const iv=t.dataset.iv;
+  if(t.checked){if(!ev.presencas.includes(iv))ev.presencas.push(iv)}else{ev.presencas=ev.presencas.filter(x=>x!==iv)}
+  touch(proc);save();
+ }
+});
+actions.apagarEvento=(b)=>{
+ const proc=getProcesso(b.dataset.processo);
+ if(!confirm('Eliminar este evento?'))return;
+ proc.eventos=proc.eventos.filter(e=>e.id!==b.dataset.id);
+ touch(proc);saveNow();back();
+};
+
+/* ---- Análise ---- */
+function viewAnalise(params){
+ const proc=getProcesso(params.processoId);if(!proc)return '';
+ const ordered=questoesOrdenadas(proc);
+ return card('🔎 Análise por questão', `
+  <div>${ordered.length?ordered.map(({q,a})=>`
+   <div class="item" data-action="navTo" data-view="analiseQuestao" data-params='${esc(JSON.stringify({processoId:proc.id,id:q.id}))}'>
+    <b>${esc(questaoTitulo(q,a))}</b>
+    <div class="meta">${fasePill(q.fase||'analise')} · ${(proc.peritos||[]).length} perito(s) a responder</div>
+   </div>`).join(''):'<div class="note">Sem questões.</div>'}</div>
+ `);
+}
+function viewAnaliseQuestao(params){
+ const proc=getProcesso(params.processoId);if(!proc)return '';
+ const q=proc.questoes.find(x=>x.id===params.id);if(!q)return '';
+ const a=proc.autores.find(x=>x.id===q.autorId);
+ const peritos=peritosDoProcesso(proc);
+ if(!q.respostas)q.respostas={};
+ if(!q.historico)q.historico=[];
+ if(!q.conciliada)q.conciliada={texto:'',aceite:false};
+ const single=peritos.length===1;
+ const fotos=fotosDaQuestao(proc,q.id);
+ return `
+ ${card('🔎 '+esc(questaoTitulo(q,a)), `<div class="note">${esc(q.descricaoCompleta||'')}</div>${fasePill(q.fase||'analise')}${!fotos.length?'<div class="note" style="color:var(--r);margin-top:6px">⚠ Esta questão ainda não tem fotografias.</div>':''}`)}
+ ${!peritos.length?'<div class="card"><div class="note">Associe peritos ao processo para registar respostas individuais.</div></div>':''}
+ ${single?'<div class="card"><div class="note">Peritagem com um só perito: a resposta avança diretamente para o Draft de relatório, sem proposta conciliada intermédia.</div></div>':''}
+ ${peritos.map(p=>card('🧑‍⚖️ Resposta — '+esc(p.interveniente.nome), `
+  <textarea rows="4" data-action-input="respostaPerito" data-perito="${p.intervenienteId}">${esc(q.respostas[p.intervenienteId]||'')}</textarea>
+  <div class="actions${single?'':' one'}">
+   <button type="button" class="secondary" data-action="registarPosicao" data-perito="${p.intervenienteId}">📌 Registar posição de hoje</button>
+   ${single?`<button type="button" class="green" data-action="aceitarUnico" data-perito="${p.intervenienteId}">✅ Aceitar e enviar para Draft de relatório</button>`:''}
+  </div>
+ `)).join('')}
+ ${peritos.length!==1?card('🤝 Proposta de resposta conciliada', `
+  <textarea rows="5" data-action-input="conciliadaTexto">${esc(q.conciliada.texto)}</textarea>
+  <label class="inline"><input type="checkbox" data-action-input="conciliadaAceite" ${q.conciliada.aceite?'checked':''}> Resposta conciliada aceite (avança para o Draft de relatório)</label>
+ `):''}
+ ${q.historico.length?card('🕒 Histórico de posições (sequencial)', q.historico.slice().sort((x,y)=>String(x.data).localeCompare(String(y.data))).map(h=>{
+   const iv=getInterveniente(h.intervenienteId);
+   return `<div class="item"><b>${esc(iv?iv.nome:'—')} — ${esc(h.data)}</b><div class="meta">${nl2br(h.texto)}</div></div>`;
+  }).join('')):''}
+ `;
+}
+actions.registarPosicao=(b)=>{
+ const proc=getProcesso(ui.params.processoId);if(!proc)return;
+ const q=proc.questoes.find(x=>x.id===ui.params.id);if(!q)return;
+ const intervenienteId=b.dataset.perito;
+ const texto=(q.respostas&&q.respostas[intervenienteId])||'';
+ if(!texto.trim())return alert('Escreva a posição antes de a registar.');
+ if(!q.historico)q.historico=[];
+ q.historico.push({intervenienteId,texto,data:todayISO()});
+ touch(proc);logEvento(proc,'Posição registada — questão '+questaoCodigo(q,proc.autores.find(x=>x.id===q.autorId)));
+ saveNow();render();
+};
+actions.aceitarUnico=(b)=>{
+ const proc=getProcesso(ui.params.processoId);if(!proc)return;
+ const q=proc.questoes.find(x=>x.id===ui.params.id);if(!q)return;
+ const intervenienteId=b.dataset.perito;
+ const texto=(q.respostas&&q.respostas[intervenienteId])||'';
+ if(!texto.trim())return alert('Escreva a resposta antes de aceitar.');
+ if(!q.historico)q.historico=[];
+ q.historico.push({intervenienteId,texto,data:todayISO()});
+ q.conciliada={texto,aceite:true};
+ q.fase='relatorio';
+ touch(proc);logEvento(proc,'Questão '+questaoCodigo(q,proc.autores.find(x=>x.id===q.autorId))+' aceite (perito único) — Draft de relatório');
+ saveNow();render();
+};
+document.addEventListener('input',e=>{
+ const t=e.target;
+ if(ui.view!=='analiseQuestao')return;
+ const proc=getProcesso(ui.params.processoId);if(!proc)return;
+ const q=proc.questoes.find(x=>x.id===ui.params.id);if(!q)return;
+ if(t.dataset.actionInput==='respostaPerito'){q.respostas[t.dataset.perito]=t.value;touch(proc);save()}
+ if(t.dataset.actionInput==='conciliadaTexto'){q.conciliada.texto=t.value;touch(proc);save()}
+});
+document.addEventListener('change',e=>{
+ const t=e.target;
+ if(ui.view!=='analiseQuestao')return;
+ const proc=getProcesso(ui.params.processoId);if(!proc)return;
+ const q=proc.questoes.find(x=>x.id===ui.params.id);if(!q)return;
+ if(t.dataset.actionInput==='conciliadaAceite'){
+  q.conciliada.aceite=t.checked;
+  q.fase=t.checked?'relatorio':'analise';
+  touch(proc);logEvento(proc,'Resposta conciliada '+(t.checked?'aceite':'reaberta')+' — questão '+questaoCodigo(q,proc.autores.find(x=>x.id===q.autorId)));
+  saveNow();render();
+ }
+});
+
+/* ---- Relatório provisório ---- */
+function viewRelatorio(params){
+ const proc=getProcesso(params.processoId);if(!proc)return '';
+ const ordered=questoesOrdenadas(proc).filter(x=>x.q.fase==='relatorio');
+ return card('📝 Draft de relatório', `
+  <div class="note">Questões já conciliadas (fechadas), ordenadas por bloco de autor e, dentro dele, pela sua ordem sequencial. Trazem consigo as fotografias associadas na fase de análise. Cada questão inicia página nova na exportação.</div>
+  ${ordered.length?ordered.map(({q,a})=>`
+   <hr>
+   <h3>${esc(questaoTitulo(q,a))}</h3>
+   <div class="${isShortText(q.conciliada.texto)?'':'justify'}">${nl2br(q.conciliada.texto||'(sem texto conciliado)')}</div>
+   <div class="note">${fotosDaQuestao(proc,q.id).length} foto(s) incluída(s) no final do texto.</div>
+  `).join(''):'<div class="note">Ainda nenhuma questão com resposta conciliada aceite.</div>'}
+  <div class="actions one" style="margin-top:14px"><button type="button" data-action="navTo" data-view="preview" data-params='${esc(JSON.stringify({processoId:proc.id}))}'>👁️ Pré-visualizar / exportar</button></div>
+ `);
+}
+function isShortText(t){return !t||t.length<90}
+
+/* ---- Pré-visualização PDF: validar antes de exportar (aceitar/reformular) ---- */
+let _previewUrl=null,_previewProcId=null;
+function viewPreview(params){
+ const proc=getProcesso(params.processoId);if(!proc)return '';
+ const cfg=ensureExportConfig(proc);
+ const ready=_previewProcId===proc.id&&_previewUrl;
+ return card('👁️ Pré-visualização do PDF', `
+  <div class="note">Gere a pré-visualização, confirme se está tudo OK e só depois siga para as restantes exportações (PDF, Word, ZIP). Pode reformular — incluindo mudar o nº de colunas da grelha de fotos — e repetir o ciclo.</div>
+  <label class="inline"><input type="checkbox" data-action-input="cfgCapa" ${cfg.capa?'checked':''}> Incluir Capa de processo <span class="note">(opcional)</span></label>
+  <label class="inline"><input type="checkbox" data-action-input="cfgResumoCron" ${cfg.resumoCronologia?'checked':''}> Incluir Resumo com cronologia <span class="note">(opcional)</span></label>
+  <label class="inline"><input type="checkbox" data-action-input="cfgListaAnalise" ${cfg.listaAnalise?'checked':''}> Incluir Histórico de Análise <span class="note">(por defeito)</span></label>
+  <label class="inline"><input type="checkbox" data-action-input="cfgListaDraft" ${cfg.listaDraft?'checked':''}> Incluir Draft de relatório <span class="note">(por defeito)</span></label>
+  <label class="inline"><input type="checkbox" data-action-input="cfgFotos" ${cfg.fotos?'checked':''}> Incluir fotografias</label>
+  ${field('Colunas da grelha de fotos nesta exportação',`<select data-action-input="cfgCols">${[1,2,3,4,5].map(n=>`<option value="${n}" ${cfg.cols==n?'selected':''}>${n} coluna(s)</option>`).join('')}</select>`)}
+  <div class="actions one"><button type="button" data-action="gerarPreview" data-processo="${proc.id}">🔄 Gerar pré-visualização</button></div>
+  <div id="previewState" class="status">${ready?'Pré-visualização gerada. Reveja e Aceite ou Reformule.':'Ainda sem pré-visualização gerada nesta sessão.'}</div>
+  ${ready?`<iframe class="preview-frame" src="${_previewUrl}" title="Pré-visualização do PDF"></iframe>`:''}
+  ${ready?`<div class="actions" style="margin-top:10px"><button type="button" class="green" data-action="aceitarPreview" data-processo="${proc.id}">✔ Aceitar</button><button type="button" class="secondary" data-action="reformularPreview" data-processo="${proc.id}">↺ Reformular</button></div>`:''}
+  ${cfg.accepted?'<div class="status">✅ Configuração aceite — pode agora exportar PDF/Word/ZIP em "Exportar".</div>':'<div class="status">⏳ Ainda não aceite.</div>'}
+ `);
+}
+document.addEventListener('change',e=>{
+ const t=e.target;
+ if(ui.view!=='preview')return;
+ const proc=getProcesso(ui.params.processoId);if(!proc)return;
+ const cfg=ensureExportConfig(proc);
+ const map={cfgCapa:'capa',cfgResumoCron:'resumoCronologia',cfgListaAnalise:'listaAnalise',cfgListaDraft:'listaDraft',cfgFotos:'fotos'};
+ if(map[t.dataset.actionInput]){cfg[map[t.dataset.actionInput]]=t.checked;cfg.accepted=false;touch(proc);saveNow();render()}
+ if(t.dataset.actionInput==='cfgCols'){cfg.cols=Number(t.value);cfg.accepted=false;touch(proc);saveNow();render()}
+});
+actions.gerarPreview=async(b)=>{
+ const proc=getProcesso(b.dataset.processo);
+ const cfg=ensureExportConfig(proc);
+ const st=$('previewState');
+ if(st)st.textContent='A gerar pré-visualização...';
+ try{
+  const blob=await buildResumoPdf(proc,cfg);
+  if(_previewUrl)URL.revokeObjectURL(_previewUrl);
+  _previewUrl=URL.createObjectURL(blob);
+  _previewProcId=proc.id;
+  render();
+ }catch(err){console.error(err);if(st)st.textContent='Erro ao gerar pré-visualização: '+(err.message||err)}
+};
+actions.aceitarPreview=(b)=>{
+ const proc=getProcesso(b.dataset.processo);
+ const cfg=ensureExportConfig(proc);
+ cfg.accepted=true;
+ touch(proc);logEvento(proc,'Pré-visualização aceite para exportação');saveNow();render();
+};
+actions.reformularPreview=(b)=>{
+ if(_previewUrl){URL.revokeObjectURL(_previewUrl);_previewUrl=null;_previewProcId=null}
+ render();
+};
+
+/* ---- Fotografias ---- */
+function viewFotos(params){
+ const proc=getProcesso(params.processoId);if(!proc)return '';
+ const questaoId=params.questaoId;
+ const fotos=(proc.fotos||[]).filter(f=>!questaoId||f.questaoId===questaoId);
+ const cols=app.settings.fotoGridCols||3;
+ return card('🖼️ Fotografias'+(questaoId?' — questão':''), `
+  <div class="actions">
+   <button type="button" data-action="carregarFotos" data-processo="${proc.id}" data-questao="${questaoId||''}">🖼 Carregar da fototeca</button>
+   <button type="button" class="secondary" data-action="tirarFoto" data-processo="${proc.id}" data-questao="${questaoId||''}">📷 Tirar foto</button>
+  </div>
+  <input type="file" id="fotoGallery" accept="image/*" multiple hidden>
+  <input type="file" id="fotoCamera" accept="image/*" capture="environment" hidden>
+  <div class="note">Resolução alvo: ${app.settings.fotoResolutionKB} KB por foto · grelha de ${cols} coluna(s) · orientação predominante por defeito: ${app.settings.fotoOrientacaoDefault==='paisagem'?'paisagem':'retrato'} (configurável em Configurações → Fotografias).</div>
+  ${!questaoId?'<div class="note">⚠ Sem questão associada — para a grelha ficar associada a uma questão, aceda a Fotografias a partir do formulário dessa questão.</div>':''}
+  <div class="grid-cols" style="grid-template-columns:repeat(${cols},1fr)">
+   ${fotos.map(f=>`
+    <div class="photo-cell">
+     <img data-photo-id="${f.id}" data-action="verFoto" data-id="${f.id}" alt="foto">
+     ${f.captionFlagRotacao?'<div class="flag">⚠ orientação diferente</div>':''}
+     <div class="cap">${esc(f.caption||'(sem legenda)')}</div>
+     <div class="photo-actions">
+      <button type="button" data-action="legendarFoto" data-id="${f.id}">✏️ Legenda</button>
+      <button type="button" data-action="rodarFoto" data-id="${f.id}">↻ Rodar</button>
+      <button type="button" class="${f.isCapa?'green':'secondary'}" data-action="toggleCapa" data-id="${f.id}">${f.isCapa?'★ Capa':'☆ Capa'}</button>
+      <button type="button" class="danger" data-action="apagarFoto" data-id="${f.id}" data-processo="${proc.id}">🗑</button>
+     </div>
+    </div>`).join('')||'<div class="note">Sem fotografias.</div>'}
+  </div>
+ `);
+}
+actions.carregarFotos=(b)=>{const el=$('fotoGallery');el.dataset.processo=b.dataset.processo;el.dataset.questao=b.dataset.questao;el.click()};
+actions.tirarFoto=(b)=>{const el=$('fotoCamera');el.dataset.processo=b.dataset.processo;el.dataset.questao=b.dataset.questao;el.click()};
+document.addEventListener('change',async e=>{
+ const t=e.target;
+ if(t.id!=='fotoGallery'&&t.id!=='fotoCamera')return;
+ const proc=getProcesso(t.dataset.processo);if(!proc)return;
+ const questaoId=t.dataset.questao||null;
+ const files=Array.from(t.files||[]);
+ if(!files.length)return;
+ for(const file of files){
+  await processarNovaFoto(proc,questaoId,file);
+ }
+ t.value='';
+ saveNow();render();
+});
+async function compressImage(file,targetKB){
+ const img=await fileToImage(file);
+ let w=img.width,h=img.height;
+ const maxSide=2000;
+ if(Math.max(w,h)>maxSide){const s=maxSide/Math.max(w,h);w=Math.round(w*s);h=Math.round(h*s)}
+ const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
+ const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,w,h);
+ let q=0.85,blob=await canvasToBlob(canvas,q);
+ if(targetKB!=='original'){
+  const targetBytes=Number(targetKB)*1024;
+  let tries=0;
+  while(blob.size>targetBytes&&q>0.35&&tries<8){q-=0.1;blob=await canvasToBlob(canvas,q);tries++}
+ }
+ return {blob,width:w,height:h};
+}
+function fileToImage(file){
+ return new Promise((res,rej)=>{
+  const url=URL.createObjectURL(file);
+  const img=new Image();
+  img.onload=()=>{res(img)};
+  img.onerror=rej;
+  img.src=url;
+ });
+}
+function canvasToBlob(canvas,q){return new Promise(res=>canvas.toBlob(res,'image/jpeg',q))}
+async function processarNovaFoto(proc,questaoId,file){
+ const {blob,width,height}=await compressImage(file,app.settings.fotoResolutionKB);
+ const id=uid();
+ await idbPut(id,blob);
+ const orientacao=height>=width?'portrait':'landscape';
+ const existentes=(proc.fotos||[]).filter(f=>questaoId?f.questaoId===questaoId:true);
+ const counts={portrait:0,landscape:0};
+ existentes.forEach(f=>{counts[f.orientacao]=(counts[f.orientacao]||0)+1});
+ const orientacaoDefault=app.settings.fotoOrientacaoDefault==='paisagem'?'landscape':'portrait';
+ const dominante=existentes.length?(counts.portrait>=counts.landscape?'portrait':'landscape'):orientacaoDefault;
+ const flag=orientacao!==dominante;
+ if(!proc.fotos)proc.fotos=[];
+ proc.fotos.push({id,questaoId,caption:'',isCapa:false,width,height,orientacao,captionFlagRotacao:flag,createdAt:new Date().toISOString()});
+ touch(proc);logEvento(proc,'Foto adicionada'+(questaoId?' à questão':''));
+}
+actions.verFoto=async(b)=>{
+ const url=await getPhotoUrl(b.dataset.id);
+ abrirModal(`<img class="big" src="${url}" alt="foto"><div class="actions one"><button type="button" data-action="fecharModal">Fechar</button></div>`);
+};
+actions.legendarFoto=async(b)=>{
+ const proc=getProcesso(ui.params.processoId||ui.params.id);
+ const f=(proc.fotos||[]).find(x=>x.id===b.dataset.id);if(!f)return;
+ const url=await getPhotoUrl(f.id);
+ abrirModal(`
+  <img class="big" src="${url}" alt="foto">
+  <label>Legenda</label>
+  <textarea id="captionInput" rows="3" style="font-size:16px">${esc(f.caption)}</textarea>
+  <div class="actions"><button type="button" data-action="guardarLegenda" data-id="${f.id}">💾 Guardar</button><button type="button" class="secondary" data-action="fecharModal">Cancelar</button></div>
+ `);
+};
+actions.guardarLegenda=(b)=>{
+ const proc=getProcesso(ui.params.processoId||ui.params.id);
+ const f=(proc.fotos||[]).find(x=>x.id===b.dataset.id);
+ f.caption=$('captionInput').value;
+ touch(proc);saveNow();fecharModal();render();
+};
+actions.fecharModal=()=>fecharModal();
+function abrirModal(html){
+ let ov=$('modalOverlay');
+ if(!ov){ov=document.createElement('div');ov.id='modalOverlay';ov.className='modal-overlay';document.body.appendChild(ov)}
+ ov.innerHTML=`<div class="modal-box">${html}</div>`;
+ ov.classList.remove('hidden');
+ hydratePhotos(ov);
+}
+function fecharModal(){const ov=$('modalOverlay');if(ov)ov.remove()}
+actions.rodarFoto=async(b)=>{
+ const proc=getProcesso(ui.params.processoId||ui.params.id);
+ const f=(proc.fotos||[]).find(x=>x.id===b.dataset.id);if(!f)return;
+ const blob=await idbGet(f.id);
+ const img=await fileToImage(blob);
+ const canvas=document.createElement('canvas');
+ canvas.width=img.height;canvas.height=img.width;
+ const ctx=canvas.getContext('2d');
+ ctx.translate(canvas.width/2,canvas.height/2);ctx.rotate(Math.PI/2);
+ ctx.drawImage(img,-img.width/2,-img.height/2);
+ const newBlob=await canvasToBlob(canvas,0.85);
+ await idbPut(f.id,newBlob);
+ if(photoUrlCache[f.id]){URL.revokeObjectURL(photoUrlCache[f.id]);delete photoUrlCache[f.id]}
+ const w=f.width,h=f.height;f.width=h;f.height=w;
+ f.orientacao=f.height>=f.width?'portrait':'landscape';
+ f.captionFlagRotacao=false;
+ touch(proc);saveNow();render();
+};
+actions.toggleCapa=(b)=>{
+ const proc=getProcesso(ui.params.processoId||ui.params.id);
+ const f=(proc.fotos||[]).find(x=>x.id===b.dataset.id);
+ const max=Number(app.settings.capaGridSize)||4;
+ if(!f.isCapa&&fotosCapa(proc).length>=max)return alert('Máximo de '+max+' fotos de capa (configurável em Configurações → Fotografias).');
+ f.isCapa=!f.isCapa;
+ touch(proc);saveNow();render();
+};
+actions.apagarFoto=async(b)=>{
+ if(!confirm('Eliminar esta fotografia?'))return;
+ const proc=getProcesso(b.dataset.processo);
+ await idbDel(b.dataset.id);
+ if(photoUrlCache[b.dataset.id]){URL.revokeObjectURL(photoUrlCache[b.dataset.id]);delete photoUrlCache[b.dataset.id]}
+ proc.fotos=proc.fotos.filter(f=>f.id!==b.dataset.id);
+ touch(proc);saveNow();render();
+};
+
+/* ---- Intervenientes / Funções / Siglas (tabelas globais, padrão "link e regressar") ---- */
+function returnLinkBtn(){
+ const rv=ui.params.returnView,rp=ui.params.returnParams;
+ if(!rv)return '';
+ return `<div class="actions one" style="margin-top:14px"><button type="button" data-action="navReturn" data-view="${rv}" data-params='${esc(JSON.stringify(rp||{}))}' data-backlen="${ui.params._backLen}">‹ Voltar ao formulário anterior</button></div>`;
+}
+function viewIntervenientes(){
+ return card('👥 Intervenientes', `
+  <div class="note">Tabela transversal a todos os processos: nome, contacto, e-mail e função.</div>
+  <div>${app.intervenientes.length?app.intervenientes.map(i=>`
+   <div class="item" data-action="navTo" data-view="intervenienteForm" data-params='${esc(JSON.stringify({id:i.id,returnView:ui.params.returnView,returnParams:ui.params.returnParams,_backLen:ui.params._backLen}))}'>
+    <b>${esc(i.nome)}</b>
+    <div class="meta">${esc(getFuncaoNome(i.funcaoId))} · ${esc(i.contacto||'—')} · ${esc(i.email||'—')}</div>
+   </div>`).join(''):'<div class="note">Ainda não há intervenientes.</div>'}</div>
+  <div class="actions"><button type="button" data-action="novoInterveniente">➕ Novo interveniente</button><button type="button" class="secondary" data-action="navTo" data-view="funcoes" data-params='${esc(JSON.stringify({}))}'>🏷️ Gerir funções</button></div>
+  ${returnLinkBtn()}
+ `);
+}
+actions.novoInterveniente=()=>{
+ const i={id:uid(),nome:'',contacto:'',email:'',funcaoId:app.funcoes[0]?app.funcoes[0].id:''};
+ app.intervenientes.push(i);saveNow();
+ nav('intervenienteForm',{id:i.id,returnView:ui.params.returnView,returnParams:ui.params.returnParams,_backLen:ui.params._backLen});
+};
+function viewIntervenienteForm(params){
+ const i=getInterveniente(params.id);if(!i)return '';
+ return card('👤 Interveniente', `
+  ${field('Nome','<input data-bind="nome" data-scope="interveniente" data-scope-id="'+i.id+'" value="'+esc(i.nome)+'">')}
+  ${field('Contacto','<input data-bind="contacto" data-scope="interveniente" data-scope-id="'+i.id+'" value="'+esc(i.contacto)+'">')}
+  ${field('E-mail','<input type="email" data-bind="email" data-scope="interveniente" data-scope-id="'+i.id+'" value="'+esc(i.email)+'">')}
+  ${field('Função',fieldWithLink(`<select data-bind="funcaoId" data-scope="interveniente" data-scope-id="${i.id}">${app.funcoes.map(f=>`<option value="${f.id}" ${i.funcaoId===f.id?'selected':''}>${esc(f.nome)}</option>`).join('')}</select>`,'gerir funções','funcoes',{}))}
+  <div class="actions one" style="margin-top:14px"><button type="button" class="danger" data-action="apagarInterveniente" data-id="${i.id}">🗑 Eliminar</button></div>
+  ${returnLinkBtn()}
+ `);
+}
+actions.apagarInterveniente=(b)=>{
+ if(!confirm('Eliminar este interveniente? Será removido de peritagens e eventos associados.'))return;
+ app.intervenientes=app.intervenientes.filter(i=>i.id!==b.dataset.id);
+ app.processos.forEach(p=>{
+  p.peritos=(p.peritos||[]).filter(pe=>pe.intervenienteId!==b.dataset.id);
+  (p.eventos||[]).forEach(e=>{e.presencas=(e.presencas||[]).filter(x=>x!==b.dataset.id)});
+ });
+ saveNow();back();
+};
+function viewFuncoes(){
+ return card('🏷️ Funções (Tab_Funções)', `
+  <div class="note">Ex.: Perito, Mandatário, Topógrafo. Editável e configurável.</div>
+  <div>${app.funcoes.map(f=>`
+   <div class="item">
+    <b>${esc(f.nome)}</b>
+    <div class="item-actions">
+     <button type="button" class="secondary" data-action="editarFuncao" data-id="${f.id}">✏️ Editar</button>
+     <button type="button" class="danger" data-action="apagarFuncao" data-id="${f.id}">🗑 Eliminar</button>
+    </div>
+   </div>`).join('')}</div>
+  <div class="row"><input id="novaFuncaoInput" placeholder="Nova função"><button type="button" data-action="novaFuncao">➕ Adicionar</button></div>
+  ${returnLinkBtn()}
+ `);
+}
+actions.novaFuncao=()=>{
+ const nome=$('novaFuncaoInput').value.trim();if(!nome)return;
+ app.funcoes.push({id:uid(),nome});
+ saveNow();render();
+};
+actions.editarFuncao=(b)=>{
+ const f=app.funcoes.find(x=>x.id===b.dataset.id);
+ const nome=prompt('Nome da função:',f.nome);if(!nome)return;
+ f.nome=nome;saveNow();render();
+};
+actions.apagarFuncao=(b)=>{
+ if(!confirm('Eliminar esta função?'))return;
+ app.funcoes=app.funcoes.filter(f=>f.id!==b.dataset.id);
+ saveNow();render();
+};
+function viewSiglas(){
+ return card('🔤 Siglas de questão', `
+  <div class="note">Ex.: Qs (Questão), Tm (Tema). Editável e configurável, usada nos cartões das questões.</div>
+  <div>${app.siglasQuestao.map(s=>`
+   <div class="item">
+    <b>${esc(s.sigla)} — ${esc(s.nome)}</b>
+    <div class="item-actions">
+     <button type="button" class="secondary" data-action="editarSigla" data-id="${s.id}">✏️ Editar</button>
+     <button type="button" class="danger" data-action="apagarSigla" data-id="${s.id}">🗑 Eliminar</button>
+    </div>
+   </div>`).join('')}</div>
+  <div class="row3"><input id="novaSiglaSigla" placeholder="Sigla (ex.: Qs)"><input id="novaSiglaNome" placeholder="Nome (ex.: Questão)"><button type="button" data-action="novaSigla">➕ Adicionar</button></div>
+  ${returnLinkBtn()}
+ `);
+}
+actions.novaSigla=()=>{
+ const sigla=$('novaSiglaSigla').value.trim(),nome=$('novaSiglaNome').value.trim();
+ if(!sigla||!nome)return;
+ app.siglasQuestao.push({id:uid(),sigla,nome});
+ saveNow();render();
+};
+actions.editarSigla=(b)=>{
+ const s=app.siglasQuestao.find(x=>x.id===b.dataset.id);
+ const sigla=prompt('Sigla:',s.sigla);if(sigla==null)return;
+ const nome=prompt('Nome:',s.nome);if(nome==null)return;
+ s.sigla=sigla;s.nome=nome;saveNow();render();
+};
+actions.apagarSigla=(b)=>{
+ if(app.siglasQuestao.length<=1)return alert('Tem de existir pelo menos uma sigla.');
+ if(!confirm('Eliminar esta sigla?'))return;
+ app.siglasQuestao=app.siglasQuestao.filter(s=>s.id!==b.dataset.id);
+ saveNow();render();
+};
+
+/* ---- Serviço solicitado (Tab_Servico) ---- */
+function viewServicos(){
+ return card('🧰 Serviço solicitado', `
+  <div class="note">Por defeito: Peritagem, Inspeção, Parecer técnico.</div>
+  <div>${app.servicos.map(s=>`
+   <div class="item">
+    <b>${esc(s.nome)}</b>
+    <div class="item-actions">
+     <button type="button" class="secondary" data-action="editarServico" data-id="${s.id}">✏️ Editar</button>
+     <button type="button" class="danger" data-action="apagarServico" data-id="${s.id}">🗑 Eliminar</button>
+    </div>
+   </div>`).join('')}</div>
+  <div class="row"><input id="novoServicoNome" placeholder="Novo serviço"><button type="button" data-action="novoServico">➕ Adicionar</button></div>
+  ${returnLinkBtn()}
+ `);
+}
+actions.novoServico=()=>{
+ const nome=$('novoServicoNome').value.trim();if(!nome)return;
+ app.servicos.push({id:uid(),nome});saveNow();render();
+};
+actions.editarServico=(b)=>{
+ const s=app.servicos.find(x=>x.id===b.dataset.id);
+ const nome=prompt('Nome:',s.nome);if(!nome)return;
+ s.nome=nome;saveNow();render();
+};
+actions.apagarServico=(b)=>{
+ if(app.servicos.length<=1)return alert('Tem de existir pelo menos um serviço.');
+ if(!confirm('Eliminar este serviço?'))return;
+ app.servicos=app.servicos.filter(s=>s.id!==b.dataset.id);
+ saveNow();render();
+};
+
+/* ---- Finalidade (Tab_Finalidade) ---- */
+function viewFinalidades(){
+ return card('🎯 Finalidade', `
+  <div class="note">Por defeito: Particular, Em contexto judicial.</div>
+  <div>${app.finalidades.map(f=>`
+   <div class="item">
+    <b>${esc(f.nome)}</b>
+    <div class="item-actions">
+     <button type="button" class="secondary" data-action="editarFinalidade" data-id="${f.id}">✏️ Editar</button>
+     <button type="button" class="danger" data-action="apagarFinalidade" data-id="${f.id}">🗑 Eliminar</button>
+    </div>
+   </div>`).join('')}</div>
+  <div class="row"><input id="novaFinalidadeNome" placeholder="Nova finalidade"><button type="button" data-action="novaFinalidade">➕ Adicionar</button></div>
+  ${returnLinkBtn()}
+ `);
+}
+actions.novaFinalidade=()=>{
+ const nome=$('novaFinalidadeNome').value.trim();if(!nome)return;
+ app.finalidades.push({id:uid(),nome});saveNow();render();
+};
+actions.editarFinalidade=(b)=>{
+ const f=app.finalidades.find(x=>x.id===b.dataset.id);
+ const nome=prompt('Nome:',f.nome);if(!nome)return;
+ f.nome=nome;saveNow();render();
+};
+actions.apagarFinalidade=(b)=>{
+ if(app.finalidades.length<=1)return alert('Tem de existir pelo menos uma finalidade.');
+ if(!confirm('Eliminar esta finalidade?'))return;
+ app.finalidades=app.finalidades.filter(f=>f.id!==b.dataset.id);
+ saveNow();render();
+};
+
+/* ---- Tipos de evento (tabela editável, "por defeito" = incrementável) ---- */
+function viewTiposEvento(){
+ return card('🏷️ Tipos de evento', `
+  <div class="note">Por defeito: Reunião, Visita, Informação. Pode acrescentar outros tipos. "Sem presenças" desliga o registo de presenças nesse tipo (ex.: Informação).</div>
+  <div>${app.tiposEvento.map(t=>`
+   <div class="item">
+    <b>${esc(t.nome)}</b> ${t.semPresencas?'<span class="pill end">sem presenças</span>':''}
+    <div class="item-actions">
+     <button type="button" class="secondary" data-action="editarTipoEvento" data-id="${t.id}">✏️ Editar</button>
+     <button type="button" class="danger" data-action="apagarTipoEvento" data-id="${t.id}">🗑 Eliminar</button>
+    </div>
+   </div>`).join('')}</div>
+  <div class="row"><input id="novoTipoEventoNome" placeholder="Novo tipo (ex.: Vistoria)"><button type="button" data-action="novoTipoEvento">➕ Adicionar</button></div>
+  ${returnLinkBtn()}
+ `);
+}
+actions.novoTipoEvento=()=>{
+ const nome=$('novoTipoEventoNome').value.trim();if(!nome)return;
+ app.tiposEvento.push({id:uid(),chave:nome.toLowerCase().replace(/\s+/g,'_'),nome,semPresencas:false});
+ saveNow();render();
+};
+actions.editarTipoEvento=(b)=>{
+ const t=app.tiposEvento.find(x=>x.id===b.dataset.id);
+ const nome=prompt('Nome do tipo de evento:',t.nome);if(!nome)return;
+ t.nome=nome;
+ t.semPresencas=confirm('Este tipo de evento NÃO regista presenças? (OK = sem presenças, Cancelar = com presenças)');
+ saveNow();render();
+};
+actions.apagarTipoEvento=(b)=>{
+ if(app.tiposEvento.length<=1)return alert('Tem de existir pelo menos um tipo de evento.');
+ if(!confirm('Eliminar este tipo de evento?'))return;
+ app.tiposEvento=app.tiposEvento.filter(t=>t.id!==b.dataset.id);
+ saveNow();render();
+};
+
+/* ---- Representações do perito (tabela editável) ---- */
+function viewRepresentacoes(){
+ return card('⚖️ Representações do perito', `
+  <div class="note">Por defeito: Parte A, Parte B, Nenhuma (coordenador). Marque a que deve ser proposta automaticamente ao adicionar um novo perito.</div>
+  <div>${app.representacoes.map(r=>`
+   <div class="item">
+    <b>${esc(r.nome)}</b> ${r.isDefault?'<span class="pill on">por defeito</span>':''}
+    <div class="item-actions">
+     <button type="button" class="secondary" data-action="defaultRepresentacao" data-id="${r.id}">${r.isDefault?'✓ Por defeito':'Tornar por defeito'}</button>
+     <button type="button" class="secondary" data-action="editarRepresentacao" data-id="${r.id}">✏️ Editar</button>
+     <button type="button" class="danger" data-action="apagarRepresentacao" data-id="${r.id}">🗑 Eliminar</button>
+    </div>
+   </div>`).join('')}</div>
+  <div class="row"><input id="novaRepresentacaoNome" placeholder="Nova representação"><button type="button" data-action="novaRepresentacao">➕ Adicionar</button></div>
+  ${returnLinkBtn()}
+ `);
+}
+actions.novaRepresentacao=()=>{
+ const nome=$('novaRepresentacaoNome').value.trim();if(!nome)return;
+ app.representacoes.push({id:uid(),nome});
+ saveNow();render();
+};
+actions.editarRepresentacao=(b)=>{
+ const r=app.representacoes.find(x=>x.id===b.dataset.id);
+ const nome=prompt('Nome:',r.nome);if(!nome)return;
+ r.nome=nome;saveNow();render();
+};
+actions.defaultRepresentacao=(b)=>{
+ app.representacoes.forEach(r=>{r.isDefault=(r.id===b.dataset.id)});
+ saveNow();render();
+};
+actions.apagarRepresentacao=(b)=>{
+ if(app.representacoes.length<=1)return alert('Tem de existir pelo menos uma representação.');
+ if(!confirm('Eliminar esta representação?'))return;
+ app.representacoes=app.representacoes.filter(r=>r.id!==b.dataset.id);
+ if(!app.representacoes.some(r=>r.isDefault))app.representacoes[0].isDefault=true;
+ saveNow();render();
+};
+
+/* ---- Resoluções de foto (tabela editável) ---- */
+function viewResolucoesFoto(){
+ return card('📷 Resoluções de fotografia', `
+  <div class="note">Por defeito: 300 KB por foto. Pode acrescentar outras opções (KB alvo) ou "original" para não comprimir.</div>
+  <div>${app.resolucoesFoto.map(r=>`
+   <div class="item">
+    <b>${esc(r.nome)}</b> ${r.isDefault?'<span class="pill on">por defeito</span>':''}
+    <div class="item-actions">
+     <button type="button" class="secondary" data-action="defaultResolucao" data-id="${r.id}">${r.isDefault?'✓ Por defeito':'Tornar por defeito'}</button>
+     <button type="button" class="danger" data-action="apagarResolucao" data-id="${r.id}">🗑 Eliminar</button>
+    </div>
+   </div>`).join('')}</div>
+  <div class="row"><input id="novaResolucaoKB" type="number" min="20" placeholder="KB (ex.: 400)"><button type="button" data-action="novaResolucao">➕ Adicionar</button></div>
+  ${returnLinkBtn()}
+ `);
+}
+actions.novaResolucao=()=>{
+ const kb=Number($('novaResolucaoKB').value);if(!kb||kb<10)return alert('Indique um valor em KB.');
+ app.resolucoesFoto.push({id:uid(),kb,nome:kb+' KB'});
+ saveNow();render();
+};
+actions.defaultResolucao=(b)=>{
+ app.resolucoesFoto.forEach(r=>{r.isDefault=(r.id===b.dataset.id)});
+ const r=app.resolucoesFoto.find(x=>x.id===b.dataset.id);
+ app.settings.fotoResolutionKB=r.kb;
+ saveNow();render();
+};
+actions.apagarResolucao=(b)=>{
+ if(app.resolucoesFoto.length<=1)return alert('Tem de existir pelo menos uma resolução.');
+ if(!confirm('Eliminar esta opção de resolução?'))return;
+ app.resolucoesFoto=app.resolucoesFoto.filter(r=>r.id!==b.dataset.id);
+ if(!app.resolucoesFoto.some(r=>r.isDefault))app.resolucoesFoto[0].isDefault=true;
+ saveNow();render();
+};
+
+/* ---- Ordem dos campos (Pedido / Processo / Questão) ---- */
+function kindLabel(kind){return {pedido:'Pedido',processo:'Processo',questao:'Questão'}[kind]||kind}
+function viewFieldOrder(){
+ return Object.keys(FIELD_DEFS).map(kind=>{
+  const order=app.settings.fieldOrder[kind];
+  const labelOf=k=>{const f=FIELD_DEFS[kind].find(x=>x[0]===k);return f?f[1]:k};
+  return card('↕️ '+kindLabel(kind), `
+   <div class="note">A sequência mais lógica de preenchimento muda por vezes ao acrescentar ou eliminar campos — ajuste aqui.</div>
+   ${order.map((k,i)=>`
+    <div class="order-row">
+     <span class="lbl">${i+1}. ${esc(labelOf(k))}</span>
+     <div class="order-btns">
+      <button type="button" data-action="moveFieldOrder" data-kind="${kind}" data-key="${k}" data-dir="up" ${i===0?'disabled':''}>▲</button>
+      <button type="button" data-action="moveFieldOrder" data-kind="${kind}" data-key="${k}" data-dir="down" ${i===order.length-1?'disabled':''}>▼</button>
+     </div>
+    </div>`).join('')}
+  `);
+ }).join('')+`<div class="actions one"><button type="button" class="secondary" data-action="resetFieldOrder">↺ Repor ordem por defeito</button></div>`+returnLinkBtn();
+}
+actions.moveFieldOrder=(b)=>{
+ const kind=b.dataset.kind,key=b.dataset.key,dir=b.dataset.dir;
+ const arr=app.settings.fieldOrder[kind];
+ const i=arr.indexOf(key);if(i<0)return;
+ const j=dir==='up'?i-1:i+1;
+ if(j<0||j>=arr.length)return;
+ [arr[i],arr[j]]=[arr[j],arr[i]];
+ saveNow();render();
+};
+actions.resetFieldOrder=()=>{
+ if(!confirm('Repor a ordem por defeito dos campos em todos os formulários?'))return;
+ app.settings.fieldOrder=defaultFieldOrder();
+ saveNow();render();
+};
+
+/* ===================== Configurações ===================== */
+function viewSettings(){
+ const s=app.settings;
+ return `
+ <div class="block-title">🔧 Geral</div>
+ ${card('Versão / release', `
+  ${field('Release apresentada no menu principal','<input data-bind="release" data-scope="settings" value="'+esc(s.release)+'">')}
+ `)}
+ ${card('Fotografias', `
+  <div class="note">Grelha associada a cada questão. Por defeito: 2 colunas, orientação retrato.</div>
+  ${field('Colunas da grelha de fotos (1 a 5)',`<select data-bind="fotoGridCols" data-scope="settings">${[1,2,3,4,5].map(n=>`<option value="${n}" ${s.fotoGridCols==n?'selected':''}>${n} coluna(s)</option>`).join('')}</select>`)}
+  ${field('Orientação predominante por defeito',`<select data-bind="fotoOrientacaoDefault" data-scope="settings"><option value="retrato" ${s.fotoOrientacaoDefault==='retrato'?'selected':''}>Retrato</option><option value="paisagem" ${s.fotoOrientacaoDefault==='paisagem'?'selected':''}>Paisagem</option></select>`)}
+  ${field('Resolução alvo por foto',fieldWithLink(`<select data-bind="fotoResolutionKB" data-scope="settings">${app.resolucoesFoto.map(r=>`<option value="${r.kb}" ${String(s.fotoResolutionKB)===String(r.kb)?'selected':''}>${esc(r.nome)}${r.isDefault?' (por defeito)':''}</option>`).join('')}</select>`,'gerir opções de resolução','resolucoesFoto',{}))}
+  ${field('Nº de fotos na grelha de capa (por defeito)','<input type="number" min="1" max="8" data-bind="capaGridSize" data-scope="settings" value="'+s.capaGridSize+'">','se faltarem fotos marcadas para capa, o resto é preenchido aleatoriamente a partir das restantes')}
+ `)}
+ ${card('Ordem dos campos nos formulários', `<div class="note">A ordem em que os campos aparecem no Pedido, Processo e Questão pode ser ajustada à sequência de preenchimento que for mais lógica.</div><div class="actions one">${linkBtn('↕️ Gerir ordem dos campos','fieldOrder',{})}</div>`)}
+ ${card('Tabela de siglas de questão', `<div class="actions one">${linkBtn('🔤 Gerir siglas (Qs, Tm, ...)','siglas',{})}</div>`)}
+ ${card('Funções, intervenientes e tabelas do processo', `<div class="actions">${linkBtn('🏷️ Gerir funções','funcoes',{})}${linkBtn('👥 Gerir intervenientes','intervenientes',{})}</div><div class="actions">${linkBtn('⚖️ Gerir representações','representacoes',{})}${linkBtn('🗓️ Gerir tipos de evento','tiposEvento',{})}</div>`)}
+ ${card('Tabelas do pedido', `<div class="actions">${linkBtn('🧰 Gerir serviço solicitado','servicos',{})}${linkBtn('🎯 Gerir finalidades','finalidades',{})}</div>`)}
+ ${card('Dados e segurança', `
+  <div class="status">Backup_OUT: exporta um ZIP com todos os dados e fotografias. Backup_IN: restaura esse ZIP noutro dispositivo.</div>
+  <div class="actions"><button type="button" id="backupOutBtn" data-action="backupOut">⬇️ Backup_OUT</button><button type="button" class="secondary" data-action="backupInTrigger">⬆️ Backup_IN</button></div>
+  <input type="file" id="backupInFile" accept=".zip" hidden>
+  <div id="backupState" class="status">Pronto.</div>
+  <details><summary>Operação de risco</summary><div class="actions one"><button type="button" class="danger" data-action="apagarTudo">🗑 Eliminar todos os dados locais</button></div></details>
+ `)}
+
+ <div class="block-title">🗂️ Layout da página</div>
+ ${card('Layout geral (PDF/Word)', `
+  <div class="row">
+   <div>${field('Tamanho de página',`<select data-bind="layout.pageSize" data-scope="settings"><option value="a4" ${s.layout.pageSize==='a4'?'selected':''}>A4</option></select>`)}</div>
+   <div>${field('Fonte',`<select data-bind="layout.font" data-scope="settings"><option value="helvetica" ${s.layout.font==='helvetica'?'selected':''}>Helvetica</option><option value="courier" ${s.layout.font==='courier'?'selected':''}>Courier</option><option value="times" ${s.layout.font==='times'?'selected':''}>Times</option></select>`)}</div>
+  </div>
+  ${field('Tamanho da fonte (pt)','<input type="number" min="6" max="18" step="0.5" data-bind="layout.fontSize" data-scope="settings" value="'+s.layout.fontSize+'">')}
+  <label>Margens (cm)</label>
+  <div class="row3">
+   <div>${field('Esquerda','<input type="number" step="0.1" data-bind="layout.marginLeft" data-scope="settings" value="'+s.layout.marginLeft+'">')}</div>
+   <div>${field('Topo','<input type="number" step="0.1" data-bind="layout.marginTop" data-scope="settings" value="'+s.layout.marginTop+'">')}</div>
+   <div>${field('Direita','<input type="number" step="0.1" data-bind="layout.marginRight" data-scope="settings" value="'+s.layout.marginRight+'">')}</div>
+  </div>
+  ${field('Inferior','<input type="number" step="0.1" data-bind="layout.marginBottom" data-scope="settings" value="'+s.layout.marginBottom+'">')}
+ `)}
+
+ <div class="block-title">📋 Conteúdo de cabeçalho</div>
+ ${card('Cabeçalho', `
+  ${field('Linha 1 (texto fixo)','<input data-bind="cabecalho.linha1" data-scope="settings" value="'+esc(s.cabecalho.linha1)+'">')}
+  <div class="row">
+   <div>${field('Tamanho (pt)','<input type="number" min="5" max="18" step="0.5" data-bind="cabecalho.tamanho" data-scope="settings" value="'+s.cabecalho.tamanho+'">')}</div>
+   <div><label class="inline"><input type="checkbox" data-bind-immediate data-bind="cabecalho.negrito" data-scope="settings" ${s.cabecalho.negrito?'checked':''}> Negrito</label></div>
+  </div>
+  <div class="note">Linha 2 mostra automaticamente o código do processo em cada documento gerado.</div>
+ `)}
+
+ <div class="block-title">📋 Conteúdo de rodapé</div>
+ ${card('Rodapé', `
+  <div class="row3">
+   <div>${field('Esquerda','<input data-bind="rodape.esquerda" data-scope="settings" value="'+esc(s.rodape.esquerda)+'">')}</div>
+   <div>${field('Centro','<input data-bind="rodape.centro" data-scope="settings" value="'+esc(s.rodape.centro)+'">')}</div>
+   <div>${field('Direita','<input data-bind="rodape.direita" data-scope="settings" value="'+esc(s.rodape.direita)+'">')}</div>
+  </div>
+  ${field('Tamanho (pt)','<input type="number" min="5" max="14" step="0.5" data-bind="rodape.tamanho" data-scope="settings" value="'+s.rodape.tamanho+'">')}
+  <div class="note">Marcadores disponíveis: {processo} {pagina} {paginas} {data}</div>
+ `)}
+ `;
+}
+actions.backupOut=async(b)=>{
+ const st=$('backupState');st.textContent='A preparar ZIP...';
+ try{
+  const zip=new JSZip();
+  zip.file('dados.json',JSON.stringify(app,null,2));
+  const fotos=zip.folder('fotos');
+  const allProcFotos=app.processos.flatMap(p=>p.fotos||[]);
+  for(const f of allProcFotos){
+   const blob=await idbGet(f.id);
+   if(blob)fotos.file(f.id+'.jpg',blob);
+  }
+  const blob=await zip.generateAsync({type:'blob'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='PeriGest_backup_'+todayISO()+'.zip';document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),4000);
+  st.textContent='Backup_OUT concluído: '+allProcFotos.length+' foto(s) incluída(s).';
+ }catch(err){console.error(err);st.textContent='Erro no Backup_OUT: '+(err.message||err)}
+};
+actions.backupInTrigger=()=>$('backupInFile').click();
+document.addEventListener('change',async e=>{
+ if(e.target.id!=='backupInFile')return;
+ const file=e.target.files[0];if(!file)return;
+ if(!confirm('Restaurar esta cópia substitui os dados atuais. Continuar?'))return;
+ const st=$('backupState');st.textContent='A restaurar...';
+ try{
+  const zip=await JSZip.loadAsync(file);
+  const json=await zip.file('dados.json').async('text');
+  const restored=JSON.parse(json);
+  const fotosFolder=zip.folder('fotos');
+  const files=fotosFolder?Object.keys(fotosFolder.files).filter(n=>!fotosFolder.files[n].dir):[];
+  for(const name of files){
+   const entry=zip.file(name);
+   if(!entry)continue;
+   const id=name.split('/').pop().replace('.jpg','');
+   const blob=await entry.async('blob');
+   await idbPut(id,blob);
+  }
+  app=restored;saveNow();
+  Object.keys(photoUrlCache).forEach(k=>{URL.revokeObjectURL(photoUrlCache[k]);delete photoUrlCache[k]});
+  st.textContent='Backup_IN concluído: '+files.length+' foto(s) restaurada(s).';
+  goHome();
+ }catch(err){console.error(err);st.textContent='Erro no Backup_IN: '+(err.message||err)}
+ e.target.value='';
+});
+actions.apagarTudo=async()=>{
+ if(!confirm('Eliminar TODOS os dados locais (pedidos, processos, fotos)? Esta ação não pode ser revertida sem um Backup_OUT prévio.'))return;
+ app=defaultState();saveNow();
+ const d=await idb();
+ await new Promise((res,rej)=>{const tx=d.transaction(STORE,'readwrite');tx.objectStore(STORE).clear();tx.oncomplete=res;tx.onerror=()=>rej(tx.error)});
+ Object.keys(photoUrlCache).forEach(k=>{URL.revokeObjectURL(photoUrlCache[k]);delete photoUrlCache[k]});
+ goHome();
+};
+
+/* ===================== Exportação PDF / Word / ZIP ===================== */
+function fillFooterTemplate(tpl,ctx){
+ return String(tpl||'').replace(/\{processo\}/g,ctx.processo||'').replace(/\{pagina\}/g,ctx.pagina||'').replace(/\{paginas\}/g,ctx.paginas||'').replace(/\{data\}/g,ctx.data||'');
+}
+/* ---- Auxiliares de imagem (fotos → dataURL para jsPDF / docx) ---- */
+function blobToDataUrl(blob){
+ return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(blob)});
+}
+function imageDimsFromDataUrl(dataUrl){
+ return new Promise((res,rej)=>{const img=new Image();img.onload=()=>res({w:img.naturalWidth,h:img.naturalHeight});img.onerror=rej;img.src=dataUrl});
+}
+async function loadPhotoForDoc(fotoId){
+ const blob=await idbGet(fotoId);
+ if(!blob)return null;
+ return await blobToDataUrl(blob);
+}
+
+/* ---- PDF: Capa (opc.) / Resumo+Cronologia (opc.) / A-Histórico de Análise (defeito) / B-Draft de relatório (defeito) ---- */
+async function buildResumoPdf(proc,cfg){
+ if(!(window.jspdf&&window.jspdf.jsPDF))throw new Error('O gerador de PDF ainda não carregou. Verifique a ligação à internet.');
+ cfg=cfg||ensureExportConfig(proc);
+ const {jsPDF}=window.jspdf;
+ const s=app.settings,L=s.layout;
+ const doc=new jsPDF({unit:'mm',format:L.pageSize||'a4'});
+ const F=L.font||'helvetica',BS=Number(L.fontSize)||10;
+ const mL=(Number(L.marginLeft)||2)*10,mT=(Number(L.marginTop)||2)*10,mR=(Number(L.marginRight)||1.5)*10,mB=(Number(L.marginBottom)||1.5)*10;
+ const pageW=doc.internal.pageSize.getWidth(),pageH=doc.internal.pageSize.getHeight(),contentW=pageW-mL-mR;
+ const cols=Math.max(1,Math.min(5,Number(cfg.cols)||app.settings.fotoGridCols||2));
+ let y=mT,currentTitulo='';
+ const drawHeader=()=>{
+  doc.setFont(F,s.cabecalho.negrito?'bold':'normal');doc.setFontSize(s.cabecalho.tamanho||9);
+  doc.text(s.cabecalho.linha1||'PeriGest',mL,mT-6);
+  doc.text((proc.codigo||'')+(currentTitulo?' · '+currentTitulo:''),pageW-mR,mT-6,{align:'right'});
+  doc.setDrawColor(180);doc.line(mL,mT-3,pageW-mR,mT-3);
+ };
+ const newPage=()=>{doc.addPage();drawHeader();y=mT+6};
+ const ensure=(needed)=>{if(y+needed>pageH-mB)newPage()};
+ const setTitulo=(t)=>{currentTitulo=t};
+ drawHeader();y=mT+6;
+
+ // parágrafo: justificado, salvo quando cabe numa só linha (alinhado à esquerda nesse caso)
+ const writeParagraph=(text,fontSize,x,w)=>{
+  doc.setFont(F,'normal');doc.setFontSize(fontSize);
+  const lines=doc.splitTextToSize(String(text||''),w);
+  const lineH=fontSize*0.45+1.1;
+  lines.forEach((line,i)=>{
+   ensure(lineH);
+   const isLast=i===lines.length-1;
+   if(!isLast&&lines.length>1)doc.text(line,x,y,{align:'justify',maxWidth:w});
+   else doc.text(line,x,y);
+   y+=lineH;
+  });
+ };
+ const sectionTitle=(t)=>{ensure(12);doc.setFont(F,'bold');doc.setFontSize(BS+8);doc.text(t,mL,y);y+=10};
+ const label=(t)=>{ensure(6);doc.setFont(F,'bold');doc.setFontSize(BS);doc.text(t,mL,y);y+=6};
+ const plain=(t,sz)=>{doc.setFont(F,'normal');doc.setFontSize(sz||BS);const w=doc.splitTextToSize(t,contentW);ensure(w.length*(sz||BS)*0.45+2);doc.text(w,mL,y);y+=w.length*(sz||BS)*0.45+2};
+ const kv=(k,v)=>plain(`${k}: ${v||'—'}`);
+
+ const drawPhotoGrid=async(fotos)=>{
+  if(!fotos.length)return;
+  const gap=4,cellW=(contentW-gap*(cols-1))/cols,cellH=cellW*0.8,capH=8;
+  for(let i=0;i<fotos.length;i+=cols){
+   const row=fotos.slice(i,i+cols);
+   ensure(cellH+capH+4);
+   for(let c=0;c<row.length;c++){
+    const f=row[c],cx=mL+c*(cellW+gap);
+    try{
+     const dataUrl=await loadPhotoForDoc(f.id);
+     if(dataUrl){
+      const dim=await imageDimsFromDataUrl(dataUrl);
+      let dw=cellW,dh=cellW*(dim.h/dim.w);
+      if(dh>cellH){dh=cellH;dw=cellH*(dim.w/dim.h)}
+      doc.addImage(dataUrl,'JPEG',cx+(cellW-dw)/2,y+(cellH-dh)/2,dw,dh);
+     }
+    }catch(e){/* foto ilegível — ignora e segue */}
+    doc.setFont(F,'normal');doc.setFontSize(Math.max(6,BS-2));
+    const capText=photoFileName(proc,f).replace(/\.jpg$/,'')+(f.caption?' — '+f.caption:'');
+    doc.text(doc.splitTextToSize(capText,cellW).slice(0,2),cx,y+cellH+4);
+   }
+   y+=cellH+capH+4;
+  }
+ };
+
+ // bloco de questão: "------" / Autor / Questão / "Resposta" / entradas indentadas e justificadas / fotos no fim
+ const drawQuestionBlock=async(q,a,entradas,semFotoAviso)=>{
+  ensure(8);
+  doc.setFont(F,'normal');doc.setFontSize(BS);
+  doc.text('------------------------------------------------------------',mL,y);y+=6;
+  doc.setFont(F,'bold');doc.setFontSize(BS);
+  doc.text(`Autor ${a.ordem} — ${a.nome}`,mL,y);y+=6;
+  const titulo=doc.splitTextToSize(questaoTitulo(q,a),contentW);
+  ensure(titulo.length*BS*0.45+2);doc.text(titulo,mL,y);y+=titulo.length*BS*0.45+3;
+  label('Resposta');
+  const indent=6;
+  if(!entradas.length){
+   doc.setFont(F,'italic');doc.setFontSize(BS);ensure(6);doc.text('(sem resposta registada)',mL+indent,y);y+=6;
+  }
+  entradas.forEach(en=>{
+   if(en.titulo){doc.setFont(F,'bold');doc.setFontSize(Math.max(6,BS-1));ensure(5);doc.text(en.titulo,mL+indent,y);y+=5}
+   writeParagraph(en.texto,BS,mL+indent,contentW-indent);
+   y+=2;
+  });
+  if(semFotoAviso){
+   doc.setFont(F,'italic');doc.setFontSize(Math.max(6,BS-1));doc.setTextColor(160,40,40);
+   ensure(6);doc.text('⚠ Esta questão não tem fotografias associadas.',mL+indent,y);y+=6;
+   doc.setTextColor(0);
+  }
+  if(cfg.fotos)await drawPhotoGrid(fotosDaQuestao(proc,q.id));
+ };
+
+ if(cfg.capa){
+  setTitulo('Capa');
+  sectionTitle('Capa de processo');
+  [['Código de processo',proc.codigo],['Nº processo',proc.numero],['Solicitante institucional',proc.solicitanteInstitucional],['Designação',proc.designacaoInstitucional],['Local',proc.local]].forEach(([k,v])=>kv(k,v));
+  y+=4;
+  if(cfg.fotos)await drawPhotoGrid(capaPhotosForExport(proc));
+  newPage();
+ }
+ if(cfg.resumoCronologia){
+  setTitulo('Resumo e cronologia');
+  sectionTitle('Resumo do processo');
+  [['Código de processo',proc.codigo],['Nº processo',proc.numero],['Solicitante institucional',proc.solicitanteInstitucional],['Designação',proc.designacaoInstitucional],['Designação TAG',proc.designacaoTag],['Local',proc.local],['Resumo dos Temas de análise',proc.assunto]].forEach(([k,v])=>kv(k,v));
+  y+=3;label('Peritos');
+  const peritos=peritosDoProcesso(proc);
+  if(!peritos.length)plain('—');
+  peritos.forEach(p=>plain(`${p.interveniente.nome} — ${representacaoNome(p.representacaoId)}`));
+  y+=3;label('Cronologia (eventos e alterações)');
+  const log=(proc.log||[]).slice().sort((a2,b2)=>String(a2.at).localeCompare(String(b2.at)));
+  if(!log.length)plain('Sem registos.');
+  log.forEach(e=>plain(`${new Date(e.at).toLocaleString('pt-PT')} — ${e.msg}`,Math.max(6,BS-1)));
+  newPage();
+ }
+ if(cfg.listaAnalise){
+  setTitulo('Histórico de Análise');
+  sectionTitle('A — Histórico de Análise às questões colocadas');
+  const emAnalise=questoesOrdenadas(proc).filter(x=>x.q.fase!=='relatorio');
+  if(!emAnalise.length)plain('Sem questões em análise.');
+  for(let i=0;i<emAnalise.length;i++){
+   const {q,a}=emAnalise[i];
+   if(i>0)newPage();
+   const hist=(q.historico&&q.historico.length)?q.historico:peritosDoProcesso(proc).map(p=>({intervenienteId:p.intervenienteId,texto:(q.respostas&&q.respostas[p.intervenienteId])||'',data:null})).filter(e=>e.texto&&e.texto.trim());
+   const entradas=hist.slice().sort((x,y2)=>String(x.data||'').localeCompare(String(y2.data||''))).map(h=>{
+    const iv=getInterveniente(h.intervenienteId);
+    return {titulo:`${iv?iv.nome:'—'}${h.data?' — '+h.data:''}:`,texto:h.texto};
+   });
+   await drawQuestionBlock(q,a,entradas,fotosDaQuestao(proc,q.id).length===0);
+  }
+  newPage();
+ }
+ if(cfg.listaDraft){
+  setTitulo('Draft de relatório');
+  sectionTitle('B — Draft de relatório (questões já fechadas)');
+  const fechadas=questoesOrdenadas(proc).filter(x=>x.q.fase==='relatorio');
+  if(!fechadas.length)plain('Ainda nenhuma questão conciliada.');
+  for(let i=0;i<fechadas.length;i++){
+   const {q,a}=fechadas[i];
+   if(i>0)newPage();
+   await drawQuestionBlock(q,a,[{titulo:'',texto:q.conciliada.texto||'(sem texto conciliado)'}],fotosDaQuestao(proc,q.id).length===0);
+  }
+ }
+
+ const total=doc.internal.getNumberOfPages();
+ const drawFooter=(p,tot)=>{
+  const ctx={processo:proc.codigo,pagina:String(p),paginas:String(tot),data:new Date().toLocaleDateString('pt-PT')};
+  doc.setFont(F,'normal');doc.setFontSize(s.rodape.tamanho||8);doc.setTextColor(90);
+  const fy=pageH-mB+8;
+  doc.text(fillFooterTemplate(s.rodape.esquerda,ctx),mL,fy);
+  doc.text(fillFooterTemplate(s.rodape.centro,ctx),pageW/2,fy,{align:'center'});
+  doc.text(fillFooterTemplate(s.rodape.direita,ctx),pageW-mR,fy,{align:'right'});
+  doc.setTextColor(0);
+ };
+ for(let p=1;p<=total;p++){doc.setPage(p);drawFooter(p,total)}
+ return doc.output('blob');
+}
+
+/* ---- Word: mesma estrutura A/B, mesmas secções opcionais aceites no preview ---- */
+async function buildResumoDocx(proc,cfg){
+ cfg=cfg||ensureExportConfig(proc);
+ const zip=new JSZip();
+ const s=app.settings,F=(s.layout.font==='courier'?'Courier New':s.layout.font==='times'?'Times New Roman':'Calibri');
+ const szBody=(Number(s.layout.fontSize)||10)*2,szTitle=szBody+16,szHead=szBody+6,szSmall=Math.max(12,szBody-4);
+ const cm2tw=v=>Math.round((Number(v)||0)*566.9);
+ const mL=cm2tw(s.layout.marginLeft),mT=cm2tw(s.layout.marginTop),mR=cm2tw(s.layout.marginRight),mB=cm2tw(s.layout.marginBottom);
+ const pgW=11906,pgH=16838;
+ const contentTwips=pgW-mL-mR,contentCm=contentTwips/566.9;
+ const cols=Math.max(1,Math.min(5,Number(cfg.cols)||app.settings.fotoGridCols||2));
+
+ // medição de quebra de linha (reaproveita jsPDF só para decidir justificar vs alinhar à esquerda)
+ let willWrap=()=>false;
+ if(window.jspdf&&window.jspdf.jsPDF){
+  const measureDoc=new window.jspdf.jsPDF({unit:'mm'});
+  measureDoc.setFont(s.layout.font||'helvetica','normal');measureDoc.setFontSize(Number(s.layout.fontSize)||10);
+  const contentWmm=contentCm*10;
+  willWrap=(text)=>measureDoc.splitTextToSize(String(text||''),Math.max(10,contentWmm-6)).length>1;
+ }
+
+ const run=(text,o)=>{o=o||{};let rpr='<w:rPr>';if(o.font)rpr+='<w:rFonts w:ascii="'+o.font+'" w:hAnsi="'+o.font+'"/>';if(o.bold)rpr+='<w:b/>';if(o.italic)rpr+='<w:i/>';if(o.color)rpr+='<w:color w:val="'+o.color+'"/>';rpr+='<w:sz w:val="'+(o.size||szBody)+'"/></w:rPr>';return '<w:r>'+rpr+'<w:t xml:space="preserve">'+esc(text)+'</w:t></w:r>'};
+ const para=(inner,o)=>{o=o||{};let ppr='<w:pPr>';if(o.align)ppr+='<w:jc w:val="'+o.align+'"/>';if(o.indent)ppr+='<w:ind w:left="'+o.indent+'"/>';ppr+='<w:spacing w:after="'+(o.after!=null?o.after:120)+'"/></w:pPr>';return '<w:p>'+ppr+inner+'</w:p>'};
+ const paraAuto=(text,o)=>{o=o||{};const align=willWrap(text)?'both':'left';return para(run(text,{font:F,size:szBody}),{align,indent:o.indent,after:o.after!=null?o.after:140})};
+ const parts=[];
+ const pageBreak=()=>parts.push('<w:p><w:r><w:br w:type="page"/></w:r></w:p>');
+
+ let mediaIdx=0,relIdx=1,drawingId=0;
+ const mediaRels=[];
+ const addImagePart=async(fotoId)=>{
+  const blob=await idbGet(fotoId);
+  if(!blob)return null;
+  mediaIdx++;const name='image'+mediaIdx+'.jpg';
+  zip.file('word/media/'+name,blob);
+  relIdx++;const rId='rIdImg'+relIdx;
+  mediaRels.push({rId,name});
+  const dataUrl=await blobToDataUrl(blob);
+  const dim=await imageDimsFromDataUrl(dataUrl);
+  return {rId,width:dim.w,height:dim.h};
+ };
+ const imageParagraph=(img,maxCmW,maxCmH)=>{
+  if(!img)return para(run('⚠ Imagem indisponível',{font:F,size:szSmall,color:'a02020'}),{after:80});
+  drawingId++;
+  let wCm=maxCmW,hCm=maxCmW*(img.height/img.width);
+  if(hCm>maxCmH){hCm=maxCmH;wCm=maxCmH*(img.width/img.height)}
+  const wEmu=Math.round(wCm*360000),hEmu=Math.round(hCm*360000);
+  const drawing='<w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="'+wEmu+'" cy="'+hEmu+'"/><wp:docPr id="'+drawingId+'" name="Imagem'+drawingId+'"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="'+drawingId+'" name="Imagem'+drawingId+'"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="'+img.rId+'"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+wEmu+'" cy="'+hEmu+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>';
+  return para(drawing,{after:60,align:'center'});
+ };
+ const photoTable=(cellsXml,ncols,colCm)=>{
+  let rows='';
+  for(let i=0;i<cellsXml.length;i+=ncols){
+   const rowCells=cellsXml.slice(i,i+ncols);
+   while(rowCells.length<ncols)rowCells.push(para('',{after:0}));
+   rows+='<w:tr>'+rowCells.map(c=>'<w:tc><w:tcPr><w:tcW w:w="'+Math.round(colCm*566.9)+'" w:type="dxa"/><w:tcBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/></w:tcBorders></w:tcPr>'+c+'</w:tc>').join('')+'</w:tr>';
+  }
+  return '<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/><w:tblLayout w:type="fixed"/></w:tblPr>'+rows+'</w:tbl>';
+ };
+ const photoBlock=async(fotos)=>{
+  if(!fotos.length)return;
+  const colCm=Math.max(1.5,(contentCm-0.2*(cols-1))/cols);
+  const cells=[];
+  for(const f of fotos){
+   const img=await addImagePart(f.id);
+   const capText=photoFileName(proc,f).replace(/\.jpg$/,'')+(f.caption?' — '+f.caption:'');
+   cells.push(imageParagraph(img,Math.max(1,colCm-0.2),6)+para(run(capText,{font:F,size:szSmall,color:'5a5a5a'}),{align:'center',after:60}));
+  }
+  parts.push(photoTable(cells,cols,colCm));
+  parts.push(para('',{after:160}));
+ };
+
+ const drawQuestionBlockDocx=async(q,a,entradas,semFotoAviso)=>{
+  parts.push(para(run('------------------------------------------------------------',{font:F,size:szSmall,color:'888888'}),{after:60}));
+  parts.push(para(run(`Autor ${a.ordem} — ${a.nome}`,{bold:true,font:F}),{after:40}));
+  parts.push(para(run(questaoTitulo(q,a),{bold:true,font:F}),{after:80}));
+  parts.push(para(run('Resposta',{bold:true,font:F}),{after:60}));
+  if(!entradas.length)parts.push(para(run('(sem resposta registada)',{font:F,italic:true}),{indent:280,after:120}));
+  entradas.forEach(en=>{
+   if(en.titulo)parts.push(para(run(en.titulo,{bold:true,font:F,size:szSmall}),{indent:280,after:40}));
+   parts.push(paraAuto(en.texto,{indent:280,after:140}));
+  });
+  if(semFotoAviso)parts.push(para(run('⚠ Esta questão não tem fotografias associadas.',{font:F,italic:true,color:'a02020',size:szSmall}),{indent:280,after:120}));
+  if(cfg.fotos)await photoBlock(fotosDaQuestao(proc,q.id));
+ };
+
+ parts.push(para(run(proc.codigo||'',{bold:true,font:F,size:szTitle}),{after:120}));
+
+ if(cfg.capa){
+  parts.push(para(run('Capa de processo',{bold:true,font:F,size:szHead}),{after:160}));
+  [['Código de processo',proc.codigo],['Nº processo',proc.numero],['Solicitante institucional',proc.solicitanteInstitucional],['Designação',proc.designacaoInstitucional],['Local',proc.local]].forEach(([k,v])=>{
+   parts.push(para(run(k+': ',{bold:true,font:F})+run(String(v||'—'),{font:F})));
+  });
+  if(cfg.fotos)await photoBlock(capaPhotosForExport(proc));
+  pageBreak();
+ }
+ if(cfg.resumoCronologia){
+  parts.push(para(run('Resumo do processo',{bold:true,font:F,size:szHead}),{after:120}));
+  [['Código de processo',proc.codigo],['Nº processo',proc.numero],['Solicitante institucional',proc.solicitanteInstitucional],['Designação',proc.designacaoInstitucional],['Designação TAG',proc.designacaoTag],['Local',proc.local],['Resumo dos Temas de análise',proc.assunto]].forEach(([k,v])=>{
+   parts.push(para(run(k+': ',{bold:true,font:F})+run(String(v||'—'),{font:F})));
+  });
+  parts.push(para(run('Peritos',{bold:true,font:F,size:szHead}),{after:100}));
+  const peritos=peritosDoProcesso(proc);
+  if(!peritos.length)parts.push(para(run('—',{font:F})));
+  peritos.forEach(p=>parts.push(para(run(p.interveniente.nome+' — '+representacaoNome(p.representacaoId),{font:F}))));
+  parts.push(para(run('Cronologia (eventos e alterações)',{bold:true,font:F,size:szHead}),{after:100}));
+  const log=(proc.log||[]).slice().sort((a2,b2)=>String(a2.at).localeCompare(String(b2.at)));
+  if(!log.length)parts.push(para(run('Sem registos.',{font:F})));
+  log.forEach(e=>parts.push(para(run(`${new Date(e.at).toLocaleString('pt-PT')} — ${e.msg}`,{font:F,size:szSmall}),{after:40})));
+  pageBreak();
+ }
+ if(cfg.listaAnalise){
+  parts.push(para(run('A — Histórico de Análise às questões colocadas',{bold:true,font:F,size:szTitle}),{after:180}));
+  const emAnalise=questoesOrdenadas(proc).filter(x=>x.q.fase!=='relatorio');
+  if(!emAnalise.length)parts.push(para(run('Sem questões em análise.',{font:F})));
+  for(let i=0;i<emAnalise.length;i++){
+   const {q,a}=emAnalise[i];
+   if(i>0)pageBreak();
+   const hist=(q.historico&&q.historico.length)?q.historico:peritosDoProcesso(proc).map(p=>({intervenienteId:p.intervenienteId,texto:(q.respostas&&q.respostas[p.intervenienteId])||'',data:null})).filter(e=>e.texto&&e.texto.trim());
+   const entradas=hist.slice().sort((x,y2)=>String(x.data||'').localeCompare(String(y2.data||''))).map(h=>{
+    const iv=getInterveniente(h.intervenienteId);
+    return {titulo:`${iv?iv.nome:'—'}${h.data?' — '+h.data:''}:`,texto:h.texto};
+   });
+   await drawQuestionBlockDocx(q,a,entradas,fotosDaQuestao(proc,q.id).length===0);
+  }
+  pageBreak();
+ }
+ if(cfg.listaDraft){
+  parts.push(para(run('B — Draft de relatório (questões já fechadas)',{bold:true,font:F,size:szTitle}),{after:180}));
+  const fechadas=questoesOrdenadas(proc).filter(x=>x.q.fase==='relatorio');
+  if(!fechadas.length)parts.push(para(run('Ainda nenhuma questão conciliada.',{font:F})));
+  for(let i=0;i<fechadas.length;i++){
+   const {q,a}=fechadas[i];
+   if(i>0)pageBreak();
+   await drawQuestionBlockDocx(q,a,[{titulo:'',texto:q.conciliada.texto||'(sem texto conciliado)'}],fotosDaQuestao(proc,q.id).length===0);
+  }
+ }
+
+ const documentXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:body>'
+  +parts.join('')
+  +'<w:sectPr><w:pgSz w:w="'+pgW+'" w:h="'+pgH+'"/><w:pgMar w:top="'+mT+'" w:right="'+mR+'" w:bottom="'+mB+'" w:left="'+mL+'"/></w:sectPr></w:body></w:document>';
+ zip.file('word/document.xml',documentXml);
+ const imgContentType=mediaRels.length?'<Default Extension="jpg" ContentType="image/jpeg"/>':'';
+ zip.file('[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>'+imgContentType+'<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
+ zip.file('_rels/.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
+ const imgRels=mediaRels.map(m=>`<Relationship Id="${m.rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${m.name}"/>`).join('');
+ zip.file('word/_rels/document.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+imgRels+'</Relationships>');
+ return await zip.generateAsync({type:'blob'});
+}
+function shareOrDownload(blob,filename){
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),4000);
+}
+function requireAcceptedConfig(proc){
+ const cfg=proc.exportConfig;
+ if(!cfg||!cfg.accepted)throw new Error('É necessário validar a pré-visualização (Exportar → Pré-visualizar / validar) antes de exportar.');
+ return cfg;
+}
+actions.exportarResumoPdf=async(b)=>{
+ const proc=getProcesso(b.dataset.id);
+ const st=$('expState_'+proc.id);
+ try{
+  const cfg=requireAcceptedConfig(proc);
+  const blob=await buildResumoPdf(proc,cfg);
+  shareOrDownload(blob,proc.codigo+'_Resumo.pdf');
+  if(st)st.textContent='PDF gerado com sucesso.';
+ }catch(err){console.error(err);if(st)st.textContent='Erro: '+(err.message||err);else alert('Erro: '+(err.message||err))}
+};
+actions.exportarResumoDocx=async(b)=>{
+ const proc=getProcesso(b.dataset.id);
+ const st=$('expState_'+proc.id);
+ try{
+  const cfg=requireAcceptedConfig(proc);
+  const blob=await buildResumoDocx(proc,cfg);
+  shareOrDownload(blob,proc.codigo+'_Resumo.docx');
+  if(st)st.textContent='Word gerado com sucesso.';
+ }catch(err){console.error(err);if(st)st.textContent='Erro: '+(err.message||err);else alert('Erro: '+(err.message||err))}
+};
+actions.exportarZipProcesso=async(b)=>{
+ const proc=getProcesso(b.dataset.id);
+ const st=$('expState_'+proc.id);
+ try{
+  const cfg=requireAcceptedConfig(proc);
+  if(st)st.textContent='A preparar ZIP do processo...';
+  const zip=new JSZip();
+  const root=zip.folder(proc.codigo||'processo');
+  root.file('dados.json',JSON.stringify(proc,null,2));
+  const pdfBlob=await buildResumoPdf(proc,cfg);
+  root.file(proc.codigo+'_Resumo.pdf',pdfBlob);
+  const docxBlob=await buildResumoDocx(proc,cfg);
+  root.file(proc.codigo+'_Resumo.docx',docxBlob);
+  const fotosFolder=root.folder('Fotos');
+  for(const f of (proc.fotos||[])){
+   const blob=await idbGet(f.id);
+   if(blob)fotosFolder.file(photoFileName(proc,f),blob);
+  }
+  const finalBlob=await zip.generateAsync({type:'blob'});
+  shareOrDownload(finalBlob,(proc.codigo||'processo')+'_completo.zip');
+  if(st)st.textContent='ZIP do processo gerado com sucesso.';
+ }catch(err){console.error(err);if(st)st.textContent='Erro: '+(err.message||err)}
+};
+
+/* ===================== Arranque ===================== */
+loadState();
+render();
+</script>
+</body></html>
