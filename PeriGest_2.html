@@ -288,15 +288,15 @@ function fotoSeq(proc,foto){
  if(!foto.questaoId)return null;
  return fotosDaQuestao(proc,foto.questaoId).findIndex(f=>f.id===foto.id)+1;
 }
-// Nomenclatura das fotos: {ordemAutor}_{sigla}_{numeroQuestao}_IMG_{sequência}
+// Nomenclatura das fotos: {ordemAutor}_{numeroQuestao a 3 dígitos}_IMG_{sequência a 3 dígitos}
+// (mesma lógica do código da questão — sem sigla, ex.: 1_001_IMG_005)
 function photoFileName(proc,foto,ext){
  ext=ext||'jpg';
  const q=foto.questaoId?proc.questoes.find(x=>x.id===foto.questaoId):null;
  if(!q)return foto.id+'.'+ext;
  const a=proc.autores.find(x=>x.id===q.autorId);
- const sg=siglaObj(q.siglaId);
  const seq=fotoSeq(proc,foto);
- return `${a?a.ordem:0}_${sg.sigla}_${pad(q.numero)}_IMG_${pad(seq,3)}.${ext}`;
+ return `${a?a.ordem:0}_${pad(q.numero,3)}_IMG_${pad(seq,3)}.${ext}`;
 }
 // Fotos de capa: as marcadas manualmente; se não chegarem para o tamanho da grelha
 // por defeito, completa aleatoriamente com fotos das restantes questões.
