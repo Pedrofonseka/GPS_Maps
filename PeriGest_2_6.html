@@ -47,7 +47,6 @@ label.inline{display:flex;align-items:center;gap:8px;font-weight:400;margin:8px 
 input,select,textarea{width:100%;padding:11px;border:1px solid #b8c2cc;border-radius:8px;font:inherit;font-size:16px;background:#fff}
 input[type="checkbox"]{width:auto;flex:0 0 auto}
 input[type="date"],input[type="time"]{min-height:48px;font-size:17px}
-input.pending-commit{outline:2px solid var(--amber);outline-offset:1px}
 textarea{min-height:70px;resize:vertical}
 /* Regra permanente: botões com altura maior do que o mínimo do browser, para sobrarem
    alvos de toque confortáveis por cima da faixa publicitária do fundo do ecrã. */
@@ -132,7 +131,7 @@ function isIOS(){return /iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator
 // Campos orientáveis (ordem configurável) de cada formulário principal.
 const FIELD_DEFS={
  pedido:[['codigo','Código provisório'],['solicitante','Solicitante'],['contacto','Contacto telefónico'],['email','E-mail'],['dataPedido','Data do pedido'],['prazo','Prazo'],['servicoId','Serviço solicitado'],['finalidadeId','Finalidade'],['assunto','Situação a analisar'],['local','Local']],
- processo:[['codigo','Código de processo'],['numero','Nº processo (institucional)'],['solicitanteInstitucional','Solicitante institucional'],['designacaoInstitucional','Número institucional do processo'],['designacaoTag','Designação TAG'],['local','Local'],['assunto','Resumo de situações a analisar'],['siglaId','Sigla das questões'],['coordenadorId','Coordenador do processo']],
+ processo:[['codigo','Código de processo'],['numero','Nº processo (institucional)'],['solicitanteInstitucional','Solicitante institucional'],['designacaoInstitucional','Contexto'],['designacaoTag','Designação TAG'],['local','Local'],['assunto','Resumo de situações a analisar'],['siglaId','Sigla das questões'],['coordenadorId','Coordenador do processo'],['designacaoQuestaoId','Designação processual das questões']],
  questao:[['numero','Número na sequência do autor'],['siglaId','Sigla'],['referencia','Referência/código do autor (livre)'],['descricaoResumida','Descrição resumida'],['descricaoCompleta','Descrição completa']]
 };
 function defaultFieldOrder(){
@@ -157,7 +156,7 @@ const PROCESS_VARS=[
  ['codigo','Código de processo'],
  ['numero','Nº processo (institucional)'],
  ['solicitanteInstitucional','Solicitante institucional'],
- ['designacaoInstitucional','Número institucional do processo'],
+ ['designacaoInstitucional','Contexto'],
  ['designacaoTag','Designação TAG'],
  ['local','Local'],
  ['assunto','Resumo de situações a analisar'],
@@ -226,7 +225,7 @@ function defaultState(){
   intervenientes:[],
   funcoes:[{id:uid(),nome:'Perito'},{id:uid(),nome:'Mandatário'},{id:uid(),nome:'Topógrafo'}],
   siglasQuestao:[{id:uid(),sigla:'Qs',nome:'Questão'},{id:uid(),sigla:'Tm',nome:'Tema'}],
-  tiposEvento:[{id:uid(),chave:'reuniao',nome:'Reunião'},{id:uid(),chave:'visita',nome:'Visita'},{id:uid(),chave:'informacao',nome:'Informação',semPresencas:true},{id:uid(),chave:'comunicacoes',nome:'Comunicações',semPresencas:true}],
+  tiposEvento:[{id:uid(),chave:'reuniao',nome:'Reunião'},{id:uid(),chave:'comunicacao',nome:'Comunicação',semPresencas:true},{id:uid(),chave:'informacao',nome:'Informação',semPresencas:true},{id:uid(),chave:'visita',nome:'Visita'}],
   representacoes:[{id:uid(),nome:'Parte A'},{id:uid(),nome:'Parte B'},{id:uid(),nome:'Nenhuma (coordenador)',isDefault:true}],
   resolucoesFoto:[{id:uid(),kb:150,nome:'150 KB'},{id:uid(),kb:300,nome:'300 KB',isDefault:true},{id:uid(),kb:500,nome:'500 KB'},{id:uid(),kb:800,nome:'800 KB'},{id:uid(),kb:'original',nome:'Original (sem compressão)'}],
   servicos:[{id:uid(),nome:'Peritagem'},{id:uid(),nome:'Inspeção'},{id:uid(),nome:'Parecer técnico'}],
@@ -235,13 +234,38 @@ function defaultState(){
    {id:uid(),designacao:'Proficis Engenheiros * Peritos Avaliadores',email:'proficis.peritos@gmail.com',especificacoes:''},
    {id:uid(),designacao:'Perit_Ava * peritagens de engenharia e avaliação de ativos',email:'Peritava@gmail.com',especificacoes:''}
   ],
+  tiposDocumento:[
+   {id:uid(),nome:'Caderneta predial'},{id:uid(),nome:'Plantas'},{id:uid(),nome:'Relatório de peritagem'},
+   {id:uid(),nome:'Lista de matéria a dar resposta'},{id:uid(),nome:'CRP'},{id:uid(),nome:'Lista de quesitos'}
+  ],
+  designacoesQuestao:[
+   {id:uid(),nome:'Quesito',plural:'Quesitos',genero:'m',isDefault:true},
+   {id:uid(),nome:'Questão',plural:'Questões',genero:'f'},
+   {id:uid(),nome:'Tema',plural:'Temas',genero:'m'},
+   {id:uid(),nome:'Situação',plural:'Situações',genero:'f'}
+  ],
+  // "Model docs": título de cada secção dos documentos gerados, com tipo de letra, tamanho
+  // e negrito próprios — o título imprime-se uma só vez por secção, independentemente do
+  // nº de páginas que essa secção ocupe.
+  modelDocs:[
+   {id:uid(),chave:'capa',titulo:'Capa de processo',fonte:'helvetica',tamanho:10,negrito:true},
+   {id:uid(),chave:'resumoCronologia',titulo:'Resumo do processo',fonte:'helvetica',tamanho:10,negrito:true},
+   {id:uid(),chave:'listaQuestoes',titulo:'A — Lista de questões colocadas',fonte:'helvetica',tamanho:10,negrito:true},
+   {id:uid(),chave:'custosPendentes',titulo:'Resumo de questões com apuramento de custos pendente',fonte:'helvetica',tamanho:10,negrito:true},
+   {id:uid(),chave:'listaAnalise',titulo:'B — Histórico de análise',fonte:'helvetica',tamanho:10,negrito:true},
+   {id:uid(),chave:'listaDraft',titulo:'C — Draft de relatório (Respostas validadas)',fonte:'helvetica',tamanho:10,negrito:true},
+   {id:uid(),chave:'listaDraftFinal',titulo:'C — Relatório final (Respostas validadas)',fonte:'helvetica',tamanho:10,negrito:true}
+  ],
   settings:{
    release:'2.6',
    fotoGridCols:2,
    fotoResolutionKB:300,
-   fotoOrientacaoDefault:'retrato',
+   fotoOrientacaoDefault:'paisagem',
+   documentoOrientacaoDefault:'retrato',
    capaGridSize:4,
    fieldOrder:defaultFieldOrder(),
+   fieldLabels:{pedido:{},processo:{},questao:{}},
+   customFields:{pedido:[],processo:[],questao:[]},
    layout:{pageSize:'a4',font:'helvetica',fontSize:10,marginLeft:2.0,marginTop:2.2,marginRight:1.5,marginBottom:1.5},
    cabecalho:defaultCabecalho(),
    rodape:defaultRodape()
@@ -254,13 +278,18 @@ function loadState(){
  const d=defaultState();
  if(!app.settings)app.settings=d.settings;
  if(!app.settings.fieldOrder)app.settings.fieldOrder=d.settings.fieldOrder;
+ if(!app.settings.fieldLabels)app.settings.fieldLabels={pedido:{},processo:{},questao:{}};
+ if(!app.settings.customFields)app.settings.customFields={pedido:[],processo:[],questao:[]};
  Object.keys(FIELD_DEFS).forEach(k=>{
   if(!app.settings.fieldOrder[k])app.settings.fieldOrder[k]=d.settings.fieldOrder[k];
+  if(!app.settings.fieldLabels[k])app.settings.fieldLabels[k]={};
+  if(!app.settings.customFields[k])app.settings.customFields[k]=[];
   // acrescenta no fim quaisquer campos novos que ainda não estejam na ordem gravada
   FIELD_DEFS[k].forEach(([key])=>{if(!app.settings.fieldOrder[k].includes(key))app.settings.fieldOrder[k].push(key)});
  });
  if(app.settings.fotoGridCols==null)app.settings.fotoGridCols=d.settings.fotoGridCols;
  if(!app.settings.fotoOrientacaoDefault)app.settings.fotoOrientacaoDefault=d.settings.fotoOrientacaoDefault;
+ if(!app.settings.documentoOrientacaoDefault)app.settings.documentoOrientacaoDefault=d.settings.documentoOrientacaoDefault;
  if(!app.settings.capaGridSize)app.settings.capaGridSize=d.settings.capaGridSize;
  if(!app.funcoes||!app.funcoes.length)app.funcoes=d.funcoes;
  if(!app.siglasQuestao||!app.siglasQuestao.length)app.siglasQuestao=d.siglasQuestao;
@@ -270,6 +299,10 @@ function loadState(){
  if(!app.servicos||!app.servicos.length)app.servicos=d.servicos;
  if(!app.finalidades||!app.finalidades.length)app.finalidades=d.finalidades;
  if(!app.gabinetes)app.gabinetes=d.gabinetes;
+ if(!app.tiposDocumento||!app.tiposDocumento.length)app.tiposDocumento=d.tiposDocumento;
+ if(!app.designacoesQuestao||!app.designacoesQuestao.length)app.designacoesQuestao=d.designacoesQuestao;
+ if(!app.modelDocs||!app.modelDocs.length)app.modelDocs=d.modelDocs;
+ d.modelDocs.forEach(def=>{if(!app.modelDocs.some(m=>m.chave===def.chave))app.modelDocs.push({...def})});
  // cabecalho/rodape passaram de texto livre para caixas de seleção de variáveis —
  // repõe a estrutura nova caso ainda esteja no formato antigo (string).
  if(!app.settings.cabecalho||typeof app.settings.cabecalho.linha1!=='object')app.settings.cabecalho=d.settings.cabecalho;
@@ -279,7 +312,7 @@ function loadState(){
  // repõe a estrutura nova caso ainda esteja no formato antigo (achatado, uma só linha).
  if(!app.settings.rodape||typeof app.settings.rodape.linha1!=='object')app.settings.rodape=d.settings.rodape;
  if(app.settings.rodape.tamanho2==null)app.settings.rodape.tamanho2=8;
- if(!app.tiposEvento.some(t=>t.chave==='comunicacoes'))app.tiposEvento.push({id:uid(),chave:'comunicacoes',nome:'Comunicações',semPresencas:true});
+ if(!app.tiposEvento.some(t=>t.chave==='comunicacao'||t.chave==='comunicacoes'))app.tiposEvento.push({id:uid(),chave:'comunicacao',nome:'Comunicação',semPresencas:true});
 }
 let saveTimer=null;
 function save(){
@@ -321,6 +354,25 @@ async function hydratePhotos(root){
  for(const img of imgs){
   img.setAttribute('data-hydrated','1');
   const url=await getPhotoUrl(img.getAttribute('data-photo-id'));
+  if(url)img.src=url;
+ }
+}
+// Documentos (Documentação do processo) — mesmo padrão dos getPhotoUrl/hydratePhotos, mas
+// lendo da store de ficheiros (FILES_STORE) para gerar as miniaturas.
+const docUrlCache={};
+async function getDocUrl(id){
+ if(docUrlCache[id])return docUrlCache[id];
+ const blob=await idbGet(id,FILES_STORE);
+ if(!blob)return '';
+ const url=URL.createObjectURL(blob);
+ docUrlCache[id]=url;
+ return url;
+}
+async function hydrateDocs(root){
+ const imgs=(root||document).querySelectorAll('img[data-doc-id]:not([data-hydrated])');
+ for(const img of imgs){
+  img.setAttribute('data-hydrated','1');
+  const url=await getDocUrl(img.getAttribute('data-doc-id'));
   if(url)img.src=url;
  }
 }
@@ -461,16 +513,18 @@ function render(){
   tiposEvento:viewTiposEvento, representacoes:viewRepresentacoes, resolucoesFoto:viewResolucoesFoto,
   fieldOrder:viewFieldOrder, preview:viewPreview,
   servicos:viewServicos, finalidades:viewFinalidades, gabinetes:viewGabinetes,
+  tiposDocumento:viewTiposDocumento, designacoesQuestao:viewDesignacoesQuestao, modelDocs:viewModelDocs,
   pendentesGlobal:viewPendentesGlobal, documentos:viewDocumentos
  };
  const fn=views[ui.view]||viewPedidos;
  $('main').innerHTML=fn(ui.params||{});
  wireCommon();
  hydratePhotos($('main'));
+ hydrateDocs($('main'));
 }
 function renderCrumb(){
  const bar=$('crumbbar');
- const labels={pedidos:'Pedidos',pedidoForm:'Pedido',processos:'Processos',processo:'Processo',autores:'Autores',questoes:'Questões',questaoForm:'Questão',importQuestoes:'Importar questões',peritos:'Peritos',eventos:'Eventos',eventoForm:'Evento',analise:'Análise',analiseQuestao:'Análise da questão',relatorio:'Relatório',fotos:'Fotografias',settings:'Configurações',intervenientes:'Intervenientes',intervenienteForm:'Interveniente',funcoes:'Funções',siglas:'Siglas de questão',tiposEvento:'Tipos de evento',representacoes:'Entidades representadas',resolucoesFoto:'Resoluções de foto',fieldOrder:'Ordem dos campos',preview:'Pré-visualização',servicos:'Serviço solicitado',finalidades:'Finalidade',gabinetes:'Gabinetes',pendentesGlobal:'Pendentes de resposta',documentos:'Documentação'};
+ const labels={pedidos:'Pedidos',pedidoForm:'Pedido',processos:'Processos',processo:'Processo',autores:'Autores',questoes:'Questões',questaoForm:'Questão',importQuestoes:'Importar questões',peritos:'Peritos',eventos:'Eventos',eventoForm:'Evento',analise:'Análise',analiseQuestao:'Análise da questão',relatorio:'Relatório',fotos:'Fotografias',settings:'Configurações',intervenientes:'Intervenientes',intervenienteForm:'Interveniente',funcoes:'Funções',siglas:'Siglas de questão',tiposEvento:'Tipos de evento',representacoes:'Entidades representadas',resolucoesFoto:'Resoluções de foto',fieldOrder:'Ordem dos campos',preview:'Pré-visualização',servicos:'Serviço solicitado',finalidades:'Finalidade',gabinetes:'Gabinetes',pendentesGlobal:'Pendentes de resposta',documentos:'Documentação',tiposDocumento:'Tipos de documentação',designacoesQuestao:'Designação das questões',modelDocs:'Model docs'};
  if(ui.stack.length===0){bar.innerHTML='';return}
  bar.innerHTML=`<button type="button" data-action="back">‹ Voltar</button><span>${esc(labels[ui.view]||'')}</span>`;
 }
@@ -507,6 +561,27 @@ function renderOrderedFields(kind,renderers){
  const order=(app.settings.fieldOrder&&app.settings.fieldOrder[kind])||Object.keys(renderers);
  return order.filter(k=>renderers[k]!=null).map(k=>renderers[k]).join('');
 }
+// Nome a mostrar de um campo (base ou personalizado): usa a substituição gravada em
+// Configurações → Ordem dos campos se existir, caso contrário o nome por defeito.
+function resolveFieldLabel(kind,key){
+ const override=app.settings.fieldLabels[kind]&&app.settings.fieldLabels[kind][key];
+ if(override)return override;
+ const custom=(app.settings.customFields[kind]||[]).find(c=>c.key===key);
+ if(custom)return custom.label;
+ const def=(FIELD_DEFS[kind]||[]).find(f=>f[0]===key);
+ return def?def[1]:key;
+}
+// Gera os renderers dos campos personalizados de um kind — reaproveita o mecanismo
+// genérico data-bind (customValues.<key>), pelo que ficam gravados/ordenados exatamente
+// como os campos base.
+function customFieldRenderers(kind,scope,record,extraAttrs){
+ const out={};
+ (app.settings.customFields[kind]||[]).forEach(cf=>{
+  if(!record.customValues)record.customValues={};
+  out[cf.key]=field(resolveFieldLabel(kind,cf.key),'<textarea rows="2" data-bind="customValues.'+cf.key+'" data-scope="'+scope+'" data-scope-id="'+record.id+'"'+(extraAttrs||'')+'>'+esc(record.customValues[cf.key]||'')+'</textarea>');
+ });
+ return out;
+}
 
 /* ===================== Wiring genérico (delegação de eventos) ===================== */
 let wired=false;
@@ -515,27 +590,14 @@ function wireCommon(){
  document.addEventListener('click',onClick);
  document.addEventListener('input',onInput);
  document.addEventListener('change',onChange);
- document.addEventListener('change',onDateTimeDelay,true);
 }
-// Regra permanente: no iPhone o seletor nativo de data/hora (roda giratória) precisa de
-// mais tempo do que os campos de texto — um "change" disparado a meio da rolagem, seguido
-// de um render() imediato, chega a fechar o seletor antes de o utilizador terminar a
-// escolha. Por isso todo o "change" de um input de data/hora é interceptado em fase de
-// captura (antes de chegar a qualquer outro listener) e só reencaminhado ~3 segundos
-// depois, dando tempo de sobra ao gesto nativo antes de a app reagir.
-function onDateTimeDelay(e){
- const t=e.target;
- if(!(t.tagName==='INPUT'&&(t.type==='date'||t.type==='time')))return;
- if(t.dataset._delayed){delete t.dataset._delayed;return}
- e.stopImmediatePropagation();
- t.classList.add('pending-commit');
- clearTimeout(t._commitTimer);
- t._commitTimer=setTimeout(()=>{
-  t.classList.remove('pending-commit');
-  if(!document.body.contains(t))return;
-  t.dataset._delayed='1';
-  t.dispatchEvent(new Event('change',{bubbles:true}));
- },3000);
+// Regra permanente: no iPhone, gravar automaticamente ao "change" de um <input type="date"/
+// "time"> não dá tempo de sobra ao seletor nativo (roda giratória) — mesmo com um atraso, o
+// timing do evento varia por versão/embedding do Safari. Método adotado: os campos de
+// data/hora nunca gravam sozinhos — ficam sempre com um botão "✔ Confirmar" próprio, que o
+// utilizador toca quando termina de escolher. Sem dependência de timing nenhuma.
+function dateFieldConfirm(inputId,value,btnDataAttrs,type){
+ return `<input type="${type||'date'}" id="${inputId}" value="${esc(value||'')}"><div class="actions one"><button type="button" class="secondary" data-action="confirmDateField" data-input-id="${inputId}"${btnDataAttrs}>✔ Confirmar</button></div><div class="note" id="${inputId}_state"></div>`;
 }
 function onClick(e){
  const b=e.target.closest('[data-action]');
@@ -561,6 +623,8 @@ function resolveBindRoot(t){
  if(scope==='pedido')return getPedido(t.dataset.scopeId||ui.params.id);
  if(scope==='settings')return app.settings;
  if(scope==='interveniente')return getInterveniente(t.dataset.scopeId);
+ if(scope==='modelDoc')return app.modelDocs.find(m=>m.id===t.dataset.scopeId);
+ if(scope==='questao'){const proc=getProcesso(t.dataset.processoId||ui.params.processoId);return proc&&(proc.questoes||[]).find(x=>x.id===t.dataset.scopeId)}
  return app;
 }
 function bindField(t){
@@ -570,11 +634,32 @@ function bindField(t){
  if(t.type==='number')val=val===''?'':Number(val);
  pathSet(root,t.dataset.bind,val);
  if(t.dataset.scope==='processo'){const p=getProcesso(t.dataset.scopeId||ui.params.processoId||ui.params.id);if(p)touch(p)}
+ if(t.dataset.scope==='questao'){const p=getProcesso(t.dataset.processoId||ui.params.processoId);if(p)touch(p)}
  save();
 }
 
 /* ===================== Ações ===================== */
 const actions={};
+actions.confirmDateField=(b)=>{
+ const input=document.getElementById(b.dataset.inputId);if(!input)return;
+ const val=input.value;
+ const kind=b.dataset.kind;
+ let proc;
+ if(kind==='pedido'){
+  const p=getPedido(b.dataset.pedidoId);if(!p)return;
+  p[b.dataset.field]=val;saveNow();
+ }else if(kind==='evento'){
+  proc=getProcesso(b.dataset.processoId);if(!proc)return;
+  const ev=(proc.eventos||[]).find(x=>x.id===b.dataset.eventoId);if(!ev)return;
+  ev[b.dataset.field]=val;touch(proc);saveNow();
+ }else if(kind==='questao'){
+  proc=getProcesso(b.dataset.processoId);if(!proc)return;
+  const q=(proc.questoes||[]).find(x=>x.id===b.dataset.questaoId);if(!q)return;
+  q[b.dataset.field]=val;touch(proc);saveNow();
+ }else return;
+ const st=document.getElementById(b.dataset.inputId+'_state');
+ if(st)st.textContent=val?'✔ Guardado: '+val:'✔ Guardado (vazio).';
+};
 actions.goHome=()=>goHome();
 actions.goSettings=()=>goSettings();
 actions.back=()=>back();
@@ -611,17 +696,19 @@ document.addEventListener('change',e=>{
 actions.abrirPedido=(b)=>nav('pedidoForm',{id:b.dataset.id});
 
 function pedidoFieldRenderers(p){
+ const L=k=>resolveFieldLabel('pedido',k);
  return {
-  codigo:field('Código provisório','<input data-bind="codigo" data-scope="pedido" data-scope-id="'+p.id+'" value="'+esc(p.codigo)+'">'),
-  solicitante:field('Solicitante','<input data-bind="solicitante" data-scope="pedido" data-scope-id="'+p.id+'" value="'+esc(p.solicitante)+'">'),
-  contacto:field('Contacto telefónico','<input data-bind="contacto" data-scope="pedido" data-scope-id="'+p.id+'" value="'+esc(p.contacto)+'">'),
-  email:field('E-mail','<input type="email" data-bind="email" data-scope="pedido" data-scope-id="'+p.id+'" value="'+esc(p.email)+'">'),
-  dataPedido:field('Data do pedido','<input type="date" data-bind="dataPedido" data-scope="pedido" data-scope-id="'+p.id+'" value="'+esc(p.dataPedido)+'">'),
-  prazo:field('Prazo','<input type="date" id="pedidoPrazoInput_'+p.id+'" data-bind="prazo" data-scope="pedido" data-scope-id="'+p.id+'" value="'+esc(p.prazo)+'"><button type="button" class="linklike" data-action="addToCalendar" data-date-el="pedidoPrazoInput_'+p.id+'" data-title="'+esc('Prazo — '+p.codigo)+'">📅 Adicionar ao calendário (opcional)</button>'),
-  servicoId:field('Serviço solicitado',fieldWithLink(`<select data-action-input="pedidoServico">${app.servicos.map(s=>`<option value="${s.id}" ${p.servicoId===s.id?'selected':''}>${esc(s.nome)}</option>`).join('')}</select>`,'gerir serviços','servicos',{returnView:'pedidoForm',returnParams:{id:p.id}})),
-  finalidadeId:field('Finalidade',fieldWithLink(`<select data-action-input="pedidoFinalidade">${app.finalidades.map(f=>`<option value="${f.id}" ${p.finalidadeId===f.id?'selected':''}>${esc(f.nome)}</option>`).join('')}</select>`,'gerir finalidades','finalidades',{returnView:'pedidoForm',returnParams:{id:p.id}})),
-  assunto:field('Situação a analisar','<textarea data-bind="assunto" data-scope="pedido" data-scope-id="'+p.id+'">'+esc(p.assunto)+'</textarea>'),
-  local:field('Local','<input data-bind="local" data-scope="pedido" data-scope-id="'+p.id+'" value="'+esc(p.local)+'">')
+  codigo:field(L('codigo'),'<input data-bind="codigo" data-scope="pedido" data-scope-id="'+p.id+'" value="'+esc(p.codigo)+'">'),
+  solicitante:field(L('solicitante'),'<input data-bind="solicitante" data-scope="pedido" data-scope-id="'+p.id+'" value="'+esc(p.solicitante)+'">'),
+  contacto:field(L('contacto'),'<input data-bind="contacto" data-scope="pedido" data-scope-id="'+p.id+'" value="'+esc(p.contacto)+'">'),
+  email:field(L('email'),'<input type="email" data-bind="email" data-scope="pedido" data-scope-id="'+p.id+'" value="'+esc(p.email)+'">'),
+  dataPedido:field(L('dataPedido'),dateFieldConfirm('pedidoDataPedidoInput_'+p.id,p.dataPedido,' data-kind="pedido" data-pedido-id="'+p.id+'" data-field="dataPedido"')),
+  prazo:field(L('prazo'),dateFieldConfirm('pedidoPrazoInput_'+p.id,p.prazo,' data-kind="pedido" data-pedido-id="'+p.id+'" data-field="prazo"')+'<button type="button" class="linklike" data-action="addToCalendar" data-date-el="pedidoPrazoInput_'+p.id+'" data-title="'+esc('Prazo — '+p.codigo)+'">📅 Adicionar ao calendário (opcional)</button>'),
+  servicoId:field(L('servicoId'),fieldWithLink(`<select data-action-input="pedidoServico">${app.servicos.map(s=>`<option value="${s.id}" ${p.servicoId===s.id?'selected':''}>${esc(s.nome)}</option>`).join('')}</select>`,'gerir serviços','servicos',{returnView:'pedidoForm',returnParams:{id:p.id}})),
+  finalidadeId:field(L('finalidadeId'),fieldWithLink(`<select data-action-input="pedidoFinalidade">${app.finalidades.map(f=>`<option value="${f.id}" ${p.finalidadeId===f.id?'selected':''}>${esc(f.nome)}</option>`).join('')}</select>`,'gerir finalidades','finalidades',{returnView:'pedidoForm',returnParams:{id:p.id}})),
+  assunto:field(L('assunto'),'<textarea data-bind="assunto" data-scope="pedido" data-scope-id="'+p.id+'">'+esc(p.assunto)+'</textarea>'),
+  local:field(L('local'),'<input data-bind="local" data-scope="pedido" data-scope-id="'+p.id+'" value="'+esc(p.local)+'">'),
+  ...customFieldRenderers('pedido','pedido',p)
  };
 }
 function viewPedidoForm(params){
@@ -682,20 +769,24 @@ function processoHeaderInfo(proc){
  return `<div class="note">Pedido de origem: ${pedido?esc(pedido.codigo):'—'} ${pedido?linkBtn('ver pedido','pedidoForm',{id:pedido.id}):''}</div>`;
 }
 function processoFieldRenderers(proc){
+ const L=k=>resolveFieldLabel('processo',k);
  return {
-  codigo:field('Código de processo','<input data-bind="codigo" data-scope="processo" data-scope-id="'+proc.id+'" value="'+esc(proc.codigo)+'">'),
-  numero:field('Nº processo (institucional)','<input data-bind="numero" data-scope="processo" data-scope-id="'+proc.id+'" value="'+esc(proc.numero)+'">'),
-  solicitanteInstitucional:field('Solicitante institucional','<input data-bind="solicitanteInstitucional" data-scope="processo" data-scope-id="'+proc.id+'" value="'+esc(proc.solicitanteInstitucional)+'">'),
-  designacaoInstitucional:field('Número institucional do processo','<input data-bind="designacaoInstitucional" data-scope="processo" data-scope-id="'+proc.id+'" value="'+esc(proc.designacaoInstitucional)+'">'),
-  designacaoTag:field('Designação TAG','<input data-bind="designacaoTag" data-scope="processo" data-scope-id="'+proc.id+'" value="'+esc(proc.designacaoTag)+'">'),
-  local:field('Local','<input data-bind="local" data-scope="processo" data-scope-id="'+proc.id+'" value="'+esc(proc.local)+'">'),
-  assunto:field('Resumo de situações a analisar','<textarea data-bind="assunto" data-scope="processo" data-scope-id="'+proc.id+'">'+esc(proc.assunto)+'</textarea>'),
-  siglaId:field('Sigla das questões deste processo',fieldWithLink(siglaSelectHtml(proc),'gerir siglas','siglas',{returnView:'processo',returnParams:{id:proc.id}})),
-  coordenadorId:field('Coordenador do processo',fieldWithLink(`<select data-bind="coordenadorId" data-scope="processo" data-scope-id="${proc.id}"><option value="">— por definir —</option>${app.intervenientes.map(i=>`<option value="${i.id}" ${proc.coordenadorId===i.id?'selected':''}>${esc(i.nome)}</option>`).join('')}</select>`,'gerir intervenientes','intervenientes',{returnView:'processo',returnParams:{id:proc.id}}),'disponível como variável para o cabeçalho/rodapé')
+  codigo:field(L('codigo'),'<input data-bind="codigo" data-scope="processo" data-scope-id="'+proc.id+'" value="'+esc(proc.codigo)+'">'),
+  numero:field(L('numero'),'<input data-bind="numero" data-scope="processo" data-scope-id="'+proc.id+'" value="'+esc(proc.numero)+'">'),
+  solicitanteInstitucional:field(L('solicitanteInstitucional'),'<input data-bind="solicitanteInstitucional" data-scope="processo" data-scope-id="'+proc.id+'" value="'+esc(proc.solicitanteInstitucional)+'">'),
+  designacaoInstitucional:field(L('designacaoInstitucional'),'<input data-bind="designacaoInstitucional" data-scope="processo" data-scope-id="'+proc.id+'" value="'+esc(proc.designacaoInstitucional)+'">'),
+  designacaoTag:field(L('designacaoTag'),'<input data-bind="designacaoTag" data-scope="processo" data-scope-id="'+proc.id+'" value="'+esc(proc.designacaoTag)+'">'),
+  local:field(L('local'),'<input data-bind="local" data-scope="processo" data-scope-id="'+proc.id+'" value="'+esc(proc.local)+'">'),
+  assunto:field(L('assunto'),'<textarea data-bind="assunto" data-scope="processo" data-scope-id="'+proc.id+'">'+esc(proc.assunto)+'</textarea>'),
+  siglaId:field(L('siglaId'),fieldWithLink(siglaSelectHtml(proc),'gerir siglas','siglas',{returnView:'processo',returnParams:{id:proc.id}})),
+  coordenadorId:field(L('coordenadorId'),fieldWithLink(`<select data-bind="coordenadorId" data-scope="processo" data-scope-id="${proc.id}"><option value="">— por definir —</option>${app.intervenientes.map(i=>`<option value="${i.id}" ${proc.coordenadorId===i.id?'selected':''}>${esc(i.nome)}</option>`).join('')}</select>`,'gerir intervenientes','intervenientes',{returnView:'processo',returnParams:{id:proc.id}}),'disponível como variável para o cabeçalho/rodapé'),
+  designacaoQuestaoId:field(L('designacaoQuestaoId'),fieldWithLink(`<select data-bind="designacaoQuestaoId" data-scope="processo" data-scope-id="${proc.id}">${app.designacoesQuestao.map(d=>`<option value="${d.id}" ${(proc.designacaoQuestaoId||getDesignacaoQuestao(proc).id)===d.id?'selected':''}>${esc(d.nome)}</option>`).join('')}</select>`,'gerir designações','designacoesQuestao',{returnView:'processo',returnParams:{id:proc.id}}),'usada nos documentos gerados (ex.: "Quesitos apresentados por: ...")'),
+  ...customFieldRenderers('processo','processo',proc)
  };
 }
 // Painel de controlo de pendentes: total de perguntas, por comentar (por perito) e já fechadas.
-function questoesComCustosPendentes(proc){return (proc.questoes||[]).filter(q=>ensureClassificacao(q).verCustos)}
+// Ordenado por autor (como questoesOrdenadas) para os agrupamentos por autor nos exports.
+function questoesComCustosPendentes(proc){return questoesOrdenadas(proc).filter(x=>ensureClassificacao(x.q).verCustos).map(x=>x.q)}
 function pendentesPainelHtml(proc){
  const todas=proc.questoes||[];
  const fechadas=todas.filter(q=>q.fase==='relatorio');
@@ -746,7 +837,7 @@ function viewProcesso(params){
   <hr>
   <label>Estado do processo</label>
   <div class="actions four">
-   <button type="button" class="${proc.status==='ON'?'green':'secondary'}" data-action="setProcessoStatus" data-id="${proc.id}" data-status="ON">ON</button>
+   <button type="button" class="${proc.status==='ON'?'green':'secondary'}" data-action="setProcessoStatus" data-id="${proc.id}" data-status="ON">Processo</button>
    <button type="button" class="${proc.status==='SBY'?'amber':'secondary'}" data-action="setProcessoStatus" data-id="${proc.id}" data-status="SBY">SBY</button>
    <button type="button" class="${proc.status==='END'?'amber':'secondary'}" data-action="setProcessoStatus" data-id="${proc.id}" data-status="END">END</button>
    <button type="button" class="${proc.status==='OFF'?'danger':'secondary'}" data-action="setProcessoStatus" data-id="${proc.id}" data-status="OFF">OFF</button>
@@ -893,12 +984,14 @@ actions.novaQuestao=(b)=>{
  nav('questaoForm',{processoId:proc.id,id:q.id});
 };
 function questaoFieldRenderers(proc,q){
+ const L=k=>resolveFieldLabel('questao',k);
  return {
-  numero:field('Número na sequência do autor','<input type="number" min="1" value="'+q.numero+'" data-action-input="numeroQuestao">','ordem de exibição dentro do bloco do autor'),
-  siglaId:field('Sigla',`<select data-action-input="siglaQuestao">${app.siglasQuestao.map(s=>`<option value="${s.id}" ${q.siglaId===s.id?'selected':''}>${esc(s.sigla)} — ${esc(s.nome)}</option>`).join('')}</select>`),
-  referencia:field('Referência/código do autor','<input value="'+esc(q.referencia)+'" data-action-input="refQuestao">','livre — ex.: 1, 5, Q_35; nem sempre é sequencial'),
-  descricaoResumida:field('Descrição resumida (usada no cartão)','<input value="'+esc(q.descricaoResumida)+'" data-action-input="descResumida">'),
-  descricaoCompleta:field('Descrição completa','<textarea data-action-input="descCompleta" rows="4">'+esc(q.descricaoCompleta)+'</textarea>')
+  numero:field(L('numero'),'<input type="number" min="1" value="'+q.numero+'" data-action-input="numeroQuestao">','ordem de exibição dentro do bloco do autor'),
+  siglaId:field(L('siglaId'),`<select data-action-input="siglaQuestao">${app.siglasQuestao.map(s=>`<option value="${s.id}" ${q.siglaId===s.id?'selected':''}>${esc(s.sigla)} — ${esc(s.nome)}</option>`).join('')}</select>`),
+  referencia:field(L('referencia'),'<input value="'+esc(q.referencia)+'" data-action-input="refQuestao">','livre — ex.: 1, 5, Q_35; nem sempre é sequencial'),
+  descricaoResumida:field(L('descricaoResumida'),'<input value="'+esc(q.descricaoResumida)+'" data-action-input="descResumida">'),
+  descricaoCompleta:field(L('descricaoCompleta'),'<textarea data-action-input="descCompleta" rows="4">'+esc(q.descricaoCompleta)+'</textarea>'),
+  ...customFieldRenderers('questao','questao',q)
  };
 }
 function viewQuestaoForm(params){
@@ -1112,8 +1205,8 @@ function viewEventoForm(params){
   <div class="note">Este evento integra a cronologia do processo (Exportar → Resumo com cronologia).</div>
   ${field('Descrição resumida','<input data-action-input="eventoDescResumida" value="'+esc(e.descricaoResumida)+'">')}
   <div class="row">
-   <div>${field('Data','<input type="date" id="eventoDataInput_'+e.id+'" data-action-input="eventoData" value="'+esc(e.data)+'">')}</div>
-   <div>${field('Hora','<input type="time" id="eventoHoraInput_'+e.id+'" data-action-input="eventoHora" value="'+esc(e.hora)+'">')}</div>
+   <div>${field('Data',dateFieldConfirm('eventoDataInput_'+e.id,e.data,' data-kind="evento" data-processo-id="'+proc.id+'" data-evento-id="'+e.id+'" data-field="data"'))}</div>
+   <div>${field('Hora',dateFieldConfirm('eventoHoraInput_'+e.id,e.hora,' data-kind="evento" data-processo-id="'+proc.id+'" data-evento-id="'+e.id+'" data-field="hora"','time'))}</div>
   </div>
   <div class="actions one"><button type="button" class="linklike" data-action="addToCalendar" data-date-el="eventoDataInput_${e.id}" data-time-el="eventoHoraInput_${e.id}" data-title="${esc(tipo.nome+' — '+(e.descricaoResumida||proc.codigo))}" data-location="${esc(proc.local||'')}">📅 Adicionar ao calendário (opcional)</button></div>
   ${!tipo.semPresencas?field('Presenças',fieldWithLink(presencasChecklist(proc,e),'gerir intervenientes','intervenientes',{returnView:'eventoForm',returnParams:params})):''}
@@ -1140,8 +1233,6 @@ document.addEventListener('change',e=>{
  if(ui.view!=='eventoForm')return;
  const proc=getProcesso(ui.params.processoId);if(!proc)return;
  const ev=proc.eventos.find(x=>x.id===ui.params.id);if(!ev)return;
- if(t.dataset.actionInput==='eventoData'){ev.data=t.value;touch(proc);save()}
- if(t.dataset.actionInput==='eventoHora'){ev.hora=t.value;touch(proc);save()}
  if(t.dataset.actionInput==='presenca'){
   if(!ev.presencas)ev.presencas=[];
   const iv=t.dataset.iv;
@@ -1216,7 +1307,7 @@ function viewAnaliseQuestao(params){
  ${card('🔎 '+esc(questaoTitulo(q,a)), `<div class="note">${esc(q.descricaoCompleta||'')}</div><div style="margin-top:6px">${fasePill(q.fase||'analise')} ${fotoStatusPill(fotos.length)}</div>`)}
  ${card('🏷️ Classificação da questão', `
   ${field('Status da pergunta',`<select data-action-input="veredito"><option value="">— por definir —</option>${VEREDITO_OPTIONS.map(([k,label])=>`<option value="${k}" ${q.veredito===k?'selected':''}>${esc(label)}</option>`).join('')}</select>`)}
-  ${field('Prazo de resposta','<input type="date" data-action-input="prazoResposta" value="'+esc(q.prazoResposta||'')+'">','opcional — usado para assinalar pendências em atraso')}
+  ${field('Prazo de resposta',dateFieldConfirm('prazoRespostaInput_'+q.id,q.prazoResposta,' data-kind="questao" data-processo-id="'+proc.id+'" data-questao-id="'+q.id+'" data-field="prazoResposta"'),'opcional — usado para assinalar pendências em atraso')}
   ${q.fase!=='relatorio'&&q.prazoResposta?`<div class="note">${prazoLabel(q.prazoResposta)}</div>`:''}
   <label>Classificação em terços</label>
   <label class="inline"><input type="checkbox" data-action-input="classConsequencias" ${cl.consequencias?'checked':''}> Consequências</label>
@@ -1255,7 +1346,6 @@ document.addEventListener('change',e=>{
  const q=proc.questoes.find(x=>x.id===ui.params.id);if(!q)return;
  const cl=ensureClassificacao(q);
  if(t.dataset.actionInput==='veredito'){q.veredito=t.value;touch(proc);saveNow()}
- if(t.dataset.actionInput==='prazoResposta'){q.prazoResposta=t.value;touch(proc);saveNow()}
  if(t.dataset.actionInput==='classConsequencias'){cl.consequencias=t.checked;touch(proc);saveNow()}
  if(t.dataset.actionInput==='classReparacao'){cl.operacoesReparacao=t.checked;touch(proc);saveNow()}
  if(t.dataset.actionInput==='classCustos'){cl.verCustos=t.checked;touch(proc);saveNow()}
@@ -1466,6 +1556,15 @@ function fileSizeLabel(bytes){
  if(bytes<1024*1024)return Math.round(bytes/1024)+' KB';
  return (bytes/1024/1024).toFixed(1)+' MB';
 }
+function docIcon(nome){
+ const ext=(nome||'').split('.').pop().toLowerCase();
+ if(ext==='pdf')return '📕';
+ if(['doc','docx'].includes(ext))return '📝';
+ if(['xls','xlsx','csv'].includes(ext))return '📊';
+ if(['ppt','pptx'].includes(ext))return '📽️';
+ if(['zip','rar','7z'].includes(ext))return '🗜️';
+ return '📄';
+}
 function viewDocumentos(params){
  const proc=getProcesso(params.processoId);if(!proc)return '';
  if(!proc.documentos)proc.documentos=[];
@@ -1473,21 +1572,70 @@ function viewDocumentos(params){
   ${field('Notas de documentação','<textarea data-bind="documentacao" data-scope="processo" data-scope-id="'+proc.id+'" rows="4">'+esc(proc.documentacao)+'</textarea>','ex.: documentos em falta, origem, observações')}
   <hr>
   <h3>Ficheiros carregados</h3>
-  <div>${proc.documentos.length?proc.documentos.map(d=>`
+  <div>${proc.documentos.length?proc.documentos.map(d=>{
+   const isImg=(d.tipo||'').startsWith('image/');
+   const thumb=isImg
+    ?`<img data-doc-id="${d.id}" data-action="abrirDocumento" data-id="${d.id}" alt="documento" style="width:64px;height:64px;object-fit:cover;border-radius:8px;cursor:pointer;background:#e3e8ee;flex:0 0 64px">`
+    :`<div data-action="abrirDocumento" data-id="${d.id}" style="width:64px;height:64px;border-radius:8px;background:#eef1f6;display:flex;align-items:center;justify-content:center;font-size:28px;cursor:pointer;flex:0 0 64px">${docIcon(d.nome)}</div>`;
+   return `
    <div class="item">
-    <b>${esc(d.nome)}</b>
-    <div class="meta">${esc(fileSizeLabel(d.tamanho))} · ${esc((d.createdAt||'').slice(0,10))}</div>
+    <div style="display:flex;gap:10px;align-items:flex-start;cursor:default">
+     ${thumb}
+     <div style="flex:1;min-width:0">
+      <b>${esc(d.nome)}</b>
+      <div class="meta">${esc(fileSizeLabel(d.tamanho))} · ${esc((d.createdAt||'').slice(0,10))}${d.flagRotacao?' · ⚠ orientação diferente':''}</div>
+     </div>
+    </div>
+    ${app.tiposDocumento.length?`<div class="note" style="margin-top:8px">Tipo de documentação (marcação cumulativa):</div><div>${app.tiposDocumento.map(t=>`<label class="inline"><input type="checkbox" data-action-input="toggleTipoDocumento" data-processo="${proc.id}" data-id="${d.id}" data-tipo="${t.id}" ${(d.tipos||[]).includes(t.id)?'checked':''}> ${esc(t.nome)}</label>`).join('')}</div>`:''}
     <div class="item-actions">
+     <button type="button" data-action="abrirDocumento" data-id="${d.id}">👁 Abrir</button>
      <button type="button" class="secondary" data-action="descarregarDocumento" data-processo="${proc.id}" data-id="${d.id}">⬇️ Descarregar</button>
      <button type="button" class="danger" data-action="apagarDocumento" data-processo="${proc.id}" data-id="${d.id}">🗑 Eliminar</button>
     </div>
-   </div>`).join(''):'<div class="note">Ainda não há ficheiros carregados.</div>'}</div>
+   </div>`;
+  }).join(''):'<div class="note">Ainda não há ficheiros carregados.</div>'}</div>
   <input type="file" id="documentoFile" multiple hidden>
   <div class="actions one"><button type="button" data-action="carregarDocumentos" data-processo="${proc.id}">📎 Carregar ficheiros</button></div>
   <div id="documentoState" class="status">Pronto.</div>
  `);
 }
 actions.carregarDocumentos=(b)=>{const el=$('documentoFile');el.dataset.processo=b.dataset.processo;el.click()};
+actions.abrirDocumento=async(b)=>{
+ const url=await getDocUrl(b.dataset.id);
+ if(!url)return alert('Ficheiro indisponível.');
+ window.open(url,'_blank');
+};
+document.addEventListener('change',e=>{
+ const t=e.target;
+ if(t.dataset.actionInput!=='toggleTipoDocumento')return;
+ const proc=getProcesso(t.dataset.processo);if(!proc)return;
+ const d=(proc.documentos||[]).find(x=>x.id===t.dataset.id);if(!d)return;
+ if(!d.tipos)d.tipos=[];
+ const tipoId=t.dataset.tipo;
+ if(t.checked){if(!d.tipos.includes(tipoId))d.tipos.push(tipoId)}else{d.tipos=d.tipos.filter(x=>x!==tipoId)}
+ touch(proc);save();
+});
+// Ao carregar um documento de imagem, verifica a orientação predominante configurada para
+// documentos (Configurações → Documentação) — a mesma rotina de rodar/eliminar/manter das
+// fotografias. Ficheiros que não sejam imagem (PDF, Word, ...) não são verificados.
+async function processarNovoDocumento(proc,file){
+ const id=uid();
+ let width=null,height=null,orientacao=null,flagRotacao=false;
+ if(file.type&&file.type.startsWith('image/')){
+  try{
+   const img=await decodeImageOriented(file);
+   width=img.width;height=img.height;
+   if(img.close)img.close();
+   orientacao=height>=width?'portrait':'landscape';
+   const dominante=app.settings.documentoOrientacaoDefault==='paisagem'?'landscape':'portrait';
+   flagRotacao=orientacao!==dominante;
+  }catch(e){/* não decodificável como imagem — segue sem verificação de orientação */}
+ }
+ await idbPut(id,file,FILES_STORE);
+ proc.documentos.push({id,nome:file.name,tamanho:file.size,tipo:file.type,tipos:[],width,height,orientacao,flagRotacao,createdAt:new Date().toISOString()});
+ touch(proc);logEvento(proc,'Documento "'+file.name+'" carregado');
+ return id;
+}
 document.addEventListener('change',async e=>{
  const t=e.target;
  if(t.id!=='documentoFile')return;
@@ -1495,15 +1643,16 @@ document.addEventListener('change',async e=>{
  const files=Array.from(t.files||[]);
  if(!files.length)return;
  if(!proc.documentos)proc.documentos=[];
+ const addedIds=[];
  for(const file of files){
-  const id=uid();
-  await idbPut(id,file,FILES_STORE);
-  proc.documentos.push({id,nome:file.name,tamanho:file.size,tipo:file.type,createdAt:new Date().toISOString()});
+  addedIds.push(await processarNovoDocumento(proc,file));
  }
- touch(proc);logEvento(proc,files.length+' documento(s) carregado(s)');saveNow();
+ saveNow();
  t.value='';
  const st=$('documentoState');if(st)st.textContent=files.length+' ficheiro(s) carregado(s).';
  render();
+ const naoConformes=addedIds.map(id=>(proc.documentos||[]).find(d=>d&&d.id===id)).filter(d=>d&&d.flagRotacao);
+ if(naoConformes.length)await reviewDocOrientation(proc,naoConformes,0);
 });
 actions.descarregarDocumento=async(b)=>{
  const proc=getProcesso(b.dataset.processo);
@@ -1512,12 +1661,71 @@ actions.descarregarDocumento=async(b)=>{
  if(!blob)return alert('Ficheiro indisponível.');
  shareOrDownload(blob,d.nome);
 };
+async function rotateDocumentById(proc,docId){
+ const d=(proc.documentos||[]).find(x=>x.id===docId);if(!d)return;
+ const blob=await idbGet(d.id,FILES_STORE);
+ const img=await decodeImageOriented(blob);
+ const canvas=document.createElement('canvas');
+ canvas.width=img.height;canvas.height=img.width;
+ const ctx=canvas.getContext('2d');
+ ctx.translate(canvas.width/2,canvas.height/2);ctx.rotate(Math.PI/2);
+ ctx.drawImage(img,-img.width/2,-img.height/2);
+ if(img.close)img.close();
+ const newBlob=await canvasToBlob(canvas,0.9);
+ await idbPut(d.id,newBlob,FILES_STORE);
+ if(docUrlCache[d.id]){URL.revokeObjectURL(docUrlCache[d.id]);delete docUrlCache[d.id]}
+ const w=d.width,h=d.height;d.width=h;d.height=w;
+ d.orientacao=d.height>=d.width?'portrait':'landscape';
+ d.flagRotacao=false;d.tamanho=newBlob.size;d.tipo='image/jpeg';
+ touch(proc);
+}
+async function deleteDocumentById(proc,docId){
+ await idbDel(docId,FILES_STORE);
+ if(docUrlCache[docId]){URL.revokeObjectURL(docUrlCache[docId]);delete docUrlCache[docId]}
+ proc.documentos=(proc.documentos||[]).filter(d=>d.id!==docId);
+ touch(proc);
+}
 actions.apagarDocumento=async(b)=>{
  if(!confirm('Eliminar este ficheiro?'))return;
  const proc=getProcesso(b.dataset.processo);
- await idbDel(b.dataset.id,FILES_STORE);
- proc.documentos=(proc.documentos||[]).filter(d=>d.id!==b.dataset.id);
- touch(proc);saveNow();render();
+ await deleteDocumentById(proc,b.dataset.id);
+ saveNow();render();
+};
+/* ---- Revisão de orientação dos documentos de imagem: uma a uma (rodar/eliminar/manter) ---- */
+let _reviewDocProc=null,_reviewDocList=null;
+async function reviewDocOrientation(proc,list,idx){
+ if(idx>=list.length){_reviewDocProc=null;_reviewDocList=null;fecharModal();return}
+ const d=(proc.documentos||[]).find(x=>x.id===list[idx].id);
+ if(!d){await reviewDocOrientation(proc,list,idx+1);return}
+ _reviewDocProc=proc;_reviewDocList=list;
+ const url=await getDocUrl(d.id);
+ const defaultLabel=app.settings.documentoOrientacaoDefault==='paisagem'?'paisagem':'retrato';
+ const docLabel=d.orientacao==='landscape'?'paisagem':'retrato';
+ abrirModal(`
+  <div class="note" style="margin-bottom:8px">⚠ Documento ${idx+1}/${list.length} (${esc(d.nome)}): está em <b>${docLabel}</b>, mas a orientação por defeito dos documentos é <b>${defaultLabel}</b>. O que pretende fazer?</div>
+  <img class="big" src="${url}" alt="documento">
+  <div class="actions">
+   <button type="button" data-action="reviewDocRodar" data-id="${d.id}" data-idx="${idx}">↻ Rodar</button>
+   <button type="button" class="danger" data-action="reviewDocEliminar" data-id="${d.id}" data-idx="${idx}">🗑 Eliminar</button>
+   <button type="button" class="secondary" data-action="reviewDocManter" data-id="${d.id}" data-idx="${idx}">✔ Manter assim</button>
+  </div>
+ `);
+}
+actions.reviewDocRodar=async(b)=>{
+ await rotateDocumentById(_reviewDocProc,b.dataset.id);
+ saveNow();render();
+ await reviewDocOrientation(_reviewDocProc,_reviewDocList,Number(b.dataset.idx)+1);
+};
+actions.reviewDocEliminar=async(b)=>{
+ await deleteDocumentById(_reviewDocProc,b.dataset.id);
+ saveNow();render();
+ await reviewDocOrientation(_reviewDocProc,_reviewDocList,Number(b.dataset.idx)+1);
+};
+actions.reviewDocManter=async(b)=>{
+ const d=(_reviewDocProc.documentos||[]).find(x=>x.id===b.dataset.id);
+ if(d)d.flagRotacao=false;
+ touch(_reviewDocProc);saveNow();render();
+ await reviewDocOrientation(_reviewDocProc,_reviewDocList,Number(b.dataset.idx)+1);
 };
 actions.carregarFotos=(b)=>{const el=$('fotoGallery');el.dataset.processo=b.dataset.processo;el.dataset.questao=b.dataset.questao;el.click()};
 actions.tirarFoto=(b)=>{const el=$('fotoCamera');el.dataset.processo=b.dataset.processo;el.dataset.questao=b.dataset.questao;el.click()};
@@ -1618,6 +1826,7 @@ function abrirModal(html){
  ov.innerHTML=`<div class="modal-box">${html}</div>`;
  ov.classList.remove('hidden');
  hydratePhotos(ov);
+ hydrateDocs(ov);
 }
 function fecharModal(){const ov=$('modalOverlay');if(ov)ov.remove()}
 async function rotatePhotoById(proc,fotoId){
@@ -1928,6 +2137,100 @@ actions.apagarGabinete=(b)=>{
  saveNow();render();
 };
 
+/* ---- Tipos de documentação (tags cumulativas dos ficheiros carregados) ---- */
+function viewTiposDocumento(){
+ return card('🏷️ Tipos de documentação', `
+  <div class="note">Por defeito: Caderneta predial, Plantas, Relatório de peritagem, Lista de matéria a dar resposta, CRP, Lista de quesitos. Cada ficheiro carregado pode ser marcado com um ou mais destes tipos (tick cumulativo).</div>
+  <div>${app.tiposDocumento.map(t=>`
+   <div class="item">
+    <b>${esc(t.nome)}</b>
+    <div class="item-actions">
+     <button type="button" class="secondary" data-action="editarTipoDocumento" data-id="${t.id}">✏️ Editar</button>
+     <button type="button" class="danger" data-action="apagarTipoDocumento" data-id="${t.id}">🗑 Eliminar</button>
+    </div>
+   </div>`).join('')}</div>
+  <div class="row"><input id="novoTipoDocumentoNome" placeholder="Novo tipo de documentação"><button type="button" data-action="novoTipoDocumento">➕ Adicionar</button></div>
+  ${returnLinkBtn()}
+ `);
+}
+actions.novoTipoDocumento=()=>{
+ const nome=$('novoTipoDocumentoNome').value.trim();if(!nome)return;
+ app.tiposDocumento.push({id:uid(),nome});saveNow();render();
+};
+actions.editarTipoDocumento=(b)=>{
+ const t=app.tiposDocumento.find(x=>x.id===b.dataset.id);
+ const nome=prompt('Nome:',t.nome);if(!nome)return;
+ t.nome=nome;saveNow();render();
+};
+actions.apagarTipoDocumento=(b)=>{
+ if(!confirm('Eliminar este tipo de documentação?'))return;
+ app.tiposDocumento=app.tiposDocumento.filter(t=>t.id!==b.dataset.id);
+ saveNow();render();
+};
+
+/* ---- Designação processual das questões (Quesito / Questão / Tema / Situação) ---- */
+function viewDesignacoesQuestao(){
+ return card('🏷️ Designação processual das questões', `
+  <div class="note">Por defeito: Quesito. Usada em todo o processo (ex.: "Quesitos apresentados por: ...") — pode escolher-se outra por processo, no formulário do processo.</div>
+  <div>${app.designacoesQuestao.map(d=>`
+   <div class="item">
+    <b>${esc(d.nome)} <span class="note">(pl. ${esc(d.plural)}, ${d.genero==='f'?'feminino':'masculino'})</span></b> ${d.isDefault?'<span class="pill on">por defeito</span>':''}
+    <div class="item-actions">
+     <button type="button" class="secondary" data-action="defaultDesignacaoQuestao" data-id="${d.id}">${d.isDefault?'✓ Por defeito':'Tornar por defeito'}</button>
+     <button type="button" class="danger" data-action="apagarDesignacaoQuestao" data-id="${d.id}">🗑 Eliminar</button>
+    </div>
+   </div>`).join('')}</div>
+  <div class="row"><input id="novaDesignacaoNome" placeholder="Nome (ex.: Tema)"><input id="novaDesignacaoPlural" placeholder="Plural (ex.: Temas)"></div>
+  <label class="inline"><input type="checkbox" id="novaDesignacaoFeminino"> Género feminino (ex.: Situação → "apresentadas")</label>
+  <div class="actions one"><button type="button" data-action="novaDesignacaoQuestao">➕ Adicionar</button></div>
+  ${returnLinkBtn()}
+ `);
+}
+actions.novaDesignacaoQuestao=()=>{
+ const nome=$('novaDesignacaoNome').value.trim(),plural=$('novaDesignacaoPlural').value.trim();
+ if(!nome||!plural)return alert('Indique o nome e o plural.');
+ app.designacoesQuestao.push({id:uid(),nome,plural,genero:$('novaDesignacaoFeminino').checked?'f':'m'});
+ saveNow();render();
+};
+actions.defaultDesignacaoQuestao=(b)=>{
+ app.designacoesQuestao.forEach(d=>{d.isDefault=(d.id===b.dataset.id)});
+ saveNow();render();
+};
+actions.apagarDesignacaoQuestao=(b)=>{
+ if(app.designacoesQuestao.length<=1)return alert('Tem de existir pelo menos uma designação.');
+ if(!confirm('Eliminar esta designação?'))return;
+ app.designacoesQuestao=app.designacoesQuestao.filter(d=>d.id!==b.dataset.id);
+ if(!app.designacoesQuestao.some(d=>d.isDefault))app.designacoesQuestao[0].isDefault=true;
+ saveNow();render();
+};
+function getDesignacaoQuestao(proc){
+ return app.designacoesQuestao.find(x=>x.id===proc.designacaoQuestaoId)||app.designacoesQuestao.find(x=>x.isDefault)||app.designacoesQuestao[0]||{nome:'Quesito',plural:'Quesitos',genero:'m'};
+}
+function autorGroupHeaderText(desig,autorNome){
+ return `${desig.plural} ${desig.genero==='f'?'apresentadas':'apresentados'} por: ${autorNome}`;
+}
+function getModelDoc(chave){
+ return app.modelDocs.find(m=>m.chave===chave)||{titulo:chave,fonte:'helvetica',tamanho:10,negrito:true};
+}
+
+/* ---- Model docs: título/fonte/tamanho/negrito de cada secção dos documentos gerados ---- */
+function viewModelDocs(){
+ return card('📄 Títulos dos documentos gerados (model docs)', `
+  <div class="note">Cada secção dos documentos exportados (PDF/Word) tem um título configurável, com o seu próprio tipo de letra, tamanho e negrito. O título aparece uma só vez por secção, independentemente do número de páginas que ocupe. Por defeito: tamanho 10, negrito.</div>
+  ${app.modelDocs.map(m=>`
+   <div class="item">
+    ${field('Título',`<input data-bind="titulo" data-scope="modelDoc" data-scope-id="${m.id}" value="${esc(m.titulo)}">`)}
+    <div class="row3">
+     <div>${field('Fonte',`<select data-bind="fonte" data-scope="modelDoc" data-scope-id="${m.id}">${FONT_OPTIONS.map(([k,label])=>`<option value="${k}" ${m.fonte===k?'selected':''}>${esc(label)}</option>`).join('')}</select>`)}</div>
+     <div>${field('Tamanho (pt)',`<input type="number" min="6" max="24" step="0.5" data-bind="tamanho" data-scope="modelDoc" data-scope-id="${m.id}" value="${m.tamanho}">`)}</div>
+     <div><label class="inline" style="margin-top:28px"><input type="checkbox" data-bind-immediate data-bind="negrito" data-scope="modelDoc" data-scope-id="${m.id}" ${m.negrito?'checked':''}> Negrito</label></div>
+    </div>
+   </div>
+  `).join('')}
+  ${returnLinkBtn()}
+ `);
+}
+
 /* ---- Pendentes de resposta — filtro global por processo/perito (para insistir no feedback) ---- */
 function viewPendentesGlobal(params){
  params=params||{};
@@ -2103,17 +2406,22 @@ function kindLabel(kind){return {pedido:'Pedido',processo:'Processo',questao:'Qu
 function viewFieldOrder(){
  return Object.keys(FIELD_DEFS).map(kind=>{
   const order=app.settings.fieldOrder[kind];
-  const labelOf=k=>{const f=FIELD_DEFS[kind].find(x=>x[0]===k);return f?f[1]:k};
   return card('↕️ '+kindLabel(kind), `
-   <div class="note">A sequência mais lógica de preenchimento muda por vezes ao acrescentar ou eliminar campos — ajuste aqui.</div>
-   ${order.map((k,i)=>`
+   <div class="note">A sequência mais lógica de preenchimento muda por vezes ao acrescentar ou eliminar campos — ajuste aqui. ✏️ renomeia, 📄 duplica (cria uma variante personalizada, nunca altera o campo original), 🗑 elimina — só disponível para campos personalizados; os campos base da aplicação não podem ser eliminados.</div>
+   ${order.map((k,i)=>{
+    const isCustom=(app.settings.customFields[kind]||[]).some(c=>c.key===k);
+    return `
     <div class="order-row">
-     <span class="lbl">${i+1}. ${esc(labelOf(k))}</span>
+     <span class="lbl">${i+1}. ${esc(resolveFieldLabel(kind,k))}${isCustom?' <span class="note">(personalizado)</span>':''}</span>
      <div class="order-btns">
       <button type="button" data-action="moveFieldOrder" data-kind="${kind}" data-key="${k}" data-dir="up" ${i===0?'disabled':''}>▲</button>
       <button type="button" data-action="moveFieldOrder" data-kind="${kind}" data-key="${k}" data-dir="down" ${i===order.length-1?'disabled':''}>▼</button>
+      <button type="button" data-action="renameFieldOrder" data-kind="${kind}" data-key="${k}">✏️</button>
+      <button type="button" data-action="duplicateFieldOrder" data-kind="${kind}" data-key="${k}">📄</button>
+      ${isCustom?`<button type="button" class="danger" data-action="deleteFieldOrder" data-kind="${kind}" data-key="${k}">🗑</button>`:''}
      </div>
-    </div>`).join('')}
+    </div>`;
+   }).join('')}
   `);
  }).join('')+`<div class="actions one"><button type="button" class="secondary" data-action="resetFieldOrder">↺ Repor ordem por defeito</button></div>`+returnLinkBtn();
 }
@@ -2126,9 +2434,40 @@ actions.moveFieldOrder=(b)=>{
  [arr[i],arr[j]]=[arr[j],arr[i]];
  saveNow();render();
 };
+actions.renameFieldOrder=(b)=>{
+ const kind=b.dataset.kind,key=b.dataset.key;
+ const atual=resolveFieldLabel(kind,key);
+ const novo=prompt('Novo nome do campo:',atual);
+ if(!novo||!novo.trim())return;
+ app.settings.fieldLabels[kind][key]=novo.trim();
+ saveNow();render();
+};
+actions.duplicateFieldOrder=(b)=>{
+ const kind=b.dataset.kind,key=b.dataset.key;
+ const label=resolveFieldLabel(kind,key);
+ const newKey='custom_'+uid();
+ app.settings.customFields[kind].push({key:newKey,label:label+' (cópia)'});
+ const arr=app.settings.fieldOrder[kind];
+ const i=arr.indexOf(key);
+ arr.splice(i>=0?i+1:arr.length,0,newKey);
+ saveNow();render();
+};
+actions.deleteFieldOrder=(b)=>{
+ const kind=b.dataset.kind,key=b.dataset.key;
+ const isCustom=(app.settings.customFields[kind]||[]).some(c=>c.key===key);
+ if(!isCustom)return alert('Este é um campo base da aplicação e não pode ser eliminado — pode duplicá-lo para criar uma variante personalizada.');
+ if(!confirm('Eliminar este campo personalizado? Os valores já preenchidos deixam de ser mostrados (não são apagados dos registos).'))return;
+ app.settings.customFields[kind]=app.settings.customFields[kind].filter(c=>c.key!==key);
+ app.settings.fieldOrder[kind]=app.settings.fieldOrder[kind].filter(k=>k!==key);
+ delete app.settings.fieldLabels[kind][key];
+ saveNow();render();
+};
 actions.resetFieldOrder=()=>{
- if(!confirm('Repor a ordem por defeito dos campos em todos os formulários?'))return;
+ if(!confirm('Repor a ordem por defeito dos campos base em todos os formulários? Os campos personalizados mantêm-se, acrescentados no fim.'))return;
+ const customKeysByKind={};
+ Object.keys(FIELD_DEFS).forEach(k=>{customKeysByKind[k]=(app.settings.customFields[k]||[]).map(c=>c.key)});
  app.settings.fieldOrder=defaultFieldOrder();
+ Object.keys(FIELD_DEFS).forEach(k=>{app.settings.fieldOrder[k]=app.settings.fieldOrder[k].concat(customKeysByKind[k])});
  saveNow();render();
 };
 
@@ -2141,15 +2480,19 @@ function viewSettings(){
   ${field('Release apresentada no menu principal','<input data-bind="release" data-scope="settings" value="'+esc(s.release)+'">')}
  `)}
  ${card('Fotografias', `
-  <div class="note">Grelha associada a cada questão. Por defeito: 2 colunas, orientação retrato.</div>
+  <div class="note">Grelha associada a cada questão. Por defeito: 2 colunas, orientação paisagem. Fotos que não cumpram a orientação predominante são assinaladas uma a uma (rodar/eliminar/manter) ao carregar.</div>
   ${field('Colunas da grelha de fotos (1 a 5)',`<select data-bind="fotoGridCols" data-scope="settings">${[1,2,3,4,5].map(n=>`<option value="${n}" ${s.fotoGridCols==n?'selected':''}>${n} coluna(s)</option>`).join('')}</select>`)}
-  ${field('Orientação predominante por defeito',`<select data-bind="fotoOrientacaoDefault" data-scope="settings"><option value="retrato" ${s.fotoOrientacaoDefault==='retrato'?'selected':''}>Retrato</option><option value="paisagem" ${s.fotoOrientacaoDefault==='paisagem'?'selected':''}>Paisagem</option></select>`)}
+  ${field('Orientação predominante (por defeito) das imagens',`<select data-bind="fotoOrientacaoDefault" data-scope="settings"><option value="retrato" ${s.fotoOrientacaoDefault==='retrato'?'selected':''}>Retrato</option><option value="paisagem" ${s.fotoOrientacaoDefault==='paisagem'?'selected':''}>Paisagem</option></select>`)}
   ${field('Resolução alvo por foto',fieldWithLink(`<select data-bind="fotoResolutionKB" data-scope="settings">${app.resolucoesFoto.map(r=>`<option value="${r.kb}" ${String(s.fotoResolutionKB)===String(r.kb)?'selected':''}>${esc(r.nome)}${r.isDefault?' (por defeito)':''}</option>`).join('')}</select>`,'gerir opções de resolução','resolucoesFoto',{}))}
   ${field('Nº de fotos na grelha de capa (por defeito)','<input type="number" min="1" max="8" data-bind="capaGridSize" data-scope="settings" value="'+s.capaGridSize+'">','se faltarem fotos marcadas para capa, o resto é preenchido aleatoriamente a partir das restantes')}
  `)}
+ ${card('Documentação', `
+  <div class="note">Aplica-se aos ficheiros de imagem carregados em Documentação do processo (a mesma rotina de rodar/eliminar/manter das fotografias). Ficheiros que não sejam imagem (PDF, Word, ...) não são verificados.</div>
+  ${field('Orientação predominante dos documentos',`<select data-bind="documentoOrientacaoDefault" data-scope="settings"><option value="retrato" ${s.documentoOrientacaoDefault==='retrato'?'selected':''}>Retrato</option><option value="paisagem" ${s.documentoOrientacaoDefault==='paisagem'?'selected':''}>Paisagem</option></select>`)}
+ `)}
  ${card('Ordem dos campos nos formulários', `<div class="note">A ordem em que os campos aparecem no Pedido, Processo e Questão pode ser ajustada à sequência de preenchimento que for mais lógica.</div><div class="actions one">${linkBtn('↕️ Gerir ordem dos campos','fieldOrder',{})}</div>`)}
  ${card('Tabela de siglas de questão', `<div class="actions one">${linkBtn('🔤 Gerir siglas (Qs, Tm, ...)','siglas',{})}</div>`)}
- ${card('Funções, intervenientes e tabelas do processo', `<div class="actions">${linkBtn('🏷️ Gerir funções','funcoes',{})}${linkBtn('👥 Gerir intervenientes','intervenientes',{})}</div><div class="actions">${linkBtn('🏛️ Gerir entidades representadas','representacoes',{})}${linkBtn('🗓️ Gerir tipos de evento','tiposEvento',{})}</div><div class="actions">${linkBtn('🏢 Gerir gabinetes','gabinetes',{})}${linkBtn('📌 Pendentes de resposta (todos os processos)','pendentesGlobal',{})}</div>`)}
+ ${card('Funções, intervenientes e tabelas do processo', `<div class="actions">${linkBtn('🏷️ Gerir funções','funcoes',{})}${linkBtn('👥 Gerir intervenientes','intervenientes',{})}</div><div class="actions">${linkBtn('🏛️ Gerir entidades representadas','representacoes',{})}${linkBtn('🗓️ Gerir tipos de evento','tiposEvento',{})}</div><div class="actions">${linkBtn('🏢 Gerir gabinetes','gabinetes',{})}${linkBtn('📌 Pendentes de resposta (todos os processos)','pendentesGlobal',{})}</div><div class="actions">${linkBtn('📁 Gerir tipos de documentação','tiposDocumento',{})}${linkBtn('🏷️ Gerir designação das questões','designacoesQuestao',{})}</div><div class="actions one">${linkBtn('📄 Gerir títulos dos documentos gerados (model docs)','modelDocs',{})}</div>`)}
  ${card('Tabelas do pedido', `<div class="actions">${linkBtn('🧰 Gerir serviço solicitado','servicos',{})}${linkBtn('🎯 Gerir finalidades','finalidades',{})}</div>`)}
  ${card('Dados e segurança', `
   <div class="status">Backup_OUT: exporta um ZIP com todos os dados e fotografias. Backup_IN: restaura esse ZIP noutro dispositivo.</div>
@@ -2337,6 +2680,7 @@ async function buildResumoPdf(proc,cfg){
  const mL=(Number(L.marginLeft)||2)*10,mT=(Number(L.marginTop)||2)*10,mR=(Number(L.marginRight)||1.5)*10,mB=(Number(L.marginBottom)||1.5)*10;
  const pageW=doc.internal.pageSize.getWidth(),pageH=doc.internal.pageSize.getHeight(),contentW=pageW-mL-mR;
  const cols=Math.max(1,Math.min(5,Number(cfg.cols)||app.settings.fotoGridCols||2));
+ const desig=getDesignacaoQuestao(proc);
  let y=mT,currentTitulo='';
  // Cabeçalho e rodapé são desenhados numa passagem final (após gerar todo o conteúdo),
  // para que a variável "Página / total de páginas" tenha o total já conhecido em qualquer posição.
@@ -2359,6 +2703,23 @@ async function buildResumoPdf(proc,cfg){
   });
  };
  const sectionTitle=(t)=>{ensure(12);doc.setFont(F,'bold');doc.setFontSize(BS+8);doc.text(t,mL,y);y+=10};
+ // Título de secção configurável (model docs) — imprime-se uma só vez, à entrada da secção,
+ // independentemente do nº de páginas que essa secção venha a ocupar.
+ const sectionTitleModel=(chave)=>{
+  const m=getModelDoc(chave);
+  const mf=FONT_PDF_BASE[m.fonte]||F,ms=Number(m.tamanho)||10;
+  ensure(ms*0.5+4);doc.setFont(mf,m.negrito?'bold':'normal');doc.setFontSize(ms);
+  doc.text(m.titulo,mL,y);y+=ms*0.45+6;
+  doc.setFont(F,'normal');doc.setFontSize(BS);
+ };
+ // Cabeçalho de grupo por autor — uma linha em branco antes e depois, uma só vez no início
+ // do bloco contíguo de cada autor (não repetido por questão).
+ const autorGroupHeaderPdf=(autorNome)=>{
+  y+=4;
+  ensure(10);doc.setFont(F,'bold');doc.setFontSize(BS+1);
+  doc.text(autorGroupHeaderText(desig,autorNome),mL,y);y+=8;
+  doc.setFont(F,'normal');doc.setFontSize(BS);
+ };
  const label=(t)=>{ensure(6);doc.setFont(F,'bold');doc.setFontSize(BS);doc.text(t,mL,y);y+=6};
  const plain=(t,sz)=>{doc.setFont(F,'normal');doc.setFontSize(sz||BS);const w=doc.splitTextToSize(t,contentW);ensure(w.length*(sz||BS)*0.45+2);doc.text(w,mL,y);y+=w.length*(sz||BS)*0.45+2};
  const kv=(k,v)=>plain(`${k}: ${v||'—'}`);
@@ -2398,8 +2759,6 @@ async function buildResumoPdf(proc,cfg){
    doc.setFont(F,'normal');doc.setFontSize(BS);
    doc.text('------------------------------------------------------------',mL,y);y+=6;
   }
-  doc.setFont(F,'bold');doc.setFontSize(BS);
-  doc.text(`Autor ${a.ordem} — ${a.nome}`,mL,y);y+=6;
   const titulo=doc.splitTextToSize(questaoTitulo(q,a),contentW);
   ensure(titulo.length*BS*0.45+2);doc.text(titulo,mL,y);y+=titulo.length*BS*0.45+3;
   if(q.descricaoCompleta&&q.descricaoCompleta.trim()){
@@ -2448,16 +2807,16 @@ async function buildResumoPdf(proc,cfg){
 
  if(cfg.capa){
   setTitulo('Capa');
-  sectionTitle('Capa de processo');
-  [['Código de processo',proc.codigo],['Nº processo',proc.numero],['Solicitante institucional',proc.solicitanteInstitucional],['Número institucional',proc.designacaoInstitucional],['Local',proc.local]].forEach(([k,v])=>kv(k,v));
+  sectionTitleModel('capa');
+  [['Código de processo',proc.codigo],['Nº processo',proc.numero],['Solicitante institucional',proc.solicitanteInstitucional],['Contexto',proc.designacaoInstitucional],['Local',proc.local]].forEach(([k,v])=>kv(k,v));
   y+=4;
   if(cfg.fotos)await drawPhotoGrid(capaPhotosForExport(proc),true);
   newPage();
  }
  if(cfg.resumoCronologia){
   setTitulo('Resumo e cronologia');
-  sectionTitle('Resumo do processo');
-  [['Código de processo',proc.codigo],['Nº processo',proc.numero],['Solicitante institucional',proc.solicitanteInstitucional],['Número institucional',proc.designacaoInstitucional],['Designação TAG',proc.designacaoTag],['Local',proc.local],['Coordenador',resolveProcessVar(proc,'coordenador',{})],['Resumo de situações a analisar',proc.assunto]].forEach(([k,v])=>kv(k,v));
+  sectionTitleModel('resumoCronologia');
+  [['Código de processo',proc.codigo],['Nº processo',proc.numero],['Solicitante institucional',proc.solicitanteInstitucional],['Contexto',proc.designacaoInstitucional],['Designação TAG',proc.designacaoTag],['Local',proc.local],['Coordenador',resolveProcessVar(proc,'coordenador',{})],['Resumo de situações a analisar',proc.assunto]].forEach(([k,v])=>kv(k,v));
   y+=3;label('Peritos');
   const peritos=peritosDoProcesso(proc);
   if(!peritos.length)plain('—');
@@ -2470,10 +2829,12 @@ async function buildResumoPdf(proc,cfg){
  }
  if(cfg.listaQuestoes){
   setTitulo('Lista de questões colocadas');
-  sectionTitle('A — Lista de questões colocadas');
+  sectionTitleModel('listaQuestoes');
   const todas=questoesOrdenadas(proc);
   if(!todas.length)plain('Sem questões.');
+  let lastAutorA=null;
   todas.forEach(({q,a})=>{
+   if(a.id!==lastAutorA){lastAutorA=a.id;autorGroupHeaderPdf(a.nome)}
    doc.setFont(F,'bold');doc.setFontSize(BS);
    const titulo=doc.splitTextToSize(questaoTitulo(q,a),contentW);
    ensure(titulo.length*BS*0.45+2);doc.text(titulo,mL,y);y+=titulo.length*BS*0.45+1;
@@ -2485,11 +2846,13 @@ async function buildResumoPdf(proc,cfg){
  }
  if(cfg.custosPendentes){
   setTitulo('Custos pendentes');
-  sectionTitle('Resumo de questões com apuramento de custos pendente');
+  sectionTitleModel('custosPendentes');
   const custos=questoesComCustosPendentes(proc);
   if(!custos.length)plain('Sem questões pendentes de apuramento de custos.');
+  let lastAutorCP=null;
   custos.forEach(q=>{
    const a=proc.autores.find(x=>x.id===q.autorId);
+   if(a.id!==lastAutorCP){lastAutorCP=a.id;autorGroupHeaderPdf(a.nome)}
    doc.setFont(F,'bold');doc.setFontSize(BS);
    const titulo=doc.splitTextToSize(questaoTitulo(q,a),contentW);
    ensure(titulo.length*BS*0.45+2);doc.text(titulo,mL,y);y+=titulo.length*BS*0.45+1;
@@ -2500,12 +2863,14 @@ async function buildResumoPdf(proc,cfg){
  }
  if(cfg.listaAnalise){
   setTitulo('Histórico de análise');
-  sectionTitle('B — Histórico de análise');
+  sectionTitleModel('listaAnalise');
   const emAnalise=questoesOrdenadas(proc).filter(x=>x.q.fase!=='relatorio');
   if(!emAnalise.length)plain('Sem questões em análise.');
+  let lastAutorB=null;
   for(let i=0;i<emAnalise.length;i++){
    const {q,a}=emAnalise[i];
    if(i>0)newPage();
+   if(a.id!==lastAutorB){lastAutorB=a.id;autorGroupHeaderPdf(a.nome)}
    const hist=(q.historico&&q.historico.length)?q.historico:peritosDoProcesso(proc).map(p=>({intervenienteId:p.intervenienteId,texto:(q.respostas&&q.respostas[p.intervenienteId])||'',data:null})).filter(e=>e.texto&&e.texto.trim());
    const entradas=hist.slice().sort((x,y2)=>String(x.data||'').localeCompare(String(y2.data||''))).map(h=>{
     const iv=getInterveniente(h.intervenienteId);
@@ -2513,20 +2878,22 @@ async function buildResumoPdf(proc,cfg){
     const texto=h.texto+(nota&&nota.trim()?`\n\nAnotações: ${nota}`:'');
     return {titulo:`${iv?iv.nome:'—'}${h.data?' — '+h.data:''}:`,texto};
    });
-   await drawQuestionBlock(q,a,entradas,fotosDaQuestao(proc,q.id).length===0,i>0,(q.conciliada&&q.conciliada.texto)||'','Proposta(s) de resposta');
+   await drawQuestionBlock(q,a,entradas,fotosDaQuestao(proc,q.id).length===0,true,(q.conciliada&&q.conciliada.texto)||'','Proposta(s) de resposta');
   }
   newPage();
  }
  if(cfg.listaDraft){
   const relFinal=relatorioIsFinal(proc);
   setTitulo(relFinal?'Relatório final':'Draft de relatório');
-  sectionTitle(relFinal?'C — Relatório final (Respostas validadas)':'C — Draft de relatório (Respostas validadas)');
+  sectionTitleModel(relFinal?'listaDraftFinal':'listaDraft');
   const fechadas=questoesOrdenadas(proc).filter(x=>x.q.fase==='relatorio');
   if(!fechadas.length)plain('Ainda nenhuma questão conciliada.');
+  let lastAutorC=null;
   for(let i=0;i<fechadas.length;i++){
    const {q,a}=fechadas[i];
    if(i>0)newPage();
-   await drawQuestionBlock(q,a,[{titulo:'',texto:q.conciliada.texto||'(sem texto conciliado)'}],fotosDaQuestao(proc,q.id).length===0,i>0,null,'Resposta(s)');
+   if(a.id!==lastAutorC){lastAutorC=a.id;autorGroupHeaderPdf(a.nome)}
+   await drawQuestionBlock(q,a,[{titulo:'',texto:q.conciliada.texto||'(sem texto conciliado)'}],fotosDaQuestao(proc,q.id).length===0,true,null,'Resposta(s)');
   }
   if(relFinal)drawFechoRelatorioFinal();
  }
@@ -2581,6 +2948,7 @@ async function buildResumoDocx(proc,cfg){
  cfg=cfg||ensureExportConfig(proc);
  const zip=new JSZip();
  const s=app.settings,F=FONT_DOCX_NAME[s.layout.font]||'Calibri';
+ const desig=getDesignacaoQuestao(proc);
  const szBody=(Number(s.layout.fontSize)||10)*2,szTitle=szBody+16,szHead=szBody+6,szSmall=Math.max(12,szBody-4);
  const cm2tw=v=>Math.round((Number(v)||0)*566.9);
  const mL=cm2tw(s.layout.marginLeft),mT=cm2tw(s.layout.marginTop),mR=cm2tw(s.layout.marginRight),mB=cm2tw(s.layout.marginBottom);
@@ -2602,6 +2970,17 @@ async function buildResumoDocx(proc,cfg){
  const paraAuto=(text,o)=>{o=o||{};const align=willWrap(text)?'both':'left';return para(run(text,{font:F,size:szBody}),{align,indent:o.indent,after:o.after!=null?o.after:140})};
  const parts=[];
  const pageBreak=()=>parts.push('<w:p><w:r><w:br w:type="page"/></w:r></w:p>');
+ // Título de secção configurável (model docs) — imprime-se uma só vez, à entrada da secção.
+ const sectionTitleModelDocx=(chave)=>{
+  const m=getModelDoc(chave);
+  parts.push(para(run(m.titulo,{bold:!!m.negrito,font:FONT_DOCX_NAME[m.fonte]||F,size:(Number(m.tamanho)||10)*2}),{after:180}));
+ };
+ // Cabeçalho de grupo por autor — uma linha em branco antes e depois, uma só vez no início
+ // do bloco contíguo de cada autor (não repetido por questão).
+ const autorGroupHeaderDocx=(autorNome)=>{
+  parts.push(para('',{after:120}));
+  parts.push(para(run(autorGroupHeaderText(desig,autorNome),{bold:true,font:F}),{after:120}));
+ };
 
  // Campo dinâmico do Word (PAGE / NUMPAGES) — usado quando a variável "Página / total de páginas" é escolhida.
  const docxFieldRun=(code,size,bold)=>{
@@ -2719,16 +3098,16 @@ async function buildResumoDocx(proc,cfg){
  parts.push(para(run(proc.codigo||'',{bold:true,font:F,size:szTitle}),{after:120}));
 
  if(cfg.capa){
-  parts.push(para(run('Capa de processo',{bold:true,font:F,size:szHead}),{after:160}));
-  [['Código de processo',proc.codigo],['Nº processo',proc.numero],['Solicitante institucional',proc.solicitanteInstitucional],['Número institucional',proc.designacaoInstitucional],['Local',proc.local]].forEach(([k,v])=>{
+  sectionTitleModelDocx('capa');
+  [['Código de processo',proc.codigo],['Nº processo',proc.numero],['Solicitante institucional',proc.solicitanteInstitucional],['Contexto',proc.designacaoInstitucional],['Local',proc.local]].forEach(([k,v])=>{
    parts.push(para(run(k+': ',{bold:true,font:F})+run(String(v||'—'),{font:F})));
   });
   if(cfg.fotos)await photoBlock(capaPhotosForExport(proc),true);
   pageBreak();
  }
  if(cfg.resumoCronologia){
-  parts.push(para(run('Resumo do processo',{bold:true,font:F,size:szHead}),{after:120}));
-  [['Código de processo',proc.codigo],['Nº processo',proc.numero],['Solicitante institucional',proc.solicitanteInstitucional],['Número institucional',proc.designacaoInstitucional],['Designação TAG',proc.designacaoTag],['Local',proc.local],['Coordenador',resolveProcessVar(proc,'coordenador',{})],['Resumo de situações a analisar',proc.assunto]].forEach(([k,v])=>{
+  sectionTitleModelDocx('resumoCronologia');
+  [['Código de processo',proc.codigo],['Nº processo',proc.numero],['Solicitante institucional',proc.solicitanteInstitucional],['Contexto',proc.designacaoInstitucional],['Designação TAG',proc.designacaoTag],['Local',proc.local],['Coordenador',resolveProcessVar(proc,'coordenador',{})],['Resumo de situações a analisar',proc.assunto]].forEach(([k,v])=>{
    parts.push(para(run(k+': ',{bold:true,font:F})+run(String(v||'—'),{font:F})));
   });
   parts.push(para(run('Peritos',{bold:true,font:F,size:szHead}),{after:100}));
@@ -2742,33 +3121,39 @@ async function buildResumoDocx(proc,cfg){
   pageBreak();
  }
  if(cfg.listaQuestoes){
-  parts.push(para(run('A — Lista de questões colocadas',{bold:true,font:F,size:szTitle}),{after:180}));
+  sectionTitleModelDocx('listaQuestoes');
   const todas=questoesOrdenadas(proc);
   if(!todas.length)parts.push(para(run('Sem questões.',{font:F})));
+  let lastAutorA=null;
   todas.forEach(({q,a})=>{
+   if(a.id!==lastAutorA){lastAutorA=a.id;autorGroupHeaderDocx(a.nome)}
    parts.push(para(run(questaoTitulo(q,a),{bold:true,font:F}),{after:20}));
    parts.push(para(run(`Fase: ${q.fase==='relatorio'?'Draft de relatório':'Análise'} · Fotos: ${fotosDaQuestao(proc,q.id).length}`,{font:F,size:szSmall}),{after:100}));
   });
   pageBreak();
  }
  if(cfg.custosPendentes){
-  parts.push(para(run('Resumo de questões com apuramento de custos pendente',{bold:true,font:F,size:szTitle}),{after:180}));
+  sectionTitleModelDocx('custosPendentes');
   const custos=questoesComCustosPendentes(proc);
   if(!custos.length)parts.push(para(run('Sem questões pendentes de apuramento de custos.',{font:F})));
+  let lastAutorCP=null;
   custos.forEach(q=>{
    const a=proc.autores.find(x=>x.id===q.autorId);
+   if(a.id!==lastAutorCP){lastAutorCP=a.id;autorGroupHeaderDocx(a.nome)}
    parts.push(para(run(questaoTitulo(q,a),{bold:true,font:F}),{after:20}));
    parts.push(para(run(`Fase: ${q.fase==='relatorio'?'Draft de relatório':'Análise'}`,{font:F,size:szSmall}),{after:100}));
   });
   pageBreak();
  }
  if(cfg.listaAnalise){
-  parts.push(para(run('B — Histórico de análise',{bold:true,font:F,size:szTitle}),{after:180}));
+  sectionTitleModelDocx('listaAnalise');
   const emAnalise=questoesOrdenadas(proc).filter(x=>x.q.fase!=='relatorio');
   if(!emAnalise.length)parts.push(para(run('Sem questões em análise.',{font:F})));
+  let lastAutorB=null;
   for(let i=0;i<emAnalise.length;i++){
    const {q,a}=emAnalise[i];
    if(i>0)pageBreak();
+   if(a.id!==lastAutorB){lastAutorB=a.id;autorGroupHeaderDocx(a.nome)}
    const hist=(q.historico&&q.historico.length)?q.historico:peritosDoProcesso(proc).map(p=>({intervenienteId:p.intervenienteId,texto:(q.respostas&&q.respostas[p.intervenienteId])||'',data:null})).filter(e=>e.texto&&e.texto.trim());
    const entradas=hist.slice().sort((x,y2)=>String(x.data||'').localeCompare(String(y2.data||''))).map(h=>{
     const iv=getInterveniente(h.intervenienteId);
@@ -2776,19 +3161,21 @@ async function buildResumoDocx(proc,cfg){
     const texto=h.texto+(nota&&nota.trim()?`\n\nAnotações: ${nota}`:'');
     return {titulo:`${iv?iv.nome:'—'}${h.data?' — '+h.data:''}:`,texto};
    });
-   await drawQuestionBlockDocx(q,a,entradas,fotosDaQuestao(proc,q.id).length===0,i>0,(q.conciliada&&q.conciliada.texto)||'','Proposta(s) de resposta');
+   await drawQuestionBlockDocx(q,a,entradas,fotosDaQuestao(proc,q.id).length===0,true,(q.conciliada&&q.conciliada.texto)||'','Proposta(s) de resposta');
   }
   pageBreak();
  }
  if(cfg.listaDraft){
   const relFinalDocx=relatorioIsFinal(proc);
-  parts.push(para(run(relFinalDocx?'C — Relatório final (Respostas validadas)':'C — Draft de relatório (Respostas validadas)',{bold:true,font:F,size:szTitle}),{after:180}));
+  sectionTitleModelDocx(relFinalDocx?'listaDraftFinal':'listaDraft');
   const fechadas=questoesOrdenadas(proc).filter(x=>x.q.fase==='relatorio');
   if(!fechadas.length)parts.push(para(run('Ainda nenhuma questão conciliada.',{font:F})));
+  let lastAutorC=null;
   for(let i=0;i<fechadas.length;i++){
    const {q,a}=fechadas[i];
    if(i>0)pageBreak();
-   await drawQuestionBlockDocx(q,a,[{titulo:'',texto:q.conciliada.texto||'(sem texto conciliado)'}],fotosDaQuestao(proc,q.id).length===0,i>0,null,'Resposta(s)');
+   if(a.id!==lastAutorC){lastAutorC=a.id;autorGroupHeaderDocx(a.nome)}
+   await drawQuestionBlockDocx(q,a,[{titulo:'',texto:q.conciliada.texto||'(sem texto conciliado)'}],fotosDaQuestao(proc,q.id).length===0,true,null,'Resposta(s)');
   }
   if(relFinalDocx){pageBreak();drawFechoRelatorioFinalDocx()}
  }
