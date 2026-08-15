@@ -161,6 +161,9 @@ const dataPt=iso=>{const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/);ret
 
 /* ===================== Estado ===================== */
 const TIPOS_DEF=['Peritagem','Vistoria','Fiscalização','Avaliação','Levantamento','Inspeção','Acompanhamento de obra'];
+/* Título do relatório. "Levantamento" sai completo; "Pendentes" sai só com as fotografias
+   por resolver. Ambos editáveis nas Definições, onde se podem acrescentar outros. */
+const RELATORIOS_DEF=[{nome:'Levantamento',soPendentes:false},{nome:'Pendentes',soPendentes:true}];
 const ESTADOS=[
  {k:'ON', t:'ON', h:'em aberto', bg:'#3fae67'},
  {k:'SBY',t:'SBY',h:'em espera', bg:'#f0b429', fg:'#3a2a00'},
@@ -170,10 +173,11 @@ const ESTADOS=[
 function vazio(){
  return {
   schema:5,
-  proc:{codigo:'',tipo:'',local:'',data:hoje(),destinatarios:[],gabinete:'',autor:''},
+  proc:{codigo:'',tipo:'',local:'',data:hoje(),destinatarios:[],gabinete:'',autor:'',relatorio:'Levantamento'},
   topicos:[],
   ativo:null,
   settings:{maxSide:1600,quality:.75,sigla:'IMG',grid:2,tipos:TIPOS_DEF.slice(),
+   relatorios:RELATORIOS_DEF.map(r=>({...r})),
    gabinete:'Proficis — Engenheiros / Peritos Avaliadores',
    contacto:'proficis.peritos@gmail.com',
    incluirFotos:true,incluirPendentes:true,ultimaCopia:null}
@@ -195,6 +199,17 @@ function todasPendentes(){
  return out;
 }
 const totalFotos=()=>app.topicos.reduce((n,t)=>n+(t.fotos||[]).length,0);
+function listaRelatorios(){
+ if(!Array.isArray(app.settings.relatorios)||!app.settings.relatorios.length)app.settings.relatorios=RELATORIOS_DEF.map(r=>({...r}));
+ return app.settings.relatorios;
+}
+const relatorioAtual=()=>listaRelatorios().find(r=>r.nome===app.proc.relatorio)||listaRelatorios()[0];
+const tituloRelatorio=()=>(relatorioAtual()||{}).nome||'Relatório';
+const soPendentes=()=>!!(relatorioAtual()||{}).soPendentes;
+/* Fotografias de um tópico que entram no relatório, conforme o tipo escolhido. */
+const fotosDoRelatorio=t=>soPendentes()?pendentesDe(t):(t.fotos||[]);
+/* Tópicos que entram no relatório: no tipo "Pendentes" só os que ainda têm algo por fechar. */
+const topicosDoRelatorio=()=>soPendentes()?app.topicos.filter(t=>pendentesDe(t).length):app.topicos;
 
 /* ===================== IndexedDB ===================== */
 const abrirDb=()=>new Promise((res,rej)=>{
@@ -274,7 +289,7 @@ function absorver(d){
   data:p.data||p.date||hoje(),
   destinatarios:Array.isArray(p.destinatarios)?p.destinatarios
    :(Array.isArray(p.attendees)?p.attendees.filter(a=>a.name||a.contact).map(a=>({nome:a.name||'',contacto:a.contact||a.email||''})):[]),
-  gabinete:p.gabinete||'',autor:p.autor||p.analista||''};
+  gabinete:p.gabinete||'',autor:p.autor||p.analista||'',relatorio:p.relatorio||'Levantamento'};
  app.settings={...base.settings,...(d.settings||{})};
  if(!Array.isArray(app.settings.tipos)||!app.settings.tipos.length)app.settings.tipos=TIPOS_DEF.slice();
  const brutos=d.topicos||d.subs||[];
@@ -538,16 +553,16 @@ function valorCabecalho(k){
   case 'data':return dataPt(app.proc.data);
   case 'destinatarios':return destinatariosTxt();
   case 'autor':return app.proc.autor||'';
-  case 'totais':return `${app.topicos.length} tópico(s) · ${totalFotos()} fotografia(s)`;
+  case 'totais':{const ts=topicosDoRelatorio();return `${ts.length} tópico(s) · ${ts.reduce((n,t)=>n+fotosDoRelatorio(t).length,0)} fotografia(s)`}
  }
  return '';
 }
 function valorTopico(t,k){
  switch(k){
   case 'nome':return t.nome||'(sem nome)';
-  case 'nFotos':return `${(t.fotos||[]).length} fotografia(s)`;
+  case 'nFotos':return `${fotosDoRelatorio(t).length} fotografia(s)`;
   case 'estado':return resolvido(t)?'Resolvido':`Por resolver (${pendentesDe(t).length} pendente(s))`;
-  case 'legendas':return (t.fotos||[]).map((f,i)=>`${fotoNome(t,i+1)}${f.caption?' — '+f.caption:''}`).join('\n');
+  case 'legendas':return (t.fotos||[]).map((f,i)=>({f,i})).filter(({f})=>!soPendentes()||['ON','SBY'].includes(estadoDe(f))).map(({f,i})=>`${fotoNome(t,i+1)}${f.caption?' — '+f.caption:''}`).join('\n');
  }
  return '';
 }
@@ -570,11 +585,12 @@ const linhaPendente=e=>blocoCampos('pendentes').map(k=>({k,r:rotulo('pendentes',
    seguinte, indentada, em texto normal. */
 const INDENT_MM=6;
 function relatorioTexto(){
- const L=[blocoTitulo('cabecalho'),''];
+ const L=[tituloRelatorio().toUpperCase(),''];
+ if(blocoTitulo('cabecalho'))L.push(blocoTitulo('cabecalho'),'');
  const par=(r,v)=>{L.push(r+':');String(v).split('\n').forEach(l=>L.push('    '+l))};
  linhasCabecalho().forEach(([r,v])=>par(r,v));
  L.push('',blocoTitulo('topico'),'');
- for(const t of app.topicos){
+ for(const t of topicosDoRelatorio()){
   L.push(`${tpLabel(t)}${t.nome?' — '+t.nome:''}`);
   linhasTopico(t).forEach(([r,v])=>{if(r!=='Nome do tópico')par(r,v)});
   L.push('');
@@ -742,17 +758,21 @@ function vRev(){
  if(!codigo())return cartao('👁 Revisão','<div class="status warn">Defina primeiro o código de processo.</div>');
  const pend=todasPendentes();
  return cartao('👁 Revisão',`
-  <div class="note">É isto que vai sair no relatório. Se faltar alguma coisa, volte à Captura — pode acrescentar tópicos e fotografias a qualquer altura.</div>
+  <label>Título do relatório</label>
+  <select id="selRel">${listaRelatorios().map(r=>`<option${tituloRelatorio()===r.nome?' selected':''}>${esc(r.nome)}</option>`).join('')}</select>
+  <div class="note">${soPendentes()?'Este título sai <b>só com as fotografias por resolver</b>.':'Este título sai com <b>tudo</b> o que está registado.'}</div>
+  <div class="note" style="margin-top:6px">É isto que vai sair no relatório. Se faltar alguma coisa, volte à Captura — pode acrescentar tópicos e fotografias a qualquer altura.</div>
   <div class="actions"><button type="button" class="secondary" id="btVoltarCapt">← Captura</button><button type="button" class="green" id="btIrExp">Exportar →</button></div>
   <hr>
   <div class="rev">
-   <h2 style="margin:0 0 8px;font-size:17px">${esc(blocoTitulo('cabecalho'))}</h2>
+   <h2 style="margin:0 0 2px;font-size:19px;text-transform:uppercase;letter-spacing:.5px">${esc(tituloRelatorio())}</h2>
+   ${blocoTitulo('cabecalho')?`<div class="note" style="margin-bottom:8px">${esc(blocoTitulo('cabecalho'))}</div>`:''}
    ${linhasCabecalho().map(([r,v])=>`<div class="kv"><b>${esc(r)}:</b><span>${esc(v).replace(/\n/g,'<br>')}</span></div>`).join('')}
    <h3>${esc(blocoTitulo('topico'))}</h3>
-   ${app.topicos.length?app.topicos.map(t=>`<div class="tp">
+   ${topicosDoRelatorio().length?topicosDoRelatorio().map(t=>`<div class="tp">
      <b>${esc(tpLabel(t))}${t.nome?' — '+esc(t.nome):''}</b>
      ${linhasTopico(t).filter(([r])=>r!=='Nome do tópico').map(([r,v])=>`<div class="kv"><b>${esc(r)}:</b><span>${esc(v).replace(/\n/g,'<br>')}</span></div>`).join('')}
-     ${app.settings.incluirFotos&&(t.fotos||[]).length?`<div class="thumbs">${t.fotos.map((f,i)=>`<figure><img data-foto="${t.id}|${f.id}" alt=""><figcaption>${esc(fotoNome(t,i+1))}${f.caption?'<br>'+esc(f.caption):''}</figcaption></figure>`).join('')}</div>`:''}
+     ${app.settings.incluirFotos&&fotosDoRelatorio(t).length?`<div class="thumbs">${(t.fotos||[]).map((f,i)=>({f,i})).filter(({f})=>!soPendentes()||['ON','SBY'].includes(estadoDe(f))).map(({f,i})=>`<figure><img data-foto="${t.id}|${f.id}" alt=""><figcaption>${esc(fotoNome(t,i+1))}${f.caption?'<br>'+esc(f.caption):''}</figcaption></figure>`).join('')}</div>`:''}
     </div>`).join(''):'<div class="note">Ainda não há tópicos.</div>'}
    ${app.settings.incluirPendentes?`<h3>${esc(blocoTitulo('pendentes'))}</h3>
     ${pend.length?(()=>{let ult=null;return pend.map(e=>{
@@ -876,6 +896,7 @@ function ligar(){
  });
 
  // --- Revisão / Exportar
+ on('selRel','change',()=>{app.proc.relatorio=$('selRel').value;gravarAgora();desenhar()});
  on('btVoltarCapt','click',()=>ir('capt'));
  on('btIrExp','click',()=>ir('exp'));
  on('cbFotos','change',()=>{app.settings.incluirFotos=$('cbFotos').checked;gravarAgora();});
@@ -943,6 +964,17 @@ function abrirDefinicoes(){
   <label>Gabinete</label><input id="dGab" value="${esc(s.gabinete||'')}">
   <label>Contacto</label><input id="dCont" value="${esc(s.contacto||'')}">
   <hr>
+  <h3>Títulos de relatório</h3>
+  <div class="note">Dão o título ao relatório. Os marcados como "só pendentes" saem apenas com as fotografias por resolver.</div>
+  <div id="dRels">${listaRelatorios().map((r,i)=>`<div class="item" style="cursor:default;padding:8px 10px">
+    <div class="row" style="align-items:center"><input value="${esc(r.nome)}" data-rn="${i}">
+     <div style="display:flex;gap:6px;align-items:center"><label class="inline" style="margin:0;flex:1"><input type="checkbox" data-rp="${i}"${r.soPendentes?' checked':''}> só pendentes</label>
+      <button type="button" class="secondary" data-rmv="${i}|-1"${i===0?' disabled':''} style="width:auto">▲</button>
+      <button type="button" class="secondary" data-rmv="${i}|1"${i===listaRelatorios().length-1?' disabled':''} style="width:auto">▼</button>
+      <button type="button" class="ghost" data-rx="${i}" style="width:auto">🗑</button></div></div>
+   </div>`).join('')}</div>
+  <div class="row"><input id="dNovoRel" placeholder="Novo título de relatório"><button type="button" class="secondary" id="dAddRel">➕ Adicionar</button></div>
+  <hr>
   <h3>Tipos de assunto</h3>
   <div id="dTipos">${(s.tipos||[]).map((t,i)=>`<div class="row" style="margin-bottom:6px"><input value="${esc(t)}" data-tp2="${i}"><div style="display:flex;gap:6px"><button type="button" class="secondary" data-tmv="${i}|-1"${i===0?' disabled':''} style="width:auto">▲</button><button type="button" class="secondary" data-tmv="${i}|1"${i===s.tipos.length-1?' disabled':''} style="width:auto">▼</button><button type="button" class="ghost" data-tx="${i}" style="width:auto">🗑</button></div></div>`).join('')}</div>
   <div class="row"><input id="dNovoTipo" placeholder="Novo tipo de assunto"><button type="button" class="secondary" id="dAddTipo">➕ Adicionar</button></div>
@@ -962,6 +994,15 @@ function abrirDefinicoes(){
  on('dSigla','input',()=>{s.sigla=$('dSigla').value.trim().toUpperCase()||'IMG';gravar()});
  on('dGab','input',()=>{s.gabinete=$('dGab').value;gravar()});
  on('dCont','input',()=>{s.contacto=$('dCont').value;gravar()});
+ ov.querySelectorAll('[data-rn]').forEach(i=>{i.oninput=()=>{listaRelatorios()[+i.dataset.rn].nome=i.value;gravar()};i.onblur=()=>{gravarAgora();desenhar()}});
+ ov.querySelectorAll('[data-rp]').forEach(c=>c.onchange=()=>{listaRelatorios()[+c.dataset.rp].soPendentes=c.checked;gravarAgora();desenhar()});
+ ov.querySelectorAll('[data-rmv]').forEach(b=>b.onclick=()=>{
+  const [i,d]=b.dataset.rmv.split('|').map(Number),j=i+d,L=listaRelatorios();
+  if(j<0||j>=L.length)return;
+  [L[i],L[j]]=[L[j],L[i]];redesenhar();
+ });
+ ov.querySelectorAll('[data-rx]').forEach(b=>b.onclick=()=>{const L=listaRelatorios();if(L.length<=1)return;L.splice(+b.dataset.rx,1);redesenhar()});
+ on('dAddRel','click',()=>{const v=$('dNovoRel').value.trim();if(!v)return;listaRelatorios().push({nome:v,soPendentes:false});redesenhar()});
  ov.querySelectorAll('[data-tp2]').forEach(i=>{i.oninput=()=>{s.tipos[+i.dataset.tp2]=i.value;gravar()};i.onblur=gravarAgora});
  ov.querySelectorAll('[data-tmv]').forEach(b=>b.onclick=()=>{
   const [i,d]=b.dataset.tmv.split('|').map(Number),j=i+d;
@@ -1081,7 +1122,7 @@ function mostrarPreview(){
   if(a==='tab')return window.open(previewUrl,'_blank');
   if(a==='refazer'){fecharModal();return abrirPreview()}
   if(a==='pdf'){
-   const nome=`${codigo()}_relatorio_${hoje()}.pdf`;
+   const nome=`${codigo()}_${seg(tituloRelatorio())}_${hoje()}.pdf`;
    return partilhar([new File([previewBlob],nome,{type:'application/pdf'})],nome);
   }
   if(a==='word')return exportarWord();
@@ -1126,19 +1167,21 @@ async function construirDocx(){
  }
  let corpo='';
  // --- Cabeçalho do relatório
- corpo+=wPar(wRun(blocoTitulo('cabecalho'),{b:true,sz:32}),{depois:180});
+ corpo+=wPar(wRun(tituloRelatorio().toUpperCase(),{b:true,sz:40}),{depois:60});
+ if(blocoTitulo('cabecalho'))corpo+=wPar(wRun(blocoTitulo('cabecalho'),{sz:20,cor:'777777'}),{depois:180});
  linhasCabecalho().forEach(([r,v])=>{corpo+=wCampo(r,v)});
  corpo+=wPar('',{borda:true,depois:160});
  // --- Tópicos
  corpo+=wPar(wRun(blocoTitulo('topico'),{b:true,sz:26}),{depois:140});
  let nImg=1;
- for(const t of app.topicos){
+ for(const t of topicosDoRelatorio()){
   corpo+=wPar(wRun(`${tpLabel(t)}${t.nome?' — '+t.nome:''}`,{b:true,sz:24}),{depois:80});
   linhasTopico(t).forEach(([r,v])=>{if(r!=='Nome do tópico')corpo+=wCampo(r,v)});
-  if(app.settings.incluirFotos&&(t.fotos||[]).length){
+  const fotosRel=(t.fotos||[]).map((f,i)=>({f,i})).filter(({f})=>!soPendentes()||['ON','SBY'].includes(estadoDe(f)));
+  if(app.settings.incluirFotos&&fotosRel.length){
    const celulas=[];
-   for(let i=0;i<t.fotos.length;i++){
-    const f=t.fotos[i];if(!f.blob)continue;
+   for(const {f,i} of fotosRel){
+    if(!f.blob)continue;
     const info=await juntarImagem(f.blob);
     const leg=`${fotoNome(t,i+1)}${f.caption?' — '+f.caption:''}`;
     celulas.push(`<w:tc><w:tcPr><w:tcW w:w="${Math.round(larguraCel*567)}" w:type="dxa"/></w:tcPr>`
@@ -1194,7 +1237,7 @@ async function exportarWord(){
  ocupado(true,'A gerar o Word…');
  try{
   const blob=await construirDocx();
-  const nome=`${codigo()}_relatorio_${hoje()}.docx`;
+  const nome=`${codigo()}_${seg(tituloRelatorio())}_${hoje()}.docx`;
   await partilhar([new File([blob],nome,{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'})],nome);
  }catch(e){console.error(e);alert('Falha ao gerar o Word: '+e.message)}
  finally{ocupado(false)}
@@ -1248,8 +1291,14 @@ async function construirPdf(){
  };
  paginas.push(1);cabecalho();
 
- // --- Bloco de cabeçalho
- titulo(blocoTitulo('cabecalho'),16);
+ // --- Título do relatório
+ doc.setFont(F,'bold');doc.setFontSize(19);
+ doc.text(tituloRelatorio().toUpperCase(),mL,y);y+=9;
+ if(blocoTitulo('cabecalho')){
+  doc.setFont(F,'normal');doc.setFontSize(10);doc.setTextColor(110);
+  doc.text(blocoTitulo('cabecalho'),mL,y);y+=6;doc.setTextColor(0);
+ }
+ doc.setFont(F,'normal');
  y+=1;
  linhasCabecalho().forEach(([r,v])=>kv(r+':',v));
  y+=3;doc.setDrawColor(190);doc.line(mL,y,pw-mR,y);y+=6;
@@ -1258,17 +1307,18 @@ async function construirPdf(){
  titulo(blocoTitulo('topico'),13);
  const cols=Math.max(1,Math.min(4,Number(app.settings.grid)||2));
  const gap=4, cellW=(cw-gap*(cols-1))/cols;
- for(const t of app.topicos){
+ for(const t of topicosDoRelatorio()){
   espaco(10);
   doc.setFont(F,'bold');doc.setFontSize(11);
   doc.text(`${tpLabel(t)}${t.nome?' — '+t.nome:''}`,mL,y);y+=6;
   doc.setFont(F,'normal');
   linhasTopico(t).forEach(([r,v])=>{if(r!=='Nome do tópico')kv(r+':',v,9.5)});
-  if(app.settings.incluirFotos&&(t.fotos||[]).length){
+  const fotosRel=(t.fotos||[]).map((f,i)=>({f,i})).filter(({f})=>!soPendentes()||['ON','SBY'].includes(estadoDe(f)));
+  if(app.settings.incluirFotos&&fotosRel.length){
    y+=2;
    let col=0,linhaAltura=0,yLinha=y;
-   for(let i=0;i<t.fotos.length;i++){
-    const f=t.fotos[i];
+   for(let k=0;k<fotosRel.length;k++){
+    const {f,i}=fotosRel[k];
     if(!f.blob)continue;
     const img=await imagemParaPdf(f.blob,900);
     const cellH=cellW*(img.h/img.w);
@@ -1332,7 +1382,7 @@ async function exportarPdf(){
  ocupado(true,'A gerar o relatório…');
  try{
   const blob=await construirPdf();
-  const nome=`${codigo()}_relatorio_${hoje()}.pdf`;
+  const nome=`${codigo()}_${seg(tituloRelatorio())}_${hoje()}.pdf`;
   await partilhar([new File([blob],nome,{type:'application/pdf'})],nome);
  }catch(e){console.error(e);alert('Falha ao gerar o PDF: '+e.message)}
  finally{ocupado(false)}
@@ -1344,15 +1394,15 @@ async function exportarZip(){
  try{
   const z=new JSZip();
   const raiz=z.folder(codigo()||'Processo');
-  raiz.file(`${codigo()||'Processo'}_relatorio.txt`,relatorioTexto());
-  for(const t of app.topicos){
-   if(!(t.fotos||[]).length)continue;
+  raiz.file(`${codigo()||'Processo'}_${seg(tituloRelatorio())}.txt`,relatorioTexto());
+  for(const t of topicosDoRelatorio()){
+   if(!fotosDoRelatorio(t).length)continue;
    const nome=seg(`${tpLabel(t)}${t.nome?'_'+t.nome:''}`)||tpLabel(t);
    const pasta=raiz.folder(nome);
-   t.fotos.forEach((f,i)=>{if(f.blob)pasta.file(fotoNome(t,i+1),f.blob)});
+   (t.fotos||[]).forEach((f,i)=>{if(f.blob&&(!soPendentes()||['ON','SBY'].includes(estadoDe(f))))pasta.file(fotoNome(t,i+1),f.blob)});
   }
   if(window.jspdf&&window.jspdf.jsPDF){
-   try{raiz.file(`${codigo()}_relatorio.pdf`,await construirPdf())}catch(e){console.error('PDF não incluído no ZIP',e)}
+   try{raiz.file(`${codigo()}_${seg(tituloRelatorio())}.pdf`,await construirPdf())}catch(e){console.error('PDF não incluído no ZIP',e)}
   }
   const blob=await z.generateAsync({type:'blob'});
   const nome=`${codigo()||'processo'}_${hoje()}.zip`;
