@@ -69,6 +69,8 @@ button{border:0;border-radius:9px;padding:10px 12px;min-height:48px;background:v
 .pill.relatorio{background:var(--b)}
 .item{border:1px solid var(--ln);border-radius:10px;padding:11px;margin:8px 0;cursor:pointer;background:#fbfcfd}
 .item:active{background:#f0f3f7}
+.item.status-on{background:#e7f6ec;border-color:#bfe3c8}
+.item.status-on:active{background:#d9f0e0}
 .item b{display:block;font-size:14.5px}
 .item .meta{font-size:12px;color:var(--muted);margin-top:2px}
 .item-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
@@ -237,7 +239,7 @@ function defaultState(){
   intervenientes:[],
   funcoes:[{id:uid(),nome:'Perito'},{id:uid(),nome:'Mandatário'},{id:uid(),nome:'Topógrafo'}],
   siglasQuestao:[{id:uid(),sigla:'Qs',nome:'Questão'},{id:uid(),sigla:'Tm',nome:'Tema'}],
-  tiposEvento:[{id:uid(),chave:'comunicacao',nome:'Comunicação',semPresencas:true},{id:uid(),chave:'visita',nome:'Visita'},{id:uid(),chave:'reuniao',nome:'Reunião'},{id:uid(),chave:'informacao',nome:'Informação',semPresencas:true}],
+  tiposEvento:[{id:uid(),chave:'comunicacao',nome:'Comunicação',plural:'Comunicações',semPresencas:true},{id:uid(),chave:'visita',nome:'Visita',plural:'Visitas'},{id:uid(),chave:'reuniao',nome:'Reunião',plural:'Reuniões'},{id:uid(),chave:'informacao',nome:'Informação',plural:'Informações',semPresencas:true}],
   representacoes:[{id:uid(),nome:'Parte A'},{id:uid(),nome:'Parte B'},{id:uid(),nome:'Nenhuma (coordenador)',isDefault:true}],
   resolucoesFoto:[{id:uid(),kb:150,nome:'150 KB'},{id:uid(),kb:300,nome:'300 KB',isDefault:true},{id:uid(),kb:500,nome:'500 KB'},{id:uid(),kb:800,nome:'800 KB'},{id:uid(),kb:'original',nome:'Original (sem compressão)'}],
   servicos:[{id:uid(),nome:'Peritagem'},{id:uid(),nome:'Inspeção'},{id:uid(),nome:'Parecer técnico'}],
@@ -340,7 +342,9 @@ function loadState(){
  if(app.settings.rodape.tamanho2==null)app.settings.rodape.tamanho2=8;
  if(!app.settings.rodape.linhaReserva)app.settings.rodape.linhaReserva={esquerda:[],centro:[],direita:[]};
  if(app.settings.rodape.tamanhoReserva==null)app.settings.rodape.tamanhoReserva=8;
- if(!app.tiposEvento.some(t=>t.chave==='comunicacao'||t.chave==='comunicacoes'))app.tiposEvento.push({id:uid(),chave:'comunicacao',nome:'Comunicação',semPresencas:true});
+ if(!app.tiposEvento.some(t=>t.chave==='comunicacao'||t.chave==='comunicacoes'))app.tiposEvento.push({id:uid(),chave:'comunicacao',nome:'Comunicação',plural:'Comunicações',semPresencas:true});
+ // corrige plurais em falta nos tipos de evento por defeito (gravados antes de o campo existir).
+ app.tiposEvento.forEach(t=>{if(!t.plural){const def=d.tiposEvento.find(x=>x.chave===t.chave);if(def)t.plural=def.plural}});
 }
 let saveTimer=null;
 function save(){
@@ -698,7 +702,7 @@ function viewPedidos(){
  return card('📋 Pedidos de serviço', `
   <div class="actions one"><button type="button" data-action="novoPedido">➕ Novo pedido</button></div>
   <div>${list.length?list.map(p=>`
-   <div class="item" data-action="abrirPedido" data-id="${p.id}">
+   <div class="item${p.status==='ON'?' status-on':''}" data-action="abrirPedido" data-id="${p.id}">
     <b>${esc(p.codigo||'(sem código)')} — ${esc(p.solicitante||'(sem solicitante)')} ${statusPill(p.status,'pedido')}</b>
     <div class="meta">${esc(p.assunto||'')}</div>
     <div class="meta">Local: ${esc(p.local||'—')} · Data: ${esc(p.dataPedido||'—')} · Prazo: ${esc(p.prazo||'—')}</div>
@@ -782,7 +786,7 @@ function viewProcessos(){
  return card('📁 Processos', `
   <div>${list.length?list.map(pr=>{
    const nq=(pr.questoes||[]).length, nr=(pr.questoes||[]).filter(q=>q.fase==='relatorio').length;
-   return `<div class="item" data-action="navTo" data-view="processo" data-params='${esc(JSON.stringify({id:pr.id}))}'>
+   return `<div class="item${pr.status==='ON'?' status-on':''}" data-action="navTo" data-view="processo" data-params='${esc(JSON.stringify({id:pr.id}))}'>
     <b>${esc(pr.codigo)} ${statusPill(pr.status)}</b>
     <div class="meta">${esc(pr.solicitanteInstitucional||'')} · ${esc(pr.local||'')}</div>
     <div class="meta">${nq} questões · ${nr} em relatório provisório</div>
@@ -1207,7 +1211,7 @@ function viewEventos(params){
  const proc=getProcesso(params.processoId);if(!proc)return '';
  return app.tiposEvento.map(tipo=>{
   const evs=(proc.eventos||[]).filter(e=>e.tipoId===tipo.id).sort((a,b)=>(b.numero||0)-(a.numero||0));
-  return card(`🗓️ ${esc(tipo.nome)}s`, `
+  return card(`🗓️ ${esc(tipo.plural||(tipo.nome+'s'))}`, `
    <div>${evs.length?evs.map(e=>`
     <div class="item" data-action="navTo" data-view="eventoForm" data-params='${esc(JSON.stringify({processoId:proc.id,id:e.id}))}'>
      <b>${esc(eventoRotulo(tipo,e))} — ${esc(e.data||'(sem data)')}${e.hora?' '+esc(e.hora):''}</b>
@@ -2383,28 +2387,32 @@ actions.notificarPerito=(b)=>{
 /* ---- Tipos de evento (tabela editável, "por defeito" = incrementável) ---- */
 function viewTiposEvento(){
  return card('🏷️ Tipos de evento', `
-  <div class="note">Por defeito: Reunião, Visita, Informação. Pode acrescentar outros tipos. "Sem presenças" desliga o registo de presenças nesse tipo (ex.: Informação).</div>
+  <div class="note">Por defeito: Comunicação, Visita, Reunião, Informação. Pode acrescentar outros tipos. O plural é usado nos títulos das secções (ex.: "Reuniões"). "Sem presenças" desliga o registo de presenças nesse tipo (ex.: Informação).</div>
   <div>${app.tiposEvento.map(t=>`
    <div class="item">
-    <b>${esc(t.nome)}</b> ${t.semPresencas?'<span class="pill end">sem presenças</span>':''}
+    <b>${esc(t.nome)} <span class="note">(pl. ${esc(t.plural||(t.nome+'s'))})</span></b> ${t.semPresencas?'<span class="pill end">sem presenças</span>':''}
     <div class="item-actions">
      <button type="button" class="secondary" data-action="editarTipoEvento" data-id="${t.id}">✏️ Editar</button>
      <button type="button" class="danger" data-action="apagarTipoEvento" data-id="${t.id}">🗑 Eliminar</button>
     </div>
    </div>`).join('')}</div>
-  <div class="row"><input id="novoTipoEventoNome" placeholder="Novo tipo (ex.: Vistoria)"><button type="button" data-action="novoTipoEvento">➕ Adicionar</button></div>
+  <div class="row"><input id="novoTipoEventoNome" placeholder="Novo tipo (ex.: Vistoria)"><input id="novoTipoEventoPlural" placeholder="Plural (ex.: Vistorias)"></div>
+  <div class="actions one"><button type="button" data-action="novoTipoEvento">➕ Adicionar</button></div>
   ${returnLinkBtn()}
  `);
 }
 actions.novoTipoEvento=()=>{
  const nome=$('novoTipoEventoNome').value.trim();if(!nome)return;
- app.tiposEvento.push({id:uid(),chave:nome.toLowerCase().replace(/\s+/g,'_'),nome,semPresencas:false});
+ const plural=$('novoTipoEventoPlural').value.trim()||(nome+'s');
+ app.tiposEvento.push({id:uid(),chave:nome.toLowerCase().replace(/\s+/g,'_'),nome,plural,semPresencas:false});
  saveNow();render();
 };
 actions.editarTipoEvento=(b)=>{
  const t=app.tiposEvento.find(x=>x.id===b.dataset.id);
  const nome=prompt('Nome do tipo de evento:',t.nome);if(!nome)return;
  t.nome=nome;
+ const plural=prompt('Plural (usado nos títulos das secções):',t.plural||(nome+'s'));
+ t.plural=plural||(nome+'s');
  t.semPresencas=confirm('Este tipo de evento NÃO regista presenças? (OK = sem presenças, Cancelar = com presenças)');
  saveNow();render();
 };
