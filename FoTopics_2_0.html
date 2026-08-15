@@ -173,7 +173,7 @@ const ESTADOS=[
 function vazio(){
  return {
   schema:5,
-  proc:{codigo:'',tipo:'',local:'',data:hoje(),destinatarios:[],gabinete:'',autor:'',relatorio:'Levantamento'},
+  proc:{codigo:'',tipo:'',local:'',data:hoje(),destinatarios:[],gabinete:'',autor:'',relatorio:'Levantamento',reserva1:'',reserva2:''},
   topicos:[],
   ativo:null,
   settings:{maxSide:1600,quality:.75,sigla:'IMG',grid:2,tipos:TIPOS_DEF.slice(),
@@ -234,7 +234,7 @@ async function instantaneo(){
  for(const t of app.topicos){
   const fotos=[];
   for(const f of t.fotos||[])fotos.push({id:f.id,nome:f.nome,data:f.data,caption:f.caption||'',status:estadoDe(f),blob:await paraGuardar(f.blob)});
-  out.topicos.push({id:t.id,n:t.n,nome:t.nome||'',criado:t.criado,fotos});
+  out.topicos.push({id:t.id,n:t.n,nome:t.nome||'',comentario:t.comentario||'',criado:t.criado,fotos});
  }
  return out;
 }
@@ -289,7 +289,8 @@ function absorver(d){
   data:p.data||p.date||hoje(),
   destinatarios:Array.isArray(p.destinatarios)?p.destinatarios
    :(Array.isArray(p.attendees)?p.attendees.filter(a=>a.name||a.contact).map(a=>({nome:a.name||'',contacto:a.contact||a.email||''})):[]),
-  gabinete:p.gabinete||'',autor:p.autor||p.analista||'',relatorio:p.relatorio||'Levantamento'};
+  gabinete:p.gabinete||'',autor:p.autor||p.analista||'',relatorio:p.relatorio||'Levantamento',
+  reserva1:p.reserva1||'',reserva2:p.reserva2||''};
  app.settings={...base.settings,...(d.settings||{})};
  if(!Array.isArray(app.settings.tipos)||!app.settings.tipos.length)app.settings.tipos=TIPOS_DEF.slice();
  const brutos=d.topicos||d.subs||[];
@@ -297,6 +298,7 @@ function absorver(d){
   id:t.id||uid(),
   n:t.n||k+1,
   nome:t.nome||t.designation||'',
+  comentario:t.comentario||'',
   criado:t.criado||t.createdAt||new Date().toISOString(),
   fotos:(t.fotos||t.photos||[]).map(f=>({
    id:f.id||uid(),nome:f.nome||f.name||'foto.jpg',
@@ -455,7 +457,7 @@ async function juntarFotos(ficheiros){
  desenhar();
 }
 function criarTopico(nome,silencioso){
- const t={id:uid(),n:proxN(),nome:nome||'',criado:new Date().toISOString(),fotos:[]};
+ const t={id:uid(),n:proxN(),nome:nome||'',comentario:'',criado:new Date().toISOString(),fotos:[]};
  app.topicos.push(t);app.ativo=t.id;
  if(!silencioso){gravarAgora();desenhar()}
  return t;
@@ -496,20 +498,23 @@ const BLOCOS={
    {k:'data',        r:'Data'},
    {k:'destinatarios',r:'Destinatários'},
    {k:'autor',       r:'Autor'},
-   {k:'totais',      r:'Totais (tópicos e fotografias)'}
+   {k:'totais',      r:'Totais (tópicos e fotografias)'},
+   {k:'reserva1',    r:'Resumo'},
+   {k:'reserva2',    r:'Comentários'}
   ],
-  ligados:['codigo','tipo','local','data','destinatarios','totais']
+  ligados:['codigo','tipo','local','data','destinatarios','totais','reserva1','reserva2']
  },
  topico:{
   nome:'Bloco de cada tópico',
   tituloDef:'Tópicos',
   campos:[
-   {k:'nome',    r:'Nome do tópico'},
-   {k:'nFotos',  r:'N.º de fotografias'},
-   {k:'estado',  r:'Estado (resolvido / por resolver)'},
-   {k:'legendas',r:'Legendas das fotografias'}
+   {k:'nome',      r:'Nome do tópico'},
+   {k:'comentario',r:'Comentários'},
+   {k:'nFotos',    r:'N.º de fotografias'},
+   {k:'estado',    r:'Estado (resolvido / por resolver)'},
+   {k:'legendas',  r:'Legendas das fotografias'}
   ],
-  ligados:['nome','nFotos','estado','legendas']
+  ligados:['nome','comentario','nFotos','estado','legendas']
  },
  pendentes:{
   nome:'Lista de pendentes',
@@ -541,7 +546,12 @@ function bloco(chave){
 }
 const blocoTitulo=ch=>(bloco(ch).titulo||'').trim()||BLOCOS[ch].tituloDef;
 const blocoCampos=ch=>bloco(ch).campos.filter(c=>c.on).map(c=>c.k);
-const rotulo=(ch,k)=>((BLOCOS[ch].campos.find(c=>c.k===k)||{}).r)||k;
+// O nome de cada campo pode ser mudado nas Definições; sem alteração, usa-se o de origem.
+function rotulo(ch,k){
+ const meu=(bloco(ch).campos.find(c=>c.k===k)||{}).r;
+ if(meu&&meu.trim())return meu.trim();
+ return ((BLOCOS[ch].campos.find(c=>c.k===k)||{}).r)||k;
+}
 
 /* Valores de cada campo, partilhados pela Revisão, pelo PDF e pelo texto de partilha —
    assim o que se vê na pré-visualização é exatamente o que sai no documento. */
@@ -553,6 +563,8 @@ function valorCabecalho(k){
   case 'data':return dataPt(app.proc.data);
   case 'destinatarios':return destinatariosTxt();
   case 'autor':return app.proc.autor||'';
+  case 'reserva1':return app.proc.reserva1||'';
+  case 'reserva2':return app.proc.reserva2||'';
   case 'totais':{const ts=topicosDoRelatorio();return `${ts.length} tópico(s) · ${ts.reduce((n,t)=>n+fotosDoRelatorio(t).length,0)} fotografia(s)`}
  }
  return '';
@@ -560,6 +572,7 @@ function valorCabecalho(k){
 function valorTopico(t,k){
  switch(k){
   case 'nome':return t.nome||'(sem nome)';
+  case 'comentario':return t.comentario||'';
   case 'nFotos':return `${fotosDoRelatorio(t).length} fotografia(s)`;
   case 'estado':return resolvido(t)?'Resolvido':`Por resolver (${pendentesDe(t).length} pendente(s))`;
   case 'legendas':return (t.fotos||[]).map((f,i)=>({f,i})).filter(({f})=>!soPendentes()||['ON','SBY'].includes(estadoDe(f))).map(({f,i})=>`${fotoNome(t,i+1)}${f.caption?' — '+f.caption:''}`).join('\n');
@@ -680,6 +693,10 @@ function vProc(){
      <div style="display:flex;gap:6px"><input value="${esc(x.contacto||'')}" data-dc="${i}" placeholder="E-mail ou telemóvel"><button type="button" class="ghost" data-dx="${i}" style="width:auto;flex:0 0 auto">🗑</button></div>
     </div>`).join(''):'<div class="note">Sem destinatários.</div>'}</div>
   <div class="actions one"><button type="button" class="secondary" id="btAddDest">➕ Adicionar destinatário</button></div>
+  <label>${esc(rotulo('cabecalho','reserva1'))} <small class="note">caixa livre — sai no relatório se estiver ligada nas Definições</small></label>
+  <textarea id="fRes1" placeholder="Resumo do que foi feito ou observado…">${esc(p.reserva1||'')}</textarea>
+  <label>${esc(rotulo('cabecalho','reserva2'))}</label>
+  <textarea id="fRes2" placeholder="Outras notas, condicionantes, o que ficou combinado…">${esc(p.reserva2||'')}</textarea>
   <div class="status saveState">Pronto.</div>
   <hr>
   <h3>📂 Processos gravados</h3>
@@ -722,6 +739,8 @@ function vCapt(){
   ${barra}
   <label>Nome do tópico</label>
   <input id="fTpNome" value="${esc(t.nome)}" placeholder="Ex.: Fachada norte, Cozinha, Cobertura…">
+  <label>Comentários do tópico</label>
+  <textarea id="fTpCom" placeholder="Notas sobre este tópico — o que observou, o que falta, o que combinou…">${esc(t.comentario||'')}</textarea>
   <div class="shoot">
    <button type="button" class="green" id="btCamara"><span class="ic">📷</span>Tirar foto</button>
    <button type="button" id="btGaleria"><span class="ic">🖼</span>Da fototeca</button>
@@ -834,6 +853,10 @@ function ligar(){
  document.querySelectorAll('[data-dn]').forEach(i=>{i.oninput=()=>{app.proc.destinatarios[+i.dataset.dn].nome=i.value;gravar()};i.onblur=gravarAgora});
  document.querySelectorAll('[data-dc]').forEach(i=>{i.oninput=()=>{app.proc.destinatarios[+i.dataset.dc].contacto=i.value;gravar()};i.onblur=gravarAgora});
  document.querySelectorAll('[data-dx]').forEach(b=>b.onclick=()=>{app.proc.destinatarios.splice(+b.dataset.dx,1);gravarAgora();desenhar()});
+ on('fRes1','input',()=>{app.proc.reserva1=$('fRes1').value;gravar()});
+ on('fRes1','blur',gravarAgora);
+ on('fRes2','input',()=>{app.proc.reserva2=$('fRes2').value;gravar()});
+ on('fRes2','blur',gravarAgora);
  on('fFiltroProc','input',()=>{ui.filtroProc=$('fFiltroProc').value;listaProcessos()});
  on('btNovoProc','click',novoProcesso);
  on('btVoltarProc','click',()=>ir('proc'));
@@ -847,6 +870,8 @@ function ligar(){
  });
  on('fTpNome','input',()=>{const t=topico();if(t){t.nome=$('fTpNome').value;gravar()}});
  on('fTpNome','blur',()=>{gravarAgora();refrescarLeve()});
+ on('fTpCom','input',()=>{const t=topico();if(t){t.comentario=$('fTpCom').value;gravar()}});
+ on('fTpCom','blur',gravarAgora);
  on('btCamara','click',()=>$('inCam').click());
  on('btGaleria','click',()=>$('inGal').click());
  on('inCam','change',e=>{juntarFotos(e.target.files);e.target.value=''});
@@ -939,9 +964,11 @@ function abrirDefinicoes(){
   return `<h3>${esc(BLOCOS[ch].nome)}</h3>
    <label>Título do bloco</label>
    <input value="${esc(b.titulo)}" data-btit="${ch}" placeholder="${esc(BLOCOS[ch].tituloDef)}">
-   <div data-bcampos="${ch}">${b.campos.map((c,i)=>`<div class="item" style="cursor:default;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px">
-     <label class="inline" style="margin:0;flex:1"><input type="checkbox" data-bon="${ch}|${i}"${c.on?' checked':''}> ${esc(rotulo(ch,c.k))}</label>
-     <span style="display:flex;gap:6px">
+   <div class="note">O nome de cada campo é editável — mude-o para o que fizer sentido no seu relatório.</div>
+   <div data-bcampos="${ch}">${b.campos.map((c,i)=>`<div class="item" style="cursor:default;display:flex;align-items:center;gap:8px;padding:8px 10px">
+     <input type="checkbox" data-bon="${ch}|${i}"${c.on?' checked':''} style="flex:0 0 auto">
+     <input value="${esc(rotulo(ch,c.k))}" data-brot="${ch}|${i}" style="flex:1;padding:7px 9px;font-size:14px">
+     <span style="display:flex;gap:6px;flex:0 0 auto">
       <button type="button" class="secondary" data-bmv="${ch}|${i}|-1"${i===0?' disabled':''} style="width:auto;min-height:36px;padding:5px 11px">▲</button>
       <button type="button" class="secondary" data-bmv="${ch}|${i}|1"${i===b.campos.length-1?' disabled':''} style="width:auto;min-height:36px;padding:5px 11px">▼</button>
      </span>
@@ -1012,6 +1039,10 @@ function abrirDefinicoes(){
  ov.querySelectorAll('[data-tx]').forEach(b=>b.onclick=()=>{s.tipos.splice(+b.dataset.tx,1);redesenhar()});
  on('dAddTipo','click',()=>{const v=$('dNovoTipo').value.trim();if(!v)return;s.tipos.push(v);redesenhar()});
  ov.querySelectorAll('[data-btit]').forEach(i=>{i.oninput=()=>{bloco(i.dataset.btit).titulo=i.value;gravar()};i.onblur=gravarAgora});
+ ov.querySelectorAll('[data-brot]').forEach(i=>{
+  i.oninput=()=>{const [ch,k]=i.dataset.brot.split('|');bloco(ch).campos[+k].r=i.value;gravar()};
+  i.onblur=()=>{gravarAgora();desenhar()};
+ });
  ov.querySelectorAll('[data-bon]').forEach(c=>c.onchange=()=>{
   const [ch,i]=c.dataset.bon.split('|');
   bloco(ch).campos[+i].on=c.checked;gravarAgora();
