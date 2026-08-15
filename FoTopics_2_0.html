@@ -774,10 +774,10 @@ function vCapt(){
   <label>Comentários do tópico</label>
   <textarea id="fTpCom" placeholder="Notas sobre este tópico — o que observou, o que falta, o que combinou…">${esc(t.comentario||'')}</textarea>
   <div class="shoot">
-   <button type="button" class="green" id="btCamara"><span class="ic">📷</span>Tirar foto</button>
+   <button type="button" class="green" id="btCamara"><span class="ic">📷</span>Câmara</button>
    <button type="button" id="btGaleria"><span class="ic">🖼</span>Da fototeca</button>
   </div>
-  <label class="inline" style="justify-content:center;margin:2px 0 0"><input type="checkbox" id="cbCont"${ui.disparoContinuo?' checked':''}> Disparo contínuo <small class="note">(a câmara reabre sozinha)</small></label>
+  <div class="note" style="text-align:center">A câmara da aplicação dispara sem pedir confirmação a cada fotografia. Se não estiver disponível, explica porquê e usa a do sistema.</div>
   <input type="file" id="inCam" accept="image/*" capture="environment" hidden>
   <input type="file" id="inGal" accept="image/*" multiple hidden>
   ${fotos.length?`<div class="filters" style="justify-content:space-between">
@@ -967,15 +967,9 @@ function ligar(){
   ui.sel.clear();gravarAgora();desenhar();
  });
  on('btLoteMover','click',()=>moverFotos([...ui.sel]));
- on('cbCont','change',()=>{ui.disparoContinuo=$('cbCont').checked});
- on('btCamara','click',()=>$('inCam').click());
+ on('btCamara','click',abrirCamara);
  on('btGaleria','click',()=>$('inGal').click());
- on('inCam','change',async e=>{
-  const fs=e.target.files;e.target.value='';
-  await juntarFotos(fs);
-  // Disparo contínuo: reabre a câmara para a fotografia seguinte, sem tocar duas vezes.
-  if(ui.disparoContinuo&&fs&&fs.length)setTimeout(()=>{const c=$('inCam');if(c)c.click()},350);
- });
+ on('inCam','change',e=>{juntarFotos(e.target.files);e.target.value=''});
  on('inGal','change',e=>{juntarFotos(e.target.files);e.target.value=''});
  document.querySelectorAll('[data-fl]').forEach(b=>b.onclick=()=>{ui.filtro=b.dataset.fl;desenhar()});
  document.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>{
@@ -1257,6 +1251,94 @@ function abrirDefinicoes(){
  on('dCopiaIn','click',()=>$('dCopiaFich').click());
  on('dCopiaFich','change',e=>{copiaRestaurar(e.target.files[0]);e.target.value=''});
 }
+
+/* ===================== Câmara dentro da aplicação =====================
+   O <input capture> abre a câmara do iOS, que obriga a confirmar "Repetir / Usar foto" a
+   cada fotografia — isso é do sistema e não se desliga a partir da página. A alternativa é
+   a app ter câmara própria (getUserMedia): vídeo ao vivo, botão de disparo, e cada toque
+   grava a imagem de imediato, sem confirmação nenhuma.
+
+   Limitação a assumir: getUserMedia só funciona em contexto seguro (https:// ou "Adicionar
+   ao ecrã principal" a partir de um endereço https). Um ficheiro aberto localmente (file://)
+   não tem acesso à câmara — nesse caso explica-se e usa-se a câmara do sistema. */
+let camStream=null;
+function camaraDisponivel(){
+ return !!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)&&window.isSecureContext;
+}
+function motivoSemCamara(){
+ if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia))return 'Este navegador não dá acesso à câmara a partir de uma página.';
+ if(!window.isSecureContext)return 'A câmara própria só funciona se a aplicação for aberta a partir de um endereço <b>https</b> (ou instalada no ecrã principal a partir desse endereço). Aberta como ficheiro local, o iPhone não autoriza o acesso à câmara.';
+ return 'Câmara indisponível.';
+}
+function pararCamara(){
+ if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null}
+}
+async function abrirCamara(){
+ const t=topico();
+ if(!t)return alert('Crie ou escolha primeiro um tópico.');
+ if(!camaraDisponivel()){
+  const ov0=modal(`<h2 style="margin:0 0 6px">Câmara própria indisponível</h2>
+   <div class="status warn">${motivoSemCamara()}</div>
+   <div class="note">Entretanto usa-se a câmara do sistema — que pede confirmação a cada fotografia. Para várias fotografias seguidas, "🖼 Da fototeca" é mais rápido: tira as fotos pela app da câmara e depois carrega-as todas de uma vez.</div>
+   <div class="actions"><button type="button" data-cam="sistema">📷 Câmara do sistema</button><button type="button" class="secondary" data-cam="fototeca">🖼 Da fototeca</button></div>
+   <div class="actions one"><button type="button" class="secondary" data-fechar="1">Fechar</button></div>`);
+  ov0.querySelector('[data-cam="sistema"]').onclick=()=>{fecharModal();$('inCam').click()};
+  ov0.querySelector('[data-cam="fototeca"]').onclick=()=>{fecharModal();$('inGal').click()};
+  return;
+ }
+ try{
+  camStream=await navigator.mediaDevices.getUserMedia({
+   video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1440}},
+   audio:false
+  });
+ }catch(e){
+  const nome=e&&e.name||'';
+  const explica=nome==='NotAllowedError'?'O acesso à câmara foi recusado. Autorize-o nas definições do Safari para este site e tente outra vez.'
+   :nome==='NotFoundError'?'Não foi encontrada nenhuma câmara neste dispositivo.'
+   :(e&&e.message?esc(e.message):'Não foi possível abrir a câmara.');
+  const ov2=modal(`<h2 style="margin:0 0 6px">Sem acesso à câmara</h2>
+   <div class="status warn">${explica}</div>
+   <div class="note">Pode entretanto usar a câmara do sistema (pede confirmação a cada fotografia) ou tirar as fotos pela app da câmara e carregá-las todas de uma vez pela fototeca.</div>
+   <div class="actions"><button type="button" data-cam="sistema">📷 Câmara do sistema</button><button type="button" class="secondary" data-cam="fototeca">🖼 Da fototeca</button></div>
+   <div class="actions one"><button type="button" class="secondary" data-fechar="1">Fechar</button></div>`);
+  ov2.querySelector('[data-cam="sistema"]').onclick=()=>{fecharModal();$('inCam').click()};
+  ov2.querySelector('[data-cam="fototeca"]').onclick=()=>{fecharModal();$('inGal').click()};
+  return;
+ }
+ let contador=0;
+ const ov=modal(`
+  <h2 style="margin:0 0 6px">📷 ${esc(tpLabel(t))}${t.nome?' — '+esc(t.nome):''}</h2>
+  <div class="note" style="margin-bottom:8px">Cada toque no disparador grava a fotografia de imediato — sem confirmações.</div>
+  <video id="camVid" autoplay playsinline muted style="width:100%;max-height:52vh;object-fit:cover;border-radius:10px;background:#000"></video>
+  <div id="camCont" class="status ok" style="text-align:center">Ainda sem fotografias nesta sessão.</div>
+  <div class="actions one"><button type="button" id="camShot" class="green" style="min-height:76px;font-size:18px">⬤ Disparar</button></div>
+  <div class="actions one"><button type="button" class="secondary" data-fechar="1">Terminar</button></div>
+ `);
+ const vid=$('camVid');
+ vid.srcObject=camStream;
+ // Ao terminar: largar a câmara (ou o iPhone fica com ela presa) e redesenhar, para as
+ // fotografias tiradas aparecerem já na grelha do tópico.
+ ov.querySelectorAll('[data-fechar]').forEach(b=>b.addEventListener('click',()=>{pararCamara();desenhar()}));
+ $('camShot').onclick=async()=>{
+  const w=vid.videoWidth,h=vid.videoHeight;
+  if(!w||!h)return;
+  const cv=document.createElement('canvas');cv.width=w;cv.height=h;
+  cv.getContext('2d').drawImage(vid,0,0,w,h);
+  const bruto=await new Promise(r=>cv.toBlob(r,'image/jpeg',.92));
+  let blob=bruto;
+  try{blob=await comprimir(bruto,app.settings.maxSide,app.settings.quality)}catch(e){}
+  const alvo=topico();
+  alvo.fotos.push({id:uid(),nome:'camara.jpg',data:new Date().toISOString(),caption:'',status:'ON',blob});
+  contador++;
+  $('camCont').textContent=`${contador} fotografia(s) nesta sessão · ${alvo.fotos.length} no tópico`;
+  // Piscar o visor, para se perceber que disparou.
+  vid.style.opacity='.35';setTimeout(()=>{vid.style.opacity='1'},110);
+  await gravarJa();
+ };
+}
+// Se a página for escondida ou fechada com a câmara aberta, larga-se o dispositivo.
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')pararCamara()});
+window.addEventListener('pagehide',pararCamara);
 
 /* ===================== Orientação predominante das fotografias =====================
    Rotina herdada do X-Topics: antes de gerar, verifica-se que fotografias estão contra a
