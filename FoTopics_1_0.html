@@ -46,6 +46,11 @@
 
 <section id="topicos" class="hidden">
 <div class="meta" style="margin-bottom:8px;font-size:14px">Processo ativo: <b id="tabLabelTopicos">—</b></div>
+<details class="card" id="pendingDetails"><summary><h2 style="display:inline">📌 Fotografias pendentes</h2></summary>
+<div class="note">Todas as fotografias do processo ainda em aberto (ON) ou em espera (SBY), de todos os tópicos. Toque numa linha para abrir o respetivo tópico já filtrado pelas pendentes.</div>
+<label class="inline" style="display:flex;align-items:center;gap:8px;font-weight:400;margin:8px 0"><input type="checkbox" id="pendingShowCaptions" checked style="width:auto"> Mostrar a legenda de cada fotografia</label>
+<div id="pendingList"></div>
+</details>
 <div class="card"><h2>🏷️ 2 — Criar tópico</h2><div class="row"><div><label>Sigla do tópico</label><div class="stype-box"><span id="stypeText"></span><button type="button" id="stypeChangeBtn" class="linklike">alterar</button></div><select id="stype" class="hidden"></select></div><div><label>Nome do tópico</label><input id="newdesignation" placeholder="Ex.: Fachada norte, Cozinha, Cobertura..."></div></div><input id="newofficial" type="hidden"><button type="button" id="createSubBtn">＋ Criar tópico</button><div class="note" id="topicCreateHint"></div><input id="topicSearchInput" placeholder="🔎 Pesquisar tópicos..." autocomplete="off" style="margin:10px 0 4px"><div id="subs"></div></div>
 
 <div class="card hidden" id="detail"><div class="meta" id="topicBreadcrumb"></div><h2 id="stitle"></h2>
@@ -73,6 +78,7 @@
 <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin:6px 0"><input type="checkbox" id="pdfIncludePhotos" checked style="width:auto"> Incluir fotografias no PDF</label>
 <div class="row" id="pdfColsRow"><div><label>Colunas de fotografias</label><select id="pdfPreviewCols"><option value="1">1 coluna</option><option value="2">2 colunas</option><option value="3" selected>3 colunas</option><option value="4">4 colunas</option><option value="5">5 colunas</option></select></div></div>
 <label id="pdfIncludeCoverRow" style="display:flex;align-items:center;gap:8px;font-weight:400;margin:6px 0"><input type="checkbox" id="pdfIncludeCover" style="width:auto"> Incluir Capa do processo <small class="note">(desligada por defeito)</small></label>
+<label style="display:flex;align-items:center;gap:8px;font-weight:400;margin:6px 0"><input type="checkbox" id="pdfIncludePendentes" checked style="width:auto"> Incluir Lista de pendentes <small class="note">(fotografias ainda em ON ou SBY, agrupadas por tópico)</small></label>
 <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin:6px 0"><input type="checkbox" id="pdfIncludeChronology" checked style="width:auto"> Incluir Cronologia do processo <small class="note">(cronologia de alterações: tópicos criados/editados, fotos, estados — mesmo conteúdo do botão "Consultar histórico")</small></label>
 <div class="actions primary-one"><button type="button" class="secondary" id="viewHistoryBtn">🕒 Consultar histórico</button></div>
 <div class="note">Registo de alterações ao processo (tópicos criados, editados, eliminados; fotos adicionadas/removidas; KML gerado) — sempre incluído na exportação (PDF e Word) na pasta Resumo.</div>
@@ -202,6 +208,17 @@
 <div id="resumoHistoryList" class="status"></div>
 </div>
 
+<div class="config-doc-title">📌 Lista de pendentes</div>
+<div class="card"><h2>Designação e conteúdo</h2>
+<div class="status">Documento com todas as fotografias por resolver (ON ou SBY), agrupadas por tópico. É a versão impressa da lista que aparece no separador Tópicos.</div>
+<label>Designação</label>
+<input id="titlePendentes" placeholder="Lista de tópicos com assuntos pendentes">
+</div>
+<div class="card"><h2>📋 Campos do corpo — Lista de pendentes</h2>
+<div class="status">Escolha o que sai em cada linha e por que ordem.</div>
+<div id="outModelPendentes"></div>
+</div>
+
 <div class="config-doc-title">🕒 Cronologia</div>
 <div class="card"><h2>Designação e conteúdo</h2>
 <input id="titleCronologia" value="Cronologia">
@@ -228,7 +245,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 'use strict';
 const APP_VER='1.0';const $=id=>document.getElementById(id),DB='LEV_Foto_Data',VER=2,STORE='state',LEGACY_KEY='main',LEGACY_FALLBACK='LEV_Foto_Fallback_v1',INDEX_KEY='__index__',ACTIVE_KEY='__active__',FALLBACK_PREFIX='LEV_Foto_Fallback_v1_',FALLBACK_INDEX='LEV_Foto_Index_v1';let db=null,tm=null,pid=null,_coverPhotosOverride=null;
 const newProcessId=()=>crypto.randomUUID();
-const PDF_LAYOUT_DEFAULTS={pdfPageSize:'a4',pdfFontFamily:'courier',pdfFontSize:10,pdfMarginLeft:2.0,pdfMarginTop:2.0,pdfMarginRight:0.5,pdfMarginBottom:1.0,pdfFooterMargin:0.8,pdfFooterFontSize:8,pdfFooterLeft:'{processo}_{documento}_{topico}{versaoRelatorio}',pdfFooterCenter:'',pdfFooterRight:'{pagina}/{paginas}',pdfFooterRuleEnabled:true,footerAnalystVersion:true,titleCapa:'Relatório de',titleFxT:'Ficha de caracterização',titleCronologia:'Cronologia',titleFxP:'Resumo',titleOutros:'',headerGabineteSize:9,headerGabineteBold:false,headerTitleSize:9,headerTitleBold:true,coverCodeLineSize:18,coverCodeLineBold:true,tagValueLayout:'stacked',tagValueTabs:2,tagValueIndent:true,coverReportVersionEnabled:true,pdfHeaderDistance:0.5,headerExtraEnabled:true,headerExtraText:'',headerExtraSize:8,footerExtraEnabled:true,footerExtraText:'',footerExtraSize:6};
+const PDF_LAYOUT_DEFAULTS={pdfPageSize:'a4',pdfFontFamily:'courier',pdfFontSize:10,pdfMarginLeft:2.0,pdfMarginTop:2.0,pdfMarginRight:0.5,pdfMarginBottom:1.0,pdfFooterMargin:0.8,pdfFooterFontSize:8,pdfFooterLeft:'{processo}_{documento}_{topico}{versaoRelatorio}',pdfFooterCenter:'',pdfFooterRight:'{pagina}/{paginas}',pdfFooterRuleEnabled:true,footerAnalystVersion:true,titleCapa:'Relatório de',titleFxT:'Ficha de caracterização',titleCronologia:'Cronologia',titleFxP:'Resumo',titlePendentes:'Lista de tópicos com assuntos pendentes',titleOutros:'',headerGabineteSize:9,headerGabineteBold:false,headerTitleSize:9,headerTitleBold:true,coverCodeLineSize:18,coverCodeLineBold:true,tagValueLayout:'stacked',tagValueTabs:2,tagValueIndent:true,coverReportVersionEnabled:true,pdfHeaderDistance:0.5,headerExtraEnabled:true,headerExtraText:'',headerExtraSize:8,footerExtraEnabled:true,footerExtraText:'',footerExtraSize:6};
 function blankApp(){return {schema:3,process:{prefix:'Ptv_',number:'',nref:'',service:'',subject:'',local:'',date:new Date().toISOString().slice(0,10),presences:'',description:'',finalidade:'',docFornecida:'',apreciacao:'',attendees:[],gabinete:'',resumoHistory:[],editHistory:[]},settings:{maxSide:1200,quality:.7,img:'IMG',lcz:'LCZ',gps:'GPS',mapMethod:'manual',googleApiKey:'',mapSource:'googlemaps',mapType:'satellite',mapWidthM:500,mapHeightM:500,pdfPhotoCols:3,mapInPhotoGrid:true,lastBackupAt:null,groups:['Estrutural','Fissuras','Desgaste','Humidade/Infiltração'],fichaFields:{summary:true,usoAtual:false,constatacao:false,causas:false,medidas:false,grupo:false,gps:false},resumoApreciacao:true,resumoDescSucinta:true,resumoTopicFields:{summary:true,usoAtual:false,constatacao:false,causas:false,medidas:false,grupo:false,gps:false},cronologiaHistorico:true,...PDF_LAYOUT_DEFAULTS},subs:[],active:null}}
 async function idbGet(key){return new Promise((res,rej)=>{const tx=db.transaction(STORE,'readonly'),r=tx.objectStore(STORE).get(key);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
 async function idbPut(key,val){return new Promise((res,rej)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put(val,key);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error)})}
@@ -465,10 +482,10 @@ serviceList();gabineteList();analistaListCfg();
  app.schema=3
 }
 function sync(){app.process.number=app.process.number||'';app.process.nref=$('nref')?$('nref').value.trim().slice(0,10):'';app.process.service=$('service').value;app.process.local=$('local').value.trim();app.process.date=$('pdate').value;app.settings.maxSide=parseInt($('max').value)||0;app.settings.quality=parseFloat($('quality').value)||.7;app.settings.img=$('imgsig').value.trim().toUpperCase()||'IMG';app.settings.lcz=$('lczsig').value.trim().toUpperCase()||'LCZ';app.settings.gps=$('gpssig').value.trim().toUpperCase()||'GPS';app.settings.fix=$('fixsig').value.trim().toUpperCase()||'FxT';app.settings.capa=$('capasig').value.trim().toUpperCase()||'CAPA';app.process.analista=$('analista').value;app.process.gabinete=$('gabinete')?$('gabinete').value:app.process.gabinete;app.settings.pdfPhotoCols=[1,2,3,4,5].includes(parseInt($('pdfPhotoCols').value))?parseInt($('pdfPhotoCols').value):3;app.settings.photoGridCols=$('photoGridCols')?parseInt($('photoGridCols').value)||2:2;app.settings.mapInPhotoGrid=$('mapInPhotoGrid')?$('mapInPhotoGrid').checked:true;app.settings.resumoApreciacao=$('resumoApreciacao')?$('resumoApreciacao').checked:true;app.settings.resumoPhotoCaptions=$('resumoPhotoCaptions')?$('resumoPhotoCaptions').checked:false;app.settings.resumoCaptionsShowCode=$('resumoCaptionsShowCode')?$('resumoCaptionsShowCode').checked:false;app.settings.resumoDescSucinta=$('resumoDescSucinta')?$('resumoDescSucinta').checked:true;
- app.settings.pdfPageSize=$('pdfPageSize').value||'a4';app.settings.pdfFontFamily=$('pdfFontFamily').value||'courier';app.settings.pdfFontSize=parseFloat($('pdfFontSize').value)||10;app.settings.pdfMarginLeft=Math.max(0,parseFloat($('pdfMarginLeft').value)||0);app.settings.pdfMarginTop=Math.max(0,parseFloat($('pdfMarginTop').value)||0);app.settings.pdfMarginRight=Math.max(0,parseFloat($('pdfMarginRight').value)||0);app.settings.pdfMarginBottom=Math.max(0,parseFloat($('pdfMarginBottom').value)||0);app.settings.pdfHeaderDistance=$('pdfHeaderDistance')?Math.max(0,parseFloat($('pdfHeaderDistance').value)||0):0.5;app.settings.pdfFooterMargin=Math.max(0,parseFloat($('pdfFooterMargin').value)||0);app.settings.pdfFooterFontSize=parseFloat($('pdfFooterFontSize').value)||8;app.settings.pdfFooterLeft=$('pdfFooterLeft').value;app.settings.pdfFooterCenter=$('pdfFooterCenter').value;app.settings.pdfFooterRight=$('pdfFooterRight').value;app.settings.pdfFooterRuleEnabled=$('pdfFooterRuleEnabled').checked;app.settings.footerAnalystVersion=$('footerAnalystVersion')?$('footerAnalystVersion').checked:false;app.settings.titleCapa=$('titleCapa')?$('titleCapa').value.trim():'Relatório de';app.settings.titleFxT=$('titleFxT')?$('titleFxT').value.trim():'Ficha de caracterização';app.settings.titleCronologia=$('titleCronologia')?$('titleCronologia').value.trim():'Cronologia';app.settings.titleFxP=$('titleFxP')?$('titleFxP').value.trim():'';app.settings.titleOutros=$('titleOutros')?$('titleOutros').value.trim():'';app.settings.headerGabineteSize=$('headerGabineteSize')?(parseFloat($('headerGabineteSize').value)||9):9;app.settings.headerGabineteBold=$('headerGabineteBold')?$('headerGabineteBold').value==='1':false;app.settings.headerTitleSize=$('headerTitleSize')?(parseFloat($('headerTitleSize').value)||9):9;app.settings.headerTitleBold=$('headerTitleBold')?$('headerTitleBold').value==='1':true;app.settings.coverCodeLineSize=$('coverCodeLineSize')?(parseFloat($('coverCodeLineSize').value)||18):18;app.settings.coverCodeLineBold=$('coverCodeLineBold')?$('coverCodeLineBold').value==='1':true;app.settings.cronologiaHistorico=outModelActiveKeys('cronologia').includes('historico');app.settings.tagValueLayout=$('tagValueLayout')?$('tagValueLayout').value:'stacked';app.settings.tagValueTabs=$('tagValueTabs')?Math.min(6,Math.max(1,parseInt($('tagValueTabs').value)||2)):2;app.settings.tagValueIndent=$('tagValueIndent')?$('tagValueIndent').checked:true;app.settings.headerExtraEnabled=$('headerExtraEnabled')?$('headerExtraEnabled').checked:false;app.settings.headerExtraText=$('headerExtraText')?$('headerExtraText').value:'';app.settings.headerExtraSize=$('headerExtraSize')?(parseFloat($('headerExtraSize').value)||8):8;app.settings.footerExtraEnabled=$('footerExtraEnabled')?$('footerExtraEnabled').checked:false;app.settings.footerExtraText=$('footerExtraText')?$('footerExtraText').value:'';app.settings.footerExtraSize=$('footerExtraSize')?(parseFloat($('footerExtraSize').value)||6):6;app.settings.coverReportVersionEnabled=$('coverReportVersionEnabled')?$('coverReportVersionEnabled').checked:true}
+ app.settings.pdfPageSize=$('pdfPageSize').value||'a4';app.settings.pdfFontFamily=$('pdfFontFamily').value||'courier';app.settings.pdfFontSize=parseFloat($('pdfFontSize').value)||10;app.settings.pdfMarginLeft=Math.max(0,parseFloat($('pdfMarginLeft').value)||0);app.settings.pdfMarginTop=Math.max(0,parseFloat($('pdfMarginTop').value)||0);app.settings.pdfMarginRight=Math.max(0,parseFloat($('pdfMarginRight').value)||0);app.settings.pdfMarginBottom=Math.max(0,parseFloat($('pdfMarginBottom').value)||0);app.settings.pdfHeaderDistance=$('pdfHeaderDistance')?Math.max(0,parseFloat($('pdfHeaderDistance').value)||0):0.5;app.settings.pdfFooterMargin=Math.max(0,parseFloat($('pdfFooterMargin').value)||0);app.settings.pdfFooterFontSize=parseFloat($('pdfFooterFontSize').value)||8;app.settings.pdfFooterLeft=$('pdfFooterLeft').value;app.settings.pdfFooterCenter=$('pdfFooterCenter').value;app.settings.pdfFooterRight=$('pdfFooterRight').value;app.settings.pdfFooterRuleEnabled=$('pdfFooterRuleEnabled').checked;app.settings.footerAnalystVersion=$('footerAnalystVersion')?$('footerAnalystVersion').checked:false;app.settings.titleCapa=$('titleCapa')?$('titleCapa').value.trim():'Relatório de';app.settings.titleFxT=$('titleFxT')?$('titleFxT').value.trim():'Ficha de caracterização';app.settings.titleCronologia=$('titleCronologia')?$('titleCronologia').value.trim():'Cronologia';app.settings.titlePendentes=$('titlePendentes')?($('titlePendentes').value.trim()||'Lista de tópicos com assuntos pendentes'):app.settings.titlePendentes;app.settings.titleFxP=$('titleFxP')?$('titleFxP').value.trim():'';app.settings.titleOutros=$('titleOutros')?$('titleOutros').value.trim():'';app.settings.headerGabineteSize=$('headerGabineteSize')?(parseFloat($('headerGabineteSize').value)||9):9;app.settings.headerGabineteBold=$('headerGabineteBold')?$('headerGabineteBold').value==='1':false;app.settings.headerTitleSize=$('headerTitleSize')?(parseFloat($('headerTitleSize').value)||9):9;app.settings.headerTitleBold=$('headerTitleBold')?$('headerTitleBold').value==='1':true;app.settings.coverCodeLineSize=$('coverCodeLineSize')?(parseFloat($('coverCodeLineSize').value)||18):18;app.settings.coverCodeLineBold=$('coverCodeLineBold')?$('coverCodeLineBold').value==='1':true;app.settings.cronologiaHistorico=outModelActiveKeys('cronologia').includes('historico');app.settings.tagValueLayout=$('tagValueLayout')?$('tagValueLayout').value:'stacked';app.settings.tagValueTabs=$('tagValueTabs')?Math.min(6,Math.max(1,parseInt($('tagValueTabs').value)||2)):2;app.settings.tagValueIndent=$('tagValueIndent')?$('tagValueIndent').checked:true;app.settings.headerExtraEnabled=$('headerExtraEnabled')?$('headerExtraEnabled').checked:false;app.settings.headerExtraText=$('headerExtraText')?$('headerExtraText').value:'';app.settings.headerExtraSize=$('headerExtraSize')?(parseFloat($('headerExtraSize').value)||8):8;app.settings.footerExtraEnabled=$('footerExtraEnabled')?$('footerExtraEnabled').checked:false;app.settings.footerExtraText=$('footerExtraText')?$('footerExtraText').value:'';app.settings.footerExtraSize=$('footerExtraSize')?(parseFloat($('footerExtraSize').value)||6):6;app.settings.coverReportVersionEnabled=$('coverReportVersionEnabled')?$('coverReportVersionEnabled').checked:true}
 function fill(){
  $('nref').value=app.process.nref||'';renderServiceSelect();$('service').value=app.process.service||'';$('local').value=app.process.local||'';$('pdate').value=app.process.date||'';
- $('max').value=String(app.settings.maxSide||1200);$('quality').value=String(app.settings.quality||.7);$('imgsig').value=app.settings.img;$('lczsig').value=app.settings.lcz;$('gpssig').value=app.settings.gps;$('fixsig').value=app.settings.fix;$('capasig').value=app.settings.capa||'CAPA';if($('titleCapa'))$('titleCapa').value=app.settings.titleCapa??'Relatório de';if($('titleFxT'))$('titleFxT').value=app.settings.titleFxT??'Ficha de caracterização';if($('titleCronologia'))$('titleCronologia').value=app.settings.titleCronologia??'Cronologia';if($('titleFxP'))$('titleFxP').value=app.settings.titleFxP||'Resumo';if($('titleOutros'))$('titleOutros').value=app.settings.titleOutros||'';if($('headerGabineteSize'))$('headerGabineteSize').value=app.settings.headerGabineteSize??9;if($('headerGabineteBold'))$('headerGabineteBold').value=app.settings.headerGabineteBold?'1':'0';if($('headerTitleSize'))$('headerTitleSize').value=app.settings.headerTitleSize??9;if($('headerTitleBold'))$('headerTitleBold').value=app.settings.headerTitleBold!==false?'1':'0';if($('coverCodeLineSize'))$('coverCodeLineSize').value=app.settings.coverCodeLineSize??18;if($('coverCodeLineBold'))$('coverCodeLineBold').value=app.settings.coverCodeLineBold!==false?'1':'0';if($('tagValueLayout'))$('tagValueLayout').value=app.settings.tagValueLayout||'stacked';if($('tagValueTabs'))$('tagValueTabs').value=String(app.settings.tagValueTabs||2);if($('tagValueIndent'))$('tagValueIndent').checked=app.settings.tagValueIndent!==false;updateTagValueLayoutUi();
+ $('max').value=String(app.settings.maxSide||1200);$('quality').value=String(app.settings.quality||.7);$('imgsig').value=app.settings.img;$('lczsig').value=app.settings.lcz;$('gpssig').value=app.settings.gps;$('fixsig').value=app.settings.fix;$('capasig').value=app.settings.capa||'CAPA';if($('titleCapa'))$('titleCapa').value=app.settings.titleCapa??'Relatório de';if($('titleFxT'))$('titleFxT').value=app.settings.titleFxT??'Ficha de caracterização';if($('titleCronologia'))$('titleCronologia').value=app.settings.titleCronologia??'Cronologia';if($('titlePendentes'))$('titlePendentes').value=app.settings.titlePendentes??'Lista de tópicos com assuntos pendentes';if($('titleFxP'))$('titleFxP').value=app.settings.titleFxP||'Resumo';if($('titleOutros'))$('titleOutros').value=app.settings.titleOutros||'';if($('headerGabineteSize'))$('headerGabineteSize').value=app.settings.headerGabineteSize??9;if($('headerGabineteBold'))$('headerGabineteBold').value=app.settings.headerGabineteBold?'1':'0';if($('headerTitleSize'))$('headerTitleSize').value=app.settings.headerTitleSize??9;if($('headerTitleBold'))$('headerTitleBold').value=app.settings.headerTitleBold!==false?'1':'0';if($('coverCodeLineSize'))$('coverCodeLineSize').value=app.settings.coverCodeLineSize??18;if($('coverCodeLineBold'))$('coverCodeLineBold').value=app.settings.coverCodeLineBold!==false?'1':'0';if($('tagValueLayout'))$('tagValueLayout').value=app.settings.tagValueLayout||'stacked';if($('tagValueTabs'))$('tagValueTabs').value=String(app.settings.tagValueTabs||2);if($('tagValueIndent'))$('tagValueIndent').checked=app.settings.tagValueIndent!==false;updateTagValueLayoutUi();
  calWire('pdate',false,()=>{sync();queue()});calSyncLabel('pdate',false);
  renderServiceSiglasUI();renderTopicTypeOptions();renderGabineteAnalistaUI();renderCoverPhotos();renderAttendees();renderGabineteSelect();
  renderOutModelsUI();
@@ -578,6 +595,7 @@ function docTitleFor(docType){
  }
  if(docType==='FxT'||docType===(app.settings.fix||'FxT'))return app.settings.titleFxT||'Ficha de caracterização';
  if(docType==='Cronologia')return app.settings.titleCronologia||'Cronologia';
+ if(docType==='Pendentes')return app.settings.titlePendentes||'Lista de tópicos com assuntos pendentes';
  if(docType==='FxP')return app.settings.titleFxP||'Resumo';
  return app.settings.titleOutros||docType||'';
 }
@@ -666,7 +684,15 @@ const OUTMODEL_DEFS={
  fxp:{nome:'📑 Resumo (FxP)',tituloKey:'titleFxP',tituloDefault:'Resumo',
   campos:TOPIC_FIELD_CATALOG,defaultOn:['designation','nFotos','legendas']},
  cronologia:{nome:'🕒 Cronologia',tituloKey:'titleCronologia',tituloDefault:'Cronologia',
-  campos:[{key:'historico',label:'Histórico do processo'}],defaultOn:['historico']}
+  campos:[{key:'historico',label:'Histórico do processo'}],defaultOn:['historico']},
+ pendentes:{nome:'📌 Lista de pendentes',tituloKey:'titlePendentes',tituloDefault:'Lista de tópicos com assuntos pendentes',
+  campos:[
+   {key:'topico',label:'Tópico'},
+   {key:'foto',label:'Número da fotografia'},
+   {key:'estado',label:'Estado (ON/SBY)'},
+   {key:'legenda',label:'Legenda da fotografia'}
+  ],
+  defaultOn:['topico','foto','estado','legenda']}
 };
 // Cria (uma vez) o Out Model de um documento, herdando o que estava configurado à moda antiga.
 function outModel(docKey){
@@ -722,6 +748,7 @@ function renderOutModelsUI(){
  renderOutModelFields('fxt','outModelFxt');
  renderOutModelFields('fxp','outModelFxp');
  renderOutModelFields('cronologia','outModelCronologia');
+ renderOutModelFields('pendentes','outModelPendentes');
 }
 function outModelTitulo(docKey){
  const def=OUTMODEL_DEFS[docKey];
@@ -1242,6 +1269,55 @@ function topicStatusSummary(s){
  const c={};ph.forEach(p=>{const k=photoStatus(p);c[k]=(c[k]||0)+1});
  return PHOTO_STATUS.filter(x=>c[x.key]).map(x=>`${x.label} ${c[x.key]}`).join(' · ');
 }
+// Fotografias por resolver em todo o processo (ON ou SBY), por ordem de tópico e de foto.
+function pendingPhotos(){
+ const out=[];
+ for(const s of app.subs){
+  (s.photos||[]).forEach((p,i)=>{
+   if(['ON','SBY'].includes(photoStatus(p)))out.push({s,p,i});
+  });
+ }
+ return out;
+}
+// Uma linha de pendente, com os campos escolhidos no Out Model "Lista de pendentes".
+function pendingLineParts(entry){
+ const {s,p,i}=entry;
+ const st=PHOTO_STATUS.find(x=>x.key===photoStatus(p))||PHOTO_STATUS[0];
+ const vals={
+  topico:`${topicCode(s)}${s.designation?' — '+s.designation:''}`,
+  foto:photoName(s,i+1),
+  estado:st.label,
+  legenda:p.caption||''
+ };
+ return outModelActiveKeys('pendentes').map(k=>({key:k,label:outModelLabel('pendentes',k),value:vals[k]}));
+}
+function renderPendingList(){
+ const el=$('pendingList');if(!el)return;
+ const showCaps=$('pendingShowCaptions')?$('pendingShowCaptions').checked:true;
+ const list=pendingPhotos();
+ const head=$('pendingDetails')&&$('pendingDetails').querySelector('summary h2');
+ if(head)head.textContent=`📌 Fotografias pendentes (${list.length})`;
+ if(!list.length){el.innerHTML='<div class="status">✔ Não há fotografias pendentes neste processo.</div>';return}
+ el.innerHTML=list.map(entry=>{
+  const {s,p}=entry;
+  const st=PHOTO_STATUS.find(x=>x.key===photoStatus(p))||PHOTO_STATUS[0];
+  const parts=pendingLineParts(entry).filter(x=>x.key!=='legenda'||showCaps);
+  const topico=parts.find(x=>x.key==='topico');
+  const resto=parts.filter(x=>x.key!=='topico');
+  return `<div class="item" data-pend-sub="${s.id}">
+   ${topico?`<b>${esc(topico.value)}</b>`:''}
+   ${resto.map(x=>x.key==='estado'
+     ?`<span class="status-badge" style="display:inline-block;padding:1px 7px;border-radius:9px;font-size:11px;font-weight:600;background:${st.bg};color:${st.fg||'#fff'}">${esc(x.value)}</span>`
+     :`<div class="meta">${x.key==='foto'?`<b>${esc(x.value)}</b>`:(x.value?esc(x.value):'<i>(sem legenda)</i>')}</div>`).join('')}
+  </div>`;
+ }).join('');
+ el.querySelectorAll('[data-pend-sub]').forEach(d=>d.addEventListener('click',()=>{
+  app.active=d.dataset.pendSub;
+  photoFilter='PEND';
+  render();
+  const det=$('detail');if(det)det.scrollIntoView({behavior:'smooth',block:'start'});
+ }));
+}
 function renderPhotos(){
  const s=active();
  const cols=Math.max(1,Math.min(4,Number(app.settings.photoGridCols)||2));
@@ -1287,6 +1363,7 @@ function renderPhotos(){
   s.photos[Number(b.dataset.index)].status=b.dataset.status;
   touchTopicStart(s);render();saveImmediate();
  }));
+ renderPendingList();
  document.querySelectorAll('.rotate-photo').forEach(b=>b.addEventListener('click',async()=>{
   const s=active(),i=Number(b.dataset.index),p=s.photos[i];
   if(!p||!p.blob)return;
@@ -1910,7 +1987,7 @@ async function buildCoverPdfBlob(gabinete){
  }
  return doc.output('blob');
 }
-async function buildProcessPdfBlob(topics,includePhotos,pdfCols,withCover=false,withChronology=false,gabinete=''){
+async function buildProcessPdfBlob(topics,includePhotos,pdfCols,withCover=false,withChronology=false,gabinete='',withPendentes=false){
  topics=Array.from(new Map((topics||[]).map(t=>[t.id,t])).values());
  if(!(window.jspdf&&window.jspdf.jsPDF))throw new Error('O gerador de PDF ainda não carregou. Confirme que tem ligação à internet (necessária apenas para carregar esta funcionalidade, uma única vez) e tente novamente.');
  const {jsPDF}=window.jspdf;
@@ -2021,6 +2098,40 @@ async function buildProcessPdfBlob(topics,includePhotos,pdfCols,withCover=false,
  }
  const totalPhotos=includePhotos?topics.reduce((n,s)=>n+s.photos.length,0):0;
  y+=4;doc.setDrawColor(180);doc.line(mL,y,pageW-mR,y);y+=8;
+ if(withPendentes){
+  const pend=pendingPhotos().filter(e=>topics.some(t=>t.id===e.s.id));
+  currentTopicLabel='Pendentes';currentTopicHeaderLabel='';currentHeaderTitle=docTitleFor('Pendentes');
+  doc.addPage();drawPageHeader(doc,mL,mT,mR,pageW,F,BS,gabinete,servico,currentHeaderTitle,'');y=contentStartY(mT);footerPages[doc.internal.getNumberOfPages()]=currentTopicLabel;
+  doc.setFontSize(BS+6);doc.setFont(F,'bold');
+  doc.text(docTitleFor('Pendentes'),mL,y);y+=9;
+  doc.setFont(F,'normal');doc.setFontSize(SMALLTXT);doc.setTextColor(100);
+  doc.text('Gerado em: '+new Date().toLocaleString('pt-PT'),mL,y);y+=6;doc.setTextColor(0);doc.setFontSize(BODY);
+  doc.setDrawColor(180);doc.line(mL,y,pageW-mR,y);y+=6;
+  if(!pend.length){
+   doc.setFontSize(BODY);doc.text('Sem fotografias pendentes.',mL,y);y+=6;
+  }else{
+   // Agrupa por tópico: o cabeçalho do grupo só é escrito quando o tópico muda.
+   let ultimoTopico=null;
+   for(const entry of pend){
+    const parts=pendingLineParts(entry);
+    const topico=parts.find(x=>x.key==='topico');
+    if(topico&&topico.value!==ultimoTopico){
+     ultimoTopico=topico.value;
+     ensureSpace(BODY*.5+6);
+     y+=3;doc.setFont(F,'bold');doc.setFontSize(BODY);
+     doc.text(doc.splitTextToSize(ultimoTopico,contentW),mL,y);y+=BODY*.5+2;
+     doc.setFont(F,'normal');
+    }
+    const linha=parts.filter(x=>x.key!=='topico'&&x.value).map(x=>x.value).join('  ·  ');
+    if(!linha)continue;
+    const w=doc.splitTextToSize('   '+linha,contentW);
+    ensureSpace(w.length*SMALLTXT*.44+2);
+    doc.setFontSize(SMALLTXT);doc.text(w,mL,y);y+=w.length*SMALLTXT*.44+2;
+   }
+   doc.setFontSize(BODY);
+  }
+  doc.addPage();y=contentStartY(mT);
+ }
  if(withChronology&&topics.length){
   currentTopicLabel='Cronologia';currentTopicHeaderLabel='';currentHeaderTitle=docTitleFor('Cronologia');
   doc.addPage();drawPageHeader(doc,mL,mT,mR,pageW,F,BS,gabinete,servico,currentHeaderTitle,'');y=contentStartY(mT);footerPages[doc.internal.getNumberOfPages()]=currentTopicLabel;
@@ -2461,7 +2572,8 @@ async function generateProcessPdf(){
  const withCoverResumo=coverNeeded()?!!($('pdfIncludeCover')&&$('pdfIncludeCover').checked):false;
  if(withCoverResumo&&!(await resolveCoverPhotosForGeneration()))return;
  const withChronologyResumo=!!($('pdfIncludeChronology')&&$('pdfIncludeChronology').checked);
- window._lastWithCoverResumo=withCoverResumo;window._lastWithChronologyResumo=withChronologyResumo;
+ const withPendentesResumo=!!($('pdfIncludePendentes')&&$('pdfIncludePendentes').checked);
+ window._lastWithCoverResumo=withCoverResumo;window._lastWithChronologyResumo=withChronologyResumo;window._lastWithPendentesResumo=withPendentesResumo;
  const gabinete=pickGabinete();
  const includePhotos=!!($('pdfIncludePhotos')&&$('pdfIncludePhotos').checked);
  let pdfCols=[1,2,3,4,5].includes(app.settings.pdfPhotoCols)?app.settings.pdfPhotoCols:3;
@@ -2489,7 +2601,7 @@ async function generateProcessPdf(){
   const prevReportVersion=Number(app.process.reportVersion)||0;
   app.process.reportVersion=prevReportVersion+1;
   await saveImmediate();
-  const result=await buildProcessPdfBlob(app.subs,includePhotos,pdfCols,withCoverResumo,withChronologyResumo,gabinete);
+  const result=await buildProcessPdfBlob(app.subs,includePhotos,pdfCols,withCoverResumo,withChronologyResumo,gabinete,withPendentesResumo);
   if(result.cancelled){
    app.process.reportVersion=prevReportVersion;
    await saveImmediate();
@@ -2759,7 +2871,7 @@ async function buildChronologyDocx(topics,gabinete=''){
   +'</Relationships>');
  return await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
 }
-async function buildProcessDocx(topics,includePhotos,pdfCols,withCover=false,withChronology=false,gabinete=''){
+async function buildProcessDocx(topics,includePhotos,pdfCols,withCover=false,withChronology=false,gabinete='',withPendentes=false){
  topics=Array.from(new Map((topics||[]).map(t=>[t.id,t])).values());
  const zip=new JSZip();
  const F=(app.settings.pdfFontFamily||'courier')==='courier'?'Courier New':(app.settings.pdfFontFamily==='times'?'Times New Roman':'Arial');
@@ -2841,6 +2953,32 @@ async function buildProcessDocx(topics,includePhotos,pdfCols,withCover=false,wit
   const coverHeaderRId=makeHeader(gabinete,'','','');
   coverParts.push(docxPara('',{sectPr:sectPr(coverFooterRId,coverHeaderRId),after:0}));
   bodyParts.push(coverParts.join(''));
+ }
+
+  if(withPendentes){
+  const pend=pendingPhotos().filter(e=>topics.some(t=>t.id===e.s.id));
+  const pParts=[];
+  pParts.push(docxPara(docxRun(docTitleFor('Pendentes'),{bold:true,size:szTitle,font:F}),{after:180}));
+  pParts.push(docxPara(docxRun('Gerado em: '+new Date().toLocaleString('pt-PT'),{size:szBody,font:F}),{after:120}));
+  if(!pend.length){
+   pParts.push(docxPara(docxRun('Sem fotografias pendentes.',{size:szBody,font:F}),{after:80}));
+  }else{
+   let ultimoTopico=null;
+   for(const entry of pend){
+    const parts=pendingLineParts(entry);
+    const topico=parts.find(x=>x.key==='topico');
+    if(topico&&topico.value!==ultimoTopico){
+     ultimoTopico=topico.value;
+     pParts.push(docxPara(docxRun(ultimoTopico,{bold:true,size:szBody+2,font:F}),{after:40}));
+    }
+    const linha=parts.filter(x=>x.key!=='topico'&&x.value).map(x=>x.value).join('  ·  ');
+    if(linha)pParts.push(docxPara(docxRun(linha,{size:szBody,font:F}),{after:20,indent:280}));
+   }
+  }
+  const pFooterRId=makeFooter('','Pendentes');
+  const pHeaderRId=makeHeader(gabinete,app.process.service||'',docTitleFor('Pendentes'),'');
+  pParts.push(docxPara('',{sectPr:sectPr(pFooterRId,pHeaderRId),after:0}));
+  bodyParts.push(pParts.join(''));
  }
  if(withChronology&&topics.length){
   const chronoParts=[];
@@ -3024,7 +3162,7 @@ async function confirmDocxExport(){
  dbtn.disabled=true;dbtn.textContent='📝 A preparar Word…';
  showBusy('A gerar documento Word…');
  try{
-  window._pendingDocxBlob=await buildProcessDocx(app.subs,!!window._lastIncludePhotos,window._lastPdfCols||3,!!window._lastWithCoverResumo,!!window._lastWithChronologyResumo,window._lastGabinete||'');
+  window._pendingDocxBlob=await buildProcessDocx(app.subs,!!window._lastIncludePhotos,window._lastPdfCols||3,!!window._lastWithCoverResumo,!!window._lastWithChronologyResumo,window._lastGabinete||'',window._lastWithPendentesResumo!==false);
  }catch(docxErr){
   console.error('Erro ao gerar o Word',docxErr);
   dbtn.disabled=false;dbtn.textContent=original;
@@ -3197,6 +3335,7 @@ async function exportProcess(force=false,skipCoverResumo=false){
  }
  const withCoverResumo=skipCoverResumo?(window._lastWithCoverResumo||false):((coverNeeded())?confirm(dlgTitle()+'Deseja agregar a Capa do processo no início do Resumo (PDF e Word)?'):false);
  if(!skipCoverResumo&&coverNeeded()&&!(await resolveCoverPhotosForGeneration()))return;
+ const withPendentesResumo=(window._lastWithPendentesResumo!==false);
  const withChronologyResumo=skipCoverResumo?(window._lastWithChronologyResumo!==false):confirm(dlgTitle()+'Deseja agregar a Cronologia do processo no Resumo (PDF e Word)?');
  const gabinete=pickGabinete();
  const setExpState=(t)=>{$('expstate').textContent=t;showBusy(t)};
@@ -3268,7 +3407,7 @@ async function exportProcess(force=false,skipCoverResumo=false){
    if(reuseCached){
     resumoFolder.file(`${code()}_Resumo${reportVersionSuffix()}.pdf`,window._pendingPdfBlob);
    }else{
-    const resumoPdf=await buildProcessPdfBlob(app.subs,includePhotosResumo,pdfColsResumo,withCoverResumo,withChronologyResumo,gabinete);
+    const resumoPdf=await buildProcessPdfBlob(app.subs,includePhotosResumo,pdfColsResumo,withCoverResumo,withChronologyResumo,gabinete,withPendentesResumo);
     if(resumoPdf&&!resumoPdf.cancelled)resumoFolder.file(`${code()}_Resumo${reportVersionSuffix()}.pdf`,resumoPdf.blob);
    }
   }catch(e){console.error('Erro ao gerar o Resumo em PDF',e)}
@@ -3276,7 +3415,7 @@ async function exportProcess(force=false,skipCoverResumo=false){
    if(reuseCached){
     resumoFolder.file(`${code()}_Resumo${reportVersionSuffix()}.docx`,window._pendingDocxBlob);
    }else{
-    const resumoDocx=await buildProcessDocx(app.subs,includePhotosResumo,pdfColsResumo,withCoverResumo,withChronologyResumo,gabinete);
+    const resumoDocx=await buildProcessDocx(app.subs,includePhotosResumo,pdfColsResumo,withCoverResumo,withChronologyResumo,gabinete,withPendentesResumo);
     resumoFolder.file(`${code()}_Resumo${reportVersionSuffix()}.docx`,resumoDocx);
    }
   }catch(e){console.error('Erro ao gerar o Resumo em Word',e)}
@@ -3582,7 +3721,7 @@ function activeProcessLabel(){
  if(app.subs&&app.subs.length)label+=` · ${app.subs.length} tópico(s)`;
  return label;
 }
-function render(){ $('head').textContent=activeProcessLabel();if($('tabLabelTopicos'))$('tabLabelTopicos').textContent=activeProcessLabel();if($('tabLabelProduzir'))$('tabLabelProduzir').textContent=activeProcessLabel();$('topicCreateHint').textContent=code()?`A criar tópico para o processo: ${code()}`:'Defina primeiro os dados do processo (secção 1) antes de criar um tópico.';renderSubs();renderDetail();const n=app.subs.reduce((a,s)=>a+s.photos.length,0),k=app.subs.filter(s=>s.kmlText).length,m=app.subs.filter(s=>s.mapBlob).length;$('summary').textContent=`${app.subs.length} tópico(s) · ${n} fotografia(s) · ${k} KML · ${m} mapa(s)`;updateBackupStatus();renderResumoHistory();if(code()||app.subs.length){const w=$('freshStateWarning');if(w)w.classList.add('hidden');removeAlertBadge('fresh')}updateExportOptionsUi() }
+function render(){ $('head').textContent=activeProcessLabel();if($('tabLabelTopicos'))$('tabLabelTopicos').textContent=activeProcessLabel();if($('tabLabelProduzir'))$('tabLabelProduzir').textContent=activeProcessLabel();$('topicCreateHint').textContent=code()?`A criar tópico para o processo: ${code()}`:'Defina primeiro os dados do processo (secção 1) antes de criar um tópico.';renderSubs();renderDetail();renderPendingList();const n=app.subs.reduce((a,s)=>a+s.photos.length,0),k=app.subs.filter(s=>s.kmlText).length,m=app.subs.filter(s=>s.mapBlob).length;$('summary').textContent=`${app.subs.length} tópico(s) · ${n} fotografia(s) · ${k} KML · ${m} mapa(s)`;updateBackupStatus();renderResumoHistory();if(code()||app.subs.length){const w=$('freshStateWarning');if(w)w.classList.add('hidden');removeAlertBadge('fresh')}updateExportOptionsUi() }
 function updateExportOptionsUi(){
  const coverRow=$('pdfIncludeCoverRow');
  if(coverRow){
@@ -3599,7 +3738,7 @@ function updateExportOptionsUi(){
  const rap=$('pdfResumoApreciacao');if(rap)rap.checked=app.settings.resumoApreciacao!==false;
  const rpc=$('pdfResumoPhotoCaptions');if(rpc)rpc.checked=app.settings.resumoPhotoCaptions===true;
 }
-['nref','service','local','max','quality','imgsig','lczsig','gpssig','fixsig','pdfPhotoCols','photoGridCols','mapInPhotoGrid','pdfPageSize','pdfFontFamily','pdfFontSize','pdfMarginLeft','pdfMarginTop','pdfMarginRight','pdfMarginBottom','pdfHeaderDistance','pdfFooterMargin','pdfFooterFontSize','pdfFooterLeft','pdfFooterCenter','pdfFooterRight','pdfFooterRuleEnabled','footerAnalystVersion','capasig','titleCapa','titleFxT','titleCronologia','titleFxP','titleOutros','headerGabineteSize','headerGabineteBold','headerTitleSize','headerTitleBold','coverCodeLineSize','coverCodeLineBold','tagValueLayout','tagValueTabs','tagValueIndent','headerExtraEnabled','headerExtraText','headerExtraSize','footerExtraEnabled','footerExtraText','footerExtraSize','coverReportVersionEnabled'].forEach(id=>{const el=$(id);if(!el)return;el.addEventListener('input',queue);el.addEventListener('change',queue);el.addEventListener('blur',saveImmediate)});
+['nref','service','local','max','quality','imgsig','lczsig','gpssig','fixsig','pdfPhotoCols','photoGridCols','pdfIncludePendentes','mapInPhotoGrid','pdfPageSize','pdfFontFamily','pdfFontSize','pdfMarginLeft','pdfMarginTop','pdfMarginRight','pdfMarginBottom','pdfHeaderDistance','pdfFooterMargin','pdfFooterFontSize','pdfFooterLeft','pdfFooterCenter','pdfFooterRight','pdfFooterRuleEnabled','footerAnalystVersion','capasig','titleCapa','titleFxT','titleCronologia','titleFxP','titlePendentes','titleOutros','headerGabineteSize','headerGabineteBold','headerTitleSize','headerTitleBold','coverCodeLineSize','coverCodeLineBold','tagValueLayout','tagValueTabs','tagValueIndent','headerExtraEnabled','headerExtraText','headerExtraSize','footerExtraEnabled','footerExtraText','footerExtraSize','coverReportVersionEnabled'].forEach(id=>{const el=$(id);if(!el)return;el.addEventListener('input',queue);el.addEventListener('change',queue);el.addEventListener('blur',saveImmediate)});
 (function(){
  const processFieldLabels={number:'Número',nref:'N/Ref',service:'Serviço',subject:'Descrição sucinta',local:'Local',finalidade:'Finalidade',docfornecida:'Documentação fornecida',apreciacao:'Resumo de apreciação'};
  Object.keys(processFieldLabels).forEach(id=>{
@@ -3634,6 +3773,7 @@ function wireEvents(){
  bind('saveSubBtn','click',()=>{const s=active();if(saveSub()&&s)logProcessEvent(`Tópico ${topicCode(s)} atualizado`);});
  bind('topicSearchInput','input',()=>{topicSearchQuery=$('topicSearchInput').value;renderSubs()});
  bind('processSearchInput','input',()=>{processSearchQuery=$('processSearchInput').value;renderProcessList()});
+ bind('pendingShowCaptions','change',renderPendingList);
  document.querySelectorAll('#topicStatusButtons .status-set-btn').forEach(b=>b.addEventListener('click',()=>{
   const s=active();if(!s)return;
   const label={aberto:'Em aberto',resolvido:'Resolvido',anulado:'Anulado'};
