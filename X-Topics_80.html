@@ -2,7 +2,7 @@
 <html lang="pt-PT"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>X-Topics</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 <style>
-:root{--b:#1f7a4d;--g:#3fae67;--r:#a62c2c;--loc:#5b9bd5;--amber:#f0b429;--bg:#eef2f5;--ln:#d7dde3;--ink:#1f2933;--muted:#637381}*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--ink)}header{position:sticky;top:0;z-index:6;background:#0f3d27;color:#fff;padding:14px 16px}header h1{margin:0;font-size:21px}header small{opacity:.85;font-size:15px}main{max-width:900px;margin:auto;padding:12px;padding-bottom:180px}.card{background:#fff;border:1px solid var(--ln);border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 2px 7px #0000000d}.tabs,.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.location-actions{display:grid;grid-template-columns:1fr 1fr;column-gap:14px;row-gap:14px;margin:14px 0}.location-actions button{width:100%;min-height:52px;padding:12px 10px;font-size:15px}.actions.primary-one{grid-template-columns:1fr}.actions.three{grid-template-columns:repeat(3,1fr)}.actions.four{grid-template-columns:repeat(4,1fr)}.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.row4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}label{display:block;font-weight:700;font-size:14px;margin:10px 0 5px}input,select,textarea{width:100%;padding:11px;border:1px solid #b8c2cc;border-radius:8px;font:inherit;background:#fff}textarea{min-height:70px;resize:vertical}button{border:0;border-radius:9px;padding:10px 12px;min-height:44px;background:var(--b);color:#fff;font-weight:750;font:inherit;cursor:pointer;line-height:1.2}.actions button{width:100%;font-size:14px}.actions .wide{grid-column:1/-1}.compact-danger{background:#fff;color:var(--r);border:1px solid #d8a7a7}.secondary{background:#64727d}.status-filter-btn.active{background:var(--b)}.status-set-btn{opacity:.4;color:#fff}.status-set-btn.selected{opacity:1;box-shadow:0 0 0 3px #0000004d inset}#topicStatusButtons{display:grid!important;grid-template-columns:repeat(3,1fr)!important}.green{background:var(--g)}.loc{background:var(--loc)}.amber{background:var(--amber);color:#3a2a00}.danger{background:var(--r)}.hidden{display:none!important}.status{padding:9px 10px;background:#f5f7f9;border:1px solid var(--ln);border-radius:8px;color:var(--muted);font-size:13px;margin:8px 0}.item{border:1px solid var(--ln);border-radius:10px;padding:10px;margin:8px 0;cursor:pointer}.item.active{border:2px solid var(--b)}.item b{display:block}.item-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}.item-actions button{width:auto;min-width:110px}.meta{font-size:12px;color:var(--muted)}.photo{display:grid;grid-template-columns:108px 1fr;gap:8px;align-items:center;border-top:1px solid var(--ln);padding:8px 0}.photo img{width:108px;height:82px;object-fit:cover;object-position:center;border-radius:7px;display:block;margin:0 auto}.photo-row{display:flex;align-items:center;justify-content:space-between;gap:6px;margin:2px 0;flex-wrap:wrap}.photo-row button{width:auto;min-height:32px;padding:5px 10px;font-size:12px;flex:0 0 auto}.photo-row button.move-photo-up,.photo-row button.move-photo-down{padding:5px 8px}.cover-photos{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}.cover-photo{text-align:center;border:1px solid var(--ln);border-radius:9px;padding:8px;background:#fafbfc}.cover-photo img{width:100%;height:130px;object-fit:cover;object-position:center;border-radius:7px;display:block;margin:0 auto}.cover-photo .meta{margin:6px 0;word-break:break-all}.map-preview{width:100%;max-height:360px;object-fit:contain;border:1px solid var(--ln);border-radius:9px;background:#f7f8fa}.pill{display:inline-block;padding:3px 8px;border-radius:12px;background:#e8eef5;margin:2px;font-size:12px}.ok{color:#216e39}.warn{color:#9a6700}.err{color:#a40e26}.note{font-size:12px;color:var(--muted)}.stype-box{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px;border:1px solid #b8c2cc;border-radius:8px;background:#f5f7f9}.stype-box span{font-weight:750}.linklike{background:none;border:0;padding:0;min-height:auto;color:var(--b);text-decoration:underline;font-weight:600;font-size:13px;cursor:pointer}hr{border:0;border-top:1px solid var(--ln);margin:16px 0}.config-block-title{margin:24px 0 10px;padding:8px 12px;background:#0f3d27;color:#fff;border-radius:9px;font-size:15px;font-weight:800}.config-block-title:first-of-type{margin-top:4px}.config-doc-title{margin:18px 0 8px;padding-bottom:5px;border-bottom:2px solid var(--b);font-size:14px;font-weight:800;color:var(--b)}details.card{padding:0}details.card>summary{padding:14px;cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;background:#eef6f0;border-radius:12px;transition:background .15s}details.card>summary:active{background:#d7ecdd}details.card[open]>summary{border-radius:12px 12px 0 0}details.card>summary::-webkit-details-marker{display:none}details.card>summary::after{content:'▸';font-size:22px;font-weight:800;color:var(--b);transition:transform .15s;line-height:1}details.card[open]>summary::after{transform:rotate(90deg)}details.card>summary h2{margin:0}details.card>*:not(summary){padding:0 14px}details.card>*:last-child{padding-bottom:14px}.cal-modal{position:fixed;inset:0;background:#0009;z-index:30;display:flex;align-items:flex-end;justify-content:center}.cal-box{background:#fff;border-radius:14px 14px 0 0;padding:16px;width:100%;max-width:520px;max-height:92vh;overflow:auto}@media(min-width:640px){.cal-modal{align-items:center}.cal-box{border-radius:14px}}.cal-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:4px 0 10px}.cal-header button{width:auto;min-width:46px;padding:6px 10px}.cal-dow{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;font-size:11px;color:var(--muted);text-align:center;margin-bottom:4px;font-weight:700}.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}.cal-day{width:auto;min-width:0;min-height:42px;padding:0;background:#eef1f6;color:var(--b);font-weight:600}.cal-day.today{outline:2px solid var(--amber);outline-offset:-2px}.cal-day.sel{background:var(--g);color:#fff}.cal-field{display:flex;gap:8px;align-items:center}.cal-field .cal-open{flex:1;text-align:left;background:#fff;color:var(--ink);border:1px solid #b8c2cc;font-weight:600}.cfg-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;margin-bottom:6px}.cfg-row .cfg-del{width:auto;min-width:0;padding:8px 12px}@media(max-width:620px){.row,.row3,.row4{grid-template-columns:1fr}.actions{grid-template-columns:1fr 1fr}.location-actions{grid-template-columns:1fr;row-gap:12px}.location-actions button{min-height:54px;font-size:15px}.actions.three{grid-template-columns:1fr 1fr}.actions.four{grid-template-columns:1fr 1fr}.photo{grid-template-columns:92px 1fr}.photo img{width:92px;height:70px}.actions button{min-width:0;padding:10px 8px;font-size:13px}}
+:root{--b:#1f7a4d;--g:#3fae67;--r:#a62c2c;--loc:#5b9bd5;--amber:#f0b429;--bg:#eef2f5;--ln:#d7dde3;--ink:#1f2933;--muted:#637381}*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--ink)}header{position:sticky;top:0;z-index:6;background:#0f3d27;color:#fff;padding:14px 16px}header h1{margin:0;font-size:21px}header small{opacity:.85;font-size:15px}main{max-width:900px;margin:auto;padding:12px;padding-bottom:180px}.card{background:#fff;border:1px solid var(--ln);border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 2px 7px #0000000d}.tabs,.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.location-actions{display:grid;grid-template-columns:1fr 1fr;column-gap:14px;row-gap:14px;margin:14px 0}.location-actions button{width:100%;min-height:52px;padding:12px 10px;font-size:15px}.actions.primary-one{grid-template-columns:1fr}.actions.three{grid-template-columns:repeat(3,1fr)}.actions.four{grid-template-columns:repeat(4,1fr)}.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.row4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}label{display:block;font-weight:700;font-size:14px;margin:10px 0 5px}input,select,textarea{width:100%;padding:11px;border:1px solid #b8c2cc;border-radius:8px;font:inherit;background:#fff}textarea{min-height:70px;resize:vertical}button{border:0;border-radius:9px;padding:10px 12px;min-height:44px;background:var(--b);color:#fff;font-weight:750;font:inherit;cursor:pointer;line-height:1.2}.actions button{width:100%;font-size:14px}.actions .wide{grid-column:1/-1}.compact-danger{background:#fff;color:var(--r);border:1px solid #d8a7a7}.secondary{background:#64727d}.status-filter-btn.active{background:var(--b)}.status-set-btn{opacity:.4;color:#fff}.status-set-btn.selected{opacity:1;box-shadow:0 0 0 3px #0000004d inset}#topicStatusButtons{display:grid!important;grid-template-columns:repeat(3,1fr)!important}.green{background:var(--g)}.loc{background:var(--loc)}.amber{background:var(--amber);color:#3a2a00}.danger{background:var(--r)}.hidden{display:none!important}.status{padding:9px 10px;background:#f5f7f9;border:1px solid var(--ln);border-radius:8px;color:var(--muted);font-size:13px;margin:8px 0}.item{border:1px solid var(--ln);border-radius:10px;padding:10px;margin:8px 0;cursor:pointer}.item.active{border:2px solid var(--b)}.item b{display:block}.item-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}.item-actions button{width:auto;min-width:110px}.meta{font-size:12px;color:var(--muted)}.photo{display:grid;grid-template-columns:108px 1fr;gap:8px;align-items:center;border-top:1px solid var(--ln);padding:8px 0}.photo img{width:108px;height:82px;object-fit:cover;object-position:center;border-radius:7px;display:block;margin:0 auto}.photo-row{display:flex;align-items:center;justify-content:space-between;gap:6px;margin:2px 0;flex-wrap:wrap}.photo-row button{width:auto;min-height:32px;padding:5px 10px;font-size:12px;flex:0 0 auto}.photo-row button.move-photo-up,.photo-row button.move-photo-down{padding:5px 8px}.cover-photos{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}.cover-photo{text-align:center;border:1px solid var(--ln);border-radius:9px;padding:8px;background:#fafbfc}.cover-photo img{width:100%;height:130px;object-fit:cover;object-position:center;border-radius:7px;display:block;margin:0 auto}.cover-photo .meta{margin:6px 0;word-break:break-all}.map-preview{width:100%;max-height:360px;object-fit:contain;border:1px solid var(--ln);border-radius:9px;background:#f7f8fa}.pill{display:inline-block;padding:3px 8px;border-radius:12px;background:#e8eef5;margin:2px;font-size:12px}.ok{color:#216e39}.warn{color:#9a6700}.err{color:#a40e26}.note{font-size:12px;color:var(--muted)}.stype-box{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px;border:1px solid #b8c2cc;border-radius:8px;background:#f5f7f9}.stype-box span{font-weight:750}.linklike{background:none;border:0;padding:0;min-height:auto;color:var(--b);text-decoration:underline;font-weight:600;font-size:13px;cursor:pointer}hr{border:0;border-top:1px solid var(--ln);margin:16px 0}.config-block-title{margin:24px 0 10px;padding:8px 12px;background:#0f3d27;color:#fff;border-radius:9px;font-size:15px;font-weight:800}.config-block-title:first-of-type{margin-top:4px}.config-doc-title{margin:18px 0 8px;padding-bottom:5px;border-bottom:2px solid var(--b);font-size:14px;font-weight:800;color:var(--b)}details.card{padding:0}details.card>summary{padding:14px;cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;background:#eef6f0;border-radius:12px;transition:background .15s}details.card>summary:active{background:#d7ecdd}details.card[open]>summary{border-radius:12px 12px 0 0}details.card>summary::-webkit-details-marker{display:none}details.card>summary::after{content:'▸';font-size:22px;font-weight:800;color:var(--b);transition:transform .15s;line-height:1}details.card[open]>summary::after{transform:rotate(90deg)}details.card>summary h2{margin:0}details.card>*:not(summary){padding:0 14px}details.card>*:last-child{padding-bottom:14px}.cal-modal{position:fixed;inset:0;background:#0009;z-index:30;display:flex;align-items:flex-end;justify-content:center}.cal-box{background:#fff;border-radius:14px 14px 0 0;padding:16px;width:100%;max-width:520px;max-height:92vh;overflow:auto}@media(min-width:640px){.cal-modal{align-items:center}.cal-box{border-radius:14px}}.cal-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:4px 0 10px}.cal-header button{width:auto;min-width:46px;padding:6px 10px}.cal-dow{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;font-size:11px;color:var(--muted);text-align:center;margin-bottom:4px;font-weight:700}.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}.cal-day{width:auto;min-width:0;min-height:42px;padding:0;background:#eef1f6;color:var(--b);font-weight:600}.cal-day.today{outline:2px solid var(--amber);outline-offset:-2px}.cal-day.sel{background:var(--g);color:#fff}.cal-field{display:flex;gap:8px;align-items:center}.cal-field .cal-open{flex:1;text-align:left;background:#fff;color:var(--ink);border:1px solid #b8c2cc;font-weight:600}.cfg-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;margin-bottom:6px}.cfg-row .cfg-del{width:auto;min-width:0;padding:8px 12px}.order-row{display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--ln);border-radius:9px;padding:9px 11px;margin:6px 0;background:#fbfcfd}.order-row .lbl{font-weight:600;font-size:13.5px}.order-btns{display:flex;gap:6px}.order-btns button{width:auto;min-width:0;min-height:36px;padding:6px 12px;font-size:14px}label.inline{display:flex;align-items:center;gap:8px;font-weight:400;margin:8px 0}@media(max-width:620px){.row,.row3,.row4{grid-template-columns:1fr}.actions{grid-template-columns:1fr 1fr}.location-actions{grid-template-columns:1fr;row-gap:12px}.location-actions button{min-height:54px;font-size:15px}.actions.three{grid-template-columns:1fr 1fr}.actions.four{grid-template-columns:1fr 1fr}.photo{grid-template-columns:92px 1fr}.photo img{width:92px;height:70px}.actions button{min-width:0;padding:10px 8px;font-size:13px}}
 </style></head><body>
 <div id="busyOverlay" class="hidden" style="position:fixed;inset:0;background:rgba(255,255,255,.85);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px">
 <div style="width:34px;height:34px;border:4px solid #ddd;border-top-color:#1a7431;border-radius:50%;animation:spin .8s linear infinite"></div>
@@ -210,20 +210,18 @@
 <div class="row"><div><label>Tamanho da fonte (pt)</label><input id="coverCodeLineSize" type="number" min="8" max="36" step="0.5" value="18"></div><div><label>Estilo</label><select id="coverCodeLineBold"><option value="0">Normal</option><option value="1" selected>Negrito</option></select></div></div>
 <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-top:8px"><input type="checkbox" id="coverReportVersionEnabled" checked style="width:auto"> Incluir versão do relatório na Capa <small class="note">(linha pequena, por baixo de "Analisado por"; incrementa a cada vez que gera o PDF do processo; também é usada no nome dos ficheiros exportados, ex.: _v3)</small></label>
 </div>
+<div class="card"><h2>📋 Campos do corpo — Capa</h2>
+<div class="status">Escolha que campos do processo aparecem na Capa e por que ordem. "Designação" só é impressa quando está preenchida.</div>
+<div id="outModelCapa"></div>
+</div>
 
 <div class="config-doc-title">🏷️ Ficha de tópico (FxT)</div>
 <div class="card"><h2>Designação</h2>
 <input id="titleFxT" value="Ficha de caracterização">
 </div>
-<div class="card"><h2>📋 Campos incluídos na ficha</h2>
-<div class="status">Escolha que campos dos tópicos aparecem nas fichas (PDF e Word) geradas. A numeração de cada campo (ex.: IN_001.03) mantém-se sempre, seja ou não apresentado na ficha.</div>
-<label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="ffSummary" checked style="width:auto"> Descrevendo</label>
-<label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="ffUsoAtual" style="width:auto"> Uso atual</label>
-<label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="ffConstatacao" style="width:auto"> Constatação</label>
-<label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="ffCausas" style="width:auto"> Eventuais causas</label>
-<label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="ffMedidas" style="width:auto"> Medidas propostas</label>
-<label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="ffGrupo" style="width:auto"> Grupo</label>
-<label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-top:8px"><input type="checkbox" id="ffGps" style="width:auto"> Coordenadas GPS <small class="note">(por defeito, o GPS só aparece na Cronologia)</small></label>
+<div class="card"><h2>📋 Campos do corpo — Ficha de tópico</h2>
+<div class="status">Escolha que campos dos tópicos aparecem nas fichas (PDF e Word) e por que ordem. A numeração de cada campo (ex.: IN_001.03) fica presa ao campo, não à posição — mantém-se sempre, seja ou não apresentado.</div>
+<div id="outModelFxt"></div>
 </div>
 
 <div class="config-doc-title">📑 Resumo (Ficha de Processo — FxP)</div>
@@ -235,15 +233,9 @@
 <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-top:8px"><input type="checkbox" id="resumoPhotoCaptions" style="width:auto"> Incluir legendas das fotos no Resumo <small class="note">(secção única "Descrição sumária:" a seguir a Tópicos, organizada por Status: ON e Status: OFF; só as fotos que tiverem legenda preenchida)</small></label>
 <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-top:8px;margin-left:24px"><input type="checkbox" id="resumoCaptionsShowCode" style="width:auto"> Incluir sigla do processo na referência de cada foto <small class="note">(desligado por defeito — lista mais limpa; mantém sempre a referência ao tópico e à foto)</small></label>
 </div>
-<div class="card"><h2>📋 Campos do tópico incluídos no Resumo (FxP)</h2>
-<div class="status">Escolha que campos de cada tópico aparecem, resumidos, na lista de tópicos do Resumo do processo. Por defeito nenhum — o Resumo lista só o nome do tópico; a informação completa fica na Ficha de tópico (FxT). Um campo só é impresso se tiver conteúdo.</div>
-<label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="rfSummary" checked style="width:auto"> Descrevendo</label>
-<label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="rfUsoAtual" style="width:auto"> Uso atual</label>
-<label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="rfConstatacao" style="width:auto"> Constatação</label>
-<label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="rfCausas" style="width:auto"> Eventuais causas</label>
-<label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="rfMedidas" style="width:auto"> Medidas propostas</label>
-<label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="rfGrupo" style="width:auto"> Grupo</label>
-<label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="rfGps" style="width:auto"> Coordenadas GPS</label>
+<div class="card"><h2>📋 Campos do corpo — Resumo (FxP)</h2>
+<div class="status">Escolha que campos de cada tópico aparecem, resumidos, na lista de tópicos do Resumo, e por que ordem. Por defeito só "Descrevendo" — a informação completa fica na Ficha de tópico (FxT). Um campo só é impresso se tiver conteúdo.</div>
+<div id="outModelFxp"></div>
 </div>
 <div class="card"><h2>🔤 Formatação TAG → resposta</h2>
 <div class="status">Regra de leitura dos campos de cada tópico no Resumo (e, para consistência, também na Ficha de tópico): a <b>TAG</b> (nome do campo) aparece sempre a negrito; a <b>resposta</b> aparece sempre em texto normal. Escolha aqui como a resposta se posiciona em relação à TAG.</div>
@@ -263,7 +255,8 @@
 <div class="config-doc-title">🕒 Cronologia</div>
 <div class="card"><h2>Designação e conteúdo</h2>
 <input id="titleCronologia" value="Cronologia">
-<label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-top:8px"><input type="checkbox" id="cronologiaHistorico" checked style="width:auto"> Incluir histórico do processo na Cronologia</label>
+<div class="status">Escolha que blocos aparecem na Cronologia.</div>
+<div id="outModelCronologia"></div>
 </div>
 
 </section>
@@ -522,15 +515,15 @@ serviceList();gabineteList();analistaListCfg();
  app.schema=3
 }
 function sync(){app.process.number=$('number').value.trim();app.process.nref=$('nref')?$('nref').value.trim().slice(0,10):'';app.process.designacaoProcesso=$('designacaoProcesso')?$('designacaoProcesso').value.trim():'';app.process.service=$('service').value;app.process.subject=$('subject').value.trim();app.process.local=$('local').value.trim();app.process.date=$('pdate').value;app.process.finalidade=$('finalidade').value.trim();app.process.docFornecida=$('docfornecida').value.trim();app.process.apreciacao=$('apreciacao').value;app.settings.maxSide=parseInt($('max').value)||0;app.settings.quality=parseFloat($('quality').value)||.7;app.settings.img=$('imgsig').value.trim().toUpperCase()||'IMG';app.settings.lcz=$('lczsig').value.trim().toUpperCase()||'LCZ';app.settings.gps=$('gpssig').value.trim().toUpperCase()||'GPS';app.settings.fix=$('fixsig').value.trim().toUpperCase()||'FxT';app.settings.capa=$('capasig').value.trim().toUpperCase()||'CAPA';app.process.solicitante=$('solicitante').value.trim();app.process.analista=$('analista').value;app.process.gabinete=$('gabinete')?$('gabinete').value:app.process.gabinete;app.settings.mapMethod=$('mapMethod').value;app.settings.googleApiKey=$('googleApiKey').value.trim();app.settings.mapSource=$('mapSource').value;app.settings.mapType=$('mapType').value;app.settings.mapWidthM=Math.max(10,parseFloat($('mapWidthM').value)||500);app.settings.mapHeightM=Math.max(10,parseFloat($('mapHeightM').value)||500);app.settings.pdfPhotoCols=[1,2,3,4,5].includes(parseInt($('pdfPhotoCols').value))?parseInt($('pdfPhotoCols').value):3;app.settings.mapInPhotoGrid=$('mapInPhotoGrid')?$('mapInPhotoGrid').checked:true;app.settings.resumoApreciacao=$('resumoApreciacao')?$('resumoApreciacao').checked:true;app.settings.resumoPhotoCaptions=$('resumoPhotoCaptions')?$('resumoPhotoCaptions').checked:false;app.settings.resumoCaptionsShowCode=$('resumoCaptionsShowCode')?$('resumoCaptionsShowCode').checked:false;app.settings.resumoDescSucinta=$('resumoDescSucinta')?$('resumoDescSucinta').checked:true;
- app.settings.pdfPageSize=$('pdfPageSize').value||'a4';app.settings.pdfFontFamily=$('pdfFontFamily').value||'courier';app.settings.pdfFontSize=parseFloat($('pdfFontSize').value)||10;app.settings.pdfMarginLeft=Math.max(0,parseFloat($('pdfMarginLeft').value)||0);app.settings.pdfMarginTop=Math.max(0,parseFloat($('pdfMarginTop').value)||0);app.settings.pdfMarginRight=Math.max(0,parseFloat($('pdfMarginRight').value)||0);app.settings.pdfMarginBottom=Math.max(0,parseFloat($('pdfMarginBottom').value)||0);app.settings.pdfHeaderDistance=$('pdfHeaderDistance')?Math.max(0,parseFloat($('pdfHeaderDistance').value)||0):0.5;app.settings.pdfFooterMargin=Math.max(0,parseFloat($('pdfFooterMargin').value)||0);app.settings.pdfFooterFontSize=parseFloat($('pdfFooterFontSize').value)||8;app.settings.pdfFooterLeft=$('pdfFooterLeft').value;app.settings.pdfFooterCenter=$('pdfFooterCenter').value;app.settings.pdfFooterRight=$('pdfFooterRight').value;app.settings.pdfFooterRuleEnabled=$('pdfFooterRuleEnabled').checked;app.settings.footerAnalystVersion=$('footerAnalystVersion')?$('footerAnalystVersion').checked:false;app.settings.titleCapa=$('titleCapa')?$('titleCapa').value.trim():'Relatório de';app.settings.titleFxT=$('titleFxT')?$('titleFxT').value.trim():'Ficha de caracterização';app.settings.titleCronologia=$('titleCronologia')?$('titleCronologia').value.trim():'Cronologia';app.settings.titleFxP=$('titleFxP')?$('titleFxP').value.trim():'';app.settings.titleOutros=$('titleOutros')?$('titleOutros').value.trim():'';app.settings.headerGabineteSize=$('headerGabineteSize')?(parseFloat($('headerGabineteSize').value)||9):9;app.settings.headerGabineteBold=$('headerGabineteBold')?$('headerGabineteBold').value==='1':false;app.settings.headerTitleSize=$('headerTitleSize')?(parseFloat($('headerTitleSize').value)||9):9;app.settings.headerTitleBold=$('headerTitleBold')?$('headerTitleBold').value==='1':true;app.settings.coverCodeLineSize=$('coverCodeLineSize')?(parseFloat($('coverCodeLineSize').value)||18):18;app.settings.coverCodeLineBold=$('coverCodeLineBold')?$('coverCodeLineBold').value==='1':true;app.settings.cronologiaHistorico=$('cronologiaHistorico')?$('cronologiaHistorico').checked:true;app.settings.tagValueLayout=$('tagValueLayout')?$('tagValueLayout').value:'stacked';app.settings.tagValueTabs=$('tagValueTabs')?Math.min(6,Math.max(1,parseInt($('tagValueTabs').value)||2)):2;app.settings.tagValueIndent=$('tagValueIndent')?$('tagValueIndent').checked:true;app.settings.headerExtraEnabled=$('headerExtraEnabled')?$('headerExtraEnabled').checked:false;app.settings.headerExtraText=$('headerExtraText')?$('headerExtraText').value:'';app.settings.headerExtraSize=$('headerExtraSize')?(parseFloat($('headerExtraSize').value)||8):8;app.settings.footerExtraEnabled=$('footerExtraEnabled')?$('footerExtraEnabled').checked:false;app.settings.footerExtraText=$('footerExtraText')?$('footerExtraText').value:'';app.settings.footerExtraSize=$('footerExtraSize')?(parseFloat($('footerExtraSize').value)||6):6;app.settings.coverReportVersionEnabled=$('coverReportVersionEnabled')?$('coverReportVersionEnabled').checked:true}
+ app.settings.pdfPageSize=$('pdfPageSize').value||'a4';app.settings.pdfFontFamily=$('pdfFontFamily').value||'courier';app.settings.pdfFontSize=parseFloat($('pdfFontSize').value)||10;app.settings.pdfMarginLeft=Math.max(0,parseFloat($('pdfMarginLeft').value)||0);app.settings.pdfMarginTop=Math.max(0,parseFloat($('pdfMarginTop').value)||0);app.settings.pdfMarginRight=Math.max(0,parseFloat($('pdfMarginRight').value)||0);app.settings.pdfMarginBottom=Math.max(0,parseFloat($('pdfMarginBottom').value)||0);app.settings.pdfHeaderDistance=$('pdfHeaderDistance')?Math.max(0,parseFloat($('pdfHeaderDistance').value)||0):0.5;app.settings.pdfFooterMargin=Math.max(0,parseFloat($('pdfFooterMargin').value)||0);app.settings.pdfFooterFontSize=parseFloat($('pdfFooterFontSize').value)||8;app.settings.pdfFooterLeft=$('pdfFooterLeft').value;app.settings.pdfFooterCenter=$('pdfFooterCenter').value;app.settings.pdfFooterRight=$('pdfFooterRight').value;app.settings.pdfFooterRuleEnabled=$('pdfFooterRuleEnabled').checked;app.settings.footerAnalystVersion=$('footerAnalystVersion')?$('footerAnalystVersion').checked:false;app.settings.titleCapa=$('titleCapa')?$('titleCapa').value.trim():'Relatório de';app.settings.titleFxT=$('titleFxT')?$('titleFxT').value.trim():'Ficha de caracterização';app.settings.titleCronologia=$('titleCronologia')?$('titleCronologia').value.trim():'Cronologia';app.settings.titleFxP=$('titleFxP')?$('titleFxP').value.trim():'';app.settings.titleOutros=$('titleOutros')?$('titleOutros').value.trim():'';app.settings.headerGabineteSize=$('headerGabineteSize')?(parseFloat($('headerGabineteSize').value)||9):9;app.settings.headerGabineteBold=$('headerGabineteBold')?$('headerGabineteBold').value==='1':false;app.settings.headerTitleSize=$('headerTitleSize')?(parseFloat($('headerTitleSize').value)||9):9;app.settings.headerTitleBold=$('headerTitleBold')?$('headerTitleBold').value==='1':true;app.settings.coverCodeLineSize=$('coverCodeLineSize')?(parseFloat($('coverCodeLineSize').value)||18):18;app.settings.coverCodeLineBold=$('coverCodeLineBold')?$('coverCodeLineBold').value==='1':true;app.settings.cronologiaHistorico=outModelActiveKeys('cronologia').includes('historico');app.settings.tagValueLayout=$('tagValueLayout')?$('tagValueLayout').value:'stacked';app.settings.tagValueTabs=$('tagValueTabs')?Math.min(6,Math.max(1,parseInt($('tagValueTabs').value)||2)):2;app.settings.tagValueIndent=$('tagValueIndent')?$('tagValueIndent').checked:true;app.settings.headerExtraEnabled=$('headerExtraEnabled')?$('headerExtraEnabled').checked:false;app.settings.headerExtraText=$('headerExtraText')?$('headerExtraText').value:'';app.settings.headerExtraSize=$('headerExtraSize')?(parseFloat($('headerExtraSize').value)||8):8;app.settings.footerExtraEnabled=$('footerExtraEnabled')?$('footerExtraEnabled').checked:false;app.settings.footerExtraText=$('footerExtraText')?$('footerExtraText').value:'';app.settings.footerExtraSize=$('footerExtraSize')?(parseFloat($('footerExtraSize').value)||6):6;app.settings.coverReportVersionEnabled=$('coverReportVersionEnabled')?$('coverReportVersionEnabled').checked:true}
 function fill(){
  $('number').value=app.process.number||'';$('nref').value=app.process.nref||'';if($('designacaoProcesso'))$('designacaoProcesso').value=app.process.designacaoProcesso||'';renderServiceSelect();$('service').value=app.process.service||'';$('subject').value=app.process.subject||'';$('local').value=app.process.local;$('pdate').value=app.process.date||'';$('finalidade').value=app.process.finalidade||'';$('docfornecida').value=app.process.docFornecida||'';$('apreciacao').value=app.process.apreciacao||'';
- $('max').value=String(app.settings.maxSide||1200);$('quality').value=String(app.settings.quality||.7);$('imgsig').value=app.settings.img;$('lczsig').value=app.settings.lcz;$('gpssig').value=app.settings.gps;$('fixsig').value=app.settings.fix;$('capasig').value=app.settings.capa||'CAPA';if($('titleCapa'))$('titleCapa').value=app.settings.titleCapa??'Relatório de';if($('titleFxT'))$('titleFxT').value=app.settings.titleFxT??'Ficha de caracterização';if($('titleCronologia'))$('titleCronologia').value=app.settings.titleCronologia??'Cronologia';if($('titleFxP'))$('titleFxP').value=app.settings.titleFxP||'Resumo';if($('titleOutros'))$('titleOutros').value=app.settings.titleOutros||'';if($('headerGabineteSize'))$('headerGabineteSize').value=app.settings.headerGabineteSize??9;if($('headerGabineteBold'))$('headerGabineteBold').value=app.settings.headerGabineteBold?'1':'0';if($('headerTitleSize'))$('headerTitleSize').value=app.settings.headerTitleSize??9;if($('headerTitleBold'))$('headerTitleBold').value=app.settings.headerTitleBold!==false?'1':'0';if($('coverCodeLineSize'))$('coverCodeLineSize').value=app.settings.coverCodeLineSize??18;if($('coverCodeLineBold'))$('coverCodeLineBold').value=app.settings.coverCodeLineBold!==false?'1':'0';if($('cronologiaHistorico'))$('cronologiaHistorico').checked=app.settings.cronologiaHistorico!==false;if($('tagValueLayout'))$('tagValueLayout').value=app.settings.tagValueLayout||'stacked';if($('tagValueTabs'))$('tagValueTabs').value=String(app.settings.tagValueTabs||2);if($('tagValueIndent'))$('tagValueIndent').checked=app.settings.tagValueIndent!==false;updateTagValueLayoutUi();
+ $('max').value=String(app.settings.maxSide||1200);$('quality').value=String(app.settings.quality||.7);$('imgsig').value=app.settings.img;$('lczsig').value=app.settings.lcz;$('gpssig').value=app.settings.gps;$('fixsig').value=app.settings.fix;$('capasig').value=app.settings.capa||'CAPA';if($('titleCapa'))$('titleCapa').value=app.settings.titleCapa??'Relatório de';if($('titleFxT'))$('titleFxT').value=app.settings.titleFxT??'Ficha de caracterização';if($('titleCronologia'))$('titleCronologia').value=app.settings.titleCronologia??'Cronologia';if($('titleFxP'))$('titleFxP').value=app.settings.titleFxP||'Resumo';if($('titleOutros'))$('titleOutros').value=app.settings.titleOutros||'';if($('headerGabineteSize'))$('headerGabineteSize').value=app.settings.headerGabineteSize??9;if($('headerGabineteBold'))$('headerGabineteBold').value=app.settings.headerGabineteBold?'1':'0';if($('headerTitleSize'))$('headerTitleSize').value=app.settings.headerTitleSize??9;if($('headerTitleBold'))$('headerTitleBold').value=app.settings.headerTitleBold!==false?'1':'0';if($('coverCodeLineSize'))$('coverCodeLineSize').value=app.settings.coverCodeLineSize??18;if($('coverCodeLineBold'))$('coverCodeLineBold').value=app.settings.coverCodeLineBold!==false?'1':'0';if($('tagValueLayout'))$('tagValueLayout').value=app.settings.tagValueLayout||'stacked';if($('tagValueTabs'))$('tagValueTabs').value=String(app.settings.tagValueTabs||2);if($('tagValueIndent'))$('tagValueIndent').checked=app.settings.tagValueIndent!==false;updateTagValueLayoutUi();
  $('solicitante').value=app.process.solicitante||'';
  calWire('pdate',false,()=>{sync();queue()});calSyncLabel('pdate',false);
  renderServiceSiglasUI();renderTopicTypeOptions();renderGabineteAnalistaUI();renderCoverPhotos();renderAttendees();renderGroupsUI();renderGabineteSelect();
- $('ffSummary').checked=app.settings.fichaFields.summary!==false;$('ffUsoAtual').checked=app.settings.fichaFields.usoAtual!==false;$('ffConstatacao').checked=app.settings.fichaFields.constatacao!==false;$('ffCausas').checked=app.settings.fichaFields.causas!==false;$('ffMedidas').checked=app.settings.fichaFields.medidas!==false;$('ffGrupo').checked=app.settings.fichaFields.grupo!==false;if($('ffGps'))$('ffGps').checked=app.settings.fichaFields.gps===true;
- const rf=app.settings.resumoTopicFields||{};if($('rfSummary'))$('rfSummary').checked=rf.summary===true;if($('rfUsoAtual'))$('rfUsoAtual').checked=rf.usoAtual===true;if($('rfConstatacao'))$('rfConstatacao').checked=rf.constatacao===true;if($('rfCausas'))$('rfCausas').checked=rf.causas===true;if($('rfMedidas'))$('rfMedidas').checked=rf.medidas===true;if($('rfGrupo'))$('rfGrupo').checked=rf.grupo===true;if($('rfGps'))$('rfGps').checked=rf.gps===true;if($('resumoDescSucinta'))$('resumoDescSucinta').checked=app.settings.resumoDescSucinta!==false;
+ renderOutModelsUI();
+ if($('resumoDescSucinta'))$('resumoDescSucinta').checked=app.settings.resumoDescSucinta!==false;
  $('mapMethod').value=app.settings.mapMethod||'manual';$('googleApiKey').value=app.settings.googleApiKey||'';$('mapSource').value=app.settings.mapSource||'googlemaps';$('mapType').value=app.settings.mapType||'satellite';$('mapWidthM').value=app.settings.mapWidthM||500;$('mapHeightM').value=app.settings.mapHeightM||500;$('pdfPhotoCols').value=String(app.settings.pdfPhotoCols||3);if($('mapInPhotoGrid'))$('mapInPhotoGrid').checked=app.settings.mapInPhotoGrid!==false;if($('resumoApreciacao'))$('resumoApreciacao').checked=app.settings.resumoApreciacao!==false;if($('resumoPhotoCaptions'))$('resumoPhotoCaptions').checked=app.settings.resumoPhotoCaptions===true;if($('resumoCaptionsShowCode'))$('resumoCaptionsShowCode').checked=app.settings.resumoCaptionsShowCode===true;updateMapMethodUi();
  checkNrefDuplicate();
  $('pdfPageSize').value=app.settings.pdfPageSize||'a4';$('pdfFontFamily').value=app.settings.pdfFontFamily||'courier';$('pdfFontSize').value=app.settings.pdfFontSize||10;$('pdfMarginLeft').value=app.settings.pdfMarginLeft??2.0;$('pdfMarginTop').value=app.settings.pdfMarginTop??2.0;$('pdfMarginRight').value=app.settings.pdfMarginRight??0.5;$('pdfMarginBottom').value=app.settings.pdfMarginBottom??1.0;if($('pdfHeaderDistance'))$('pdfHeaderDistance').value=app.settings.pdfHeaderDistance??0.5;$('pdfFooterMargin').value=app.settings.pdfFooterMargin??0.8;$('pdfFooterFontSize').value=app.settings.pdfFooterFontSize||8;$('pdfFooterLeft').value=app.settings.pdfFooterLeft??'{processo} {documento}';$('pdfFooterCenter').value=app.settings.pdfFooterCenter??'';$('pdfFooterRight').value=app.settings.pdfFooterRight??'{pagina}/{paginas}';$('pdfFooterRuleEnabled').checked=app.settings.pdfFooterRuleEnabled!==false;$('footerAnalystVersion').checked=app.settings.footerAnalystVersion===true;if($('headerExtraEnabled'))$('headerExtraEnabled').checked=app.settings.headerExtraEnabled===true;if($('headerExtraText'))$('headerExtraText').value=app.settings.headerExtraText||'';if($('headerExtraSize'))$('headerExtraSize').value=app.settings.headerExtraSize||8;if($('footerExtraEnabled'))$('footerExtraEnabled').checked=app.settings.footerExtraEnabled===true;if($('footerExtraText'))$('footerExtraText').value=app.settings.footerExtraText||'';if($('footerExtraSize'))$('footerExtraSize').value=app.settings.footerExtraSize||6;if($('coverReportVersionEnabled'))$('coverReportVersionEnabled').checked=app.settings.coverReportVersionEnabled!==false;
@@ -697,13 +690,113 @@ const FICHA_FIELD_DEFS=[
  {key:'medidas',suffix:'05',label:'Medidas propostas'},
  {key:'grupo',suffix:'06',label:'Grupo'}
 ];
-function topicFichaFields(s){
- const ff=(app.settings&&app.settings.fichaFields)||{};
- return FICHA_FIELD_DEFS.filter(d=>ff[d.key]!==false&&s[d.key]).map(d=>({
-  code:`${topicCode(s)}.${d.suffix}`,
-  label:d.label,
-  value:s[d.key]
+/* ===== Out Models (um por tipo de documento gerado) =====
+   Cada documento passa a ter um "Out Model": a sua designação, o estilo do título e — o
+   essencial — a lista ordenada dos campos do corpo, onde se escolhe quais saem e por que
+   ordem. Os campos por defeito de cada Out Model são exatamente os que o X-Topics já
+   imprimia nesse documento, para que nada mude sem o utilizador o pedir.
+   A designação continua guardada nas chaves antigas (titleCapa/titleFxT/titleFxP/
+   titleCronologia), que o resto do código já lê através de docTitleFor(). */
+const TOPIC_FIELD_CATALOG=[
+ {key:'summary',label:'Descrevendo'},
+ {key:'usoAtual',label:'Uso atual'},
+ {key:'constatacao',label:'Constatação'},
+ {key:'causas',label:'Eventuais causas'},
+ {key:'medidas',label:'Medidas propostas'},
+ {key:'grupo',label:'Grupo'},
+ {key:'gps',label:'Coordenadas GPS'}
+];
+const OUTMODEL_DEFS={
+ capa:{nome:'🖼️ Capa',tituloKey:'titleCapa',tituloDefault:'Relatório de',
+  campos:[
+   {key:'processo',label:'Processo'},
+   {key:'designacao',label:'Designação'},
+   {key:'solicitante',label:'Solicitante/Destinatário'},
+   {key:'subject',label:'Descrição sucinta'},
+   {key:'finalidade',label:'Finalidade'},
+   {key:'local',label:'Local'},
+   {key:'data',label:'Data'}
+  ],
+  // A Capa imprimia sempre todos estes campos.
+  defaultOn:['processo','designacao','solicitante','subject','finalidade','local','data']},
+ fxt:{nome:'🏷️ Ficha de tópico (FxT)',tituloKey:'titleFxT',tituloDefault:'Ficha de caracterização',
+  campos:TOPIC_FIELD_CATALOG,legacy:'fichaFields',defaultOn:['summary']},
+ fxp:{nome:'📑 Resumo (FxP)',tituloKey:'titleFxP',tituloDefault:'Resumo',
+  campos:TOPIC_FIELD_CATALOG,legacy:'resumoTopicFields',defaultOn:['summary']},
+ cronologia:{nome:'🕒 Cronologia',tituloKey:'titleCronologia',tituloDefault:'Cronologia',
+  campos:[{key:'historico',label:'Histórico do processo'}],defaultOn:['historico']}
+};
+// Cria (uma vez) o Out Model de um documento, herdando o que estava configurado à moda antiga.
+function outModel(docKey){
+ const def=OUTMODEL_DEFS[docKey];if(!def)return null;
+ app.settings.outModels=app.settings.outModels||{};
+ let m=app.settings.outModels[docKey];
+ if(!m){
+  const legacy=def.legacy?(app.settings[def.legacy]||{}):null;
+  m=app.settings.outModels[docKey]={
+   tamanho:null,negrito:null,
+   campos:def.campos.map(c=>({
+    key:c.key,
+    on:legacy?(legacy[c.key]===true):def.defaultOn.includes(c.key)
+   }))
+  };
+  if(docKey==='cronologia')m.campos[0].on=app.settings.cronologiaHistorico!==false;
+ }
+ // Campos acrescentados a uma versão nova entram desligados, no fim da lista.
+ def.campos.forEach(c=>{if(!m.campos.some(x=>x.key===c.key))m.campos.push({key:c.key,on:false})});
+ m.campos=m.campos.filter(x=>def.campos.some(c=>c.key===x.key));
+ return m;
+}
+function outModelLabel(docKey,fieldKey){
+ const def=OUTMODEL_DEFS[docKey];
+ const c=def&&def.campos.find(x=>x.key===fieldKey);
+ return c?c.label:fieldKey;
+}
+// Chaves dos campos ligados, pela ordem definida no Out Model.
+function outModelActiveKeys(docKey){
+ const m=outModel(docKey);
+ return m?m.campos.filter(c=>c.on).map(c=>c.key):[];
+}
+// Lista de gestão dos campos de um Out Model: ligar/desligar e subir/descer.
+function renderOutModelFields(docKey,elId){
+ const el=$(elId);if(!el)return;
+ const m=outModel(docKey);if(!m)return;
+ el.innerHTML=m.campos.map((c,i)=>`<div class="order-row"><label class="inline" style="margin:0;flex:1"><input type="checkbox" data-om-on="${i}" ${c.on?'checked':''} style="width:auto"> <span class="lbl">${esc(outModelLabel(docKey,c.key))}</span></label><span class="order-btns"><button type="button" class="secondary" data-om-up="${i}"${i===0?' disabled':''}>▲</button><button type="button" class="secondary" data-om-down="${i}"${i===m.campos.length-1?' disabled':''}>▼</button></span></div>`).join('');
+ const redraw=()=>{renderOutModelFields(docKey,elId);queue();saveImmediate()};
+ el.querySelectorAll('[data-om-on]').forEach(cb=>cb.addEventListener('change',()=>{
+  m.campos[Number(cb.dataset.omOn)].on=cb.checked;
+  if(docKey==='cronologia')app.settings.cronologiaHistorico=!!outModel('cronologia').campos.find(c=>c.key==='historico').on;
+  queue();saveImmediate();
  }));
+ el.querySelectorAll('[data-om-up]').forEach(b=>b.addEventListener('click',()=>{
+  const i=Number(b.dataset.omUp);[m.campos[i-1],m.campos[i]]=[m.campos[i],m.campos[i-1]];redraw();
+ }));
+ el.querySelectorAll('[data-om-down]').forEach(b=>b.addEventListener('click',()=>{
+  const i=Number(b.dataset.omDown);[m.campos[i+1],m.campos[i]]=[m.campos[i],m.campos[i+1]];redraw();
+ }));
+}
+function renderOutModelsUI(){
+ renderOutModelFields('capa','outModelCapa');
+ renderOutModelFields('fxt','outModelFxt');
+ renderOutModelFields('fxp','outModelFxp');
+ renderOutModelFields('cronologia','outModelCronologia');
+}
+function outModelTitulo(docKey){
+ const def=OUTMODEL_DEFS[docKey];
+ const v=app.settings[def.tituloKey];
+ return (v==null||v==='')?def.tituloDefault:v;
+}
+function topicFichaFields(s){
+ // Ordem e seleção vêm do Out Model da Ficha de tópico. A numeração (.01, .02, ...) continua
+ // presa ao campo, não à posição, para as referências se manterem estáveis entre documentos.
+ return outModelActiveKeys('fxt').filter(k=>s[k]).map(k=>{
+  const d=FICHA_FIELD_DEFS.find(x=>x.key===k);
+  return {
+   code:d?`${topicCode(s)}.${d.suffix}`:topicCode(s),
+   label:outModelLabel('fxt',k),
+   value:s[k]
+  };
+ });
 }
 function topicCode(s){
  const off=s.official&&s.official.trim()?('-'+sanitizePathSegment(s.official.trim().replace(/\s+/g,''))):'';
@@ -776,16 +869,19 @@ async function addCoverFiles(fs){
  renderCoverPhotos();await saveNow();$('save').textContent='Fotos de capa gravadas';
 }
 function coverFieldsList(){
- const list=[
-  ['Processo',code()||''],
-  ['Solicitante/Destinatário',app.process.solicitante||''],
-  ['Descrição sucinta',app.process.subject||''],
-  ['Finalidade',app.process.finalidade||''],
-  ['Local',app.process.local||''],
-  ['Data',app.process.date?new Date(app.process.date+'T00:00:00').toLocaleDateString('pt-PT'):'']
- ];
- if(app.process.designacaoProcesso)list.splice(1,0,['Designação',app.process.designacaoProcesso]);
- return list;
+ const values={
+  processo:code()||'',
+  designacao:app.process.designacaoProcesso||'',
+  solicitante:app.process.solicitante||'',
+  subject:app.process.subject||'',
+  finalidade:app.process.finalidade||'',
+  local:app.process.local||'',
+  data:app.process.date?new Date(app.process.date+'T00:00:00').toLocaleDateString('pt-PT'):''
+ };
+ // "Designação" continua a só aparecer quando está preenchida, como antes.
+ return outModelActiveKeys('capa')
+  .filter(k=>k!=='designacao'||values.designacao)
+  .map(k=>[outModelLabel('capa',k),values[k]]);
 }
 function coverFooterInfoLines(){
  const dateStr=new Date().toLocaleDateString('pt-PT');
@@ -807,17 +903,8 @@ function reportVersionLabel(){
  return 'Ver_'+(v>0?String(v).padStart(2,'0'):'—');
 }
 function resumoTopicFieldLines(s){
- const rf=app.settings.resumoTopicFields||{};
- const defs=[
-  ['summary','Descrevendo',s.summary],
-  ['usoAtual','Uso atual',s.usoAtual],
-  ['constatacao','Constatação',s.constatacao],
-  ['causas','Eventuais causas',s.causas],
-  ['medidas','Medidas propostas',s.medidas],
-  ['grupo','Grupo',s.grupo],
-  ['gps','Coordenadas GPS',s.gps]
- ];
- return defs.filter(([key,,val])=>rf[key]===true&&val).map(([,label,val])=>[label,val]);
+ // Ordem e seleção vêm do Out Model do Resumo; um campo só sai se tiver conteúdo.
+ return outModelActiveKeys('fxp').filter(k=>s[k]).map(k=>[outModelLabel('fxp',k),s[k]]);
 }
 function drawTagValue(doc,label,val,x,y,availW,F,tagSize,valSize,ensureSpace){
  val=val==null?'':String(val);
@@ -3539,13 +3626,6 @@ function wireEvents(){
  bind('coverPhotoBtn','click',()=>$('coverPhotoInput').click());
  bind('addAttendeeBtn','click',()=>{app.process.attendees.push(newAttendee());renderAttendees()});
  bind('addGroupBtn','click',()=>{const v=$('newGroupInput').value.trim();if(!v)return;app.settings.groups=app.settings.groups||[];app.settings.groups.push(v);$('newGroupInput').value='';renderGroupsUI();renderGrupoSelect(active()?active().grupo:'');saveImmediate()});
- [['ffSummary','summary'],['ffUsoAtual','usoAtual'],['ffConstatacao','constatacao'],['ffCausas','causas'],['ffMedidas','medidas'],['ffGrupo','grupo'],['ffGps','gps']].forEach(([id,key])=>{
-  $(id).addEventListener('change',()=>{app.settings.fichaFields=app.settings.fichaFields||{};app.settings.fichaFields[key]=$(id).checked;saveImmediate()});
- });
- [['rfSummary','summary'],['rfUsoAtual','usoAtual'],['rfConstatacao','constatacao'],['rfCausas','causas'],['rfMedidas','medidas'],['rfGrupo','grupo'],['rfGps','gps']].forEach(([id,key])=>{
-  if(!$(id))return;
-  $(id).addEventListener('change',()=>{app.settings.resumoTopicFields=app.settings.resumoTopicFields||{};app.settings.resumoTopicFields[key]=$(id).checked;saveImmediate()});
- });
  bind('coverPhotoInput','change',async e=>{await addCoverFiles(e.target.files);e.target.value=''});
 }
 document.title='X-Topics '+APP_VER;const _h1=document.querySelector('header h1');if(_h1)_h1.textContent='X-Topics '+APP_VER;
