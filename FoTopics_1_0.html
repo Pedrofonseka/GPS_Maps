@@ -2546,6 +2546,46 @@ async function viewProcessHistory(){
   btn.disabled=false;btn.textContent=original;
  }
 }
+/* Out Models complementares às fichas: acompanham o documento mas não são a ficha em si.
+   Ao gerar a pré-visualização abre-se este menu, já com as opções guardadas nas caixas do
+   separador Produzir — confirma-se ou altera-se ali mesmo, sem ter de voltar atrás. */
+function complementaryOutModels(){
+ const list=[];
+ if(coverNeeded())list.push({key:'cover',el:'pdfIncludeCover',nome:docTitleFor(app.settings.capa||'CAPA')||'Capa',desc:'Página de rosto do processo'});
+ list.push({key:'pendentes',el:'pdfIncludePendentes',nome:docTitleFor('Pendentes'),desc:'Fotografias ainda em ON ou SBY, agrupadas por tópico'});
+ list.push({key:'cronologia',el:'pdfIncludeChronology',nome:docTitleFor('Cronologia'),desc:'Registo de alterações ao processo'});
+ return list;
+}
+function askComplementaryOutModels(){
+ const opts=complementaryOutModels();
+ return new Promise(resolve=>{
+  const ov=document.createElement('div');
+  ov.className='cal-modal';
+  ov.innerHTML=`<div class="cal-box">
+   <h2 style="margin:0 0 6px">Documentos a incluir</h2>
+   <div class="note" style="margin-bottom:10px">Além das fichas, escolha que Out Models complementares acompanham este documento.</div>
+   ${opts.map(o=>`<label class="inline" style="display:flex;align-items:flex-start;gap:10px;font-weight:400;margin:10px 0">
+     <input type="checkbox" data-om-opt="${o.key}" ${($(o.el)&&$(o.el).checked)?'checked':''} style="width:auto;margin-top:3px">
+     <span><b>${esc(o.nome)}</b><br><small class="note">${esc(o.desc)}</small></span>
+    </label>`).join('')}
+   <div class="actions"><button type="button" data-om-ok="1">✔ Gerar</button><button type="button" class="secondary" data-om-cancel="1">Cancelar</button></div>
+  </div>`;
+  document.body.appendChild(ov);
+  const fechar=v=>{ov.remove();resolve(v)};
+  ov.querySelector('[data-om-ok]').onclick=()=>{
+   const escolha={};
+   opts.forEach(o=>{
+    const on=ov.querySelector(`[data-om-opt="${o.key}"]`).checked;
+    escolha[o.key]=on;
+    // A escolha fica refletida nas caixas do separador Produzir e é gravada.
+    if($(o.el))$(o.el).checked=on;
+   });
+   saveImmediate();
+   fechar(escolha);
+  };
+  ov.querySelector('[data-om-cancel]').onclick=()=>fechar(null);
+ });
+}
 async function generateProcessPdf(){
  if(window._pdfGenBusy)return;
  window._pdfGenBusy=true;
@@ -2569,10 +2609,12 @@ async function generateProcessPdf(){
    alert('Ocorreu um problema ao rever as fotografias: '+(e&&e.message?e.message:e)+'\n\nA geração do PDF vai continuar mesmo assim.');
   }
  }
- const withCoverResumo=coverNeeded()?!!($('pdfIncludeCover')&&$('pdfIncludeCover').checked):false;
+ const escolha=await askComplementaryOutModels();
+ if(!escolha){$('expstate').textContent='Geração cancelada.';return}
+ const withCoverResumo=coverNeeded()?!!escolha.cover:false;
  if(withCoverResumo&&!(await resolveCoverPhotosForGeneration()))return;
- const withChronologyResumo=!!($('pdfIncludeChronology')&&$('pdfIncludeChronology').checked);
- const withPendentesResumo=!!($('pdfIncludePendentes')&&$('pdfIncludePendentes').checked);
+ const withChronologyResumo=!!escolha.cronologia;
+ const withPendentesResumo=!!escolha.pendentes;
  window._lastWithCoverResumo=withCoverResumo;window._lastWithChronologyResumo=withChronologyResumo;window._lastWithPendentesResumo=withPendentesResumo;
  const gabinete=pickGabinete();
  const includePhotos=!!($('pdfIncludePhotos')&&$('pdfIncludePhotos').checked);
