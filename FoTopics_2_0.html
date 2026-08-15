@@ -71,6 +71,8 @@ hr{border:0;border-top:1px solid var(--ln);margin:14px 0}
 /* --- Grelha de fotografias --- */
 .pgrid{display:grid;gap:10px;margin-top:10px}
 .pcell{border:1px solid var(--ln);border-radius:10px;background:#fafbfc;padding:8px;display:flex;flex-direction:column;gap:6px}
+/* Célula selecionada para ações em lote. */
+.pcell.sel{border-color:var(--b);box-shadow:inset 0 0 0 2px var(--b);background:#eef6f0}
 .pcell img{width:100%;height:132px;object-fit:cover;border-radius:7px;display:block;cursor:pointer;background:#e3e8ee}
 .pcell .nm{font-size:11px;font-weight:700;color:var(--b);word-break:break-all}
 .pcell textarea{min-height:50px;font-size:14px;padding:8px}
@@ -658,7 +660,7 @@ function relatorioTexto(){
 /* ===================== Navegação =====================
    Os quatro passos são livres: pode voltar à Captura para acrescentar tópicos ou
    fotografias a qualquer altura, mesmo depois de já ter revisto ou exportado. */
-const ui={passo:'proc',filtro:'',legendasPend:true};
+const ui={passo:'proc',filtro:'',legendasPend:true,previewTopico:true,sel:new Set(),selModo:false,disparoContinuo:false};
 function ir(p){ui.passo=p;desenhar();window.scrollTo({top:0,behavior:'smooth'})}
 const cartao=(t,i)=>`<div class="card">${t?`<h2>${t}</h2>`:''}${i}</div>`;
 
@@ -766,6 +768,7 @@ function vCapt(){
  const cols=Math.max(1,Math.min(4,Number(app.settings.grid)||2));
  return cartao('📷 Captura',`
   ${barra}
+  ${previewTopicoHtml(t)}
   <label>Nome do tópico</label>
   <input id="fTpNome" value="${esc(t.nome)}" placeholder="Ex.: Fachada norte, Cozinha, Cobertura…">
   <label>Comentários do tópico</label>
@@ -774,16 +777,27 @@ function vCapt(){
    <button type="button" class="green" id="btCamara"><span class="ic">📷</span>Tirar foto</button>
    <button type="button" id="btGaleria"><span class="ic">🖼</span>Da fototeca</button>
   </div>
+  <label class="inline" style="justify-content:center;margin:2px 0 0"><input type="checkbox" id="cbCont"${ui.disparoContinuo?' checked':''}> Disparo contínuo <small class="note">(a câmara reabre sozinha)</small></label>
   <input type="file" id="inCam" accept="image/*" capture="environment" hidden>
   <input type="file" id="inGal" accept="image/*" multiple hidden>
-  ${fotos.length?`<div class="filters">
+  ${fotos.length?`<div class="filters" style="justify-content:space-between">
+    <button type="button" id="btSel" style="opacity:1;background:${ui.selModo?'var(--b)':'#5b6b7d'}">${ui.selModo?(ui.sel.size?`☑ ${ui.sel.size} selecionada(s)`:'☐ Selecionar fotos'):'☐ Selecionar fotos'}</button>
+    ${ui.selModo?`<button type="button" id="btSelTodas" style="opacity:1">Todas</button><button type="button" id="btSelNada" style="opacity:1">Nenhuma</button>`:''}
+   </div>
+   ${ui.sel.size?`<div class="filters">
+    <button type="button" id="btLoteMover" style="opacity:1">➦ Mudar de tópico</button>
+    ${ESTADOS.map(e=>`<button type="button" data-lote-st="${e.k}" style="opacity:1;background:${e.bg}${e.fg?';color:'+e.fg:''}">${e.t}</button>`).join('')}
+    <button type="button" id="btLoteApagar" style="opacity:1;background:var(--r)">🗑</button>
+   </div>`:''}
+   <div class="filters">
     <button type="button" data-fl="" class="${ui.filtro===''?'on':''}">Todas (${fotos.length})</button>
     <button type="button" data-fl="PEND" class="${ui.filtro==='PEND'?'on':''}">Pendentes (${cont.PEND})</button>
     ${ESTADOS.map(e=>`<button type="button" data-fl="${e.k}" class="${ui.filtro===e.k?'on':''}">${e.t} (${cont[e.k]})</button>`).join('')}
    </div>`:''}
   ${fotos.length?(vis.length?`<div class="pgrid" style="grid-template-columns:repeat(${cols},1fr)">${vis.map(({f,i})=>{
     const st=estadoDe(f);
-    return `<div class="pcell">
+    return `<div class="pcell${ui.sel.has(f.id)?' sel':''}">
+     ${ui.selModo?`<label class="inline" style="margin:0;font-size:12px"><input type="checkbox" data-selfoto="${f.id}"${ui.sel.has(f.id)?' checked':''}> selecionar</label>`:''}
      <img data-foto="${t.id}|${f.id}" data-ver="${f.id}" alt="foto">
      <div class="nm">${esc(fotoNome(t,i+1))}</div>
      <div class="pstat">${ESTADOS.map(e=>`<button type="button" data-st="${f.id}|${e.k}" class="${st===e.k?'on':''}" title="${e.h}" style="background:${e.bg}${e.fg?';color:'+e.fg:''}">${e.t}</button>`).join('')}</div>
@@ -800,6 +814,34 @@ function vCapt(){
   <div class="item-actions"><button type="button" class="ghost" id="btApagarTp">🗑 Eliminar tópico</button></div>
   <div class="status saveState">Pronto.</div>
  `);
+}
+
+/* Pré-visualização do bloco do tópico ativo, tal como sai no relatório. Fica logo por
+   baixo do deslizador de tópicos e acompanha-o: ao mudar de tópico, muda com ele.
+   É montada em HTML (não gera o PDF) para ser instantânea a cada troca. */
+function previewTopicoHtml(t){
+ const L=lay();
+ const cols=Math.max(1,Math.min(6,Number(L.gridDoc)||2));
+ const fotos=(t.fotos||[]).map((f,i)=>({f,i})).filter(({f})=>!soPendentes()||['ON','SBY'].includes(estadoDe(f)));
+ const linhas=linhasTopico(t).filter(([r])=>r!==rotulo('topico','nome'));
+ return `<details class="card tp-prev" id="prevTp"${ui.previewTopico?' open':''} style="margin:0 0 10px;padding:0">
+  <summary style="padding:10px 12px;cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;background:#eef6f0;border-radius:12px">
+   <b style="font-size:13.5px">👁 Como sai no relatório</b>
+   <span class="note">${esc(tituloRelatorio())} · ${cols} coluna(s)</span>
+  </summary>
+  <div style="padding:10px 12px 12px">
+   <div class="rev" style="font-size:12.5px">
+    <b style="font-size:13.5px">${esc(tpLabel(t))}${t.nome?' — '+esc(t.nome):''}</b>
+    ${linhas.map(([r,v])=>`<div class="kv"><b>${esc(r)}:</b><span>${esc(v).replace(/\n/g,'<br>')}</span></div>`).join('')}
+    ${app.settings.incluirFotos&&fotos.length
+      ?`<div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:5px;margin-top:8px">${fotos.map(({f,i})=>`<figure style="margin:0">
+         <img data-foto="${t.id}|${f.id}" alt="" style="width:100%;height:${cols>=4?42:(cols===3?54:66)}px;object-fit:cover;border-radius:4px;background:#e3e8ee">
+         <figcaption style="font-size:9px;color:var(--muted);line-height:1.15;margin-top:2px">${esc(fotoNome(t,i+1))}${f.caption?'<br>'+esc(f.caption):''}</figcaption>
+        </figure>`).join('')}</div>`
+      :`<div class="note" style="margin-top:6px">${soPendentes()?'Sem fotografias pendentes neste tópico — não sai no relatório.':'Sem fotografias.'}</div>`}
+   </div>
+  </div>
+ </details>`;
 }
 
 /* ---------- 3. Revisão ---------- */
@@ -898,13 +940,42 @@ function ligar(){
   if(nome===null)return;
   criarTopico(nome.trim());
  });
+ // A pré-visualização do tópico lembra-se de estar aberta ou fechada entre trocas.
+ on('prevTp','toggle',()=>{ui.previewTopico=$('prevTp').open});
  on('fTpNome','input',()=>{const t=topico();if(t){t.nome=$('fTpNome').value;gravar()}});
  on('fTpNome','blur',()=>{gravarAgora();refrescarLeve()});
  on('fTpCom','input',()=>{const t=topico();if(t){t.comentario=$('fTpCom').value;gravar()}});
  on('fTpCom','blur',gravarAgora);
+ // --- Seleção múltipla e ações em lote
+ on('btSel','click',()=>{ui.selModo=!ui.selModo;if(!ui.selModo)ui.sel.clear();desenhar()});
+ on('btSelTodas','click',()=>{(topico().fotos||[]).forEach(f=>ui.sel.add(f.id));desenhar()});
+ on('btSelNada','click',()=>{ui.sel.clear();desenhar()});
+ document.querySelectorAll('[data-selfoto]').forEach(c=>c.onchange=()=>{
+  const id=c.dataset.selfoto;
+  if(c.checked)ui.sel.add(id);else ui.sel.delete(id);
+  desenhar();
+ });
+ document.querySelectorAll('[data-lote-st]').forEach(b=>b.onclick=()=>{
+  const t=topico();
+  (t.fotos||[]).forEach(f=>{if(ui.sel.has(f.id))f.status=b.dataset.loteSt});
+  ui.sel.clear();gravarAgora();desenhar();
+ });
+ on('btLoteApagar','click',()=>{
+  const t=topico();
+  if(!confirm(`Eliminar ${ui.sel.size} fotografia(s)?`))return;
+  t.fotos=(t.fotos||[]).filter(f=>!ui.sel.has(f.id));
+  ui.sel.clear();gravarAgora();desenhar();
+ });
+ on('btLoteMover','click',()=>moverFotos([...ui.sel]));
+ on('cbCont','change',()=>{ui.disparoContinuo=$('cbCont').checked});
  on('btCamara','click',()=>$('inCam').click());
  on('btGaleria','click',()=>$('inGal').click());
- on('inCam','change',e=>{juntarFotos(e.target.files);e.target.value=''});
+ on('inCam','change',async e=>{
+  const fs=e.target.files;e.target.value='';
+  await juntarFotos(fs);
+  // Disparo contínuo: reabre a câmara para a fotografia seguinte, sem tocar duas vezes.
+  if(ui.disparoContinuo&&fs&&fs.length)setTimeout(()=>{const c=$('inCam');if(c)c.click()},350);
+ });
  on('inGal','change',e=>{juntarFotos(e.target.files);e.target.value=''});
  document.querySelectorAll('[data-fl]').forEach(b=>b.onclick=()=>{ui.filtro=b.dataset.fl;desenhar()});
  document.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>{
@@ -977,15 +1048,18 @@ function ligar(){
   finally{ocupado(false)}
  });
 }
-/* Muda uma fotografia de tópico. Os nomes dos ficheiros são calculados a partir do tópico
-   e da posição, por isso a fotografia passa a ter o número seguinte no tópico de destino. */
-function moverFoto(fid){
- const origem=topico();if(!origem)return;
- const f=(origem.fotos||[]).find(x=>x.id===fid);if(!f)return;
+/* Muda fotografias de tópico. Os nomes dos ficheiros vêm do tópico e da posição, por isso
+   ambos os tópicos se renumeram sozinhos. Serve para uma foto ou para uma seleção. */
+const moverFoto=fid=>moverFotos([fid]);
+function moverFotos(ids){
+ const origem=topico();if(!origem||!ids.length)return;
+ const fs=(origem.fotos||[]).filter(x=>ids.includes(x.id));if(!fs.length)return;
  const destinos=app.topicos.filter(t=>t.id!==origem.id);
  const ov=modal(`
   <h2 style="margin:0 0 6px">Mudar de tópico</h2>
-  <div class="note" style="margin-bottom:8px">${esc(fotoNome(origem,(origem.fotos||[]).indexOf(f)+1))}${f.caption?' — '+esc(f.caption):''}</div>
+  <div class="note" style="margin-bottom:8px">${fs.length===1
+    ?esc(fotoNome(origem,(origem.fotos||[]).indexOf(fs[0])+1))+(fs[0].caption?' — '+esc(fs[0].caption):'')
+    :`${fs.length} fotografias selecionadas`}</div>
   ${destinos.length?destinos.map(t=>`<div class="item" data-dest="${t.id}">
     <b>${esc(tpLabel(t))}${t.nome?' — '+esc(t.nome):''}</b>
     <div class="meta">${(t.fotos||[]).length} fotografia(s)</div>
@@ -1001,9 +1075,10 @@ function moverFoto(fid){
    destino=criarTopico(nome.trim(),true);
   }else destino=app.topicos.find(t=>t.id===b.dataset.dest);
   if(!destino)return;
-  origem.fotos=origem.fotos.filter(x=>x.id!==fid);
+  origem.fotos=origem.fotos.filter(x=>!ids.includes(x.id));
   destino.fotos=destino.fotos||[];
-  destino.fotos.push(f);
+  fs.forEach(f=>destino.fotos.push(f));
+  ui.sel.clear();
   fecharModal();
   gravarAgora();desenhar();
  });
