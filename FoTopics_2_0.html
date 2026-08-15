@@ -164,6 +164,17 @@ const TIPOS_DEF=['Peritagem','Vistoria','Fiscalização','Avaliação','Levantam
 /* Título do relatório. "Levantamento" sai completo; "Pendentes" sai só com as fotografias
    por resolver. Ambos editáveis nas Definições, onde se podem acrescentar outros. */
 const RELATORIOS_DEF=[{nome:'Levantamento',soPendentes:false},{nome:'Pendentes',soPendentes:true}];
+/* Layout dos documentos gerados (PDF e Word). Tudo configurável nas Definições. */
+const LAYOUT_DEF={
+ orientacao:'retrato',            // retrato | paisagem
+ margemEsq:18,margemDir:14,margemTopo:16,margemBase:16,   // mm
+ tituloTam:19,tituloPos:'esquerda',                       // esquerda | centro | direita
+ blocoTam:13,corpoTam:10,legendaTam:7.2,indent:6,
+ gridDoc:2,                        // colunas de fotografias no documento
+ cabecalhoOn:true,cabecalhoTam:8.5,
+ rodapeOn:true,rodapeTam:8,
+ rodapeEsq:'{codigo} · {tipo}',rodapeDir:'{pagina}/{paginas}'
+};
 const ESTADOS=[
  {k:'ON', t:'ON', h:'em aberto', bg:'#3fae67'},
  {k:'SBY',t:'SBY',h:'em espera', bg:'#f0b429', fg:'#3a2a00'},
@@ -180,7 +191,8 @@ function vazio(){
    relatorios:RELATORIOS_DEF.map(r=>({...r})),
    gabinete:'Proficis — Engenheiros / Peritos Avaliadores',
    contacto:'proficis.peritos@gmail.com',
-   incluirFotos:true,incluirPendentes:true,ultimaCopia:null}
+   incluirFotos:true,incluirPendentes:true,ultimaCopia:null,
+   layout:{...LAYOUT_DEF}}
  };
 }
 const app=vazio();
@@ -199,6 +211,23 @@ function todasPendentes(){
  return out;
 }
 const totalFotos=()=>app.topicos.reduce((n,t)=>n+(t.fotos||[]).length,0);
+function lay(){
+ app.settings.layout={...LAYOUT_DEF,...(app.settings.layout||{})};
+ return app.settings.layout;
+}
+// Marcadores do rodapé, substituídos ao gerar cada página.
+function rodapeTexto(tpl,pag,total){
+ return String(tpl||'')
+  .split('{codigo}').join(codigo())
+  .split('{tipo}').join(app.proc.tipo||'')
+  .split('{local}').join(app.proc.local||'')
+  .split('{data}').join(dataPt(app.proc.data))
+  .split('{relatorio}').join(tituloRelatorio())
+  .split('{autor}').join(app.proc.autor||'')
+  .split('{pagina}').join(pag)
+  .split('{paginas}').join(total)
+  .replace(/\s·\s*$/,'').trim();
+}
 function listaRelatorios(){
  if(!Array.isArray(app.settings.relatorios)||!app.settings.relatorios.length)app.settings.relatorios=RELATORIOS_DEF.map(r=>({...r}));
  return app.settings.relatorios;
@@ -992,6 +1021,7 @@ async function avisoCodigo(){
    Tudo configurável, com elevadores ▲▼ para subir e descer os campos de cada bloco. */
 function abrirDefinicoes(){
  const s=app.settings;
+ const LL=lay();
  const blocosHtml=Object.keys(BLOCOS).map(ch=>{
   const b=bloco(ch);
   return `<h3>${esc(BLOCOS[ch].nome)}</h3>
@@ -1023,6 +1053,45 @@ function abrirDefinicoes(){
   <h3>Cabeçalho dos documentos</h3>
   <label>Gabinete</label><input id="dGab" value="${esc(s.gabinete||'')}">
   <label>Contacto</label><input id="dCont" value="${esc(s.contacto||'')}">
+  <hr>
+  <h3>Layout dos documentos</h3>
+  <div class="note">Aplica-se ao PDF e ao Word. Pré-visualize a seguir para confirmar.</div>
+  <div class="row">
+   <div><label>Orientação</label><select id="lOri">${[['retrato','Retrato'],['paisagem','Paisagem']].map(([v,t])=>`<option value="${v}"${LL.orientacao===v?' selected':''}>${t}</option>`).join('')}</select></div>
+   <div><label>Colunas de fotos</label><select id="lGrid">${[1,2,3,4,5,6].map(v=>`<option value="${v}"${Number(LL.gridDoc)===v?' selected':''}>${v}</option>`).join('')}</select></div>
+  </div>
+  <label>Margens (mm)</label>
+  <div class="row">
+   <div><input id="lME" type="number" min="5" max="50" step="1" value="${LL.margemEsq}" placeholder="Esquerda"><div class="note">Esquerda</div></div>
+   <div><input id="lMD" type="number" min="5" max="50" step="1" value="${LL.margemDir}" placeholder="Direita"><div class="note">Direita</div></div>
+  </div>
+  <div class="row">
+   <div><input id="lMT" type="number" min="5" max="50" step="1" value="${LL.margemTopo}"><div class="note">Topo</div></div>
+   <div><input id="lMB" type="number" min="5" max="50" step="1" value="${LL.margemBase}"><div class="note">Base</div></div>
+  </div>
+  <label>Título do relatório</label>
+  <div class="row">
+   <div><input id="lTT" type="number" min="8" max="40" step="0.5" value="${LL.tituloTam}"><div class="note">Tamanho (pt)</div></div>
+   <div><select id="lTP">${[['esquerda','Esquerda'],['centro','Centro'],['direita','Direita']].map(([v,t])=>`<option value="${v}"${LL.tituloPos===v?' selected':''}>${t}</option>`).join('')}</select><div class="note">Posição</div></div>
+  </div>
+  <label>Tamanhos de letra (pt)</label>
+  <div class="row">
+   <div><input id="lBT" type="number" min="7" max="24" step="0.5" value="${LL.blocoTam}"><div class="note">Títulos de bloco</div></div>
+   <div><input id="lCT" type="number" min="6" max="18" step="0.5" value="${LL.corpoTam}"><div class="note">Corpo</div></div>
+  </div>
+  <div class="row">
+   <div><input id="lLT" type="number" min="5" max="14" step="0.2" value="${LL.legendaTam}"><div class="note">Legendas das fotos</div></div>
+   <div><input id="lIN" type="number" min="0" max="30" step="1" value="${LL.indent}"><div class="note">Indentação da resposta (mm)</div></div>
+  </div>
+  <label class="inline"><input type="checkbox" id="lCabOn"${LL.cabecalhoOn?' checked':''}> Mostrar cabeçalho (gabinete e contacto)</label>
+  <label class="inline"><input type="checkbox" id="lRodOn"${LL.rodapeOn?' checked':''}> Mostrar rodapé</label>
+  <div class="row">
+   <div><input id="lCabT" type="number" min="5" max="14" step="0.5" value="${LL.cabecalhoTam}"><div class="note">Tamanho do cabeçalho</div></div>
+   <div><input id="lRodT" type="number" min="5" max="14" step="0.5" value="${LL.rodapeTam}"><div class="note">Tamanho do rodapé</div></div>
+  </div>
+  <label>Rodapé — esquerda</label><input id="lRodE" value="${esc(LL.rodapeEsq)}">
+  <label>Rodapé — direita</label><input id="lRodD" value="${esc(LL.rodapeDir)}">
+  <div class="note">Marcadores: {codigo} {tipo} {local} {data} {relatorio} {autor} {pagina} {paginas}</div>
   <hr>
   <h3>Títulos de relatório</h3>
   <div class="note">Dão o título ao relatório. Os marcados como "só pendentes" saem apenas com as fotografias por resolver.</div>
@@ -1086,6 +1155,29 @@ function abrirDefinicoes(){
   if(z<0||z>=camps.length)return;
   [camps[a],camps[z]]=[camps[z],camps[a]];redesenhar();
  });
+ // Layout: cada campo grava-se e o documento é regenerado na próxima pré-visualização.
+ const numL=(id,chave,min,max)=>on(id,'change',()=>{
+  const v=Number($(id).value);
+  if(!isFinite(v))return;
+  LL[chave]=Math.min(max,Math.max(min,v));
+  $(id).value=LL[chave];
+  gravarAgora();
+ });
+ on('lOri','change',()=>{LL.orientacao=$('lOri').value;gravarAgora()});
+ on('lGrid','change',()=>{LL.gridDoc=Number($('lGrid').value);gravarAgora()});
+ numL('lME','margemEsq',5,50);numL('lMD','margemDir',5,50);
+ numL('lMT','margemTopo',5,50);numL('lMB','margemBase',5,50);
+ numL('lTT','tituloTam',8,40);numL('lBT','blocoTam',7,24);
+ numL('lCT','corpoTam',6,18);numL('lLT','legendaTam',5,14);
+ numL('lIN','indent',0,30);
+ numL('lCabT','cabecalhoTam',5,14);numL('lRodT','rodapeTam',5,14);
+ on('lTP','change',()=>{LL.tituloPos=$('lTP').value;gravarAgora()});
+ on('lCabOn','change',()=>{LL.cabecalhoOn=$('lCabOn').checked;gravarAgora()});
+ on('lRodOn','change',()=>{LL.rodapeOn=$('lRodOn').checked;gravarAgora()});
+ on('lRodE','input',()=>{LL.rodapeEsq=$('lRodE').value;gravar()});
+ on('lRodE','blur',gravarAgora);
+ on('lRodD','input',()=>{LL.rodapeDir=$('lRodD').value;gravar()});
+ on('lRodD','blur',gravarAgora);
  on('dCopiaOut','click',copiaGuardar);
  on('dCopiaIn','click',()=>$('dCopiaFich').click());
  on('dCopiaFich','change',e=>{copiaRestaurar(e.target.files[0]);e.target.value=''});
@@ -1200,8 +1292,9 @@ const wRun=(t,o={})=>`<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/
 const wPar=(inner,o={})=>`<w:p><w:pPr>${o.al?`<w:jc w:val="${o.al}"/>`:''}${o.ind?`<w:ind w:left="${o.ind}"/>`:''}<w:spacing w:after="${o.depois!=null?o.depois:60}"/>${o.borda?'<w:pBdr><w:bottom w:val="single" w:sz="6" w:color="AAAAAA"/></w:pBdr>':''}</w:pPr>${inner}</w:p>`;
 // TAG numa linha; resposta na linha seguinte, indentada — a mesma regra do ecrã e do PDF.
 function wCampo(r,v){
- let out=wPar(wRun(r+':',{b:true,sz:20}),{depois:20});
- String(v).split('\n').forEach(l=>{out+=wPar(wRun(l,{sz:20}),{ind:340,depois:20})});
+ const L=lay(),sz=Math.round(L.corpoTam*2),ind=Math.round(L.indent*56.7);
+ let out=wPar(wRun(r+':',{b:true,sz}),{depois:20});
+ String(v).split('\n').forEach(l=>{out+=wPar(wRun(l,{sz}),{ind,depois:20})});
  return out;
 }
 const wCampoNum=n=>`<w:r><w:rPr><w:sz w:val="16"/></w:rPr><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:rPr><w:sz w:val="16"/></w:rPr><w:instrText xml:space="preserve"> ${n} </w:instrText></w:r><w:r><w:rPr><w:sz w:val="16"/></w:rPr><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:rPr><w:sz w:val="16"/></w:rPr><w:t>1</w:t></w:r><w:r><w:rPr><w:sz w:val="16"/></w:rPr><w:fldChar w:fldCharType="end"/></w:r>`;
@@ -1209,9 +1302,13 @@ async function construirDocx(){
  const z=new JSZip();
  const media=[],rels=[];
  let rid=10;
- const cols=Math.max(1,Math.min(4,Number(app.settings.grid)||2));
- // Largura útil da página A4 com as margens abaixo: 21cm - 2*2cm = 17cm.
- const larguraCel=Math.floor(17/cols*100)/100;
+ const L=lay();
+ const cols=Math.max(1,Math.min(6,Number(L.gridDoc)||2));
+ // Largura útil = largura da página menos as margens configuradas (mm -> cm).
+ const larguraPag=L.orientacao==='paisagem'?29.7:21;
+ const util=larguraPag-(+L.margemEsq+ +L.margemDir)/10;
+ const larguraCel=Math.floor((util-0.2*(cols-1))/cols*100)/100;
+ const pt=v=>Math.round(v*2);   // pt -> meios-pontos, como o Word espera
  async function juntarImagem(blob){
   const im=await paraImagem(blob);
   const id='rId'+(rid++), nome='img'+media.length+'.jpg';
@@ -1231,15 +1328,16 @@ async function construirDocx(){
  }
  let corpo='';
  // --- Cabeçalho do relatório
- corpo+=wPar(wRun(tituloRelatorio().toUpperCase(),{b:true,sz:40}),{depois:60});
- if(blocoTitulo('cabecalho'))corpo+=wPar(wRun(blocoTitulo('cabecalho'),{sz:20,cor:'777777'}),{depois:180});
+ const alin=L.tituloPos==='centro'?'center':(L.tituloPos==='direita'?'right':null);
+ corpo+=wPar(wRun(tituloRelatorio().toUpperCase(),{b:true,sz:pt(L.tituloTam)}),{depois:60,al:alin});
+ if(blocoTitulo('cabecalho'))corpo+=wPar(wRun(blocoTitulo('cabecalho'),{sz:pt(L.corpoTam),cor:'777777'}),{depois:180,al:alin});
  linhasCabecalho().forEach(([r,v])=>{corpo+=wCampo(r,v)});
  corpo+=wPar('',{borda:true,depois:160});
  // --- Tópicos
- corpo+=wPar(wRun(blocoTitulo('topico'),{b:true,sz:26}),{depois:140});
+ corpo+=wPar(wRun(blocoTitulo('topico'),{b:true,sz:pt(L.blocoTam)}),{depois:140});
  let nImg=1;
  for(const t of topicosDoRelatorio()){
-  corpo+=wPar(wRun(`${tpLabel(t)}${t.nome?' — '+t.nome:''}`,{b:true,sz:24}),{depois:80});
+  corpo+=wPar(wRun(`${tpLabel(t)}${t.nome?' — '+t.nome:''}`,{b:true,sz:pt(L.corpoTam+1)}),{depois:80});
   linhasTopico(t).forEach(([r,v])=>{if(r!=='Nome do tópico')corpo+=wCampo(r,v)});
   const fotosRel=(t.fotos||[]).map((f,i)=>({f,i})).filter(({f})=>!soPendentes()||['ON','SBY'].includes(estadoDe(f)));
   if(app.settings.incluirFotos&&fotosRel.length){
@@ -1250,7 +1348,7 @@ async function construirDocx(){
     const leg=`${fotoNome(t,i+1)}${f.caption?' — '+f.caption:''}`;
     celulas.push(`<w:tc><w:tcPr><w:tcW w:w="${Math.round(larguraCel*567)}" w:type="dxa"/></w:tcPr>`
      +wPar(wImagem(info,nImg++,larguraCel),{depois:20})
-     +wPar(wRun(leg,{sz:14,cor:'555555'}),{depois:60})+`</w:tc>`);
+     +wPar(wRun(leg,{sz:pt(L.legendaTam),cor:'555555'}),{depois:60})+`</w:tc>`);
    }
    for(let i=0;i<celulas.length;i+=cols){
     const linha=celulas.slice(i,i+cols);
@@ -1265,29 +1363,34 @@ async function construirDocx(){
  if(app.settings.incluirPendentes){
   const pend=todasPendentes();
   corpo+=`<w:p><w:pPr><w:pageBreakBefore/></w:pPr></w:p>`;
-  corpo+=wPar(wRun(blocoTitulo('pendentes'),{b:true,sz:26}),{depois:140});
-  if(!pend.length)corpo+=wPar(wRun('Sem fotografias pendentes.',{sz:20}));
+  corpo+=wPar(wRun(blocoTitulo('pendentes'),{b:true,sz:pt(L.blocoTam)}),{depois:140});
+  if(!pend.length)corpo+=wPar(wRun('Sem fotografias pendentes.',{sz:pt(L.corpoTam)}));
   else{
    let ult=null;
    pend.forEach(e=>{
     const partes=linhaPendente(e);
     const tp=partes.find(x=>x.k==='topico');
-    if(tp&&tp.v!==ult){ult=tp.v;corpo+=wPar(wRun(ult,{b:true,sz:22}),{depois:40})}
+    if(tp&&tp.v!==ult){ult=tp.v;corpo+=wPar(wRun(ult,{b:true,sz:pt(L.corpoTam+1)}),{depois:40})}
     const resto=partes.filter(x=>x.k!=='topico'&&x.v).map(x=>x.v).join('  ·  ');
-    if(resto)corpo+=wPar(wRun(resto,{sz:19}),{ind:340,depois:20});
+    if(resto)corpo+=wPar(wRun(resto,{sz:pt(L.corpoTam-1)}),{ind:Math.round(L.indent*56.7),depois:20});
    });
   }
  }
- const sect=`<w:sectPr><w:headerReference w:type="default" r:id="rId7"/><w:footerReference w:type="default" r:id="rId8"/>`
-  +`<w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1418" w:right="1134" w:bottom="1134" w:left="1134" w:header="567" w:footer="567" w:gutter="0"/></w:sectPr>`;
+ // Dimensões em twips (1 mm = 56.7 twips); A4 = 11906 x 16838.
+ const paisagem=L.orientacao==='paisagem';
+ const pgW=paisagem?16838:11906, pgH=paisagem?11906:16838;
+ const tw=mm=>Math.round(mm*56.7);
+ const sect=`<w:sectPr>${L.cabecalhoOn?'<w:headerReference w:type="default" r:id="rId7"/>':''}${L.rodapeOn?'<w:footerReference w:type="default" r:id="rId8"/>':''}`
+  +`<w:pgSz w:w="${pgW}" w:h="${pgH}"${paisagem?' w:orient="landscape"':''}/>`
+  +`<w:pgMar w:top="${tw(L.margemTopo)}" w:right="${tw(L.margemDir)}" w:bottom="${tw(L.margemBase)}" w:left="${tw(L.margemEsq)}" w:header="567" w:footer="567" w:gutter="0"/></w:sectPr>`;
  const NS='xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"';
  z.file('word/document.xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document ${NS}><w:body>${corpo}${sect}</w:body></w:document>`);
  z.file('word/header1.xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr ${NS}>`
-  +wPar(wRun(app.settings.gabinete||'',{sz:17,cor:'555555'})+wRun('   ',{sz:17})+wRun(app.settings.contacto||'',{sz:17,cor:'555555'}),{depois:0,borda:true})+`</w:hdr>`);
+  +wPar(wRun(app.settings.gabinete||'',{sz:pt(L.cabecalhoTam),cor:'555555'})+wRun('   ',{sz:pt(L.cabecalhoTam)})+wRun(app.settings.contacto||'',{sz:pt(L.cabecalhoTam),cor:'555555'}),{depois:0,borda:true})+`</w:hdr>`);
  z.file('word/footer1.xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:ftr ${NS}>`
   +`<w:p><w:pPr><w:pBdr><w:top w:val="single" w:sz="6" w:color="CCCCCC"/></w:pBdr><w:tabs><w:tab w:val="right" w:pos="9638"/></w:tabs><w:spacing w:after="0"/></w:pPr>`
-  +wRun(`${codigo()}${app.proc.tipo?' · '+app.proc.tipo:''}`,{sz:16,cor:'777777'})
-  +`<w:r><w:tab/></w:r>`+wCampoNum('PAGE')+wRun('/',{sz:16})+wCampoNum('NUMPAGES')+`</w:p></w:ftr>`);
+  +wRun(rodapeTexto(L.rodapeEsq,'',''),{sz:pt(L.rodapeTam),cor:'777777'})
+  +`<w:r><w:tab/></w:r>`+wCampoNum('PAGE')+wRun('/',{sz:pt(L.rodapeTam)})+wCampoNum('NUMPAGES')+`</w:p></w:ftr>`);
  z.file('[Content_Types].xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="jpg" ContentType="image/jpeg"/><Default Extension="jpeg" ContentType="image/jpeg"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>`);
  z.file('_rels/.rels',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`);
  z.file('word/_rels/document.xml.rels',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">`
@@ -1321,17 +1424,20 @@ async function imagemParaPdf(blob,lado=1000){
 }
 async function construirPdf(){
  const {jsPDF}=window.jspdf;
- const doc=new jsPDF({unit:'mm',format:'a4'});
+ const L=lay();
+ const doc=new jsPDF({unit:'mm',format:'a4',orientation:L.orientacao==='paisagem'?'landscape':'portrait'});
  const pw=doc.internal.pageSize.getWidth(), ph=doc.internal.pageSize.getHeight();
- const mL=18,mR=14,mT=16,mB=16, cw=pw-mL-mR;
+ const mL=+L.margemEsq,mR=+L.margemDir,mT=+L.margemTopo,mB=+L.margemBase, cw=pw-mL-mR;
  const F='helvetica';
+ const INDENT=+L.indent;
  let y=mT;
  const paginas=[];
  const cabecalho=()=>{
-  doc.setFont(F,'normal');doc.setFontSize(8.5);doc.setTextColor(90);
-  if(app.settings.gabinete)doc.text(app.settings.gabinete,mL,10);
-  if(app.settings.contacto)doc.text(app.settings.contacto,pw-mR,10,{align:'right'});
-  doc.setDrawColor(150);doc.setLineWidth(.2);doc.line(mL,12,pw-mR,12);
+  if(!L.cabecalhoOn)return;
+  doc.setFont(F,'normal');doc.setFontSize(+L.cabecalhoTam);doc.setTextColor(90);
+  if(app.settings.gabinete)doc.text(app.settings.gabinete,mL,Math.max(6,mT-6));
+  if(app.settings.contacto)doc.text(app.settings.contacto,pw-mR,Math.max(6,mT-6),{align:'right'});
+  doc.setDrawColor(150);doc.setLineWidth(.2);doc.line(mL,Math.max(8,mT-4),pw-mR,Math.max(8,mT-4));
   doc.setTextColor(0);
  };
  const novaPagina=()=>{doc.addPage();paginas.push(1);cabecalho();y=mT};
@@ -1349,34 +1455,36 @@ async function construirPdf(){
   doc.setFont(F,'bold');doc.text(r,mL,y);y+=sz*.55;
   doc.setFont(F,'normal');
   String(v).split('\n').forEach(bloco=>{
-   doc.splitTextToSize(bloco,cw-INDENT_MM).forEach(l=>{espaco(sz*.55);doc.text(l,mL+INDENT_MM,y);y+=sz*.55});
+   doc.splitTextToSize(bloco,cw-INDENT).forEach(l=>{espaco(sz*.55);doc.text(l,mL+INDENT,y);y+=sz*.55});
   });
   y+=1.5;
  };
  paginas.push(1);cabecalho();
 
  // --- Título do relatório
- doc.setFont(F,'bold');doc.setFontSize(19);
- doc.text(tituloRelatorio().toUpperCase(),mL,y);y+=9;
+ const posX=L.tituloPos==='centro'?pw/2:(L.tituloPos==='direita'?pw-mR:mL);
+ const alin=L.tituloPos==='centro'?'center':(L.tituloPos==='direita'?'right':'left');
+ doc.setFont(F,'bold');doc.setFontSize(+L.tituloTam);
+ doc.text(tituloRelatorio().toUpperCase(),posX,y,{align:alin});y+=(+L.tituloTam)*.5+2;
  if(blocoTitulo('cabecalho')){
-  doc.setFont(F,'normal');doc.setFontSize(10);doc.setTextColor(110);
-  doc.text(blocoTitulo('cabecalho'),mL,y);y+=6;doc.setTextColor(0);
+  doc.setFont(F,'normal');doc.setFontSize(+L.corpoTam);doc.setTextColor(110);
+  doc.text(blocoTitulo('cabecalho'),posX,y,{align:alin});y+=6;doc.setTextColor(0);
  }
  doc.setFont(F,'normal');
  y+=1;
- linhasCabecalho().forEach(([r,v])=>kv(r+':',v));
+ linhasCabecalho().forEach(([r,v])=>kv(r+':',v,+L.corpoTam));
  y+=3;doc.setDrawColor(190);doc.line(mL,y,pw-mR,y);y+=6;
 
  // --- Tópicos
- titulo(blocoTitulo('topico'),13);
- const cols=Math.max(1,Math.min(4,Number(app.settings.grid)||2));
+ titulo(blocoTitulo('topico'),+L.blocoTam);
+ const cols=Math.max(1,Math.min(6,Number(L.gridDoc)||2));
  const gap=4, cellW=(cw-gap*(cols-1))/cols;
  for(const t of topicosDoRelatorio()){
   espaco(10);
-  doc.setFont(F,'bold');doc.setFontSize(11);
+  doc.setFont(F,'bold');doc.setFontSize(+L.corpoTam+1);
   doc.text(`${tpLabel(t)}${t.nome?' — '+t.nome:''}`,mL,y);y+=6;
   doc.setFont(F,'normal');
-  linhasTopico(t).forEach(([r,v])=>{if(r!=='Nome do tópico')kv(r+':',v,9.5)});
+  linhasTopico(t).forEach(([r,v])=>{if(r!==rotulo('topico','nome'))kv(r+':',v,+L.corpoTam-.5)});
   const fotosRel=(t.fotos||[]).map((f,i)=>({f,i})).filter(({f})=>!soPendentes()||['ON','SBY'].includes(estadoDe(f)));
   if(app.settings.incluirFotos&&fotosRel.length){
    y+=2;
@@ -1387,17 +1495,17 @@ async function construirPdf(){
     const img=await imagemParaPdf(f.blob,900);
     const cellH=cellW*(img.h/img.w);
     const legenda=`${fotoNome(t,i+1)}${f.caption?' — '+f.caption:''}`;
-    doc.setFontSize(7.2);
+    doc.setFontSize(+L.legendaTam);
     const legLinhas=doc.splitTextToSize(legenda,cellW);
-    const total=cellH+legLinhas.length*3+4;
+    const total=cellH+legLinhas.length*(+L.legendaTam*.42)+4;
     if(col===0){
      if(y+total>ph-mB){novaPagina()}
      yLinha=y;linhaAltura=0;
     }
     const x=mL+col*(cellW+gap);
     doc.addImage(img.dataUrl,'JPEG',x,yLinha,cellW,cellH);
-    doc.setFontSize(7.2);doc.setTextColor(70);
-    legLinhas.forEach((l,k)=>doc.text(l,x,yLinha+cellH+3+k*3));
+    doc.setFontSize(+L.legendaTam);doc.setTextColor(70);
+    legLinhas.forEach((l,k)=>doc.text(l,x,yLinha+cellH+3+k*(+L.legendaTam*.42)));
     doc.setTextColor(0);
     linhaAltura=Math.max(linhaAltura,total);
     col++;
@@ -1412,8 +1520,8 @@ async function construirPdf(){
  if(app.settings.incluirPendentes){
   const pend=todasPendentes();
   novaPagina();
-  titulo(blocoTitulo('pendentes'),13);
-  if(!pend.length)par('Sem fotografias pendentes.',10);
+  titulo(blocoTitulo('pendentes'),+L.blocoTam);
+  if(!pend.length)par('Sem fotografias pendentes.',+L.corpoTam);
   else{
    let ult=null;
    for(const e of pend){
@@ -1421,22 +1529,23 @@ async function construirPdf(){
     const tp=partes.find(x=>x.k==='topico');
     if(tp&&tp.v!==ult){
      ult=tp.v;y+=2;espaco(6);
-     doc.setFont(F,'bold');doc.setFontSize(10);doc.text(ult,mL,y);y+=5;doc.setFont(F,'normal');
+     doc.setFont(F,'bold');doc.setFontSize(+L.corpoTam);doc.text(ult,mL,y);y+=5;doc.setFont(F,'normal');
     }
     const resto=partes.filter(x=>x.k!=='topico'&&x.v).map(x=>x.v).join('  ·  ');
-    if(resto)par(resto,9,6);
+    if(resto)par(resto,+L.corpoTam-1,INDENT);
    }
   }
  }
 
  // --- Rodapé com numeração, em todas as páginas
  const total=doc.internal.getNumberOfPages();
- for(let i=1;i<=total;i++){
+ if(L.rodapeOn)for(let i=1;i<=total;i++){
   doc.setPage(i);
-  doc.setFontSize(8);doc.setTextColor(120);
+  doc.setFontSize(+L.rodapeTam);doc.setTextColor(120);
   doc.setDrawColor(200);doc.line(mL,ph-mB+4,pw-mR,ph-mB+4);
-  doc.text(`${codigo()}${app.proc.tipo?' · '+app.proc.tipo:''}`,mL,ph-mB+9);
-  doc.text(`${i}/${total}`,pw-mR,ph-mB+9,{align:'right'});
+  const e=rodapeTexto(L.rodapeEsq,i,total), d=rodapeTexto(L.rodapeDir,i,total);
+  if(e)doc.text(e,mL,ph-mB+9);
+  if(d)doc.text(d,pw-mR,ph-mB+9,{align:'right'});
   doc.setTextColor(0);
  }
  return doc.output('blob');
