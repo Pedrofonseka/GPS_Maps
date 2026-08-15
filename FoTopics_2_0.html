@@ -98,8 +98,10 @@ hr{border:0;border-top:1px solid var(--ln);margin:14px 0}
 /* --- Revisão --- */
 .rev{background:#fff;border:1px solid var(--ln);border-radius:10px;padding:14px;font-size:13.5px}
 .rev h3{margin:14px 0 6px;font-size:14px;color:var(--b)}
-.rev .kv{display:grid;grid-template-columns:120px 1fr;gap:4px 10px;margin:2px 0}
-.rev .kv b{font-weight:700}
+/* TAG numa linha, resposta na linha seguinte e indentada. */
+.rev .kv{margin:5px 0}
+.rev .kv b{display:block;font-weight:700}
+.rev .kv span{display:block;margin-left:14px}
 .rev .tp{border-top:1px solid var(--ln);margin-top:12px;padding-top:10px}
 .rev .thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:6px;margin-top:6px}
 .rev .thumbs figure{margin:0}
@@ -563,13 +565,18 @@ const linhasCabecalho=()=>blocoCampos('cabecalho').map(k=>[rotulo('cabecalho',k)
 const linhasTopico=t=>blocoCampos('topico').map(k=>[rotulo('topico',k),valorTopico(t,k)]).filter(([,v])=>v);
 const linhaPendente=e=>blocoCampos('pendentes').map(k=>({k,r:rotulo('pendentes',k),v:valorPendente(e,k)}));
 
+/* Regra de escrita dos campos, herdada do X-Topics e aplicada em todo o lado (ecrã, PDF,
+   Word e texto): a TAG fica sozinha numa linha, a negrito; a resposta vem na linha
+   seguinte, indentada, em texto normal. */
+const INDENT_MM=6;
 function relatorioTexto(){
  const L=[blocoTitulo('cabecalho'),''];
- linhasCabecalho().forEach(([r,v])=>L.push(`${r}: ${v}`));
+ const par=(r,v)=>{L.push(r+':');String(v).split('\n').forEach(l=>L.push('    '+l))};
+ linhasCabecalho().forEach(([r,v])=>par(r,v));
  L.push('',blocoTitulo('topico'),'');
  for(const t of app.topicos){
   L.push(`${tpLabel(t)}${t.nome?' — '+t.nome:''}`);
-  linhasTopico(t).forEach(([r,v])=>{if(r!=='Nome do tópico')L.push(`  ${r}: ${v}`)});
+  linhasTopico(t).forEach(([r,v])=>{if(r!=='Nome do tópico')par(r,v)});
   L.push('');
  }
  if(app.settings.incluirPendentes){
@@ -740,11 +747,11 @@ function vRev(){
   <hr>
   <div class="rev">
    <h2 style="margin:0 0 8px;font-size:17px">${esc(blocoTitulo('cabecalho'))}</h2>
-   ${linhasCabecalho().map(([r,v])=>`<div class="kv"><b>${esc(r)}</b><span>${esc(v)}</span></div>`).join('')}
+   ${linhasCabecalho().map(([r,v])=>`<div class="kv"><b>${esc(r)}:</b><span>${esc(v).replace(/\n/g,'<br>')}</span></div>`).join('')}
    <h3>${esc(blocoTitulo('topico'))}</h3>
    ${app.topicos.length?app.topicos.map(t=>`<div class="tp">
      <b>${esc(tpLabel(t))}${t.nome?' — '+esc(t.nome):''}</b>
-     ${linhasTopico(t).filter(([r])=>r!=='Nome do tópico').map(([r,v])=>`<div class="kv"><b>${esc(r)}</b><span>${esc(v).replace(/\n/g,'<br>')}</span></div>`).join('')}
+     ${linhasTopico(t).filter(([r])=>r!=='Nome do tópico').map(([r,v])=>`<div class="kv"><b>${esc(r)}:</b><span>${esc(v).replace(/\n/g,'<br>')}</span></div>`).join('')}
      ${app.settings.incluirFotos&&(t.fotos||[]).length?`<div class="thumbs">${t.fotos.map((f,i)=>`<figure><img data-foto="${t.id}|${f.id}" alt=""><figcaption>${esc(fotoNome(t,i+1))}${f.caption?'<br>'+esc(f.caption):''}</figcaption></figure>`).join('')}</div>`:''}
     </div>`).join(''):'<div class="note">Ainda não há tópicos.</div>'}
    ${app.settings.incluirPendentes?`<h3>${esc(blocoTitulo('pendentes'))}</h3>
@@ -768,12 +775,16 @@ function vExp(){
   <div class="status ok">${esc(codigo())} · ${app.topicos.length} tópico(s) · ${n} fotografia(s)</div>
   <label class="inline"><input type="checkbox" id="cbFotos"${app.settings.incluirFotos?' checked':''}> Incluir fotografias no relatório</label>
   <label class="inline"><input type="checkbox" id="cbPend"${app.settings.incluirPendentes?' checked':''}> Incluir a lista de pendentes</label>
-  <h3>Relatório</h3>
-  <div class="note">Relatório breve em PDF, com o cabeçalho, os tópicos e as fotografias.</div>
-  <div class="actions"><button type="button" class="amber" id="btPdf"${n?'':' disabled'}>📄 Gerar e enviar PDF</button><button type="button" class="secondary" id="btTexto">📝 Enviar por texto</button></div>
-  <h3>Pastas</h3>
-  <div class="note">ZIP com uma pasta por tópico, as fotografias numeradas e o relatório em texto.</div>
-  <div class="actions one"><button type="button" class="green" id="btZip"${n?'':' disabled'}>📦 Gerar e enviar ZIP</button></div>
+  <label>Orientação predominante das fotografias</label>
+  <select id="selOrient">${[['paisagem','Paisagem (deitadas)'],['retrato','Retrato (ao alto)']].map(([v,t])=>`<option value="${v}"${(app.settings.orientacao||'paisagem')===v?' selected':''}>${t}</option>`).join('')}</select>
+  <div class="note">Ao pré-visualizar, as fotografias contra esta orientação são apresentadas uma a uma para rodar, manter ou eliminar.</div>
+  <h3>1 — Pré-visualizar</h3>
+  <div class="note">Veja o PDF montado — grelha, legendas e orientação — antes de exportar seja o que for. É a partir daí que se exporta.</div>
+  <div class="actions one"><button type="button" class="amber" id="btPreview"${n||app.topicos.length?'':' disabled'}>👁 Pré-visualizar o relatório</button></div>
+  <h3>2 — Exportar</h3>
+  <div class="note">Também disponível diretamente, sem passar pela pré-visualização.</div>
+  <div class="actions"><button type="button" class="secondary" id="btPdf"${n?'':' disabled'}>📄 PDF</button><button type="button" class="secondary" id="btWord"${n?'':' disabled'}>📝 Word</button></div>
+  <div class="actions"><button type="button" class="green" id="btZip"${n?'':' disabled'}>📦 Pastas (ZIP)</button><button type="button" class="secondary" id="btTexto">✉️ Texto</button></div>
   <h3>Fotografias de um tópico</h3>
   <div class="note">Envia as fotografias diretamente para o WhatsApp, Mail ou AirDrop, sem passar por ficheiro.</div>
   ${app.topicos.filter(t=>(t.fotos||[]).length).map(t=>`<div class="item" style="cursor:default">
@@ -869,7 +880,10 @@ function ligar(){
  on('btIrExp','click',()=>ir('exp'));
  on('cbFotos','change',()=>{app.settings.incluirFotos=$('cbFotos').checked;gravarAgora();});
  on('cbPend','change',()=>{app.settings.incluirPendentes=$('cbPend').checked;gravarAgora();});
+ on('btPreview','click',abrirPreview);
  on('btPdf','click',exportarPdf);
+ on('btWord','click',exportarWord);
+ on('selOrient','change',()=>{app.settings.orientacao=$('selOrient').value;gravarAgora()});
  on('btZip','click',exportarZip);
  on('btTexto','click',async()=>{
   const txt=relatorioTexto();
@@ -972,6 +986,220 @@ function abrirDefinicoes(){
  on('dCopiaFich','change',e=>{copiaRestaurar(e.target.files[0]);e.target.value=''});
 }
 
+/* ===================== Orientação predominante das fotografias =====================
+   Rotina herdada do X-Topics: antes de gerar, verifica-se que fotografias estão contra a
+   orientação predominante (por defeito paisagem) e, uma a uma, decide-se rodar, manter ou
+   eliminar. É o que evita grelhas com fotos ao alto no meio de fotos deitadas. */
+async function orientacaoDe(blob){
+ const im=await paraImagem(blob);
+ return (im.width>=im.height)?'paisagem':'retrato';
+}
+async function fotosContraOrientacao(){
+ const dom=app.settings.orientacao||'paisagem';
+ const fora=[];
+ for(const t of app.topicos){
+  for(let i=0;i<(t.fotos||[]).length;i++){
+   const f=t.fotos[i];
+   if(!f.blob||f.orientacaoOk)continue;
+   let o;try{o=await orientacaoDe(f.blob)}catch(e){continue}
+   if(o!==dom)fora.push({t,f,i});
+  }
+ }
+ return fora;
+}
+function perguntarOrientacao(e,restantes,url){
+ return new Promise(res=>{
+  const ov=modal(`
+   <h2 style="margin:0 0 6px">Fotografia contra a orientação</h2>
+   <div class="note" style="margin-bottom:8px">${esc(tpLabel(e.t))} · ${esc(fotoNome(e.t,e.i+1))}${restantes>0?` — faltam ${restantes}`:''}<br>
+    A orientação predominante está definida como <b>${esc(app.settings.orientacao||'paisagem')}</b>.</div>
+   <img class="big" src="${url}" alt="foto">
+   <div class="actions"><button type="button" data-o="rodar">↻ Rodar</button><button type="button" class="secondary" data-o="manter">Manter assim</button></div>
+   <div class="actions"><button type="button" class="secondary" data-o="todas">↻ Rodar todas as restantes</button><button type="button" class="ghost" data-o="eliminar">🗑 Eliminar</button></div>
+  `);
+  ov.querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>{fecharModal();res(b.dataset.o)});
+ });
+}
+async function reverOrientacao(){
+ const fora=await fotosContraOrientacao();
+ if(!fora.length)return true;
+ let rodarTodas=false;
+ for(let k=0;k<fora.length;k++){
+  const e=fora[k];
+  let acao='rodar';
+  if(!rodarTodas){
+   const url=URL.createObjectURL(e.f.blob);
+   acao=await perguntarOrientacao(e,fora.length-k-1,url);
+   setTimeout(()=>URL.revokeObjectURL(url),1000);
+   if(acao==='todas'){rodarTodas=true;acao='rodar'}
+  }
+  if(acao==='rodar'){
+   ocupado(true,'A rodar…');
+   try{e.f.blob=await rodar90(e.f.blob)}catch(err){}
+   finally{ocupado(false)}
+  }else if(acao==='eliminar'){
+   e.t.fotos=e.t.fotos.filter(x=>x.id!==e.f.id);
+  }else{
+   // "Manter assim" não volta a perguntar por esta fotografia.
+   e.f.orientacaoOk=true;
+  }
+ }
+ await gravarJa();
+ desenhar();
+ return true;
+}
+
+/* ===================== Pré-visualização do PDF =====================
+   Mostra o PDF gerado num visor, para conferir a grelha antes de exportar seja o que for. */
+let previewBlob=null,previewUrl=null;
+async function abrirPreview(){
+ if(!(window.jspdf&&window.jspdf.jsPDF))return alert('O gerador de PDF ainda não carregou. É preciso ligação à internet da primeira vez que abre a aplicação.');
+ if(!totalFotos()&&!app.topicos.length)return alert('Ainda não há nada para pré-visualizar.');
+ await reverOrientacao();
+ ocupado(true,'A gerar a pré-visualização…');
+ try{
+  previewBlob=await construirPdf();
+  if(previewUrl)URL.revokeObjectURL(previewUrl);
+  previewUrl=URL.createObjectURL(previewBlob);
+ }catch(e){ocupado(false);console.error(e);return alert('Falha ao gerar a pré-visualização: '+e.message)}
+ ocupado(false);
+ mostrarPreview();
+}
+function mostrarPreview(){
+ const ov=modal(`
+  <h2 style="margin:0 0 6px">Pré-visualização</h2>
+  <div class="note" style="margin-bottom:8px">Confirme a grelha e a orientação das fotografias antes de exportar.</div>
+  <iframe src="${previewUrl}" style="width:100%;height:55vh;border:1px solid var(--ln);border-radius:9px;background:#f7f8fa"></iframe>
+  <div class="note">Se o visor não mostrar tudo, use "Abrir em separador".</div>
+  <div class="actions"><button type="button" class="secondary" data-p="tab">🔗 Abrir em separador</button><button type="button" class="secondary" data-p="refazer">↻ Refazer</button></div>
+  <div class="actions"><button type="button" class="amber" data-p="pdf">📄 Exportar PDF</button><button type="button" class="secondary" data-p="word">📝 Exportar Word</button></div>
+  <div class="actions one"><button type="button" class="green" data-p="zip">📦 Exportar pastas (ZIP)</button></div>
+  <div class="actions one"><button type="button" class="secondary" data-fechar="1">Fechar</button></div>
+ `);
+ ov.querySelectorAll('[data-p]').forEach(b=>b.onclick=async()=>{
+  const a=b.dataset.p;
+  if(a==='tab')return window.open(previewUrl,'_blank');
+  if(a==='refazer'){fecharModal();return abrirPreview()}
+  if(a==='pdf'){
+   const nome=`${codigo()}_relatorio_${hoje()}.pdf`;
+   return partilhar([new File([previewBlob],nome,{type:'application/pdf'})],nome);
+  }
+  if(a==='word')return exportarWord();
+  if(a==='zip')return exportarZip();
+ });
+}
+
+/* ===================== Relatório em Word (.docx) ===================== */
+const xmlEsc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+const wRun=(t,o={})=>`<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>${o.b?'<w:b/>':''}${o.cor?`<w:color w:val="${o.cor}"/>`:''}<w:sz w:val="${o.sz||20}"/><w:szCs w:val="${o.sz||20}"/></w:rPr><w:t xml:space="preserve">${xmlEsc(t)}</w:t></w:r>`;
+const wPar=(inner,o={})=>`<w:p><w:pPr>${o.al?`<w:jc w:val="${o.al}"/>`:''}${o.ind?`<w:ind w:left="${o.ind}"/>`:''}<w:spacing w:after="${o.depois!=null?o.depois:60}"/>${o.borda?'<w:pBdr><w:bottom w:val="single" w:sz="6" w:color="AAAAAA"/></w:pBdr>':''}</w:pPr>${inner}</w:p>`;
+// TAG numa linha; resposta na linha seguinte, indentada — a mesma regra do ecrã e do PDF.
+function wCampo(r,v){
+ let out=wPar(wRun(r+':',{b:true,sz:20}),{depois:20});
+ String(v).split('\n').forEach(l=>{out+=wPar(wRun(l,{sz:20}),{ind:340,depois:20})});
+ return out;
+}
+const wCampoNum=n=>`<w:r><w:rPr><w:sz w:val="16"/></w:rPr><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:rPr><w:sz w:val="16"/></w:rPr><w:instrText xml:space="preserve"> ${n} </w:instrText></w:r><w:r><w:rPr><w:sz w:val="16"/></w:rPr><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:rPr><w:sz w:val="16"/></w:rPr><w:t>1</w:t></w:r><w:r><w:rPr><w:sz w:val="16"/></w:rPr><w:fldChar w:fldCharType="end"/></w:r>`;
+async function construirDocx(){
+ const z=new JSZip();
+ const media=[],rels=[];
+ let rid=10;
+ const cols=Math.max(1,Math.min(4,Number(app.settings.grid)||2));
+ // Largura útil da página A4 com as margens abaixo: 21cm - 2*2cm = 17cm.
+ const larguraCel=Math.floor(17/cols*100)/100;
+ async function juntarImagem(blob){
+  const im=await paraImagem(blob);
+  const id='rId'+(rid++), nome='img'+media.length+'.jpg';
+  media.push({nome,blob});
+  rels.push(`<Relationship Id="${id}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${nome}"/>`);
+  return {id,w:im.width,h:im.height};
+ }
+ const emu=cm=>Math.round(cm*360000);
+ function wImagem(info,n,cmW){
+  const cmH=cmW*(info.h/info.w);
+  return `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${emu(cmW)}" cy="${emu(cmH)}"/><wp:docPr id="${n}" name="Imagem ${n}"/>`
+   +`<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">`
+   +`<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="${n}" name="Imagem ${n}"/><pic:cNvPicPr/></pic:nvPicPr>`
+   +`<pic:blipFill><a:blip r:embed="${info.id}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>`
+   +`<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${emu(cmW)}" cy="${emu(cmH)}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic>`
+   +`</a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`;
+ }
+ let corpo='';
+ // --- Cabeçalho do relatório
+ corpo+=wPar(wRun(blocoTitulo('cabecalho'),{b:true,sz:32}),{depois:180});
+ linhasCabecalho().forEach(([r,v])=>{corpo+=wCampo(r,v)});
+ corpo+=wPar('',{borda:true,depois:160});
+ // --- Tópicos
+ corpo+=wPar(wRun(blocoTitulo('topico'),{b:true,sz:26}),{depois:140});
+ let nImg=1;
+ for(const t of app.topicos){
+  corpo+=wPar(wRun(`${tpLabel(t)}${t.nome?' — '+t.nome:''}`,{b:true,sz:24}),{depois:80});
+  linhasTopico(t).forEach(([r,v])=>{if(r!=='Nome do tópico')corpo+=wCampo(r,v)});
+  if(app.settings.incluirFotos&&(t.fotos||[]).length){
+   const celulas=[];
+   for(let i=0;i<t.fotos.length;i++){
+    const f=t.fotos[i];if(!f.blob)continue;
+    const info=await juntarImagem(f.blob);
+    const leg=`${fotoNome(t,i+1)}${f.caption?' — '+f.caption:''}`;
+    celulas.push(`<w:tc><w:tcPr><w:tcW w:w="${Math.round(larguraCel*567)}" w:type="dxa"/></w:tcPr>`
+     +wPar(wImagem(info,nImg++,larguraCel),{depois:20})
+     +wPar(wRun(leg,{sz:14,cor:'555555'}),{depois:60})+`</w:tc>`);
+   }
+   for(let i=0;i<celulas.length;i+=cols){
+    const linha=celulas.slice(i,i+cols);
+    while(linha.length<cols)linha.push(`<w:tc><w:tcPr><w:tcW w:w="${Math.round(larguraCel*567)}" w:type="dxa"/></w:tcPr>${wPar('')}</w:tc>`);
+    corpo+=`<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/><w:tblLayout w:type="fixed"/></w:tblPr><w:tr>${linha.join('')}</w:tr></w:tbl>`;
+   }
+   corpo+=wPar('',{depois:80});
+  }
+  corpo+=wPar('',{borda:true,depois:140});
+ }
+ // --- Lista de pendentes
+ if(app.settings.incluirPendentes){
+  const pend=todasPendentes();
+  corpo+=`<w:p><w:pPr><w:pageBreakBefore/></w:pPr></w:p>`;
+  corpo+=wPar(wRun(blocoTitulo('pendentes'),{b:true,sz:26}),{depois:140});
+  if(!pend.length)corpo+=wPar(wRun('Sem fotografias pendentes.',{sz:20}));
+  else{
+   let ult=null;
+   pend.forEach(e=>{
+    const partes=linhaPendente(e);
+    const tp=partes.find(x=>x.k==='topico');
+    if(tp&&tp.v!==ult){ult=tp.v;corpo+=wPar(wRun(ult,{b:true,sz:22}),{depois:40})}
+    const resto=partes.filter(x=>x.k!=='topico'&&x.v).map(x=>x.v).join('  ·  ');
+    if(resto)corpo+=wPar(wRun(resto,{sz:19}),{ind:340,depois:20});
+   });
+  }
+ }
+ const sect=`<w:sectPr><w:headerReference w:type="default" r:id="rId7"/><w:footerReference w:type="default" r:id="rId8"/>`
+  +`<w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1418" w:right="1134" w:bottom="1134" w:left="1134" w:header="567" w:footer="567" w:gutter="0"/></w:sectPr>`;
+ const NS='xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"';
+ z.file('word/document.xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document ${NS}><w:body>${corpo}${sect}</w:body></w:document>`);
+ z.file('word/header1.xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr ${NS}>`
+  +wPar(wRun(app.settings.gabinete||'',{sz:17,cor:'555555'})+wRun('   ',{sz:17})+wRun(app.settings.contacto||'',{sz:17,cor:'555555'}),{depois:0,borda:true})+`</w:hdr>`);
+ z.file('word/footer1.xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:ftr ${NS}>`
+  +`<w:p><w:pPr><w:pBdr><w:top w:val="single" w:sz="6" w:color="CCCCCC"/></w:pBdr><w:tabs><w:tab w:val="right" w:pos="9638"/></w:tabs><w:spacing w:after="0"/></w:pPr>`
+  +wRun(`${codigo()}${app.proc.tipo?' · '+app.proc.tipo:''}`,{sz:16,cor:'777777'})
+  +`<w:r><w:tab/></w:r>`+wCampoNum('PAGE')+wRun('/',{sz:16})+wCampoNum('NUMPAGES')+`</w:p></w:ftr>`);
+ z.file('[Content_Types].xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="jpg" ContentType="image/jpeg"/><Default Extension="jpeg" ContentType="image/jpeg"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>`);
+ z.file('_rels/.rels',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`);
+ z.file('word/_rels/document.xml.rels',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">`
+  +`<Relationship Id="rId7" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>`
+  +`<Relationship Id="rId8" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>`
+  +rels.join('')+`</Relationships>`);
+ for(const m of media)z.file('word/media/'+m.nome,m.blob);
+ return await z.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+}
+async function exportarWord(){
+ ocupado(true,'A gerar o Word…');
+ try{
+  const blob=await construirDocx();
+  const nome=`${codigo()}_relatorio_${hoje()}.docx`;
+  await partilhar([new File([blob],nome,{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'})],nome);
+ }catch(e){console.error(e);alert('Falha ao gerar o Word: '+e.message)}
+ finally{ocupado(false)}
+}
+
 /* ===================== Relatório em PDF =====================
    Relatório breve: cabeçalho do gabinete, bloco de identificação do processo, um bloco por
    tópico com a respetiva grelha de fotografias legendadas, e a lista de pendentes. */
@@ -1007,14 +1235,16 @@ async function construirPdf(){
   const linhas=doc.splitTextToSize(txt,cw-ind);
   linhas.forEach(l=>{espaco(sz*.55);doc.text(l,mL+ind,y);y+=sz*.55});
  };
+ // TAG sozinha numa linha, a negrito; resposta na linha seguinte, indentada.
  const kv=(r,v,sz=10)=>{
   doc.setFontSize(sz);
-  const larguraR=42;
-  const linhas=doc.splitTextToSize(String(v),cw-larguraR);
-  espaco(Math.max(sz*.55,linhas.length*sz*.55));
-  doc.setFont(F,'bold');doc.text(r,mL,y);doc.setFont(F,'normal');
-  linhas.forEach((l,i)=>{doc.text(l,mL+larguraR,y+i*sz*.55)});
-  y+=linhas.length*sz*.55+1;
+  espaco(sz*.55);
+  doc.setFont(F,'bold');doc.text(r,mL,y);y+=sz*.55;
+  doc.setFont(F,'normal');
+  String(v).split('\n').forEach(bloco=>{
+   doc.splitTextToSize(bloco,cw-INDENT_MM).forEach(l=>{espaco(sz*.55);doc.text(l,mL+INDENT_MM,y);y+=sz*.55});
+  });
+  y+=1.5;
  };
  paginas.push(1);cabecalho();
 
@@ -1033,13 +1263,7 @@ async function construirPdf(){
   doc.setFont(F,'bold');doc.setFontSize(11);
   doc.text(`${tpLabel(t)}${t.nome?' — '+t.nome:''}`,mL,y);y+=6;
   doc.setFont(F,'normal');
-  linhasTopico(t).forEach(([r,v])=>{
-   if(r==='Nome do tópico')return;
-   if(r==='Legendas das fotografias'){
-    doc.setFontSize(9);
-    String(v).split('\n').forEach(l=>{const ls=doc.splitTextToSize(l,cw-6);ls.forEach(x=>{espaco(5);doc.text(x,mL+6,y);y+=4.4})});
-   }else kv(r+':',v,9.5);
-  });
+  linhasTopico(t).forEach(([r,v])=>{if(r!=='Nome do tópico')kv(r+':',v,9.5)});
   if(app.settings.incluirFotos&&(t.fotos||[]).length){
    y+=2;
    let col=0,linhaAltura=0,yLinha=y;
