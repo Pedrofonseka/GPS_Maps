@@ -86,9 +86,11 @@ hr{border:0;border-top:1px solid var(--ln);margin:14px 0}
 .photo-cell .flag{font-size:11px;color:var(--r);font-weight:700}
 .photo-actions{display:flex;gap:4px;flex-wrap:wrap;justify-content:center}
 .photo-actions button{width:auto;min-height:28px;padding:4px 8px;font-size:11px}
-.modal-overlay{position:fixed;inset:0;background:#0009;z-index:20;display:flex;align-items:flex-end;justify-content:center}
-.modal-box{background:#fff;border-radius:14px 14px 0 0;padding:16px;width:100%;max-width:640px;max-height:92vh;overflow:auto}
-@media(min-width:640px){.modal-overlay{align-items:center}.modal-box{border-radius:14px}}
+/* Modais (calendário, fotos, legendas) encostam ao TOPO, nunca ao fundo: a faixa
+   publicitária do iPhone fica por cima do rodapé e tapava os botões de ação.
+   A folga inferior garante que os botões acabam sempre acima dessa faixa. */
+.modal-overlay{position:fixed;inset:0;background:#0009;z-index:20;display:flex;align-items:flex-start;justify-content:center;padding:10px 10px calc(150px + env(safe-area-inset-bottom));overflow-y:auto}
+.modal-box{background:#fff;border-radius:14px;padding:14px;width:100%;max-width:640px;margin:0 auto}
 .modal-box img.big{width:100%;max-height:46vh;object-fit:contain;border-radius:10px;background:#eee;margin-bottom:10px}
 .hidden{display:none!important}
 .searchbar{position:sticky;top:0;background:var(--bg);padding:6px 0 10px;z-index:3}
