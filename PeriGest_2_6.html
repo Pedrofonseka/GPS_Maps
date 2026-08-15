@@ -102,6 +102,13 @@ hr{border:0;border-top:1px solid var(--ln);margin:14px 0}
 .stat-tile b{display:block;font-size:18px;color:var(--b);line-height:1.15}
 .stat-tile span{font-size:10.5px;color:var(--muted)}
 .pending-group h3{margin:14px 0 6px}
+.cal-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:4px 0 10px}
+.cal-header button{width:auto;min-width:44px;padding:6px 10px}
+.cal-dow{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;font-size:11px;color:var(--muted);text-align:center;margin-bottom:4px;font-weight:700}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-day{width:auto;min-width:0;min-height:40px;padding:0;background:#eef1f6;color:var(--b);font-weight:600}
+.cal-day.today{outline:2px solid var(--amber);outline-offset:-2px}
+.cal-day.sel{background:var(--g);color:#fff}
 @media(max-width:620px){.row,.row3{grid-template-columns:1fr}.actions{grid-template-columns:1fr 1fr}.actions.three{grid-template-columns:1fr 1fr}.actions.four{grid-template-columns:1fr 1fr}}
 </style></head>
 <body>
@@ -623,12 +630,56 @@ function wireCommon(){
  document.addEventListener('input',onInput);
  document.addEventListener('change',onChange);
 }
-// Datas/horas: <input type="date"/"time"> nativo e direto — grava logo ao mudar, tal como
-// qualquer outro campo do formulário. Se o valor ficar errado (seletor nativo do iPhone
-// interrompido), o próprio campo continua editável a qualquer momento: toca outra vez e
-// corrige — sem passos extra, sem botão de confirmação, sem selects separados.
+// Datas: o seletor nativo do iOS, dentro do WebView da app, fixa a data quase de imediato
+// ao abrir e não dá para a corrigir a seguir (confirmado pelo utilizador). Por isso as datas
+// usam um calendário próprio (grelha de mês, em modal) que nunca depende do picker nativo —
+// só grava quando se toca explicitamente num dia. Horas continuam no <input type="time"> nativo.
+function fmtDataPt(iso){
+ const m=(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/);
+ return m?`${m[3]}/${m[2]}/${m[1]}`:'';
+}
 function dateFieldConfirm(inputId,value,btnDataAttrs,type){
- return `<input type="${type||'date'}" id="${inputId}" value="${esc(value||'')}" data-action-input="dateFieldDirect"${btnDataAttrs}>`;
+ if(type==='time')return `<input type="time" id="${inputId}" value="${esc(value||'')}" data-action-input="dateFieldDirect"${btnDataAttrs}>`;
+ return `<input type="hidden" id="${inputId}" value="${esc(value||'')}"><button type="button" class="secondary" data-action="abrirCalendario" data-input-id="${inputId}"${btnDataAttrs}>📅 ${value?fmtDataPt(value):'Escolher data…'}</button>`;
+}
+let calState=null;
+function calendarMonthGrid(year,month,selectedIso){
+ const first=new Date(year,month,1);
+ const startDow=(first.getDay()+6)%7;
+ const daysInMonth=new Date(year,month+1,0).getDate();
+ const hoje=todayISO();
+ const nomeMes=first.toLocaleDateString('pt-PT',{month:'long',year:'numeric'});
+ let cells='';
+ for(let i=0;i<startDow;i++)cells+='<div></div>';
+ for(let d=1;d<=daysInMonth;d++){
+  const iso=`${year}-${pad(month+1,2)}-${pad(d,2)}`;
+  cells+=`<button type="button" class="cal-day${iso===selectedIso?' sel':''}${iso===hoje?' today':''}" data-action="escolherDiaCalendario" data-iso="${iso}">${d}</button>`;
+ }
+ return `
+  <div class="cal-header">
+   <button type="button" class="secondary" data-action="calendarioMes" data-dir="-1">‹</button>
+   <b style="text-transform:capitalize">${esc(nomeMes)}</b>
+   <button type="button" class="secondary" data-action="calendarioMes" data-dir="1">›</button>
+  </div>
+  <div class="cal-dow">${['2ª','3ª','4ª','5ª','6ª','Sáb','Dom'].map(d=>`<div>${d}</div>`).join('')}</div>
+  <div class="cal-grid">${cells}</div>
+ `;
+}
+function calendarModalHtml(selectedIso){
+ return `
+  <h3 style="margin-top:0">Escolher data</h3>
+  ${calendarMonthGrid(calState.year,calState.month,selectedIso)}
+  <div class="actions">
+   <button type="button" class="secondary" data-action="calendarioHoje">Hoje</button>
+   <button type="button" class="danger" data-action="calendarioLimpar">Limpar</button>
+  </div>
+  <div class="actions one"><button type="button" class="secondary" data-action="fecharModal">Fechar</button></div>
+ `;
+}
+function atualizarBotaoCalendario(iso){
+ const hidden=$(calState.inputId);if(hidden)hidden.value=iso;
+ const btn=document.querySelector('[data-action="abrirCalendario"][data-input-id="'+calState.inputId+'"]');
+ if(btn)btn.textContent=iso?('📅 '+fmtDataPt(iso)):'📅 Escolher data…';
 }
 function commitDateFieldFromDataset(ds,val){
  if(ds.kind==='pedido'){
@@ -659,6 +710,12 @@ function onClick(e){
 function onInput(e){
  const t=e.target;
  if(t.matches('[data-bind]'))bindField(t);
+ if(t.dataset.actionInput==='filtroLista'){
+  const pos=t.selectionStart,id=t.id;
+  navReplace(ui.view,{...ui.params,q:t.value});
+  const el=$(id);
+  if(el){el.focus();try{el.setSelectionRange(pos,pos)}catch(err){}}
+ }
 }
 function onChange(e){
  const t=e.target;
@@ -690,6 +747,36 @@ function bindField(t){
 
 /* ===================== Ações ===================== */
 const actions={};
+actions.abrirCalendario=(b)=>{
+ const hidden=$(b.dataset.inputId);
+ const iso=(hidden&&hidden.value)||todayISO();
+ const [y,m]=iso.split('-').map(Number);
+ calState={inputId:b.dataset.inputId,ds:{...b.dataset},year:y,month:m-1};
+ abrirModal(calendarModalHtml(hidden?hidden.value:''));
+};
+actions.calendarioMes=(b)=>{
+ let m=calState.month+Number(b.dataset.dir),y=calState.year;
+ if(m<0){m=11;y--}if(m>11){m=0;y++}
+ calState.month=m;calState.year=y;
+ const hidden=$(calState.inputId);
+ abrirModal(calendarModalHtml(hidden?hidden.value:''));
+};
+actions.escolherDiaCalendario=(b)=>{
+ commitDateFieldFromDataset(calState.ds,b.dataset.iso);
+ atualizarBotaoCalendario(b.dataset.iso);
+ fecharModal();
+};
+actions.calendarioHoje=()=>{
+ const iso=todayISO();
+ commitDateFieldFromDataset(calState.ds,iso);
+ atualizarBotaoCalendario(iso);
+ fecharModal();
+};
+actions.calendarioLimpar=()=>{
+ commitDateFieldFromDataset(calState.ds,'');
+ atualizarBotaoCalendario('');
+ fecharModal();
+};
 actions.goHome=()=>goHome();
 actions.goSettings=()=>goSettings();
 actions.back=()=>back();
@@ -697,10 +784,13 @@ actions.navTo=(b)=>{const view=b.dataset.view;const params=JSON.parse(b.dataset.
 actions.navReturn=(b)=>{const view=b.dataset.view;const params=JSON.parse(b.dataset.params||'{}');navReturn(view,params,Number(b.dataset.backlen))};
 
 /* ---- Pedidos ---- */
-function viewPedidos(){
- const list=app.pedidos.slice().sort((a,b)=>(b.dataPedido||'').localeCompare(a.dataPedido||''));
+function viewPedidos(params){
+ const q=(params.q||'').trim().toLowerCase();
+ let list=app.pedidos.slice().sort((a,b)=>(b.dataPedido||'').localeCompare(a.dataPedido||''));
+ if(q)list=list.filter(p=>[p.codigo,p.solicitante,p.local,p.assunto].some(v=>(v||'').toLowerCase().includes(q)));
  return card('📋 Pedidos de serviço', `
   <div class="actions one"><button type="button" data-action="novoPedido">➕ Novo pedido</button></div>
+  <div class="searchbar"><input id="pedidosFiltro" data-action-input="filtroLista" placeholder="🔎 Filtrar por código, solicitante, local ou assunto…" value="${esc(params.q||'')}"></div>
   <div>${list.length?list.map(p=>`
    <div class="item${p.status==='ON'?' status-on':''}" data-action="abrirPedido" data-id="${p.id}">
     <b>${esc(p.codigo||'(sem código)')} — ${esc(p.solicitante||'(sem solicitante)')} ${statusPill(p.status,'pedido')}</b>
@@ -781,9 +871,12 @@ actions.apagarPedido=(b)=>{
 };
 
 /* ---- Processos ---- */
-function viewProcessos(){
- const list=app.processos.slice().sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+function viewProcessos(params){
+ const q=(params.q||'').trim().toLowerCase();
+ let list=app.processos.slice().sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+ if(q)list=list.filter(pr=>[pr.codigo,pr.solicitanteInstitucional,pr.local].some(v=>(v||'').toLowerCase().includes(q)));
  return card('📁 Processos', `
+  <div class="searchbar"><input id="processosFiltro" data-action-input="filtroLista" placeholder="🔎 Filtrar por código, solicitante ou local…" value="${esc(params.q||'')}"></div>
   <div>${list.length?list.map(pr=>{
    const nq=(pr.questoes||[]).length, nr=(pr.questoes||[]).filter(q=>q.fase==='relatorio').length;
    return `<div class="item${pr.status==='ON'?' status-on':''}" data-action="navTo" data-view="processo" data-params='${esc(JSON.stringify({id:pr.id}))}'>
