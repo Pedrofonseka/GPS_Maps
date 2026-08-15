@@ -763,6 +763,7 @@ function vCapt(){
       <button type="button" class="secondary" data-mv="${f.id}|-1"${i===0?' disabled':''}>▲</button>
       <button type="button" class="secondary" data-mv="${f.id}|1"${i===fotos.length-1?' disabled':''}>▼</button>
       <button type="button" class="secondary" data-rot="${f.id}">↻</button>
+      <button type="button" class="secondary" data-move="${f.id}" title="Mudar de tópico">➦</button>
       <button type="button" class="ghost" data-del="${f.id}">🗑</button>
      </div>
     </div>`}).join('')}</div>`:'<div class="status">Nenhuma fotografia neste estado.</div>')
@@ -907,6 +908,7 @@ function ligar(){
   finally{ocupado(false)}
   desenhar();
  });
+ document.querySelectorAll('[data-move]').forEach(b=>b.onclick=()=>moverFoto(b.dataset.move));
  document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
   if(!confirm('Eliminar esta fotografia?'))return;
   const t=topico();t.fotos=t.fotos.filter(x=>x.id!==b.dataset.del);
@@ -944,6 +946,37 @@ function ligar(){
    await partilhar(fs,`${tpLabel(t)}${t.nome?' — '+t.nome:''}`);
   }catch(e){alert('Falha ao enviar: '+e.message)}
   finally{ocupado(false)}
+ });
+}
+/* Muda uma fotografia de tópico. Os nomes dos ficheiros são calculados a partir do tópico
+   e da posição, por isso a fotografia passa a ter o número seguinte no tópico de destino. */
+function moverFoto(fid){
+ const origem=topico();if(!origem)return;
+ const f=(origem.fotos||[]).find(x=>x.id===fid);if(!f)return;
+ const destinos=app.topicos.filter(t=>t.id!==origem.id);
+ const ov=modal(`
+  <h2 style="margin:0 0 6px">Mudar de tópico</h2>
+  <div class="note" style="margin-bottom:8px">${esc(fotoNome(origem,(origem.fotos||[]).indexOf(f)+1))}${f.caption?' — '+esc(f.caption):''}</div>
+  ${destinos.length?destinos.map(t=>`<div class="item" data-dest="${t.id}">
+    <b>${esc(tpLabel(t))}${t.nome?' — '+esc(t.nome):''}</b>
+    <div class="meta">${(t.fotos||[]).length} fotografia(s)</div>
+   </div>`).join(''):'<div class="status">Só existe este tópico. Crie outro para poder mover fotografias.</div>'}
+  <div class="actions one"><button type="button" class="green" data-dest="__novo">➕ Mover para um tópico novo</button></div>
+  <div class="actions one"><button type="button" class="secondary" data-fechar="1">Cancelar</button></div>
+ `);
+ ov.querySelectorAll('[data-dest]').forEach(b=>b.onclick=()=>{
+  let destino;
+  if(b.dataset.dest==='__novo'){
+   const nome=prompt('Nome do novo tópico:','');
+   if(nome===null)return;
+   destino=criarTopico(nome.trim(),true);
+  }else destino=app.topicos.find(t=>t.id===b.dataset.dest);
+  if(!destino)return;
+  origem.fotos=origem.fotos.filter(x=>x.id!==fid);
+  destino.fotos=destino.fotos||[];
+  destino.fotos.push(f);
+  fecharModal();
+  gravarAgora();desenhar();
  });
 }
 async function avisoCodigo(){
