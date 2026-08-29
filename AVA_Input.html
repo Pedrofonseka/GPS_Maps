@@ -320,8 +320,8 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
  <div id="assetEditor" class="card hidden">
   <h3 id="assetEditorTitle">Novo Ativo</h3>
   <div class="row"><div><label>Código</label><input id="aCode" readonly></div><div><label>ID_Institucional <span class="id-hint">Art. matricial · Registo · Matrícula</span></label><input id="aRef" placeholder="Ex.: Art. U 2555 · CRP 1234 · 00-AA-00"></div></div>
-  <label>Agrupar com outro Ativo <small class="note">(opcional — para imóveis fisicamente próximos que quer numerar em conjunto, ex.: 001.1/001.2; a caracterização de cada Ativo mantém-se sempre totalmente separada)</small></label>
-  <select id="aGroupWith"><option value="">— Ativo autónomo (código próprio) —</option></select>
+  <label>Numeração <small class="note">(o mesmo número em vários Ativos agrupa-os no código, ex.: 1 → 001.1/001.2; a caracterização de cada Ativo mantém-se sempre totalmente separada)</small></label>
+  <div class="row"><div><label>Número</label><input id="aGroupNo" type="number" min="1" inputmode="numeric"></div><div><label>Agrupar com outro Ativo <small class="note">(atalho — preenche o número acima)</small></label><select id="aGroupWith"><option value="">— Ativo autónomo (código próprio) —</option></select></div></div>
   <div id="aGroupInfo" class="muted" style="margin-top:4px"></div>
   <div><label>Status do Ativo</label><select id="aStatus"><option value="ON">ON — Ativo</option><option value="OFF">OFF — Suspenso/inativo</option></select></div>
   <label>Designação</label><input id="aName">
@@ -626,7 +626,7 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
 // Do not depend on browsers exposing element IDs as automatic global variables.
 // Several iOS file viewers/WebViews do not provide that legacy behaviour.
 const {
- aCode,aConc,aDoorNumber,aFloor,aFreg,aGPS,aGPSInfo,aGroupWith,aGroupInfo,aInspectionStatus,aKMLInfo,aLocal,aName,aObs,aPostalCode,aRef,aStatus,aVisitDate,aVisitTime,aVisitEnd,assetStatusAuto,assetVisitPeople,aVisitOther,postalCodeSuggestions,cAssetType,cAssetGroup,cCurrentUse,cDestinationChecks,
+ aCode,aConc,aDoorNumber,aFloor,aFreg,aGPS,aGPSInfo,aGroupNo,aGroupWith,aGroupInfo,aInspectionStatus,aKMLInfo,aLocal,aName,aObs,aPostalCode,aRef,aStatus,aVisitDate,aVisitTime,aVisitEnd,assetStatusAuto,assetVisitPeople,aVisitOther,postalCodeSuggestions,cAssetType,cAssetGroup,cCurrentUse,cDestinationChecks,
  addNUF,addProcessStakeholder,assetEditor,assetEditorTitle,assetList,autoAssetCount,autoAssetRows,autoProcessCard,autoProcessCode,autoProcessName,autoProcessRef,backCharacter,backupAll,backupInfo,lastBackupInfo,cancelAutoProcess,cancelVisit,cObs,cameraPhoto,cancelNewProcess,createAutoProcess,downloadAssetTemplate,exportVisits,visitsReport,
  adjustOrientation,cfgAddField,cfgFieldHelp,cfgFieldHelpText,cfgFields,cfgFieldsSection,cfgFooterCenter,cfgFooterLeft,cfgFooterRight,cfgFooterSize,cfgFooterAutoFit,cfgFooterDistance,cfgFooterFontSizeLegacy,cfgFooterTextLeft,cfgFooterTextCenter,cfgFooterTextRight,cfgFooterAnalystVersion,cfgGroup,cfgGroupName,cfgHeaderCenter,cfgHeaderLeft,cfgHeaderRight,cfgHeaderSize,cfgHeaderDistance,cfgHeaderGabineteSize,cfgHeaderGabineteBold,cfgHeaderTitleSize,cfgHeaderTitleBold,cfgHeaderExtraEnabled,cfgHeaderExtraText,cfgHeaderExtraSize,cfgMarginBottom,cfgMarginLeft,cfgMarginRight,cfgMarginTop,cfgOutputHelp,cfgOutputHelpText,cfgOutputValues,cfgCoverContentValues,cfgResetCoverContent,cfgOutModelSelect,cfgOutModelZones,cfgOutModelAddField,cfgOutModelInfo,cfgOutputsSection,cfgFontFamily,cfgPageInfo,cfgPageOrientation,cfgTopContext,cfgTopContextSize,cfgPageTitleMode,cfgPageTitleSize,cfgPhotoInfo,cfgPhotoMaxSide,cfgPhotoQuality,cfgResetOutput,cfgResetPage,cfgResetPhotos,cfgRestore,cfgRotateQuality,cfgSavePage,cfgSavePhotos,cfgTable,cfgTableAdd,cfgTableGroup,cfgTableGroupBox,cfgTableNew,cfgTableNewLabel,cfgParishMunicipality,cfgParishMunicipalityBox,cfgTablesSection,cfgTableValues,cfgTableInfo,charTitle,characterEditor,characterList,characterPick,chooseFolder,closeAsset,closeConfig,coverCols,coverMinPhotos,
  configBody,configModal,configTabs,cfgPageSection,cfgPhotosSection,cfgStructureSection,dCode,dDeadline,dInputDate,dName,dOffice,dObs,dPurpose,dService,dRef,dRequestDescription,dRequester,dStatus,dValueBase,deleteAsset,deleteProcess,
@@ -1897,6 +1897,7 @@ function renderGroupControl(p,a){
    }).join('');
  aGroupWith.innerHTML='<option value="">— Ativo autónomo (código próprio) —</option>'+optionsHTML;
  aGroupWith.value=[...aGroupWith.options].some(o=>o.value===String(a.clusterNo))?String(a.clusterNo):'';
+ if(aGroupNo)aGroupNo.value=a.clusterNo||'';
  updateGroupInfo(p,a);
 }
 function updateGroupInfo(p,a){
@@ -1905,20 +1906,25 @@ function updateGroupInfo(p,a){
  if(!others.length){aGroupInfo.textContent='Ativo autónomo — código próprio, sem outros Ativos agrupados.';return}
  aGroupInfo.textContent=(a.id?'Agrupado com: ':'Ficará agrupado com: ')+others.map(m=>m.code+(m.name?' — '+m.name:'')).join('; ')+'.';
 }
-aGroupWith.onchange=()=>{
+// Aplica um novo número/cluster a este Ativo. Editar diretamente o número (aGroupNo)
+// permite fechar manualmente um "buraco" de numeração (ex.: depois de agrupar dois
+// Ativos, o número que ficou livre não é reatribuído sozinho — o utilizador decide).
+function applyClusterChange(newClusterNo){
  const p=proc(),a=assetEditor._draft;if(!p||!a)return;
- const chosen=aGroupWith.value?Number(aGroupWith.value):null;
- a.clusterNo=chosen||nextClusterNo(p);
+ if(!Number.isFinite(newClusterNo)||newClusterNo<=0)newClusterNo=nextClusterNo(p);
+ a.clusterNo=newClusterNo;
  if(editingAsset){
    syncAssetCodes(p);aCode.value=a.code;
-   historyAdd(p,'asset_grouped',(a.code||'Ativo')+' — agrupamento de numeração alterado.',a.id);
+   historyAdd(p,'asset_grouped',(a.code||'Ativo')+' — numeração/agrupamento alterado.',a.id);
    save();renderAssets();
  }else{
    const position=clusterMembers(p,a.clusterNo).length+1;
    aCode.value=clusterCode(a.clusterNo,position,position);
  }
  renderGroupControl(p,a);
-};
+}
+aGroupWith.onchange=()=>{applyClusterChange(aGroupWith.value?Number(aGroupWith.value):null)};
+if(aGroupNo)aGroupNo.addEventListener('change',()=>{applyClusterChange(aGroupNo.value?Number(aGroupNo.value):null)});
 function openAsset(id){
  let p=proc();editingAsset=id;let a=id?p.assets.find(x=>x.id===id):{clusterNo:nextClusterNo(p),ref:'',name:'',status:'ON',type:'',group:'',currentUse:'',local:'',doorNumber:'',floor:'',postalCode:'',freg:'',conc:'',visitDate:'',visitTime:'',visitEnd:'',visitParticipantIds:[],visitOtherPeople:'',inspectionStatus:'',gps:'',obs:'',split:true,nufs:[],char:{},photos:[],origin:'manual'};
  if(!id)a.code=clusterCode(a.clusterNo,1,1);
