@@ -214,6 +214,8 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
 <section id="processos" class="show">
  <div class="card">
   <h2>Dashboard</h2>
+  <div class="actions"><button class="btn" id="runDiagnostics" type="button">Diagnóstico de dados</button></div>
+  <pre id="diagnosticsOutput" class="muted" style="white-space:pre-wrap;font-size:11px;display:none;background:#f4f5f7;padding:8px;border-radius:6px;max-height:400px;overflow:auto;margin:6px 0"></pre>
   <div id="dashboardStats" class="dashboard-grid"></div>
   <div id="dashboardStatus" class="dashboard-status"></div>
   <div class="dashboard-lower">
@@ -792,6 +794,7 @@ function renderLastBackupInfo(){
  lastBackupInfo.className=days>=7?'muted status-warn':'muted';
 }
 let db=load(), currentProcess=null, editingAsset=null, editingVisit=null, charAsset=null;
+const migrationErrors=[];
 function rememberCurrentProcess(){
  try{if(currentProcess)localStorage.setItem(LAST_PROCESS_KEY,currentProcess);else localStorage.removeItem(LAST_PROCESS_KEY)}catch(e){}
 }
@@ -898,13 +901,17 @@ function normaliseDB(raw){
          });
        });
      }catch(e){
-       console.error('Falha ao migrar o Ativo '+(a&&(a.code||a.id)||'desconhecido')+' — dados mantidos tal como estavam para não arriscar perder fotografias.',e);
+       const msg='Ativo '+(a&&(a.code||a.id)||'desconhecido')+': '+String(e&&e.message||e);
+       console.error('Falha ao migrar o Ativo — dados mantidos tal como estavam para não arriscar perder fotografias.',e);
+       migrationErrors.push(msg);
      }
    });
    if(extraAssets.length)p.assets.push(...extraAssets);
    syncAssetCodes(p);
   }catch(e){
-   console.error('Falha ao migrar o Processo '+(p&&(p.code||p.id)||'desconhecido')+' — dados mantidos tal como estavam para não arriscar perder o resto do Processo.',e);
+   const msg='Processo '+(p&&(p.code||p.id)||'desconhecido')+': '+String(e&&e.message||e);
+   console.error('Falha ao migrar o Processo — dados mantidos tal como estavam para não arriscar perder o resto do Processo.',e);
+   migrationErrors.push(msg);
   }
  });
  return clean;
@@ -2200,6 +2207,57 @@ async function photoDeleteBlob(id){
    tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);
  });
 }
+async function photoListAllKeys(){
+ if(photoStorageMode==='session')return [...photoSession.keys()];
+ try{
+   const db=await photoDB();
+   return await new Promise((resolve,reject)=>{
+     const tx=db.transaction(PHOTO_STORE,'readonly'),store=tx.objectStore(PHOTO_STORE);
+     if(store.getAllKeys){const req=store.getAllKeys();req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);return}
+     const keys=[],cursorReq=store.openCursor();
+     cursorReq.onsuccess=e=>{const cursor=e.target.result;if(cursor){keys.push(cursor.key);cursor.continue()}else resolve(keys)};
+     cursorReq.onerror=()=>reject(cursorReq.error);
+   });
+ }catch(e){return null}
+}
+// Relatório de diagnóstico legível para o utilizador copiar/enviar quando algo
+// parece ter desaparecido: mostra se a migração falhou, se ainda há dados presos
+// na estrutura antiga do NUF, e se os ficheiros das fotografias continuam
+// fisicamente na base de dados do aparelho mesmo que a app não os mostre.
+async function runDataDiagnostics(){
+ const lines=['=== Diagnóstico Ativa '+APP_VERSION+' ==='];
+ lines.push('lightBoot ainda ativo (migração por concluir): '+(lightBoot?'SIM':'não'));
+ lines.push('Erros de migração registados: '+(migrationErrors.length?migrationErrors.length:'nenhum'));
+ migrationErrors.forEach(m=>lines.push('  - '+m));
+ lines.push('');
+ lines.push('Processos: '+(db.processes||[]).length);
+ (db.processes||[]).forEach(p=>{
+   lines.push('--- Processo '+(p.code||p.id||'?')+' — '+(p.name||'')+' ('+(p.assets||[]).length+' Ativo(s)) ---');
+   (p.assets||[]).forEach(a=>{
+     const hasNufs=Array.isArray(a.nufs);
+     const nufCount=hasNufs?a.nufs.length:0;
+     const nufPhotoCount=hasNufs?a.nufs.reduce((s,n)=>s+((n&&Array.isArray(n.photos))?n.photos.length:0),0):0;
+     const topPhotoCount=Array.isArray(a.photos)?a.photos.length:0;
+     lines.push('  '+(a.code||a.id||'?')+' — '+(a.name||'Sem designação')+': fotos visíveis='+topPhotoCount+(hasNufs?'  [AINDA POR MIGRAR: '+nufCount+' nuf(s) com '+nufPhotoCount+' foto(s) presas]':''));
+   });
+ });
+ lines.push('');
+ const keys=await photoListAllKeys();
+ if(keys===null){
+   lines.push('Base de dados de fotografias (IndexedDB): não foi possível ler (modo temporário ou erro de acesso).');
+ }else{
+   const referenced=new Set();
+   (db.processes||[]).forEach(p=>(p.assets||[]).forEach(a=>{
+     (a.photos||[]).forEach(ph=>{if(ph&&ph.id)referenced.add(ph.id)});
+     (a.nufs||[]).forEach(n=>{(n&&n.photos||[]).forEach(ph=>{if(ph&&ph.id)referenced.add(ph.id)})});
+   }));
+   const orphaned=keys.filter(k=>!referenced.has(k));
+   lines.push('Base de dados de fotografias (IndexedDB): '+keys.length+' ficheiro(s) guardado(s) fisicamente no aparelho.');
+   lines.push('Referenciados por algum Ativo (visível ou ainda por migrar): '+referenced.size);
+   lines.push('Órfãos (o ficheiro existe mas nenhum Ativo aponta para ele): '+orphaned.length);
+ }
+ return lines.join('\n');
+}
 function readFileAsDataURL(file){
  return new Promise((resolve,reject)=>{
    const r=new FileReader();
@@ -2802,6 +2860,11 @@ function applyPageSettings(){
 }
 cfgSavePage.onclick=()=>{savePageSettings();alert('Layout de página guardado.')};
 cfgResetPage.onclick=()=>{pageSettings=Object.assign({},PAGE_SETTINGS_DEFAULT);try{localStorage.setItem(PAGE_SETTINGS_KEY,JSON.stringify(pageSettings))}catch(e){warnStorageFailure()}fillPageSettings();applyPageSettings()};
+document.getElementById('runDiagnostics')?.addEventListener('click',async()=>{
+ const box=document.getElementById('diagnosticsOutput');
+ box.style.display='block';box.textContent='A calcular…';
+ box.textContent=await runDataDiagnostics();
+});
 
 function renderCfgTable(){
  if(cfgTableInfo)cfgTableInfo.textContent='';
