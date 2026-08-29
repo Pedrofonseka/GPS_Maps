@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>AVA_Input</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 <style>
 :root{--yellow:#f2c94c;--menu:#2c4a85;--feedback:#dff2fb;--bg:#f4f5f7;--card:#fff;--ink:#20242a;--muted:#69717c;--line:#d9dde3;--red:#b42318}
 *{box-sizing:border-box}
@@ -429,7 +430,7 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
   <div class="muted" style="margin-top:6px">Word, PDF e ZIP utilizam as fotografias comprimidas segundo os valores definidos em Config. Gerais.</div>
   <div class="actions">
    <button class="btn primary" id="previewReport">1) Pré-visualizar e validar</button>
-   <button class="btn" id="printReport">Guardar apenas PDF / Imprimir</button>
+   <button class="btn" id="printReport">Guardar apenas PDF</button>
    <button class="btn" id="exportWord">Gerar apenas Word</button>
    <button class="btn primary" id="exportZIP">Exportação Geral ZIP + Word</button>
    <button class="btn" id="exportSummary">Resumo TXT</button>
@@ -3843,11 +3844,7 @@ rejectPreview.onclick=()=>{
 acceptPreview.onclick=async()=>{
  const p=proc();if(!p){alert('Selecione primeiro um Processo.');return}
  // A pré-visualização já foi construída e validada no passo anterior (só chegamos
- // aqui depois disso) — reconstruí-la outra vez agora, com o novo scan de orientação
- // de todas as fotografias, introduzia um atraso entre o toque e window.print() que
- // o Safari/iOS interpreta como "já não é uma ação direta do utilizador" e recusa
- // abrir a caixa de diálogo de impressão, sem qualquer erro visível. Por isso aqui
- // reutiliza-se o preview e o scan já existentes, e a impressão é chamada de imediato.
+ // aqui depois disso) — não é preciso reconstruí-la para gerar os ficheiros.
  if(lastOrientationScan?.outliers?.length){
    orientationInfo.scrollIntoView({behavior:'smooth',block:'center'});
    alert('Existem fotografias com orientação divergente. Escolha Rodar, Eliminar ou Manter antes de produzir o documento.');
@@ -3855,20 +3852,18 @@ acceptPreview.onclick=async()=>{
  }
  acceptPreview.disabled=true;rejectPreview.disabled=true;
  try{
-  folderInfo.textContent='PDF: no diálogo seguinte escolha “Guardar como PDF” e indique o destino.';
-  window.print();
-  folderInfo.textContent='A gerar o documento Word da versão aceite…';
+  folderInfo.textContent='A gerar o PDF da versão aceite…';
+  const pdfResult=await buildReportPDF(p);
+  await saveBlobToDestination(pdfResult.blob,safeFileName(p.code||'Processo')+'_Ficha.pdf',folderInfo,'PDF pronto.'+(pdfResult.photoFailures?' ('+pdfResult.photoFailures+' fotografia(s) não incluída(s) — ver consola.)':''));
+  folderInfo.textContent+=' A gerar o documento Word da versão aceite…';
   const wordZip=await buildWordDOCX(p),blob=new Blob([wordZip],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
-  await saveBlobToDestination(blob,safeFileName(p.code||'Processo')+'_Ficha.docx',folderInfo,'Versão aceite: PDF encaminhado e Word pronto.');
+  await saveBlobToDestination(blob,safeFileName(p.code||'Processo')+'_Ficha.docx',folderInfo,'Word pronto.',true);
   previewValidation.classList.add('hidden');zipInfo.textContent='Versão aceite. A Exportação Geral pode agora ser gerada separadamente, se necessária.';
- }catch(e){console.error(e);alert('Não foi possível concluir a exportação PDF + Word da versão aceite.')}
+ }catch(e){console.error(e);alert('Não foi possível concluir a exportação PDF + Word da versão aceite: '+(e?.message||e))}
  finally{acceptPreview.disabled=false;rejectPreview.disabled=false}
 };
 printReport.onclick=async()=>{
  const p=proc();if(!p){alert('Selecione primeiro um Processo.');return}
- // Reutiliza um preview já em ecrã e válido para este Processo (evita reconstruir
- // tudo mesmo em cima do toque, o que pode fazer o Safari/iOS recusar window.print()
- // — ver nota em acceptPreview.onclick).
  const fresh=!reportPreview.classList.contains('hidden')&&lastOrientationScan?.processId===p.id;
  if(!fresh&&!await renderReportPreview(true))return;
  if(lastOrientationScan?.outliers?.length){
@@ -3876,8 +3871,13 @@ printReport.onclick=async()=>{
    alert('Existem fotografias com orientação divergente. Escolha Rodar, Eliminar ou Manter antes de produzir o documento.');
    return;
  }
- folderInfo.textContent='No diálogo seguinte escolha “Guardar como PDF” e indique a pasta pretendida.';
- window.print();
+ printReport.disabled=true;
+ try{
+  folderInfo.textContent='A gerar o PDF…';
+  const pdfResult=await buildReportPDF(p);
+  await saveBlobToDestination(pdfResult.blob,safeFileName(p.code||'Processo')+'_Ficha.pdf',folderInfo,'PDF pronto.'+(pdfResult.photoFailures?' ('+pdfResult.photoFailures+' fotografia(s) não incluída(s) — ver consola.)':''));
+ }catch(e){console.error(e);alert('Não foi possível gerar o PDF: '+(e?.message||e))}
+ finally{printReport.disabled=false}
 };
 
 const SETTINGS_DB='Ativa_Settings_v1',DESTINATION_KEY='destination-folder';
@@ -3967,6 +3967,209 @@ async function buildWordDOCX(p){
  const docRels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+rels.join('')+'</Relationships>';
  entries.push({name:'[Content_Types].xml',data:encoder.encode(types)},{name:'_rels/.rels',data:encoder.encode(rootRels)},{name:'word/document.xml',data:encoder.encode(documentXML)},{name:'word/header1.xml',data:encoder.encode(wordBandXML('header',p))},{name:'word/footer1.xml',data:encoder.encode(wordBandXML('footer',p))},{name:'word/_rels/document.xml.rels',data:encoder.encode(docRels)});
  return makeStoredZIP(entries);
+}
+
+// PDF real (jsPDF) — necessário porque window.print() não é fiável quando o
+// ficheiro é aberto a partir da pré-visualização da app Ficheiros (não
+// implementa a caixa de diálogo de impressão do Safari). O layout replica as
+// mesmas cores/tipografia da folha em ecrã (.report-field, .report h2, bandas
+// de cabeçalho/rodapé) em vez de um simples despejo de texto.
+const PDF_COLORS={ink:[32,36,42],muted:[105,113,124],line:[236,238,241],gold:[214,180,56],band:[68,68,68],bandLine:[187,187,187],photoBorder:[221,221,221],photoBg:[242,243,245]};
+async function buildReportPDF(p){
+ if(!(window.jspdf&&window.jspdf.jsPDF))throw new Error('O gerador de PDF ainda não carregou. Verifique a ligação à internet e tente novamente.');
+ const {jsPDF}=window.jspdf;
+ const reportAssets=selectedExportAssets(p);
+ pageSettings=loadPageSettings();
+ const landscape=pageSettings.orientation==='landscape';
+ const doc=new jsPDF({unit:'mm',format:'a4',orientation:landscape?'landscape':'portrait'});
+ const pageW=doc.internal.pageSize.getWidth(),pageH=doc.internal.pageSize.getHeight();
+ const marginTop=Number(pageSettings.top)||15,marginRight=Number(pageSettings.right)||15,marginBottom=Number(pageSettings.bottom)||15,marginLeft=Number(pageSettings.left)||15;
+ const contentW=pageW-marginLeft-marginRight;
+ let y=marginTop,pageStarted=false,currentComponent='';
+ const pageModel={};
+ function tagPage(){pageModel[doc.internal.getNumberOfPages()]=currentComponent}
+ function newPage(){if(pageStarted)doc.addPage();pageStarted=true;y=marginTop}
+ function ensureSpace(h){if(y+h>pageH-marginBottom)newPage()}
+ function ink(){doc.setTextColor(...PDF_COLORS.ink)}
+ function text(str,opts={}){
+  const value=String(str??'');if(!value.trim())return;
+  doc.setFont(undefined,opts.bold?'bold':'normal');doc.setFontSize(opts.size||10);
+  doc.setTextColor(...(opts.color||PDF_COLORS.ink));
+  const lines=doc.splitTextToSize(value,opts.width||contentW),lineH=(opts.size||10)*0.42;
+  ensureSpace(lines.length*lineH+2);
+  doc.text(lines,opts.x||marginLeft,y);
+  pageStarted=true;tagPage();
+  y+=lines.length*lineH+(opts.gap??2);
+  ink();
+ }
+ // Título de secção — replica .report h2 (negrito + linha dourada por baixo).
+ function heading(str,opts={}){
+  if(opts.pageBreak)newPage();else ensureSpace(14);
+  text(str,{bold:true,size:opts.size||16,gap:2});
+  doc.setDrawColor(...PDF_COLORS.gold);doc.setLineWidth(0.6);
+  doc.line(marginLeft,y,marginLeft+contentW,y);
+  doc.setLineWidth(0.2);
+  y+=4;
+ }
+ // Subtítulo — replica .report h3 (negrito, sem linha).
+ function subheading(str){ensureSpace(10);text(str,{bold:true,size:12,gap:3})}
+ // Par etiqueta/valor em grelha de 2 colunas — replica .report-grid/.report-field
+ // (etiqueta pequena em maiúsculas cinza, valor a preto, linha fina por baixo).
+ function fieldGrid(pairs){
+  const visible=(pairs||[]).filter(([,v])=>String(v??'').trim());
+  if(!visible.length)return;
+  const gap=6,colW=(contentW-gap)/2;
+  for(let i=0;i<visible.length;i+=2){
+   const row=visible.slice(i,i+2);
+   doc.setFont(undefined,'normal');doc.setFontSize(9.5);
+   const valueLines=row.map(([,v])=>doc.splitTextToSize(String(v),colW));
+   const rowH=Math.max(...valueLines.map(lines=>4+lines.length*3.7))+2;
+   ensureSpace(rowH);
+   row.forEach(([label,],idx)=>{
+    const x=marginLeft+idx*(colW+gap);
+    doc.setFont(undefined,'normal');doc.setFontSize(7.3);doc.setTextColor(...PDF_COLORS.muted);
+    doc.text(String(label).toUpperCase(),x,y);
+   });
+   row.forEach((pair,idx)=>{
+    const x=marginLeft+idx*(colW+gap);
+    doc.setFont(undefined,'normal');doc.setFontSize(9.5);doc.setTextColor(...PDF_COLORS.ink);
+    doc.text(valueLines[idx],x,y+4);
+    doc.setDrawColor(...PDF_COLORS.line);doc.setLineWidth(0.15);
+    doc.line(x,y+rowH-1.5,x+colW,y+rowH-1.5);
+   });
+   y+=rowH;pageStarted=true;tagPage();
+  }
+  y+=2.5;
+  ink();
+ }
+ // jsPDF tem um descodificador de JPEG próprio, limitado (falha em silêncio com
+ // JPEGs progressivos ou CMYK que o <img> do próprio browser lê sem problema —
+ // exatamente o que a pré-visualização usa). Por isso a imagem é sempre
+ // redesenhada num canvas (via compressImage) antes de entrar no PDF, garantindo
+ // um JPEG plano que o jsPDF consegue sempre inserir, e usam-se as dimensões
+ // devolvidas por essa conversão em vez dos metadados gravados (podem ser nulos).
+ let photoFailures=0;
+ async function photoDataURL(photo){
+  const blob=await photoGet(photo.id);if(!blob)return null;
+  const activeSettings=loadPhotoSettings(),converted=await compressImage(blob,activeSettings.maxSide,activeSettings.quality/100);
+  const dataURL=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(converted.blob)});
+  return {dataURL,w:converted.w,h:converted.h};
+ }
+ async function photoGrid(photoRefs,cols,showCaptions){
+  if(!photoRefs.length)return;
+  const gap=4,cellW=(contentW-gap*(cols-1))/cols;
+  let col=0,rowMaxH=0,rowStartY=y;
+  for(const ref of photoRefs){
+   let photoData;try{photoData=await photoDataURL(ref.photo)}catch(e){console.error('Falha ao preparar fotografia para o PDF',ref.photo?.id,e);photoFailures++;continue}
+   if(!photoData){photoFailures++;continue}
+   const w=Number(photoData.w)||Number(ref.photo.w)||1200,h=Number(photoData.h)||Number(ref.photo.h)||800,imgH=cellW*(h/w);
+   if(col===0){ensureSpace(imgH+(showCaptions?6:0)+gap);rowStartY=y;rowMaxH=0}
+   const x=marginLeft+col*(cellW+gap);
+   doc.setFillColor(...PDF_COLORS.photoBg);doc.rect(x,rowStartY,cellW,imgH,'F');
+   try{doc.addImage(photoData.dataURL,'JPEG',x,rowStartY,cellW,imgH);pageStarted=true;tagPage()}catch(e){console.error('Falha ao inserir imagem no PDF',ref.photo?.id,e);photoFailures++}
+   doc.setDrawColor(...PDF_COLORS.photoBorder);doc.setLineWidth(0.2);doc.rect(x,rowStartY,cellW,imgH);
+   rowMaxH=Math.max(rowMaxH,imgH);
+   if(showCaptions){
+    doc.setFont(undefined,'normal');doc.setFontSize(7.5);doc.setTextColor(...PDF_COLORS.muted);
+    const capLines=doc.splitTextToSize(ref.code,cellW);
+    doc.text(capLines,x,rowStartY+imgH+3);
+    rowMaxH=Math.max(rowMaxH,imgH+3+capLines.length*3);
+    ink();
+   }
+   col++;
+   if(col===cols){col=0;y=rowStartY+rowMaxH+gap}
+  }
+  if(col>0)y=rowStartY+rowMaxH+gap;
+ }
+ const assetFieldPairs=a=>[['ID_Institucional',a.ref],['Tipo',a.type],['Grupo',a.group],['Destino',a.currentUse],['Endereço / Local',a.local],['Número',a.doorNumber],['Piso / Andar',a.floor],['Código Postal',formatPostalCode(a.postalCode)],['Freguesia',a.freg],['Concelho',a.conc],['Hora da visita',a.visitTime],['GPS',assetGPS(a)]];
+ const areaFieldPairs=q=>[['Documentação de referência',(q.documents||[]).join(', ')],['Quantidade',q.qtd],['Área de terreno (AT)',q.at],['Área de implantação (AI)',q.ai],['Área bruta privativa (ABP)',q.abp],['Área bruta dependente (ABD)',q.abd],['Sup. terreno (ST)',q.st],['Sup. coberta (SC)',q.sc],['Sup. descoberta (SD)',q.sd]];
+ const components=activeOutputComponents();
+ for(const component of components){
+  currentComponent=component;
+  if(component==='process'){
+   heading(p.code||'Processo',{pageBreak:pageStarted,size:20});
+   fieldGrid([['Designação',p.name],['ID Institucional',p.ref],['Solicitante',p.requester],['Finalidade',p.purpose],['Descrição do solicitado',p.requestDescription],['Base de valor',p.valueBase],['Estado',p.status],['Data de entrada',p.inputDate],['Prazo',p.deadline]]);
+   text('Número de Ativos: '+reportAssets.length,{bold:true,size:12,gap:3});
+   for(const status of ['ON','OFF']){
+    if((status==='ON'&&!summaryConfig.on)||(status==='OFF'&&!summaryConfig.off))continue;
+    const rows=reportAssets.filter(a=>(a.status==='OFF'?'OFF':'ON')===status);
+    text('Status '+status+' — '+rows.length,{bold:true,size:11,gap:2});
+    rows.forEach(a=>text('  '+summaryConfig.fields.map(field2=>SUMMARY_FIELD_DEFS[field2]+': '+assetSummaryValue(a,field2)).join(' · '),{size:9,gap:1,color:PDF_COLORS.muted}));
+   }
+   if(String(p.obs||'').trim()){subheading('Observações');text(p.obs,{size:10})}
+  }
+  if(component==='cover')for(const a of reportAssets){
+   const refs=(a.photos||[]).map((photo,index)=>({photo,index,code:photoCodeForReport(a,0,index)})).filter(r=>r.photo.cover);
+   if(!refs.length)continue;
+   heading((a.code||'Ativo')+' — '+(a.name||'Capa'),{pageBreak:true,size:18});
+   await photoGrid(refs,validReportCols(coverCols.value),false);
+  }
+  if(component==='characterization')for(const a of reportAssets){
+   heading((a.code||'Ativo')+' — '+(a.name||'Sem designação'),{pageBreak:true,size:18});
+   fieldGrid(assetFieldPairs(a));
+   if(String(a.obs||'').trim()){subheading('Observações do Ativo');text(a.obs,{size:10})}
+   subheading('Caracterização');
+   fieldGrid(configuredCharacterValues(a,a));
+   fieldGrid(areaFieldPairs(a.qtyAreas||{}));
+   if(String(a.char?.__obs||'').trim()){subheading('Observações');text(a.char.__obs,{size:10})}
+   const photoRefs=(a.photos||[]).map((photo,index)=>({photo,index,code:photoCodeForReport(a,0,index)+(photo.caption?' — '+photo.caption:'')}));
+   if(photoRefs.length){ensureSpace(10);subheading('Imagens');await photoGrid(photoRefs,validReportCols(sheetCols.value),true)}
+  }
+  if(component==='visits'){
+   heading('Mapa de visitas do Processo',{pageBreak:true,size:18});
+   for(const visit of (p.visits||[])){
+    const people=(visit.participantIds||[]).map(id=>(p.participants||[]).find(person=>person.id===id)?.name).filter(Boolean).join(', ');
+    const assets=(visit.assets||[]).map(item=>item.code||p.assets.find(a=>a.id===item.assetId)?.code).filter(Boolean).join(', ');
+    text([visit.date,[visit.start,visit.end].filter(Boolean).join('–'),assets,people].filter(Boolean).join(' | '),{size:9,gap:1});
+   }
+   subheading('Detalhe das visitas');
+   for(const visit of (p.visits||[])){
+    text((visit.type||'Visita')+' · '+(visit.date||'Sem data'),{bold:true,size:11,gap:2});
+    fieldGrid([['Hora',[visit.start,visit.end].filter(Boolean).join('–')],['Estado do tempo',visit.weather],['Intervenientes',(visit.participantIds||[]).map(id=>(p.participants||[]).find(person=>person.id===id)?.name).filter(Boolean).join(', ')],['Ativos observados',(visit.assets||[]).map(item=>item.code||p.assets.find(a=>a.id===item.assetId)?.code).filter(Boolean).join(', ')],['Condicionamentos',visit.constraints]]);
+    if(String(visit.obs||'').trim())text(visit.obs,{size:10,gap:3});
+   }
+  }
+  if(component==='chronology'){
+   heading('Cronologia',{pageBreak:true,size:18});
+   for(const entry of (p.history||[]).slice().reverse()){
+    const date=new Date(entry.at),when=Number.isFinite(date.getTime())?date.toLocaleString('pt-PT'):'';
+    fieldGrid([[when||'Registo',entry.text||entry.type]]);
+   }
+  }
+ }
+ if(!components.length)text('O Resumo geral não tem fichas ativas.',{bold:true,size:14});
+ // Cabeçalho e rodapé replicam os mesmos campos configurados em Config. Página
+ // (a mesma fonte usada por printBandHTML na pré-visualização e por
+ // wordBandXML no Word), com as mesmas cores/linhas divisórias da banda.
+ const office=officeForProcess(p);
+ const headerLeftVal=String(pageFieldValue(pageSettings.headerLeft||'office',p)||'');
+ const headerCenterVal=String(pageFieldValue(pageSettings.headerCenter||'',p)||'');
+ const headerRightVal=String(pageFieldValue(pageSettings.headerRight||'',p)||'');
+ const headerExtraVal=String(office?.extra||'');
+ const headerSize=Math.max(9.5,Number(pageSettings.headerSize)||10);
+ const headerExtraSize=Math.max(8,Number(pageSettings.headerExtraSize)||8.5);
+ const footerFit=footerSizeAdjusted();
+ const analystVersion=['Ativa '+APP_VERSION,pageSettings.footerAnalystVersion!==false?(pageSettings.analystText||''):''].filter(Boolean).join(' * ');
+ const pageCount=doc.internal.getNumberOfPages();
+ for(let i=1;i<=pageCount;i++){
+  doc.setPage(i);
+  doc.setFont(undefined,'normal');doc.setFontSize(headerSize);doc.setTextColor(...PDF_COLORS.band);
+  if(headerLeftVal)doc.text(headerLeftVal,marginLeft,10,{align:'left'});
+  if(headerCenterVal)doc.text(headerCenterVal,pageW/2,10,{align:'center'});
+  if(headerRightVal)doc.text(headerRightVal,pageW-marginRight,10,{align:'right'});
+  if(headerExtraVal){doc.setFontSize(headerExtraSize);doc.text(headerExtraVal,marginLeft,10+headerSize*0.42+2);}
+  doc.setDrawColor(...PDF_COLORS.bandLine);doc.setLineWidth(0.2);
+  doc.line(marginLeft,12.5,pageW-marginRight,12.5);
+  const outModelName=footerOutModelName(pageModel[i]||'','Relatório',pageCount);
+  const footerLeftVal=[p.code||'',outModelName].filter(Boolean).join(' · ');
+  const footerRightVal=String(i)+' / '+pageCount;
+  doc.line(marginLeft,pageH-9,pageW-marginRight,pageH-9);
+  doc.setFont(undefined,'normal');doc.setFontSize(footerFit.size);doc.setTextColor(...PDF_COLORS.band);
+  doc.text(footerLeftVal,marginLeft,pageH-6,{align:'left'});
+  if(analystVersion)doc.text(analystVersion,pageW/2,pageH-6,{align:'center'});
+  doc.text(footerRightVal,pageW-marginRight,pageH-6,{align:'right'});
+ }
+ return {blob:doc.output('blob'),photoFailures};
 }
 
 async function saveGeneratedFile(blob,suggestedName,mimeType='application/octet-stream'){
