@@ -866,6 +866,10 @@ function load(){
  catch(e){return{processes:[]}}
 }
 const DB_FALLBACK_KEY='ativa_v2_db_fallback';
+function storageIssueGuidance(){
+ if(location.protocol==='file:')return 'Isto costuma acontecer quando o ficheiro é aberto a partir da pré-visualização da app Ficheiros, que restringe a gravação — normalmente NÃO é falta de espaço no aparelho. Toque no ícone de partilha e escolha "Abrir no Safari" (ou: toque sem soltar no ficheiro → Partilhar → Safari); depois, em Safari, use Partilhar → Adicionar ao Ecrã Principal para evitar repetir isto.';
+ return 'Verifique o espaço de armazenamento disponível para este site (Definições do navegador → Privacidade/Dados de sites); pode também acontecer em navegação privada.';
+}
 async function saveDBFallback(){
  try{
    const store=await settingsStore('readwrite');
@@ -873,7 +877,8 @@ async function saveDBFallback(){
      const request=store.put({data:db,savedAt:new Date().toISOString()},DB_FALLBACK_KEY);
      request.onsuccess=()=>resolve();request.onerror=()=>reject(request.error);
    });
- }catch(e){}
+   return true;
+ }catch(e){return false}
 }
 async function loadDBFallback(){
  try{
@@ -898,13 +903,18 @@ function save(){
    if(dbSaveFailing){dbSaveFailing=false;clearDBFallback()}
    return true;
  }catch(e){
-   // localStorage está cheio: nada foi perdido — fica uma cópia de recurso em IndexedDB
-   // (sem o limite apertado do localStorage) até haver espaço para gravar em definitivo.
-   saveDBFallback();
-   if(!dbSaveFailing){
-     dbSaveFailing=true;
-     alert('Este dispositivo ficou sem espaço de armazenamento. Foi guardada uma cópia de recurso dos dados (nada foi perdido), mas a gravação definitiva está a falhar. Liberte espaço no dispositivo e, assim que possível, feche e reabra a aplicação para recuperar a cópia de recurso.');
-   }
+   // A gravação em localStorage falhou (comum em pré-visualizações file:// tipo app
+   // Ficheiros, não necessariamente por falta de espaço). Fica sempre uma cópia de
+   // recurso em IndexedDB, quando esta também estiver disponível nesta página.
+   const alreadyFailing=dbSaveFailing;
+   dbSaveFailing=true;
+   saveDBFallback().then(ok=>{
+     if(alreadyFailing)return;
+     alert((ok
+       ? 'Não foi possível gravar os dados de forma permanente nesta página. Foi guardada uma cópia de recurso e nada foi perdido até agora, mas as próximas alterações ficam em risco enquanto isto não for resolvido.'
+       : 'Não foi possível gravar os dados de forma permanente nesta página, nem sequer numa cópia de recurso — há um risco real de perder as próximas alterações se a página for recarregada.'
+     )+' '+storageIssueGuidance());
+   });
    return false;
  }
 }
@@ -913,7 +923,7 @@ function warnStorageFailure(){
  const now=Date.now();
  if(now-storageWarnedAt<4000)return;
  storageWarnedAt=now;
- try{alert('Não foi possível guardar esta alteração neste dispositivo (espaço insuficiente ou navegação privada). A alteração pode perder-se ao recarregar a página.')}catch(e){}
+ try{alert('Não foi possível guardar esta alteração nesta página. '+storageIssueGuidance()+' A alteração pode perder-se ao recarregar a página.')}catch(e){}
 }
 
 const CFG_KEY='ativa_v2_group_config';
@@ -1714,9 +1724,9 @@ restoreFile.onchange=async()=>{
    if(!failed.length){
      alert('Arquivo carregado com sucesso.');
    }else if(dbSaved){
-     alert('Os Processos foram carregados e gravados com sucesso. Por falta de espaço neste dispositivo, NÃO foi possível gravar de forma permanente: '+failed.join(', ')+'. Liberte espaço e repita o Backup_IN para gravar estas definições em definitivo.');
+     alert('Os Processos foram carregados e gravados com sucesso. NÃO foi possível gravar de forma permanente: '+failed.join(', ')+'. '+storageIssueGuidance()+' Depois, repita o Backup_IN para gravar estas definições em definitivo.');
    }else{
-     alert('Por falta de espaço neste dispositivo, os dados deste Backup_IN NÃO foram gravados de forma permanente (foi guardada uma cópia de recurso — nada foi perdido). Liberte espaço; ao reabrir a aplicação a cópia de recurso será recuperada automaticamente.');
+     alert('Os dados deste Backup_IN NÃO foram gravados de forma permanente (foi guardada uma cópia de recurso — nada foi perdido, desde que a página não seja recarregada). '+storageIssueGuidance());
    }
  }catch(e){
    alert('Não foi possível carregar este arquivo de segurança.');
@@ -2001,12 +2011,8 @@ function renderCharacterEditor(){
  elPhotoInfo.textContent=photos.length+' fotografia(s) · '+coverCount+' de capa · preenchimento essencial: '+pct+'%';
  void renderPhotoList(t);
 }
-function persistCharacter(){
- let a=asset(),t=targetChar(); if(!a||!t)return;
- const definition=cAssetType.value?assetTypeDefinition(cAssetType.value):null;
- if(cAssetType.value&&definition){a.type=cAssetType.value.trim();a.group=definition.group||'';cAssetGroup.value=a.group}
- else if(!cAssetType.value){a.type='';a.group='';cAssetGroup.value=''}
- a.currentUse=cCurrentUse.value;
+function captureCharacterFields(){
+ let t=targetChar(); if(!t)return false;
  t.char=t.char||{};
  document.querySelectorAll('#dynamicFields [data-f]').forEach(x=>t.char[x.dataset.f]=x.value);
  t.char.__obs=cObs.value;
@@ -2015,9 +2021,27 @@ function persistCharacter(){
    abd:qABD.value, st:qST.value, sc:qSC.value, sd:qSD.value,
    documents:[...qDocs.querySelectorAll('input[type="checkbox"]:checked')].map(input=>input.value)
  };
+ return true;
+}
+function persistCharacter(){
+ let a=asset(),t=targetChar(); if(!a||!t)return;
+ const definition=cAssetType.value?assetTypeDefinition(cAssetType.value):null;
+ if(cAssetType.value&&definition){a.type=cAssetType.value.trim();a.group=definition.group||'';cAssetGroup.value=a.group}
+ else if(!cAssetType.value){a.type='';a.group='';cAssetGroup.value=''}
+ a.currentUse=cCurrentUse.value;
+ captureCharacterFields();
  markAssetStarted(proc(),asset());
  save();
 }
+// Captura em cada tecla (sem gravação imediata) para que o texto/valores não se
+// percam se o formulário for redesenhado antes de sair do campo (blur/change);
+// a gravação em si fica com um pequeno atraso para não sobrecarregar a escrita.
+dynamicFields.addEventListener('input',event=>{if(event.target?.dataset?.f){captureCharacterFields();saveSoon(600)}});
+cObs.addEventListener('input',()=>{captureCharacterFields();saveSoon(600)});
+['qQtd','qAT','qAI','qABP','qABD','qST','qSC','qSD'].forEach(id=>{
+ const el=document.getElementById(id);
+ if(el)el.addEventListener('input',()=>{captureCharacterFields();saveSoon(600)});
+});
 cAssetType.addEventListener('change',()=>{const definition=assetTypeDefinition(cAssetType.value);if(cAssetType.value&&!definition){alert('O Tipo selecionado ainda não está classificado. Edite a Tabela de Tipos e atribua-lhe um Grupo.');cAssetType.value=asset()?.type||'';return}persistCharacter();renderCharacterEditor();updateContext()});
 
 // Collect every value still visible in the active editor before an operation
@@ -3858,7 +3882,7 @@ async function checkDBFallbackRecovery(){
    const localEmpty=!Array.isArray(db.processes)||!db.processes.length;
    const fallbackNewer=!localSavedAt||fb.savedAt>localSavedAt;
    if(!fallbackNewer)return;
-   const proceed=localEmpty||confirm('Foi encontrada uma cópia de recurso de dados mais recente, guardada quando este dispositivo ficou sem espaço de armazenamento. Pretende recuperá-la agora? (substitui os dados atualmente carregados pelos da cópia de recurso)');
+   const proceed=localEmpty||confirm('Foi encontrada uma cópia de recurso de dados mais recente, guardada porque a gravação definitiva estava a falhar nesta página. Pretende recuperá-la agora? (substitui os dados atualmente carregados pelos da cópia de recurso)');
    if(!proceed)return;
    db=normaliseDB(fb.data);
    currentProcess=null;rememberCurrentProcess();
