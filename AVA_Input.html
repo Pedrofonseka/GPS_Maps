@@ -320,6 +320,9 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
  <div id="assetEditor" class="card hidden">
   <h3 id="assetEditorTitle">Novo Ativo</h3>
   <div class="row"><div><label>Código</label><input id="aCode" readonly></div><div><label>ID_Institucional <span class="id-hint">Art. matricial · Registo · Matrícula</span></label><input id="aRef" placeholder="Ex.: Art. U 2555 · CRP 1234 · 00-AA-00"></div></div>
+  <label>Agrupar com outro Ativo <small class="note">(opcional — para imóveis fisicamente próximos que quer numerar em conjunto, ex.: 001.1/001.2; a caracterização de cada Ativo mantém-se sempre totalmente separada)</small></label>
+  <select id="aGroupWith"><option value="">— Ativo autónomo (código próprio) —</option></select>
+  <div id="aGroupInfo" class="muted" style="margin-top:4px"></div>
   <div><label>Status do Ativo</label><select id="aStatus"><option value="ON">ON — Ativo</option><option value="OFF">OFF — Suspenso/inativo</option></select></div>
   <label>Designação</label><input id="aName">
   <label>Endereço / Local</label><input id="aLocal">
@@ -623,7 +626,7 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
 // Do not depend on browsers exposing element IDs as automatic global variables.
 // Several iOS file viewers/WebViews do not provide that legacy behaviour.
 const {
- aCode,aConc,aDoorNumber,aFloor,aFreg,aGPS,aGPSInfo,aInspectionStatus,aKMLInfo,aLocal,aName,aObs,aPostalCode,aRef,aStatus,aVisitDate,aVisitTime,aVisitEnd,assetStatusAuto,assetVisitPeople,aVisitOther,postalCodeSuggestions,cAssetType,cAssetGroup,cCurrentUse,cDestinationChecks,
+ aCode,aConc,aDoorNumber,aFloor,aFreg,aGPS,aGPSInfo,aGroupWith,aGroupInfo,aInspectionStatus,aKMLInfo,aLocal,aName,aObs,aPostalCode,aRef,aStatus,aVisitDate,aVisitTime,aVisitEnd,assetStatusAuto,assetVisitPeople,aVisitOther,postalCodeSuggestions,cAssetType,cAssetGroup,cCurrentUse,cDestinationChecks,
  addNUF,addProcessStakeholder,assetEditor,assetEditorTitle,assetList,autoAssetCount,autoAssetRows,autoProcessCard,autoProcessCode,autoProcessName,autoProcessRef,backCharacter,backupAll,backupInfo,lastBackupInfo,cancelAutoProcess,cancelVisit,cObs,cameraPhoto,cancelNewProcess,createAutoProcess,downloadAssetTemplate,exportVisits,visitsReport,
  adjustOrientation,cfgAddField,cfgFieldHelp,cfgFieldHelpText,cfgFields,cfgFieldsSection,cfgFooterCenter,cfgFooterLeft,cfgFooterRight,cfgFooterSize,cfgFooterAutoFit,cfgFooterDistance,cfgFooterFontSizeLegacy,cfgFooterTextLeft,cfgFooterTextCenter,cfgFooterTextRight,cfgFooterAnalystVersion,cfgGroup,cfgGroupName,cfgHeaderCenter,cfgHeaderLeft,cfgHeaderRight,cfgHeaderSize,cfgHeaderDistance,cfgHeaderGabineteSize,cfgHeaderGabineteBold,cfgHeaderTitleSize,cfgHeaderTitleBold,cfgHeaderExtraEnabled,cfgHeaderExtraText,cfgHeaderExtraSize,cfgMarginBottom,cfgMarginLeft,cfgMarginRight,cfgMarginTop,cfgOutputHelp,cfgOutputHelpText,cfgOutputValues,cfgCoverContentValues,cfgResetCoverContent,cfgOutModelSelect,cfgOutModelZones,cfgOutModelAddField,cfgOutModelInfo,cfgOutputsSection,cfgFontFamily,cfgPageInfo,cfgPageOrientation,cfgTopContext,cfgTopContextSize,cfgPageTitleMode,cfgPageTitleSize,cfgPhotoInfo,cfgPhotoMaxSide,cfgPhotoQuality,cfgResetOutput,cfgResetPage,cfgResetPhotos,cfgRestore,cfgRotateQuality,cfgSavePage,cfgSavePhotos,cfgTable,cfgTableAdd,cfgTableGroup,cfgTableGroupBox,cfgTableNew,cfgTableNewLabel,cfgParishMunicipality,cfgParishMunicipalityBox,cfgTablesSection,cfgTableValues,cfgTableInfo,charTitle,characterEditor,characterList,characterPick,chooseFolder,closeAsset,closeConfig,coverCols,coverMinPhotos,
  configBody,configModal,configTabs,cfgPageSection,cfgPhotosSection,cfgStructureSection,dCode,dDeadline,dInputDate,dName,dOffice,dObs,dPurpose,dService,dRef,dRequestDescription,dRequester,dStatus,dValueBase,deleteAsset,deleteProcess,
@@ -738,7 +741,7 @@ const groups=LEGACY_GROUP_SCHEMAS; // nomes/âmbito dos grupos; os campos de car
 const CONSERVATION_OPTIONS=['Muito bom','Bom','Razoável','Mau','Muito mau'];
 const TOPOGRAPHY_OPTIONS=['Plana','Suave','Acidentada','Mista'];
 const NUF_VARIABLE_DEFAULTS=[
- {id:'descricao_sumaria',label:'Descrição sumária',type:'textarea',wide:1,groups:['TOF','TRN','TAC','EDC','VEI','MOB','MEQ','OTS','NID','SEP']},
+ {id:'descricao_sumaria',label:'Descrição do conjunto',type:'textarea',wide:1,groups:['TOF','TRN','TAC','EDC','VEI','MOB','MEQ','OTS','NID','SEP']},
  {id:'composicao',label:'Composição',type:'textarea',wide:1,groups:['TOF','TRN','TAC','EDC','VEI','MOB','MEQ','OTS','NID','SEP']},
  {id:'uso_atual',label:'Uso atual',type:'text',groups:['TOF','TRN','TAC','EDC']},
  {id:'uso_potencial',label:'Uso potencial',type:'text',groups:['TOF','TRN','TAC','EDC']},
@@ -824,6 +827,17 @@ function normaliseDB(raw){
    p.visits.forEach(visit=>{visit.id=visit.id||uid();visit.participantIds=Array.isArray(visit.participantIds)?visit.participantIds:[];visit.assets=Array.isArray(visit.assets)?visit.assets:[]});
    p.origin=p.origin||'legacy';
    p.assets=Array.isArray(p.assets)?p.assets:[];
+   // Cada Ativo pertence a um "cluster" de numeração (clusterNo); por defeito é o único
+   // membro do seu próprio cluster (código simples). Instalações antigas sem este campo
+   // herdam o número já presente no código, preservando o código atual sem alterações.
+   p.assets.forEach(a=>{
+     if(!Number.isFinite(a.clusterNo)||a.clusterNo<=0){
+       const parsed=parseInt((a.code||'').match(/\d+/)?.[0]);
+       a.clusterNo=Number.isFinite(parsed)&&parsed>0?parsed:0;
+     }
+   });
+   let nextClusterSeed=(p.assets.length?Math.max(0,...p.assets.map(a=>a.clusterNo)):0)+1;
+   p.assets.forEach(a=>{if(!a.clusterNo)a.clusterNo=nextClusterSeed++});
    p.assets.forEach(a=>{
      a.id=a.id||uid();a.idAtivo=a.idAtivo||a.id;
      a.status=a.status==='OFF'?'OFF':'ON';
@@ -852,6 +866,7 @@ function normaliseDB(raw){
      a.split=true;a.char={};a.qtyAreas={};a.photos=[];
      try{delete a.items}catch(e){}
    });
+   syncAssetCodes(p);
  });
  return clean;
 }
@@ -1088,6 +1103,8 @@ function migrateCaracterizacaoFields(){
  let changed=false;
  const acesso=nufVariables.find(v=>v.id==='acessibilidades');
  if(acesso&&acesso.label!=='Acesso Urbano'){acesso.label='Acesso Urbano';changed=true}
+ const sumaria=nufVariables.find(v=>v.id==='descricao_sumaria');
+ if(sumaria&&sumaria.label!=='Descrição do conjunto'){sumaria.label='Descrição do conjunto';changed=true}
  if(!nufVariables.some(v=>v.id==='composicao')){
    const afterIndex=nufVariables.findIndex(v=>v.id==='descricao_sumaria');
    const composicao=normalizeVariable({id:'composicao',label:'Composição',type:'textarea',wide:1,state:'active',groups:['TOF','TRN','TAC','EDC','VEI','MOB','MEQ','OTS','NID','SEP']},afterIndex>=0?afterIndex+1:nufVariables.length);
@@ -1801,7 +1818,22 @@ async function deleteProcessById(processId){
 }
 deleteProcess.onclick=()=>{const p=proc();if(p)void deleteProcessById(p.id)};
 
-function nextAssetCode(p){let n=(p.assets.length?Math.max(...p.assets.map(a=>parseInt((a.code||'').match(/\d+/)?.[0]||0))):0)+1;return 'ATV_'+String(n).padStart(3,'0')}
+function nextClusterNo(p){let n=0;(p.assets||[]).forEach(a=>{if(Number.isFinite(a.clusterNo))n=Math.max(n,a.clusterNo)});return n+1}
+function clusterCode(clusterNo,position,total){const base='ATV_'+String(clusterNo).padStart(3,'0');return total>1?base+'.'+position:base}
+// Recalcula o código de todos os Ativos a partir do respetivo clusterNo: um cluster com um
+// só Ativo mantém o código simples (ATV_002); um cluster com vários Ativos agrupados usa
+// o sufixo .1/.2/... — cada Ativo continua com caracterização totalmente independente.
+function syncAssetCodes(p){
+ const byCluster=new Map();
+ (p.assets||[]).forEach(a=>{
+   if(!byCluster.has(a.clusterNo))byCluster.set(a.clusterNo,[]);
+   byCluster.get(a.clusterNo).push(a);
+ });
+ byCluster.forEach(members=>{
+   members.forEach((a,i)=>{a.code=clusterCode(a.clusterNo,i+1,members.length);syncNUFCodes(a)});
+ });
+}
+function clusterMembers(p,clusterNo){return (p.assets||[]).filter(a=>a.clusterNo===clusterNo)}
 function nufCode(a,index){return (a?.code||'ATV_001')+'.'+String(index+1)}
 function createNUF(a,name='Ativo 1'){
  const id=uid(),index=(a?.nufs||[]).length;
@@ -1853,11 +1885,47 @@ aFreg.addEventListener('change',()=>{const match=(appTables.parishes||[]).find(x
 let assetDateCommitTimer=null;
 aVisitDate.addEventListener('change',()=>{clearTimeout(assetDateCommitTimer);assetDateCommitTimer=setTimeout(persistExistingAsset,3000)});
 newAsset.onclick=()=>openAsset(null);
+function renderGroupControl(p,a){
+ if(!aGroupWith)return;
+ const others=(p.assets||[]).filter(x=>!a.id||x.id!==a.id);
+ const seen=new Set();
+ const optionsHTML=others.filter(x=>{if(seen.has(x.clusterNo))return false;seen.add(x.clusterNo);return true})
+   .map(x=>{
+     const members=clusterMembers(p,x.clusterNo).filter(m=>!a.id||m.id!==a.id);
+     const label=members.map(m=>m.code+(m.name?' '+m.name:'')).join(' + ');
+     return `<option value="${x.clusterNo}">${esc(label)}</option>`;
+   }).join('');
+ aGroupWith.innerHTML='<option value="">— Ativo autónomo (código próprio) —</option>'+optionsHTML;
+ aGroupWith.value=[...aGroupWith.options].some(o=>o.value===String(a.clusterNo))?String(a.clusterNo):'';
+ updateGroupInfo(p,a);
+}
+function updateGroupInfo(p,a){
+ if(!aGroupInfo)return;
+ const others=clusterMembers(p,a.clusterNo).filter(m=>!a.id||m.id!==a.id);
+ if(!others.length){aGroupInfo.textContent='Ativo autónomo — código próprio, sem outros Ativos agrupados.';return}
+ aGroupInfo.textContent=(a.id?'Agrupado com: ':'Ficará agrupado com: ')+others.map(m=>m.code+(m.name?' — '+m.name:'')).join('; ')+'.';
+}
+aGroupWith.onchange=()=>{
+ const p=proc(),a=assetEditor._draft;if(!p||!a)return;
+ const chosen=aGroupWith.value?Number(aGroupWith.value):null;
+ a.clusterNo=chosen||nextClusterNo(p);
+ if(editingAsset){
+   syncAssetCodes(p);aCode.value=a.code;
+   historyAdd(p,'asset_grouped',(a.code||'Ativo')+' — agrupamento de numeração alterado.',a.id);
+   save();renderAssets();
+ }else{
+   const position=clusterMembers(p,a.clusterNo).length+1;
+   aCode.value=clusterCode(a.clusterNo,position,position);
+ }
+ renderGroupControl(p,a);
+};
 function openAsset(id){
- let p=proc();editingAsset=id;let a=id?p.assets.find(x=>x.id===id):{code:nextAssetCode(p),ref:'',name:'',status:'ON',type:'',group:'',currentUse:'',local:'',doorNumber:'',floor:'',postalCode:'',freg:'',conc:'',visitDate:'',visitTime:'',visitEnd:'',visitParticipantIds:[],visitOtherPeople:'',inspectionStatus:'',gps:'',obs:'',split:true,nufs:[],char:{},photos:[],origin:'manual'};
+ let p=proc();editingAsset=id;let a=id?p.assets.find(x=>x.id===id):{clusterNo:nextClusterNo(p),ref:'',name:'',status:'ON',type:'',group:'',currentUse:'',local:'',doorNumber:'',floor:'',postalCode:'',freg:'',conc:'',visitDate:'',visitTime:'',visitEnd:'',visitParticipantIds:[],visitOtherPeople:'',inspectionStatus:'',gps:'',obs:'',split:true,nufs:[],char:{},photos:[],origin:'manual'};
+ if(!id)a.code=clusterCode(a.clusterNo,1,1);
  if(aGPSInfo){aGPSInfo.textContent='';aGPSInfo.classList.remove('gps-weak')}
  if(!a.nufs?.length)a.nufs=[createNUF(a)];syncNUFCodes(a);
  refreshConfiguredSelects();assetEditor.classList.remove('hidden');assetEditorTitle.textContent=id?'Editar Ativo':'Novo Ativo';aCode.value=a.code;aRef.value=a.ref||'';aName.value=a.name||'';aStatus.value=a.status||'ON';aLocal.value=a.local||'';aDoorNumber.value=a.doorNumber||'';aFloor.value=a.floor||'';aPostalCode.value=formatPostalCode(a.postalCode||'');aFreg.value=a.freg||'';aConc.value=a.conc||'';aVisitDate.value=a.visitDate||'';aVisitTime.value=a.visitTime||'';aVisitEnd.value=a.visitEnd||'';a.visitParticipantIds=Array.isArray(a.visitParticipantIds)?a.visitParticipantIds:[];aVisitOther.value=a.visitOtherPeople||'';assetVisitPeople.innerHTML=(p.participants||[]).map(person=>`<label class="pill"><input type="checkbox" data-asset-visit-person="${person.id}" style="width:auto" ${a.visitParticipantIds.includes(person.id)?'checked':''}> ${esc([person.name,person.role].filter(Boolean).join(' — '))}</label>`).join('')||'<span class="muted">Não existem Intervenientes definidos no Processo; use o campo seguinte.</span>';assetVisitPeople.querySelectorAll('[data-asset-visit-person]').forEach(x=>x.onchange=persistExistingAsset);a.inspectionStatus=automaticInspectionStatus(a);aInspectionStatus.value=a.inspectionStatus;assetStatusAuto.textContent=assetOperationalStatus(a);aGPS.value=assetGPS(a);aObs.value=a.obs||'';
+ renderGroupControl(p,a);
  nufsBox.classList.remove('hidden');renderNUFs(a);renderAssetDynamicVariables();deleteAsset.classList.toggle('hidden',!id);assetEditor._draft=a;updateContext()
 }
 addNUF.onclick=()=>{let a=assetEditor._draft,n=createNUF(a,'Ativo '+String(a.nufs.length+1));a.nufs.push(n);syncNUFCodes(a);renderNUFs(a);if(editingAsset){historyAdd(proc(),'asset_part_added',(a.code||'Núcleo')+' — Ativo '+n.code+' acrescentado.',a.id);saveSoon()}}
@@ -1879,11 +1947,12 @@ function duplicateAsIndependentAsset(a,id){
  const source=a.nufs.find(n=>n.id===id);if(!source)return;
  if(!confirm('Criar um novo Ativo independente (novo núcleo, com o próprio código) a partir de "'+(source.name||'Ativo 1')+'"?\n\nA classificação e a caracterização são copiadas; endereço, GPS, dados da visita e fotografias ficam em branco, por se tratar de outro local.'))return;
  const newAsset={ref:'',name:a.name||'',status:'ON',type:a.type||'',group:a.group||'',currentUse:a.currentUse||'',local:'',doorNumber:'',floor:'',postalCode:'',freg:'',conc:'',visitDate:'',visitTime:'',visitEnd:'',visitParticipantIds:[],visitOtherPeople:'',inspectionStatus:'',gps:'',obs:'',split:true,nufs:[],char:{},photos:[],origin:'manual'};
- newAsset.code=nextAssetCode(p);newAsset.id=uid();newAsset.idAtivo=newAsset.id;newAsset.createdAt=new Date().toISOString();
+ newAsset.clusterNo=nextClusterNo(p);newAsset.id=uid();newAsset.idAtivo=newAsset.id;newAsset.createdAt=new Date().toISOString();
  const firstNUF=createNUF(newAsset,'Ativo 1');
  firstNUF.char=JSON.parse(JSON.stringify(source.char||{}));firstNUF.qtyAreas=JSON.parse(JSON.stringify(source.qtyAreas||{}));
- newAsset.nufs=[firstNUF];syncNUFCodes(newAsset);newAsset.inspectionStatus=automaticInspectionStatus(newAsset);
+ newAsset.nufs=[firstNUF];newAsset.inspectionStatus=automaticInspectionStatus(newAsset);
  p.assets.push(newAsset);
+ syncAssetCodes(p);
  historyAdd(p,'asset_created',newAsset.code+' — criado como núcleo independente a partir de '+(a.code||'Ativo')+' ('+(source.name||'Ativo 1')+'); classificação e caracterização copiadas, localização e fotografias por preencher.',newAsset.id,'manual');
  save();
  assetEditor.classList.add('hidden');
@@ -1896,9 +1965,9 @@ async function deleteNUF(a,id){
  for(const p of (n.photos||[])){try{await photoDeleteBlob(p.id)}catch(e){}}
  a.nufs=a.nufs.filter(v=>v.id!==id);syncNUFCodes(a);if(editingAsset){historyAdd(proc(),'nuf_deleted',(a.code||'Ativo')+' — '+(n.code||'SUB/NUF')+' eliminado.',a.id);save()}renderNUFs(a);
 }
-saveAsset.onclick=()=>{let p=proc(),a=assetEditor._draft,previousInspection=a.inspectionStatus||'';Object.assign(a,{code:aCode.value,ref:aRef.value.trim(),name:aName.value.trim(),status:aStatus.value||'ON',local:aLocal.value.trim(),doorNumber:aDoorNumber.value.trim(),floor:aFloor.value.trim(),postalCode:formatPostalCode(aPostalCode.value),freg:aFreg.value.trim(),conc:aConc.value.trim(),visitDate:aVisitDate.value,visitTime:aVisitTime.value,visitEnd:aVisitEnd.value,visitParticipantIds:[...assetVisitPeople.querySelectorAll('[data-asset-visit-person]:checked')].map(x=>x.dataset.assetVisitPerson),visitOtherPeople:aVisitOther.value.trim(),
+saveAsset.onclick=()=>{let p=proc(),a=assetEditor._draft,previousInspection=a.inspectionStatus||'';Object.assign(a,{ref:aRef.value.trim(),name:aName.value.trim(),status:aStatus.value||'ON',local:aLocal.value.trim(),doorNumber:aDoorNumber.value.trim(),floor:aFloor.value.trim(),postalCode:formatPostalCode(aPostalCode.value),freg:aFreg.value.trim(),conc:aConc.value.trim(),visitDate:aVisitDate.value,visitTime:aVisitTime.value,visitEnd:aVisitEnd.value,visitParticipantIds:[...assetVisitPeople.querySelectorAll('[data-asset-visit-person]:checked')].map(x=>x.dataset.assetVisitPerson),visitOtherPeople:aVisitOther.value.trim(),
  gps:aGPS.value.trim(),obs:aObs.value,
- split:true});a.inspectionStatus=automaticInspectionStatus(a);if(!a.nufs?.length)a.nufs=[createNUF(a)];syncNUFCodes(a);if(!editingAsset){const later=!!p.startedAt;a.id=uid();a.idAtivo=a.id;a.createdAt=new Date().toISOString();a.origin='manual';p.assets.push(a);historyAdd(p,'asset_created',(a.code||'Ativo')+(later?' — acrescentado posteriormente.':' — criado.'),a.id,'manual');if(a.inspectionStatus)historyAdd(p,'inspection_changed',(a.code||'Ativo')+' — estado inicial: '+inspectionLabel(a.inspectionStatus)+'.',a.id)}else a.idAtivo=a.idAtivo||a.id;if(editingAsset&&previousInspection!==(a.inspectionStatus||''))historyAdd(p,'inspection_changed',(a.code||'Ativo')+' — estado alterado para: '+inspectionLabel(a.inspectionStatus)+'.',a.id);markAssetStarted(p,a);save();assetEditor.classList.add('hidden');renderAssets()}
+ split:true});a.inspectionStatus=automaticInspectionStatus(a);if(!a.nufs?.length)a.nufs=[createNUF(a)];if(!editingAsset){const later=!!p.startedAt;a.id=uid();a.idAtivo=a.id;a.createdAt=new Date().toISOString();a.origin='manual';if(!Number.isFinite(a.clusterNo)||a.clusterNo<=0)a.clusterNo=nextClusterNo(p);p.assets.push(a);syncAssetCodes(p);historyAdd(p,'asset_created',(a.code||'Ativo')+(later?' — acrescentado posteriormente.':' — criado.'),a.id,'manual');if(a.inspectionStatus)historyAdd(p,'inspection_changed',(a.code||'Ativo')+' — estado inicial: '+inspectionLabel(a.inspectionStatus)+'.',a.id)}else{a.idAtivo=a.idAtivo||a.id;syncAssetCodes(p)}if(editingAsset&&previousInspection!==(a.inspectionStatus||''))historyAdd(p,'inspection_changed',(a.code||'Ativo')+' — estado alterado para: '+inspectionLabel(a.inspectionStatus)+'.',a.id);markAssetStarted(p,a);save();assetEditor.classList.add('hidden');renderAssets()}
 
 getGPS.onclick=()=>{
  if(!navigator.geolocation){alert('Este navegador não permite obter o GPS. Introduza as coordenadas manualmente.');aGPS.focus();return}
@@ -1936,7 +2005,7 @@ downloadKML.onclick=async()=>{
 function escXML(value){return String(value||'').replace(/[<>&'\"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;',"'":'&apos;','"':'&quot;'}[c]))}
 
 closeAsset.onclick=()=>assetEditor.classList.add('hidden');
-deleteAsset.onclick=async()=>{if(!editingAsset)return;let p=proc(),a=p?.assets.find(x=>x.id===editingAsset);if(!a)return;const photos=(a.nufs||[]).flatMap(n=>n.photos||[]);if(!confirm('Eliminar este Ativo'+(photos.length?' e as respetivas '+photos.length+' fotografia(s)':'')+'?'))return;deleteAsset.disabled=true;for(const photo of photos){const preview=photoPreviewUrls.get(photo.id);if(preview){URL.revokeObjectURL(preview);photoPreviewUrls.delete(photo.id)}try{await photoDeleteBlob(photo.id)}catch(e){}}historyAdd(p,'asset_deleted',(a.code||'Ativo')+' — eliminado.',editingAsset);p.assets=p.assets.filter(item=>item.id!==editingAsset);editingAsset=null;save();assetEditor.classList.add('hidden');renderAssets();deleteAsset.disabled=false};
+deleteAsset.onclick=async()=>{if(!editingAsset)return;let p=proc(),a=p?.assets.find(x=>x.id===editingAsset);if(!a)return;const photos=(a.nufs||[]).flatMap(n=>n.photos||[]);if(!confirm('Eliminar este Ativo'+(photos.length?' e as respetivas '+photos.length+' fotografia(s)':'')+'?'))return;deleteAsset.disabled=true;for(const photo of photos){const preview=photoPreviewUrls.get(photo.id);if(preview){URL.revokeObjectURL(preview);photoPreviewUrls.delete(photo.id)}try{await photoDeleteBlob(photo.id)}catch(e){}}historyAdd(p,'asset_deleted',(a.code||'Ativo')+' — eliminado.',editingAsset);p.assets=p.assets.filter(item=>item.id!==editingAsset);editingAsset=null;syncAssetCodes(p);save();assetEditor.classList.add('hidden');renderAssets();deleteAsset.disabled=false};
 
 function fieldSchema(a){
  const vars=activeVariablesFor(nufVariables,String(a?.group||''));
