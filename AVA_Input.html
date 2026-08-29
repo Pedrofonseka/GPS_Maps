@@ -3995,11 +3995,17 @@ async function buildReportPDF(p){
  const headerHasExtra=!!String(officeForProcess(p)?.extra||'').trim();
  const headerBlockBottom=headerTopY+headerSizeCalc*0.42+(headerHasExtra?2+headerExtraSizeCalc*0.42:0);
  const contentTop=Math.max(marginTop,headerBlockBottom+6);
+ // Área reservada ao rodapé, espelhando a do cabeçalho: a "linha de fundo" e o
+ // texto do rodapé são desenhados a uma distância fixa do fundo físico da
+ // página: o conteúdo (texto OU grelhas de imagens) nunca pode ultrapassar
+ // essa reserva, mesmo que a margem inferior configurada seja mais pequena.
+ const footerReserve=11;
+ const contentBottom=pageH-Math.max(marginBottom,footerReserve);
  let y=contentTop,pageStarted=false,currentComponent='';
  const pageModel={};
  function tagPage(){pageModel[doc.internal.getNumberOfPages()]=currentComponent}
  function newPage(){if(pageStarted)doc.addPage();pageStarted=true;y=contentTop}
- function ensureSpace(h){if(y+h>pageH-marginBottom)newPage()}
+ function ensureSpace(h){if(y+h>contentBottom)newPage()}
  // Título da página — replica reportPageTitleHTML (mesmas regras de
  // pageTitleMode/pageTitleSize já definidas em Config. Página), sempre
  // desenhado depois da área reservada ao cabeçalho.
