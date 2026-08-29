@@ -819,15 +819,19 @@ function normaliseDB(raw){
  const source=(raw&&raw.data&&Array.isArray(raw.data.processes))?raw.data:raw;
  const clean=(source&&typeof source==='object')?source:{};
  clean.schemaVersion=Number(clean.schemaVersion)||DATA_SCHEMA_VERSION;
- clean.processes=Array.isArray(clean.processes)?clean.processes:[];
+ clean.processes=(Array.isArray(clean.processes)?clean.processes:[]).filter(p=>p&&typeof p==='object');
  clean.processes.forEach(p=>{
+  // Um Processo com dados inesperados nunca pode travar a migração dos
+  // restantes Processos — o mesmo raciocínio do try/catch por Ativo, um
+  // nível acima.
+  try{
    p.history=Array.isArray(p.history)?p.history:[];
    p.participants=Array.isArray(p.participants)?p.participants:[];
    p.participants.forEach(person=>{person.id=person.id||uid();person.name=String(person.name||'');person.role=String(person.role||'');person.phone=String(person.phone||'');person.email=String(person.email||'');person.obs=String(person.obs||'');person.reusable=!!person.reusable});
    p.visits=Array.isArray(p.visits)?p.visits:[];
    p.visits.forEach(visit=>{visit.id=visit.id||uid();visit.participantIds=Array.isArray(visit.participantIds)?visit.participantIds:[];visit.assets=Array.isArray(visit.assets)?visit.assets:[]});
    p.origin=p.origin||'legacy';
-   p.assets=Array.isArray(p.assets)?p.assets:[];
+   p.assets=(Array.isArray(p.assets)?p.assets:[]).filter(a=>a&&typeof a==='object');
    // Cada Ativo pertence a um "cluster" de numeração (clusterNo); por defeito é o único
    // membro do seu próprio cluster (código simples). Instalações antigas sem este campo
    // herdam o número já presente no código, preservando o código atual sem alterações.
@@ -849,40 +853,59 @@ function normaliseDB(raw){
    const isGenericPartName=v=>!v||/^Item\s+\d+/i.test(v)||/^Núcleo geral$/i.test(v)||/^SUB\/NUF/i.test(v)||/^Parte principal$/i.test(v)||/^Núcleo\s+\d+/i.test(v)||/^Parte\s+\d+/i.test(v)||/^Ativo\s+\d+/i.test(v);
    const extraAssets=[];
    p.assets.forEach(a=>{
-     a.id=a.id||uid();a.idAtivo=a.idAtivo||a.id;
-     a.status=a.status==='OFF'?'OFF':'ON';
-     delete a.docDesc;
-     a.currentUse=String(a.currentUse||'');
-     a.inspectionStatus=['partial','integral'].includes(a.inspectionStatus)?a.inspectionStatus:'';
-     a.origin=a.origin||'legacy';
-     const legacyParts=Array.isArray(a.nufs)?a.nufs:(Array.isArray(a.items)?a.items:[]);
-     const parts=legacyParts.length?legacyParts:[{char:a.char||{},qtyAreas:a.qtyAreas||{},photos:Array.isArray(a.photos)?a.photos:[]}];
-     parts.forEach(n=>{
-       n.photos=Array.isArray(n.photos)?n.photos:[];
-       n.char=n.char||{};
-       if(Object.prototype.hasOwnProperty.call(n.char,'Descrição sumária')&&!Object.prototype.hasOwnProperty.call(n.char,'Composição')){n.char['Composição']=n.char['Descrição sumária'];delete n.char['Descrição sumária']}
-       n.qtyAreas=n.qtyAreas||{};
-     });
-     const [first,...rest]=parts;
-     a.char=first.char;a.qtyAreas=first.qtyAreas;a.photos=first.photos;
-     try{delete a.items}catch(e){}
-     try{delete a.nufs}catch(e){}
-     try{delete a.split}catch(e){}
-     rest.forEach(n=>{
-       const nid=uid();
-       extraAssets.push({
-         id:nid,idAtivo:nid,
-         ref:'',name:isGenericPartName(n.name)?(a.name||''):n.name,status:a.status,type:a.type||'',group:a.group||'',currentUse:a.currentUse||'',
-         local:a.local||'',doorNumber:a.doorNumber||'',floor:a.floor||'',postalCode:a.postalCode||'',freg:a.freg||'',conc:a.conc||'',
-         visitDate:a.visitDate||'',visitTime:a.visitTime||'',visitEnd:a.visitEnd||'',visitParticipantIds:Array.isArray(a.visitParticipantIds)?a.visitParticipantIds.slice():[],visitOtherPeople:a.visitOtherPeople||'',
-         inspectionStatus:'',gps:a.gps||'',obs:'',origin:a.origin||'legacy',createdAt:new Date().toISOString(),
-         clusterNo:a.clusterNo,
-         char:n.char,qtyAreas:n.qtyAreas,photos:n.photos
+     // Um Ativo com dados inesperados (ex.: resíduo de uma gravação falhada,
+     // como um valor null dentro de nufs/items) nunca pode travar a migração
+     // dos restantes Ativos — sem este try/catch, uma exceção aqui abortava
+     // normaliseDB inteiro e TODOS os Ativos ficavam por migrar (fotografias
+     // presas nos nufs antigos, invisíveis, embora não apagadas).
+     try{
+       a.id=a.id||uid();a.idAtivo=a.idAtivo||a.id;
+       a.status=a.status==='OFF'?'OFF':'ON';
+       delete a.docDesc;
+       a.currentUse=String(a.currentUse||'');
+       a.inspectionStatus=['partial','integral'].includes(a.inspectionStatus)?a.inspectionStatus:'';
+       a.origin=a.origin||'legacy';
+       const rawParts=Array.isArray(a.nufs)?a.nufs:(Array.isArray(a.items)?a.items:[]);
+       const legacyParts=rawParts.filter(n=>n&&typeof n==='object');
+       const parts=legacyParts.length?legacyParts:[{char:a.char||{},qtyAreas:a.qtyAreas||{},photos:Array.isArray(a.photos)?a.photos:[]}];
+       parts.forEach(n=>{
+         n.photos=Array.isArray(n.photos)?n.photos:[];
+         n.char=n.char||{};
+         if(Object.prototype.hasOwnProperty.call(n.char,'Descrição sumária')&&!Object.prototype.hasOwnProperty.call(n.char,'Composição')){n.char['Composição']=n.char['Descrição sumária'];delete n.char['Descrição sumária']}
+         n.qtyAreas=n.qtyAreas||{};
        });
-     });
+       const [first,...rest]=parts;
+       // Nunca substituir cegamente: se a.photos (nível de topo) tiver alguma
+       // fotografia que ainda não esteja em first.photos — ex.: adicionada
+       // enquanto a app corria com dados por migrar — junta-se em vez de a
+       // perder, tal como a própria migração antiga do NUF já fazia.
+       if(Array.isArray(a.photos)&&a.photos.length&&a.photos!==first.photos){
+         const known=new Set(first.photos.map(x=>x&&x.id));
+         a.photos.forEach(x=>{if(x&&!known.has(x.id))first.photos.push(x)});
+       }
+       a.char=first.char;a.qtyAreas=first.qtyAreas;a.photos=first.photos;
+       delete a.items;delete a.nufs;delete a.split;
+       rest.forEach(n=>{
+         const nid=uid();
+         extraAssets.push({
+           id:nid,idAtivo:nid,
+           ref:'',name:isGenericPartName(n.name)?(a.name||''):n.name,status:a.status,type:a.type||'',group:a.group||'',currentUse:a.currentUse||'',
+           local:a.local||'',doorNumber:a.doorNumber||'',floor:a.floor||'',postalCode:a.postalCode||'',freg:a.freg||'',conc:a.conc||'',
+           visitDate:a.visitDate||'',visitTime:a.visitTime||'',visitEnd:a.visitEnd||'',visitParticipantIds:Array.isArray(a.visitParticipantIds)?a.visitParticipantIds.slice():[],visitOtherPeople:a.visitOtherPeople||'',
+           inspectionStatus:'',gps:a.gps||'',obs:'',origin:a.origin||'legacy',createdAt:new Date().toISOString(),
+           clusterNo:a.clusterNo,
+           char:n.char,qtyAreas:n.qtyAreas,photos:n.photos
+         });
+       });
+     }catch(e){
+       console.error('Falha ao migrar o Ativo '+(a&&(a.code||a.id)||'desconhecido')+' — dados mantidos tal como estavam para não arriscar perder fotografias.',e);
+     }
    });
    if(extraAssets.length)p.assets.push(...extraAssets);
    syncAssetCodes(p);
+  }catch(e){
+   console.error('Falha ao migrar o Processo '+(p&&(p.code||p.id)||'desconhecido')+' — dados mantidos tal como estavam para não arriscar perder o resto do Processo.',e);
+  }
  });
  return clean;
 }
@@ -4182,7 +4205,11 @@ function initialiseApp(){
    updateContext();
    applyPageSettings();
    // Arranque leve para iPhone/iPad: tarefas não essenciais ficam fora do primeiro desenho.
-   const finishLightBoot=()=>{try{db=normaliseDB(db);reconcileUnclassifiedAssets();lightBoot=false;renderProcesses()}catch(e){console.warn('dashboard diferido',e)}};
+   // normaliseDB já protege cada Processo/Ativo individualmente com try/catch, por
+   // isso não deve voltar a rebentar aqui — mas se algo mesmo assim falhar, nunca
+   // mais esconder isso num simples aviso de consola: os dados ficariam presos no
+   // estado não migrado (ex.: fotografias invisíveis) sem o utilizador saber porquê.
+   const finishLightBoot=()=>{try{db=normaliseDB(db);reconcileUnclassifiedAssets();lightBoot=false;renderProcesses()}catch(e){console.error('Falha ao concluir a migração dos dados',e);alert('Ocorreu um problema ao preparar os dados guardados. Os dados não foram apagados, mas alguma informação pode não aparecer corretamente até isto ser corrigido. Por favor avise o suporte.')}};
    if(typeof requestIdleCallback==='function')requestIdleCallback(finishLightBoot,{timeout:3000});else setTimeout(finishLightBoot,1800);
  }catch(e){
    console.error('Falha ao iniciar Ativa:',e);
