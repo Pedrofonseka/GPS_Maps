@@ -21,7 +21,7 @@ section{display:none}.show{display:block}
 h2{font-size:18px;margin:0 0 10px} h3{font-size:15px;margin:0 0 8px}
 label{display:block;font-size:12px;font-weight:700;margin:8px 0 4px}
 input,select,textarea{width:100%;font:inherit;padding:10px;border:1px solid #bfc5cc;border-radius:8px;background:white}
-textarea{min-height:76px}.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+textarea{min-height:76px}textarea[data-f="descricao_sumaria"]{min-height:170px}.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
 .actions .btn.danger{margin-left:6px}
 button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}.btn{border:1px solid #aeb5bd;background:white;border-radius:8px;padding:9px 11px;font-weight:700;min-height:42px}
@@ -739,6 +739,7 @@ const CONSERVATION_OPTIONS=['Muito bom','Bom','Razoável','Mau','Muito mau'];
 const TOPOGRAPHY_OPTIONS=['Plana','Suave','Acidentada','Mista'];
 const NUF_VARIABLE_DEFAULTS=[
  {id:'descricao_sumaria',label:'Descrição sumária',type:'textarea',wide:1,groups:['TOF','TRN','TAC','EDC','VEI','MOB','MEQ','OTS','NID','SEP']},
+ {id:'composicao',label:'Composição',type:'textarea',wide:1,groups:['TOF','TRN','TAC','EDC','VEI','MOB','MEQ','OTS','NID','SEP']},
  {id:'uso_atual',label:'Uso atual',type:'text',groups:['TOF','TRN','TAC','EDC']},
  {id:'uso_potencial',label:'Uso potencial',type:'text',groups:['TOF','TRN','TAC','EDC']},
  {id:'topografia',label:'Topografia',type:'select',o:TOPOGRAPHY_OPTIONS,groups:['TOF','TRN']},
@@ -756,7 +757,7 @@ const NUF_VARIABLE_DEFAULTS=[
  {id:'benfeitorias',label:'Benfeitorias',type:'textarea',wide:1,groups:['TAC','EDC']},
  {id:'anomalias_limitacoes',label:'Anomalias / limitações',type:'textarea',wide:1,groups:['TAC','EDC']},
  {id:'tipo_edificio',label:'Tipo de edifício',type:'text',groups:['EDC']},
- {id:'acessibilidades',label:'Acessibilidades',type:'text',groups:['EDC']},
+ {id:'acessibilidades',label:'Acesso Urbano',type:'text',groups:['EDC']},
  {id:'marca_modelo',label:'Marca / modelo',type:'text',groups:['VEI','MEQ']},
  {id:'matricula',label:'Matrícula',type:'text',groups:['VEI']},
  {id:'ano',label:'Ano',type:'number',groups:['VEI','MEQ']},
@@ -1072,6 +1073,18 @@ function migrateLegacyCharacterizationKeys(){
  })));
  if(changed)save();
  try{localStorage.setItem(CHAR_KEY_MIGRATION_KEY,'1')}catch(e){}
+}
+function migrateCaracterizacaoFields(){
+ let changed=false;
+ const acesso=nufVariables.find(v=>v.id==='acessibilidades');
+ if(acesso&&acesso.label!=='Acesso Urbano'){acesso.label='Acesso Urbano';changed=true}
+ if(!nufVariables.some(v=>v.id==='composicao')){
+   const afterIndex=nufVariables.findIndex(v=>v.id==='descricao_sumaria');
+   const composicao=normalizeVariable({id:'composicao',label:'Composição',type:'textarea',wide:1,state:'active',groups:['TOF','TRN','TAC','EDC','VEI','MOB','MEQ','OTS','NID','SEP']},afterIndex>=0?afterIndex+1:nufVariables.length);
+   nufVariables.splice(afterIndex>=0?afterIndex+1:nufVariables.length,0,composicao);
+   changed=true;
+ }
+ if(changed)saveNUFVariables();
 }
 const PROCESS_VARIABLE_TYPES={text:'Texto',textarea:'Texto longo',date:'Data',select:'Lista',textlist:'Texto + sugestões'};
 const ASSET_VARIABLE_TABLES={
@@ -3868,6 +3881,7 @@ function initialiseApp(){
    loadConstructionRules();
    seedNUFVariablesOnce();
    migrateLegacyCharacterizationKeys();
+   migrateCaracterizacaoFields();
    restoreLastActiveProcess();
    renderProcesses();
    updateContext();
@@ -3878,7 +3892,7 @@ function initialiseApp(){
  }catch(e){
    console.error('Falha ao iniciar Ativa:',e);
    db=normaliseDB(db);
-   try{seedNUFVariablesOnce();migrateLegacyCharacterizationKeys();restoreLastActiveProcess();
+   try{seedNUFVariablesOnce();migrateLegacyCharacterizationKeys();migrateCaracterizacaoFields();restoreLastActiveProcess();
 renderProcesses();updateContext()}catch(inner){console.error(inner)}
  }
  checkDBFallbackRecovery();
