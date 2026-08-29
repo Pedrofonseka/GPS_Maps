@@ -214,8 +214,17 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
 <section id="processos" class="show">
  <div class="card">
   <h2>Dashboard</h2>
-  <div class="actions"><button class="btn" id="runDiagnostics" type="button">Diagnóstico de dados</button></div>
+  <div class="actions"><button class="btn" id="runDiagnostics" type="button">Diagnóstico de dados</button><button class="btn hidden" id="openOrphanRecovery" type="button">Ver e recuperar fotografias órfãs</button></div>
   <pre id="diagnosticsOutput" class="muted" style="white-space:pre-wrap;font-size:11px;display:none;background:#f4f5f7;padding:8px;border-radius:6px;max-height:400px;overflow:auto;margin:6px 0"></pre>
+  <div id="orphanRecovery" class="hidden" style="margin:6px 0;border:1px solid #d9dde3;border-radius:8px;padding:8px">
+   <h3 style="margin-top:0">Fotografias órfãs por atribuir</h3>
+   <div class="muted">Cada fotografia continua guardada no aparelho, mas perdeu a ligação ao Ativo. Vê cada imagem, marca as que pertencem ao mesmo Ativo e atribui-as de uma vez. Podes repetir para outro Ativo com as restantes.</div>
+   <div class="row">
+    <div><label>Atribuir selecionadas a</label><select id="orphanTargetAsset"></select></div>
+   </div>
+   <div class="actions"><button class="btn" id="orphanSelectAll" type="button">Selecionar todas</button><button class="btn" id="orphanSelectNone" type="button">Nenhuma</button><button class="btn primary" id="orphanAssign" type="button">Atribuir selecionadas</button></div>
+   <div id="orphanGrid" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;max-height:480px;overflow:auto"></div>
+  </div>
   <div id="dashboardStats" class="dashboard-grid"></div>
   <div id="dashboardStatus" class="dashboard-status"></div>
   <div class="dashboard-lower">
@@ -2860,10 +2869,79 @@ function applyPageSettings(){
 }
 cfgSavePage.onclick=()=>{savePageSettings();alert('Layout de página guardado.')};
 cfgResetPage.onclick=()=>{pageSettings=Object.assign({},PAGE_SETTINGS_DEFAULT);try{localStorage.setItem(PAGE_SETTINGS_KEY,JSON.stringify(pageSettings))}catch(e){warnStorageFailure()}fillPageSettings();applyPageSettings()};
+async function findOrphanedPhotoIds(){
+ const keys=await photoListAllKeys();
+ if(keys===null)return null;
+ const referenced=new Set();
+ (db.processes||[]).forEach(p=>(p.assets||[]).forEach(a=>{
+   (a.photos||[]).forEach(ph=>{if(ph&&ph.id)referenced.add(ph.id)});
+   (a.nufs||[]).forEach(n=>{(n&&n.photos||[]).forEach(ph=>{if(ph&&ph.id)referenced.add(ph.id)})});
+ }));
+ return keys.filter(k=>!referenced.has(k));
+}
 document.getElementById('runDiagnostics')?.addEventListener('click',async()=>{
  const box=document.getElementById('diagnosticsOutput');
  box.style.display='block';box.textContent='A calcular…';
  box.textContent=await runDataDiagnostics();
+ const orphanIds=await findOrphanedPhotoIds();
+ document.getElementById('openOrphanRecovery').classList.toggle('hidden',!orphanIds||!orphanIds.length);
+});
+document.getElementById('openOrphanRecovery')?.addEventListener('click',async()=>{
+ const panel=document.getElementById('orphanRecovery');
+ panel.classList.remove('hidden');
+ panel.scrollIntoView({behavior:'smooth',block:'start'});
+ await renderOrphanRecovery();
+});
+let orphanObjectURLs=[];
+async function renderOrphanRecovery(){
+ const grid=document.getElementById('orphanGrid'),targetSelect=document.getElementById('orphanTargetAsset');
+ if(!grid||!targetSelect)return;
+ orphanObjectURLs.forEach(url=>URL.revokeObjectURL(url));orphanObjectURLs=[];
+ grid.innerHTML='A carregar fotografias órfãs…';
+ const p=proc();
+ targetSelect.innerHTML=(p?.assets||[]).map(a=>`<option value="${esc(a.id)}">${esc(a.code||'Ativo')} · ${esc(a.name||'Sem designação')}</option>`).join('')||'<option value="">Selecione primeiro um Processo com Ativos</option>';
+ const orphanIds=await findOrphanedPhotoIds();
+ if(orphanIds===null){grid.innerHTML='<div class="muted">Não foi possível aceder à base de dados de fotografias.</div>';return}
+ if(!orphanIds.length){grid.innerHTML='<div class="muted">Não há (ou já não há) fotografias órfãs.</div>';document.getElementById('openOrphanRecovery').classList.add('hidden');return}
+ grid.innerHTML='';
+ for(const id of orphanIds){
+   let blob=null;try{blob=await photoGet(id)}catch(e){}
+   const url=blob?URL.createObjectURL(blob):null;
+   if(url)orphanObjectURLs.push(url);
+   const card=document.createElement('label');
+   card.style.cssText='display:flex;flex-direction:column;align-items:center;gap:4px;width:96px;cursor:pointer';
+   card.innerHTML=(url?`<img src="${url}" style="width:88px;height:88px;object-fit:cover;border-radius:8px;border:1px solid #d9dde3">`:'<div class="muted" style="width:88px;height:88px;display:flex;align-items:center;justify-content:center;border:1px solid #d9dde3;border-radius:8px">sem imagem</div>')
+     +`<input type="checkbox" data-orphan="${esc(id)}" style="width:auto">`;
+   grid.appendChild(card);
+ }
+}
+document.getElementById('orphanSelectAll')?.addEventListener('click',()=>{document.querySelectorAll('#orphanGrid [data-orphan]').forEach(cb=>cb.checked=true)});
+document.getElementById('orphanSelectNone')?.addEventListener('click',()=>{document.querySelectorAll('#orphanGrid [data-orphan]').forEach(cb=>cb.checked=false)});
+document.getElementById('orphanAssign')?.addEventListener('click',async()=>{
+ const p=proc();if(!p){alert('Selecione primeiro um Processo.');return}
+ const targetId=document.getElementById('orphanTargetAsset').value;
+ const a=p.assets.find(x=>x.id===targetId);
+ if(!a){alert('Selecione um Ativo de destino.');return}
+ const selected=[...document.querySelectorAll('#orphanGrid [data-orphan]:checked')].map(cb=>cb.dataset.orphan);
+ if(!selected.length){alert('Selecione pelo menos uma fotografia.');return}
+ const assignButton=document.getElementById('orphanAssign');assignButton.disabled=true;
+ a.photos=Array.isArray(a.photos)?a.photos:[];
+ for(const id of selected){
+   let w=1200,h=800;
+   try{
+     const blob=await photoGet(id);
+     if(blob){
+       const dims=await new Promise((resolve,reject)=>{const img=new Image(),url=URL.createObjectURL(blob);img.onload=()=>{resolve({w:img.naturalWidth,h:img.naturalHeight});URL.revokeObjectURL(url)};img.onerror=()=>{URL.revokeObjectURL(url);reject()};img.src=url});
+       w=dims.w||w;h=dims.h||h;
+     }
+   }catch(e){}
+   a.photos.push({id,w,h,cover:a.photos.length===0,caption:'',createdAt:new Date().toISOString(),recovered:true});
+ }
+ historyAdd(p,'photos_recovered',selected.length+' fotografia(s) órfã(s) atribuída(s) a '+(a.code||'Ativo')+'.',a.id);
+ save();
+ assignButton.disabled=false;
+ alert(selected.length+' fotografia(s) atribuída(s) a '+(a.code||'Ativo')+'.');
+ await renderOrphanRecovery();
 });
 
 function renderCfgTable(){
