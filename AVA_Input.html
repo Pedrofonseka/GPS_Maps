@@ -320,9 +320,13 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
  <div id="assetEditor" class="card hidden">
   <h3 id="assetEditorTitle">Novo Ativo</h3>
   <div class="row"><div><label>Código</label><input id="aCode" readonly></div><div><label>ID_Institucional <span class="id-hint">Art. matricial · Registo · Matrícula</span></label><input id="aRef" placeholder="Ex.: Art. U 2555 · CRP 1234 · 00-AA-00"></div></div>
-  <label>Numeração <small class="note">(o mesmo número em vários Ativos agrupa-os no código, ex.: 1 → 001.1/001.2; a caracterização de cada Ativo mantém-se sempre totalmente separada)</small></label>
-  <div class="row"><div><label>Número</label><input id="aGroupNo" type="number" min="1" inputmode="numeric"></div><div><label>Agrupar com outro Ativo <small class="note">(atalho — preenche o número acima)</small></label><select id="aGroupWith"><option value="">— Ativo autónomo (código próprio) —</option></select></div></div>
+  <label>Agrupar este Ativo com outro <small class="note">(para imóveis fisicamente próximos, ex.: duas casas no mesmo terreno — o código de ambos passa a mostrar o mesmo número base, tipo 001.1/001.2. A caracterização, fotografias e localização de cada um mantêm-se sempre totalmente separadas — só o código muda)</small></label>
+  <select id="aGroupWith"><option value="">Nenhum — este Ativo fica com número próprio</option></select>
   <div id="aGroupInfo" class="muted" style="margin-top:4px"></div>
+  <details style="margin-top:6px"><summary style="font-size:12px;color:var(--muted);cursor:pointer">Mudar o número manualmente</summary>
+   <label style="margin-top:6px">Número deste Ativo <small class="note">(dois Ativos com o mesmo número ficam agrupados; use isto para corrigir um número que ficou por atribuir)</small></label>
+   <input id="aGroupNo" type="number" min="1" inputmode="numeric">
+  </details>
   <div><label>Status do Ativo</label><select id="aStatus"><option value="ON">ON — Ativo</option><option value="OFF">OFF — Suspenso/inativo</option></select></div>
   <label>Designação</label><input id="aName">
   <label>Endereço / Local</label><input id="aLocal">
@@ -1895,7 +1899,7 @@ function renderGroupControl(p,a){
      const label=members.map(m=>m.code+(m.name?' '+m.name:'')).join(' + ');
      return `<option value="${x.clusterNo}">${esc(label)}</option>`;
    }).join('');
- aGroupWith.innerHTML='<option value="">— Ativo autónomo (código próprio) —</option>'+optionsHTML;
+ aGroupWith.innerHTML='<option value="">Nenhum — este Ativo fica com número próprio</option>'+optionsHTML;
  aGroupWith.value=[...aGroupWith.options].some(o=>o.value===String(a.clusterNo))?String(a.clusterNo):'';
  if(aGroupNo)aGroupNo.value=a.clusterNo||'';
  updateGroupInfo(p,a);
@@ -1903,24 +1907,43 @@ function renderGroupControl(p,a){
 function updateGroupInfo(p,a){
  if(!aGroupInfo)return;
  const others=clusterMembers(p,a.clusterNo).filter(m=>!a.id||m.id!==a.id);
- if(!others.length){aGroupInfo.textContent='Ativo autónomo — código próprio, sem outros Ativos agrupados.';return}
- aGroupInfo.textContent=(a.id?'Agrupado com: ':'Ficará agrupado com: ')+others.map(m=>m.code+(m.name?' — '+m.name:'')).join('; ')+'.';
+ if(!others.length){aGroupInfo.textContent='Este Ativo tem número próprio — não está agrupado com nenhum outro.';return}
+ aGroupInfo.textContent=(a.id?'Agrupado com: ':'Vai ficar agrupado com: ')+others.map(m=>m.code+(m.name?' — '+m.name:'')).join('; ')+'.';
 }
-// Aplica um novo número/cluster a este Ativo. Editar diretamente o número (aGroupNo)
-// permite fechar manualmente um "buraco" de numeração (ex.: depois de agrupar dois
-// Ativos, o número que ficou livre não é reatribuído sozinho — o utilizador decide).
+// Aplica um novo número/cluster a este Ativo. Como isto pode mudar o código de OUTROS
+// Ativos já gravados (ex.: agrupar ou desagrupar), mostra sempre ao utilizador, antes de
+// gravar, exatamente que códigos vão mudar — nada acontece sem confirmação explícita.
+// Editar o número diretamente (aGroupNo) permite também fechar manualmente um "buraco"
+// de numeração (o número que fica livre ao agrupar não é reatribuído sozinho).
 function applyClusterChange(newClusterNo){
  const p=proc(),a=assetEditor._draft;if(!p||!a)return;
  if(!Number.isFinite(newClusterNo)||newClusterNo<=0)newClusterNo=nextClusterNo(p);
- a.clusterNo=newClusterNo;
- if(editingAsset){
-   syncAssetCodes(p);aCode.value=a.code;
-   historyAdd(p,'asset_grouped',(a.code||'Ativo')+' — numeração/agrupamento alterado.',a.id);
-   save();renderAssets();
- }else{
+ if(newClusterNo===a.clusterNo){renderGroupControl(p,a);return}
+ if(!editingAsset){
+   // Ativo ainda não gravado: só pré-visualiza o código, nada é alterado em definitivo.
+   a.clusterNo=newClusterNo;
    const position=clusterMembers(p,a.clusterNo).length+1;
    aCode.value=clusterCode(a.clusterNo,position,position);
+   renderGroupControl(p,a);
+   return;
  }
+ const before=new Map(p.assets.map(x=>[x.id,x.code]));
+ const previousCluster=a.clusterNo;
+ a.clusterNo=newClusterNo;
+ syncAssetCodes(p);
+ const changes=p.assets.filter(x=>before.get(x.id)!==x.code).map(x=>({name:x.name||'Ativo',before:before.get(x.id),after:x.code}));
+ const message=changes.length<=1
+   ? 'O código deste Ativo passa a ser '+a.code+'.'
+   : 'Isto vai mudar o código de '+changes.length+' Ativos:\n'+changes.map(c=>'• '+(c.before||'—')+' → '+c.after+(c.name?' ('+c.name+')':'')).join('\n');
+ if(!confirm(message+'\n\nConfirma?')){
+   a.clusterNo=previousCluster;
+   syncAssetCodes(p);
+   renderGroupControl(p,a);
+   return;
+ }
+ aCode.value=a.code;
+ historyAdd(p,'asset_grouped',(a.code||'Ativo')+' — numeração/agrupamento alterado.',a.id);
+ save();renderAssets();
  renderGroupControl(p,a);
 }
 aGroupWith.onchange=()=>{applyClusterChange(aGroupWith.value?Number(aGroupWith.value):null)};
