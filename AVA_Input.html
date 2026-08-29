@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>AVA_Input</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 <style>
 :root{--yellow:#f2c94c;--menu:#2c4a85;--feedback:#dff2fb;--bg:#f4f5f7;--card:#fff;--ink:#20242a;--muted:#69717c;--line:#d9dde3;--red:#b42318}
 *{box-sizing:border-box}
@@ -401,6 +402,9 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
  <div class="card">
   <h2>Produzir e Exportar</h2>
   <p class="muted">Fluxo: gerar Preview → validar/corrigir → exportar Word e PDF → exportar o arquivo total ZIP.</p>
+  <label>Ativos a incluir nesta exportação <small class="note">(desmarque os que não quer incluir agora — a caracterização de cada um continua gravada; isto só afeta o que sai nesta exportação)</small></label>
+  <div class="actions"><button class="btn" id="exportSelectAll" type="button">Selecionar todos</button><button class="btn" id="exportSelectNone" type="button">Nenhum</button></div>
+  <div id="exportAssetSelector" class="list" style="margin-top:6px"></div>
   <div class="row">
    <div><label>Colunas das fotografias da capa</label><select id="coverCols"><option value="1">1 coluna</option><option value="2" selected>2 colunas</option><option value="3">3 colunas</option><option value="4">4 colunas</option><option value="5">5 colunas</option></select><label style="margin-top:8px">N.º mínimo de fotografias da capa</label><input id="coverMinPhotos" type="number" inputmode="numeric" min="0" max="20" step="1" value="2"></div>
    <div><label>Colunas das fotografias na ficha</label><select id="sheetCols"><option value="1">1 coluna</option><option value="2" selected>2 colunas</option><option value="3">3 colunas</option><option value="4">4 colunas</option><option value="5">5 colunas</option></select></div>
@@ -415,7 +419,7 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
   <div class="muted" style="margin-top:6px">Word, PDF e ZIP utilizam as fotografias comprimidas segundo os valores definidos em Config. Gerais.</div>
   <div class="actions">
    <button class="btn primary" id="previewReport">1) Pré-visualizar e validar</button>
-   <button class="btn" id="printReport">Guardar apenas PDF / Imprimir</button>
+   <button class="btn" id="printReport">Guardar apenas PDF</button>
    <button class="btn" id="exportWord">Gerar apenas Word</button>
    <button class="btn primary" id="exportZIP">Exportação Geral ZIP + Word</button>
    <button class="btn" id="exportSummary">Resumo TXT</button>
@@ -1601,7 +1605,7 @@ function renderProcessHistory(){
  }).join('')||'<div class="muted">Ainda não existem acontecimentos registados.</div>';
 }
 function updateContext(){let p=proc(),a=asset()||p?.assets?.find(x=>x.id===editingAsset)||(!assetEditor?.classList.contains('hidden')?assetEditor._draft:null);if(!p){document.getElementById('context').textContent='Nenhum processo selecionado';return}if(!a){document.getElementById('context').textContent=p.code||'Processo';return}document.getElementById('context').textContent=[a.code,a.ref].filter(Boolean).join(' ')+' / '+(a.name||'Sem designação')}
-function go(id){if(id!=='processos'&&!proc()){alert('Crie ou selecione primeiro um Processo.');id='processos'}document.querySelectorAll('main section').forEach(s=>s.classList.toggle('show',s.id===id));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.go===id));if(id==='processos')renderProcesses();if(id==='dados')fillData();if(id==='ativos')renderAssets();if(id==='caracterizar')renderCharacterList();updateContext();scrollTo(0,0)}
+function go(id){if(id!=='processos'&&!proc()){alert('Crie ou selecione primeiro um Processo.');id='processos'}document.querySelectorAll('main section').forEach(s=>s.classList.toggle('show',s.id===id));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.go===id));if(id==='processos')renderProcesses();if(id==='dados')fillData();if(id==='ativos')renderAssets();if(id==='caracterizar')renderCharacterList();if(id==='exportar')renderExportAssetSelector();updateContext();scrollTo(0,0)}
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{syncPendingData();go(b.dataset.go)});
 
 let lightBoot=true;
@@ -3007,7 +3011,7 @@ let summaryConfig=loadSummaryConfig();
 function saveSummaryConfig(){try{localStorage.setItem(SUMMARY_CONFIG_KEY,JSON.stringify(summaryConfig))}catch(e){warnStorageFailure()}}
 function renderSummaryConfig(){if(!cfgSummaryFields)return;cfgSummaryON.checked=summaryConfig.on;cfgSummaryOFF.checked=summaryConfig.off;cfgSummaryFields.innerHTML=Object.entries(SUMMARY_FIELD_DEFS).map(([id,label])=>`<label class="item"><span>${esc(label)}</span><input type="checkbox" data-summary-field="${id}" style="width:auto" ${summaryConfig.fields.includes(id)?'checked':''}></label>`).join('');const persist=()=>{summaryConfig.on=cfgSummaryON.checked;summaryConfig.off=cfgSummaryOFF.checked;summaryConfig.fields=[...cfgSummaryFields.querySelectorAll('[data-summary-field]:checked')].map(x=>x.dataset.summaryField);saveSummaryConfig()};cfgSummaryON.onchange=persist;cfgSummaryOFF.onchange=persist;cfgSummaryFields.querySelectorAll('[data-summary-field]').forEach(x=>x.onchange=persist)}
 function assetSummaryValue(a,field){if(field==='status')return a.status==='OFF'?'OFF':'ON';if(field==='local')return [a.local,a.doorNumber,a.floor,formatPostalCode(a.postalCode),a.freg,a.conc].filter(Boolean).join(', ');return a[field]||''}
-function assetSummaryHTML(p){const assets=p?.assets||[],groups=[['ON',summaryConfig.on],['OFF',summaryConfig.off]];return `<div class="fxresum"><h3>Número de Ativos: ${assets.length}</h3>`+groups.filter(([,enabled])=>enabled).map(([status])=>{const rows=assets.filter(a=>(a.status==='OFF'?'OFF':'ON')===status);return `<div class="fxresum-group"><b>Status ${status} — ${rows.length}</b>${rows.map(a=>`<div class="fxresum-row">${summaryConfig.fields.map(field=>`<span><b>${esc(SUMMARY_FIELD_DEFS[field])}:</b> ${esc(assetSummaryValue(a,field))}</span>`).join(' · ')}</div>`).join('')||'<div class="fxresum-row">Sem Ativos.</div>'}</div>`}).join('')+'</div>'}
+function assetSummaryHTML(p){const assets=selectedExportAssets(p),groups=[['ON',summaryConfig.on],['OFF',summaryConfig.off]];return `<div class="fxresum"><h3>Número de Ativos: ${assets.length}</h3>`+groups.filter(([,enabled])=>enabled).map(([status])=>{const rows=assets.filter(a=>(a.status==='OFF'?'OFF':'ON')===status);return `<div class="fxresum-group"><b>Status ${status} — ${rows.length}</b>${rows.map(a=>`<div class="fxresum-row">${summaryConfig.fields.map(field=>`<span><b>${esc(SUMMARY_FIELD_DEFS[field])}:</b> ${esc(assetSummaryValue(a,field))}</span>`).join(' · ')}</div>`).join('')||'<div class="fxresum-row">Sem Ativos.</div>'}</div>`}).join('')+'</div>'}
 const OUT_MODEL_KEY='ativa_out_models_v2';
 const OUT_MODEL_LABELS={cover:'Capa',process:'Resumo',characterization:'Caracterização',visits:'Visitas',chronology:'Cronologia'};
 const OUT_MODEL_FIELDS={
@@ -3314,6 +3318,30 @@ function renderOutputComposition(){
 }
 function moveOutputComposition(index,direction){const next=index+direction;if(next<0||next>=outputComposition.length)return;[outputComposition[index],outputComposition[next]]=[outputComposition[next],outputComposition[index]];saveOutputComposition();renderOutputComposition();refreshOpenOutputs()}
 function activeOutputComponents(){outputComposition=loadOutputComposition();return outputComposition.filter(item=>item.enabled).map(item=>item.id)}
+
+// Seleção de Ativos a incluir na próxima exportação. É estado só desta sessão
+// (não é gravado no Processo) — por defeito todos os Ativos estão incluídos;
+// desmarcar um não apaga nem altera a sua caracterização, só o exclui do
+// PDF/Word/ZIP seguintes.
+let exportSelection={processId:null,excluded:new Set()};
+function selectedExportAssets(p){
+ if(!p)return[];
+ if(exportSelection.processId!==p.id)exportSelection={processId:p.id,excluded:new Set()};
+ return (p.assets||[]).filter(a=>!exportSelection.excluded.has(a.id));
+}
+function renderExportAssetSelector(){
+ const p=proc();const box=document.getElementById('exportAssetSelector');if(!box)return;
+ if(!p){box.innerHTML='<div class="muted">Selecione primeiro um Processo.</div>';return}
+ if(exportSelection.processId!==p.id)exportSelection={processId:p.id,excluded:new Set()};
+ const assets=p.assets||[];
+ box.innerHTML=assets.map(a=>`<label class="pill" style="display:flex;align-items:center;gap:6px;margin:3px 0"><input type="checkbox" data-export-asset="${a.id}" style="width:auto" ${exportSelection.excluded.has(a.id)?'':'checked'}> ${esc(a.code)} · ${esc(a.name||'Sem designação')}</label>`).join('')||'<div class="muted">Não existem Ativos neste Processo.</div>';
+ box.querySelectorAll('[data-export-asset]').forEach(cb=>cb.onchange=()=>{
+  const id=cb.dataset.exportAsset;
+  if(cb.checked)exportSelection.excluded.delete(id);else exportSelection.excluded.add(id);
+ });
+}
+document.getElementById('exportSelectAll')?.addEventListener('click',()=>{const p=proc();if(!p)return;exportSelection={processId:p.id,excluded:new Set()};renderExportAssetSelector()});
+document.getElementById('exportSelectNone')?.addEventListener('click',()=>{const p=proc();if(!p)return;exportSelection={processId:p.id,excluded:new Set((p.assets||[]).map(a=>a.id))};renderExportAssetSelector()});
 cfgResetOutput.onclick=()=>{if(!confirm('Repor a composição recomendada do Resumo geral?'))return;outputComposition=OUTPUT_COMPOSITION_DEFAULT.map(item=>({...item}));saveOutputComposition();renderOutputComposition();refreshOpenOutputs()};
 
 const REPORT_LAYOUT_KEY='ativa_report_layout_v1';
@@ -3361,7 +3389,7 @@ function photoGridLabel(a){return (a?.code||'Ativo')+' · '+(a?.name||'Ativo sim
 async function scanPhotoOrientations(){
  const p=syncPendingData();if(!p){alert('Selecione primeiro um Processo.');return null}
  const refs=[],grids=[];
- (p.assets||[]).forEach(a=>{
+ selectedExportAssets(p).forEach(a=>{
    const grid={a,label:photoGridLabel(a),refs:[],counts:{portrait:0,landscape:0,square:0,missing:0}};grids.push(grid);
    (a.photos||[]).forEach((photo,index)=>{const ref={photo,a,index,grid};refs.push(ref);grid.refs.push(ref)});
  });
@@ -3498,7 +3526,7 @@ function shuffleRefs(list){
 }
 async function collectCoverPhotoRefs(p){
  const marked=[],others=[];
- for(const a of (p.assets||[])){
+ for(const a of selectedExportAssets(p)){
    for(let index=0;index<(a.photos||[]).length;index++){
     const photo=a.photos[index];
     try{
@@ -3537,7 +3565,8 @@ async function renderReportPreview(strictOrientation=false){
  syncReportLayoutFromStorage();
  pageSettings=loadPageSettings();applyPageSettings();
  clearReportURLs();
- const targets=[];(p.assets||[]).forEach((a,assetIndex)=>targets.push({key:'r_'+assetIndex,t:a,a,assetIndex,title:'Imagens'}));
+ const reportAssets=selectedExportAssets(p);
+ const targets=[];reportAssets.forEach((a,assetIndex)=>targets.push({key:'r_'+assetIndex,t:a,a,assetIndex,title:'Imagens'}));
  const processHTML=()=>{
    const centerRows=outModelRows('process','center',true);
    const fields=centerRows.map(row=>{
@@ -3550,7 +3579,7 @@ async function renderReportPreview(strictOrientation=false){
  const coverHTML=async()=>{
    const service=serviceDesignation(p.service||p.serviceType||p.purpose||'Avaliação');
    const title='Relatório de '+service;
-   const local=[...(p.assets||[])].map(a=>a.local).find(Boolean)||'';
+   const local=reportAssets.map(a=>a.local).find(Boolean)||'';
    const centerRows=outModelRows('cover','center',true);
    const centerValues=centerRows.map(row=>[OUT_MODEL_FIELDS[row.field]||row.field,outFieldValue(row.field,p,1,previewLogicalTotal)]).filter(x=>String(x[1]||'').trim());
    const detailsHTML=centerValues.length?`<div class="cover-fields">${centerValues.map(x=>`<div class="cover-field"><b>${esc(x[0])}</b>${esc(x[1])}</div>`).join('')}</div>`:'';
@@ -3558,7 +3587,7 @@ async function renderReportPreview(strictOrientation=false){
    const photos=refs.length?`<div class="report-cover-photos" data-cover-master="1"></div>`:'';
    return `<section class="report-cover-block report-document-cover">${printBandHTML('header',p,'Capa',1,previewLogicalTotal,'cover')}${outZoneHTML('cover','top',p,1,previewLogicalTotal)}<div class="report-page-title" style="font-size:${clampPhotoSetting(pageSettings.pageTitleSize,8,18,12)}pt;font-weight:700;margin:0 0 10px">${esc(title)}</div>${detailsHTML}<div class="report-cover-body">${photos}</div>${outZoneHTML('cover','bottom',p,1,previewLogicalTotal)}${printBandHTML('footer',p,'Capa',1,previewLogicalTotal,'cover')}</section>`;
  };
- const characterizationHTML=()=>{if(!(p.assets||[]).length)return'<p class="muted">Este Processo ainda não tem Ativos.</p>';return`<section>${reportPageTitleHTML(p,'Caracterização',false)}`+(p.assets||[]).map((a,assetIndex)=>`<article class="report-asset"><h2>${esc(a.code||'Ativo')} — ${esc(a.name||'Sem designação')}</h2><div class="report-grid">${[['ID_Institucional',a.ref],['Tipo',a.type],['Grupo',a.group],['Destino',a.currentUse],['Endereço / Local',a.local],['Número',a.doorNumber],['Piso / Andar',a.floor],['Código Postal',formatPostalCode(a.postalCode)],['Freguesia',a.freg],['Concelho',a.conc],['Hora da visita',a.visitTime],['GPS',assetGPS(a)]].map(x=>reportField(x[0],x[1])).join('')}</div>${reportText('Observações do Ativo',a.obs)}${targets.filter(target=>target.assetIndex===assetIndex).map(target=>reportTargetHTML(target.t,target.a,target.title,target.key,{cover:false,sheet:true})).join('')}</article>`).join('')+`</section>`};
+ const characterizationHTML=()=>{if(!reportAssets.length)return'<p class="muted">Não existem Ativos selecionados para caracterização.</p>';return`<section>${reportPageTitleHTML(p,'Caracterização',false)}`+reportAssets.map((a,assetIndex)=>`<article class="report-asset"><h2>${esc(a.code||'Ativo')} — ${esc(a.name||'Sem designação')}</h2><div class="report-grid">${[['ID_Institucional',a.ref],['Tipo',a.type],['Grupo',a.group],['Destino',a.currentUse],['Endereço / Local',a.local],['Número',a.doorNumber],['Piso / Andar',a.floor],['Código Postal',formatPostalCode(a.postalCode)],['Freguesia',a.freg],['Concelho',a.conc],['Hora da visita',a.visitTime],['GPS',assetGPS(a)]].map(x=>reportField(x[0],x[1])).join('')}</div>${reportText('Observações do Ativo',a.obs)}${targets.filter(target=>target.assetIndex===assetIndex).map(target=>reportTargetHTML(target.t,target.a,target.title,target.key,{cover:false,sheet:true})).join('')}</article>`).join('')+`</section>`};
  const visitsHTML=()=>{const rows=(p.visits||[]).map(visit=>{const people=(visit.participantIds||[]).map(id=>(p.participants||[]).find(person=>person.id===id)?.name).filter(Boolean).join(', '),assets=(visit.assets||[]).map(item=>item.code||p.assets.find(a=>a.id===item.assetId)?.code).filter(Boolean).join(', ');return{visit,people,assets}});const map=rows.length?`<h3>Mapa de visitas do Processo</h3><table class="visit-map"><thead><tr><th>Data / Hora</th><th>Ativos</th><th>Intervenientes</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${esc([x.visit.date,[x.visit.start,x.visit.end].filter(Boolean).join('–')].filter(Boolean).join(' · '))}</td><td>${esc(x.assets)}</td><td>${esc(x.people)}</td></tr>`).join('')}</tbody></table>`:'';return`<section class="report-asset">${reportPageTitleHTML(p,'Visitas',false)}${map}${rows.map(x=>`<div class="report-item"><h3>${esc(x.visit.type||'Visita')} · ${esc(x.visit.date||'Sem data')}</h3><div class="report-grid">${[['Hora',[x.visit.start,x.visit.end].filter(Boolean).join('–')],['Estado do tempo',x.visit.weather],['Intervenientes',x.people],['Ativos observados',x.assets],['Condicionamentos',x.visit.constraints]].map(y=>reportField(y[0],y[1])).join('')}</div>${reportText('Observações',x.visit.obs)}</div>`).join('')||'<p class="muted">Não existem visitas registadas.</p>'}</section>`};
  const chronologyHTML=()=>`<section class="report-asset">${reportPageTitleHTML(p,'Cronologia',false)}${(p.history||[]).slice().reverse().map(entry=>{const date=new Date(entry.at),when=Number.isFinite(date.getTime())?date.toLocaleString('pt-PT'):'';return`<div class="report-field"><b>${esc(when)}</b>${esc(entry.text||entry.type||'Registo')}</div>`}).join('')||'<p class="muted">Não existem acontecimentos registados.</p>'}</section>`;
  const builders={process:processHTML,characterization:characterizationHTML,visits:visitsHTML,chronology:chronologyHTML};
@@ -3651,11 +3680,7 @@ rejectPreview.onclick=()=>{
 acceptPreview.onclick=async()=>{
  const p=proc();if(!p){alert('Selecione primeiro um Processo.');return}
  // A pré-visualização já foi construída e validada no passo anterior (só chegamos
- // aqui depois disso) — reconstruí-la outra vez agora, com o novo scan de orientação
- // de todas as fotografias, introduzia um atraso entre o toque e window.print() que
- // o Safari/iOS interpreta como "já não é uma ação direta do utilizador" e recusa
- // abrir a caixa de diálogo de impressão, sem qualquer erro visível. Por isso aqui
- // reutiliza-se o preview e o scan já existentes, e a impressão é chamada de imediato.
+ // aqui depois disso) — não é preciso reconstruí-la para gerar os ficheiros.
  if(lastOrientationScan?.outliers?.length){
    orientationInfo.scrollIntoView({behavior:'smooth',block:'center'});
    alert('Existem fotografias com orientação divergente. Escolha Rodar, Eliminar ou Manter antes de produzir o documento.');
@@ -3663,20 +3688,20 @@ acceptPreview.onclick=async()=>{
  }
  acceptPreview.disabled=true;rejectPreview.disabled=true;
  try{
-  folderInfo.textContent='PDF: no diálogo seguinte escolha “Guardar como PDF” e indique o destino.';
-  window.print();
-  folderInfo.textContent='A gerar o documento Word da versão aceite…';
+  folderInfo.textContent='A gerar o PDF da versão aceite…';
+  const pdfBlob=await buildReportPDF(p);
+  await saveBlobToDestination(pdfBlob,safeFileName(p.code||'Processo')+'_Ficha.pdf',folderInfo,'PDF pronto.');
+  folderInfo.textContent+=' A gerar o documento Word da versão aceite…';
   const wordZip=await buildWordDOCX(p),blob=new Blob([wordZip],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
-  await saveBlobToDestination(blob,safeFileName(p.code||'Processo')+'_Ficha.docx',folderInfo,'Versão aceite: PDF encaminhado e Word pronto.');
+  await saveBlobToDestination(blob,safeFileName(p.code||'Processo')+'_Ficha.docx',folderInfo,'Word pronto.',true);
   previewValidation.classList.add('hidden');zipInfo.textContent='Versão aceite. A Exportação Geral pode agora ser gerada separadamente, se necessária.';
- }catch(e){console.error(e);alert('Não foi possível concluir a exportação PDF + Word da versão aceite.')}
+ }catch(e){console.error(e);alert('Não foi possível concluir a exportação PDF + Word da versão aceite: '+(e?.message||e))}
  finally{acceptPreview.disabled=false;rejectPreview.disabled=false}
 };
 printReport.onclick=async()=>{
  const p=proc();if(!p){alert('Selecione primeiro um Processo.');return}
- // Reutiliza um preview já em ecrã e válido para este Processo (evita reconstruir
- // tudo mesmo em cima do toque, o que pode fazer o Safari/iOS recusar window.print()
- // — ver nota em acceptPreview.onclick).
+ // Reutiliza um preview já em ecrã e válido para este Processo quando existir;
+ // caso contrário gera um novo antes de produzir o PDF.
  const fresh=!reportPreview.classList.contains('hidden')&&lastOrientationScan?.processId===p.id;
  if(!fresh&&!await renderReportPreview(true))return;
  if(lastOrientationScan?.outliers?.length){
@@ -3684,8 +3709,13 @@ printReport.onclick=async()=>{
    alert('Existem fotografias com orientação divergente. Escolha Rodar, Eliminar ou Manter antes de produzir o documento.');
    return;
  }
- folderInfo.textContent='No diálogo seguinte escolha “Guardar como PDF” e indique a pasta pretendida.';
- window.print();
+ printReport.disabled=true;
+ try{
+  folderInfo.textContent='A gerar o PDF…';
+  const pdfBlob=await buildReportPDF(p);
+  await saveBlobToDestination(pdfBlob,safeFileName(p.code||'Processo')+'_Ficha.pdf',folderInfo,'PDF pronto.');
+ }catch(e){console.error(e);alert('Não foi possível gerar o PDF: '+(e?.message||e))}
+ finally{printReport.disabled=false}
 };
 
 const SETTINGS_DB='Ativa_Settings_v1',DESTINATION_KEY='destination-folder';
@@ -3716,25 +3746,36 @@ if(!window.showDirectoryPicker){
  try{destinationDirectory=await window.showDirectoryPicker({mode:'readwrite'});await rememberDestination(destinationDirectory);folderInfo.textContent='Pasta destino: '+destinationDirectory.name}
  catch(e){if(e?.name!=='AbortError')alert('Não foi possível selecionar a pasta destino.')}
 };
-async function saveBlobToDestination(blob,fileName,statusElement=folderInfo,readyText='Ficheiro preparado.'){
+async function saveBlobToDestination(blob,fileName,statusElement=folderInfo,readyText='Ficheiro preparado.',keepExisting=false){
  fileName=String(fileName||'Ativa_Export').replace(/[\\/:*?"<>|]+/g,'_');
  if(destinationDirectory&&await destinationAllowed(destinationDirectory)){
-   try{const handle=await destinationDirectory.getFileHandle(fileName,{create:true}),writable=await handle.createWritable();await writable.write(blob);await writable.close();statusElement.textContent='Guardado em '+destinationDirectory.name+': '+fileName;return true}catch(e){console.error('Pasta destino indisponível:',e);destinationDirectory=null;await forgetDestination()}
+   try{
+     const handle=await destinationDirectory.getFileHandle(fileName,{create:true}),writable=await handle.createWritable();await writable.write(blob);await writable.close();
+     const msg='Guardado em '+destinationDirectory.name+': '+fileName;
+     if(keepExisting){const row=document.createElement('div');row.textContent=msg;statusElement.appendChild(row)}else statusElement.textContent=msg;
+     return true;
+   }catch(e){console.error('Pasta destino indisponível:',e);destinationDirectory=null;await forgetDestination()}
  }
- statusElement.textContent=readyText+' ';
- const saveButton=document.createElement('button');saveButton.type='button';saveButton.className='btn primary safe-save-action';saveButton.textContent='Guardar '+fileName+'…';statusElement.appendChild(saveButton);
+ // Cada ficheiro fica na sua própria linha (label + botão), para que gravar vários
+ // ficheiros seguidos (ex.: PDF e depois Word) não apague o botão do anterior antes
+ // de o utilizador chegar a tocar nele.
+ if(!keepExisting)statusElement.innerHTML='';
+ const row=document.createElement('div');row.className='safe-save-row';row.style.margin='4px 0';
+ const label=document.createElement('span');label.textContent=readyText+' ';
+ const saveButton=document.createElement('button');saveButton.type='button';saveButton.className='btn primary safe-save-action';saveButton.textContent='Guardar '+fileName+'…';
+ row.appendChild(label);row.appendChild(saveButton);statusElement.appendChild(row);
  saveButton.onclick=async()=>{
    saveButton.disabled=true;
    try{
      if(window.showSaveFilePicker){
        const extension='.'+(fileName.split('.').pop()||'bin'),mime=blob.type||'application/octet-stream';
        const handle=await window.showSaveFilePicker({suggestedName:fileName,types:[{description:'Ficheiro '+extension.toUpperCase(),accept:{[mime]:[extension]}}]});
-       const writable=await handle.createWritable();await writable.write(blob);await writable.close();statusElement.textContent='Ficheiro guardado: '+fileName;return;
+       const writable=await handle.createWritable();await writable.write(blob);await writable.close();label.textContent='Ficheiro guardado: '+fileName;saveButton.remove();return;
      }
      const file=new File([blob],fileName,{type:blob.type||'application/octet-stream'});
-     if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]}))){await navigator.share({files:[file],title:fileName});statusElement.textContent='Ficheiro entregue ao seletor Ficheiros.';return}
-     const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=fileName;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),300000);statusElement.textContent='Descarga iniciada: '+fileName;
-   }catch(e){if(e?.name==='AbortError'){saveButton.disabled=false;return}console.error(e);statusElement.textContent='Não foi possível abrir o seletor. ';statusElement.appendChild(saveButton);saveButton.disabled=false}
+     if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]}))){await navigator.share({files:[file],title:fileName});label.textContent='Ficheiro entregue ao seletor Ficheiros.';saveButton.remove();return}
+     const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=fileName;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),300000);label.textContent='Descarga iniciada: '+fileName;saveButton.remove();
+   }catch(e){if(e?.name==='AbortError'){saveButton.disabled=false;return}console.error(e);label.textContent='Não foi possível abrir o seletor. ';saveButton.disabled=false}
  };
  return false;
 }
@@ -3746,12 +3787,13 @@ function wordBandCell(field,p,size,align){const value=pageFieldValue(field,p),co
 function wordBandXML(kind,p){const fields=kind==='header'?[pageSettings.headerLeft,pageSettings.headerCenter,pageSettings.headerRight]:[pageSettings.footerLeft,pageSettings.footerCenter,pageSettings.footerRight],size=kind==='header'?pageSettings.headerSize:pageSettings.footerSize,tag=kind==='header'?'hdr':'ftr';return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:'+tag+' xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/></w:tblPr><w:tr>'+wordBandCell(fields[0],p,size,'left')+wordBandCell(fields[1],p,size,'center')+wordBandCell(fields[2],p,size,'right')+'</w:tr></w:tbl></w:'+tag+'>'}
 async function buildWordDOCX(p){
  pageSettings=loadPageSettings();const encoder=new TextEncoder(),entries=[],rels=[],body=[];let imageNo=0;
+ const reportAssets=selectedExportAssets(p);
  async function appendWordPhotos(a,nufIndex,photoRefs,cols,showCaptions){const cellWidth=Math.floor(5400000/cols),imageHeight=2100000;let cells=[];for(const ref of photoRefs){const photo=ref.photo,index=ref.index;try{let blob=await photoGet(photo.id);if(!blob)continue;let ext=(blob.type||'').includes('png')?'png':'jpeg';if(!/image\/(png|jpeg|jpg)/i.test(blob.type||'')){const activeSettings=loadPhotoSettings(),converted=await compressImage(blob,activeSettings.maxSide,activeSettings.quality/100);blob=converted.blob;ext='jpeg'}imageNo++;const fileExt=ext==='png'?'png':'jpg',rid='rId'+imageNo,w=Number(photo.w)||1200,h=Number(photo.h)||800,scale=Math.min(cellWidth/w,imageHeight/h),cx=Math.max(1,Math.round(w*scale)),cy=Math.max(1,Math.round(h*scale));entries.push({name:'word/media/image'+imageNo+'.'+fileExt,data:new Uint8Array(await blob.arrayBuffer())});rels.push('<Relationship Id="'+rid+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image'+imageNo+'.'+fileExt+'"/>');cells.push({image:wordDrawing(rid,imageNo,cx,cy),caption:showCaptions?wordParagraph(photoCodeForReport(a,nufIndex,index)+(photo.caption?' — '+photo.caption:''),{size:16}):''});if(cells.length===cols){body.push(wordPhotoTable(cells,cols,showCaptions));cells=[]}}catch(e){console.error(e)}}if(cells.length)body.push(wordPhotoTable(cells,cols,showCaptions))}
  const components=activeOutputComponents();
  for(const component of components){
-  if(component==='process'){body.push(wordParagraph(p.code||'Processo',{bold:true,size:36,pageBreak:body.length>0}),wordField('Designação',p.name),wordField('ID Institucional',p.ref),wordField('Solicitante',p.requester),wordField('Finalidade',p.purpose),wordField('Descrição do solicitado',p.requestDescription),wordField('Base de valor',p.valueBase),wordField('Estado',p.status),wordField('Data de entrada',p.inputDate),wordField('Prazo',p.deadline),wordParagraph('Número de Ativos: '+(p.assets||[]).length,{bold:true,size:22}));for(const status of ['ON','OFF']){if((status==='ON'&&!summaryConfig.on)||(status==='OFF'&&!summaryConfig.off))continue;const rows=(p.assets||[]).filter(a=>(a.status==='OFF'?'OFF':'ON')===status);body.push(wordParagraph('Status '+status+' — '+rows.length,{bold:true,size:20}));rows.forEach(a=>body.push(wordParagraph('    '+summaryConfig.fields.map(field=>SUMMARY_FIELD_DEFS[field]+': '+assetSummaryValue(a,field)).join(' · '),{size:17}))) }body.push(wordField('Observações',p.obs))}
-  if(component==='cover')for(const a of (p.assets||[])){const refs=(a.photos||[]).map((photo,index)=>({photo,index})).filter(ref=>ref.photo.cover);if(!refs.length)continue;body.push(wordParagraph((a.code||'Ativo')+' — '+(a.name||'Capa'),{bold:true,size:28,pageBreak:true}));await appendWordPhotos(a,0,refs,validReportCols(coverCols.value),false)}
-  if(component==='characterization')for(const a of (p.assets||[])){body.push(wordParagraph((a.code||'Ativo')+' — '+(a.name||'Sem designação'),{bold:true,size:28,pageBreak:true}),wordField('ID_Institucional',a.ref),wordField('Tipo',a.type),wordField('Grupo',a.group),wordField('Destino',a.currentUse),wordField('Endereço / Local',a.local),wordField('Número',a.doorNumber),wordField('Piso / Andar',a.floor),wordField('Código Postal',formatPostalCode(a.postalCode)),wordField('Freguesia',a.freg),wordField('Concelho',a.conc),wordField('ID externo',a.externalId),wordField('Hora da visita',a.visitTime),wordField('GPS',assetGPS(a)),wordField('Observações do Ativo',a.obs));body.push(wordParagraph('Caracterização',{bold:true,size:24}));configuredCharacterValues(a,a).forEach(([key,value])=>body.push(wordField(key,value)));const q=a.qtyAreas||{};[['Documentação de referência',(q.documents||[]).join(', ')],['Quantidade',q.qtd],['Área de terreno (AT)',q.at],['Área de implantação (AI)',q.ai],['Área bruta privativa (ABP)',q.abp],['Área bruta dependente (ABD)',q.abd],['Sup. terreno (ST)',q.st],['Sup. coberta (SC)',q.sc],['Sup. descoberta (SD)',q.sd]].forEach(x=>body.push(wordField(x[0],x[1])));body.push(wordField('Observações',a.char?.__obs));await appendWordPhotos(a,0,(a.photos||[]).map((photo,index)=>({photo,index})),validReportCols(sheetCols.value),true)}
+  if(component==='process'){body.push(wordParagraph(p.code||'Processo',{bold:true,size:36,pageBreak:body.length>0}),wordField('Designação',p.name),wordField('ID Institucional',p.ref),wordField('Solicitante',p.requester),wordField('Finalidade',p.purpose),wordField('Descrição do solicitado',p.requestDescription),wordField('Base de valor',p.valueBase),wordField('Estado',p.status),wordField('Data de entrada',p.inputDate),wordField('Prazo',p.deadline),wordParagraph('Número de Ativos: '+reportAssets.length,{bold:true,size:22}));for(const status of ['ON','OFF']){if((status==='ON'&&!summaryConfig.on)||(status==='OFF'&&!summaryConfig.off))continue;const rows=reportAssets.filter(a=>(a.status==='OFF'?'OFF':'ON')===status);body.push(wordParagraph('Status '+status+' — '+rows.length,{bold:true,size:20}));rows.forEach(a=>body.push(wordParagraph('    '+summaryConfig.fields.map(field=>SUMMARY_FIELD_DEFS[field]+': '+assetSummaryValue(a,field)).join(' · '),{size:17}))) }body.push(wordField('Observações',p.obs))}
+  if(component==='cover')for(const a of reportAssets){const refs=(a.photos||[]).map((photo,index)=>({photo,index})).filter(ref=>ref.photo.cover);if(!refs.length)continue;body.push(wordParagraph((a.code||'Ativo')+' — '+(a.name||'Capa'),{bold:true,size:28,pageBreak:true}));await appendWordPhotos(a,0,refs,validReportCols(coverCols.value),false)}
+  if(component==='characterization')for(const a of reportAssets){body.push(wordParagraph((a.code||'Ativo')+' — '+(a.name||'Sem designação'),{bold:true,size:28,pageBreak:true}),wordField('ID_Institucional',a.ref),wordField('Tipo',a.type),wordField('Grupo',a.group),wordField('Destino',a.currentUse),wordField('Endereço / Local',a.local),wordField('Número',a.doorNumber),wordField('Piso / Andar',a.floor),wordField('Código Postal',formatPostalCode(a.postalCode)),wordField('Freguesia',a.freg),wordField('Concelho',a.conc),wordField('ID externo',a.externalId),wordField('Hora da visita',a.visitTime),wordField('GPS',assetGPS(a)),wordField('Observações do Ativo',a.obs));body.push(wordParagraph('Caracterização',{bold:true,size:24}));configuredCharacterValues(a,a).forEach(([key,value])=>body.push(wordField(key,value)));const q=a.qtyAreas||{};[['Documentação de referência',(q.documents||[]).join(', ')],['Quantidade',q.qtd],['Área de terreno (AT)',q.at],['Área de implantação (AI)',q.ai],['Área bruta privativa (ABP)',q.abp],['Área bruta dependente (ABD)',q.abd],['Sup. terreno (ST)',q.st],['Sup. coberta (SC)',q.sc],['Sup. descoberta (SD)',q.sd]].forEach(x=>body.push(wordField(x[0],x[1])));body.push(wordField('Observações',a.char?.__obs));await appendWordPhotos(a,0,(a.photos||[]).map((photo,index)=>({photo,index})),validReportCols(sheetCols.value),true)}
   if(component==='visits'){body.push(wordParagraph('Mapa de visitas do Processo',{bold:true,size:28,pageBreak:true}));for(const visit of (p.visits||[])){const people=(visit.participantIds||[]).map(id=>(p.participants||[]).find(person=>person.id===id)?.name).filter(Boolean).join(', '),assets=(visit.assets||[]).map(item=>item.code||p.assets.find(a=>a.id===item.assetId)?.code).filter(Boolean).join(', ');body.push(wordParagraph([visit.date,[visit.start,visit.end].filter(Boolean).join('–'),assets,people].filter(Boolean).join(' | '),{size:18}))}body.push(wordParagraph('Detalhe das visitas',{bold:true,size:24}));for(const visit of (p.visits||[])){body.push(wordParagraph((visit.type||'Visita')+' · '+(visit.date||'Sem data'),{bold:true,size:22}),wordField('Hora',[visit.start,visit.end].filter(Boolean).join('–')),wordField('Estado do tempo',visit.weather),wordField('Intervenientes',(visit.participantIds||[]).map(id=>(p.participants||[]).find(person=>person.id===id)?.name).filter(Boolean).join(', ')),wordField('Ativos observados',(visit.assets||[]).map(item=>item.code||p.assets.find(a=>a.id===item.assetId)?.code).filter(Boolean).join(', ')),wordField('Condicionamentos',visit.constraints),wordField('Observações',visit.obs))}}
   if(component==='chronology'){body.push(wordParagraph('Cronologia',{bold:true,size:28,pageBreak:true}));for(const entry of (p.history||[]).slice().reverse()){const date=new Date(entry.at),when=Number.isFinite(date.getTime())?date.toLocaleString('pt-PT'):'';body.push(wordField(when||'Registo',entry.text||entry.type))}}
  }
@@ -3763,6 +3805,140 @@ async function buildWordDOCX(p){
  const docRels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+rels.join('')+'</Relationships>';
  entries.push({name:'[Content_Types].xml',data:encoder.encode(types)},{name:'_rels/.rels',data:encoder.encode(rootRels)},{name:'word/document.xml',data:encoder.encode(documentXML)},{name:'word/header1.xml',data:encoder.encode(wordBandXML('header',p))},{name:'word/footer1.xml',data:encoder.encode(wordBandXML('footer',p))},{name:'word/_rels/document.xml.rels',data:encoder.encode(docRels)});
  return makeStoredZIP(entries);
+}
+
+// Gera o PDF como ficheiro real (jsPDF), tal como o Word já é gerado — em vez de
+// depender de window.print(), que no Safari/iOS exige ser chamado sem qualquer
+// espera assíncrona a seguir ao toque e pode simplesmente não abrir, sem erro.
+async function buildReportPDF(p){
+ if(!(window.jspdf&&window.jspdf.jsPDF))throw new Error('O gerador de PDF ainda não carregou. Verifique a ligação à internet e tente novamente.');
+ const {jsPDF}=window.jspdf;
+ const reportAssets=selectedExportAssets(p);
+ pageSettings=loadPageSettings();
+ const landscape=pageSettings.orientation==='landscape';
+ const doc=new jsPDF({unit:'mm',format:'a4',orientation:landscape?'landscape':'portrait'});
+ const pageW=doc.internal.pageSize.getWidth(),pageH=doc.internal.pageSize.getHeight();
+ const marginTop=Number(pageSettings.top)||15,marginRight=Number(pageSettings.right)||15,marginBottom=Number(pageSettings.bottom)||15,marginLeft=Number(pageSettings.left)||15;
+ const contentW=pageW-marginLeft-marginRight;
+ let y=marginTop,pageStarted=false;
+ function newPage(){if(pageStarted)doc.addPage();pageStarted=true;y=marginTop}
+ function ensureSpace(h){if(y+h>pageH-marginBottom)newPage()}
+ function text(str,opts={}){
+  const value=String(str??'');if(!value.trim())return;
+  doc.setFont(undefined,opts.bold?'bold':'normal');doc.setFontSize(opts.size||10);
+  const lines=doc.splitTextToSize(value,contentW),lineH=(opts.size||10)*0.42;
+  ensureSpace(lines.length*lineH+2);
+  doc.text(lines,marginLeft,y);
+  pageStarted=true;
+  y+=lines.length*lineH+(opts.gap??2);
+ }
+ function heading(str,opts={}){if(opts.pageBreak)newPage();else ensureSpace(10);text(str,{bold:true,size:opts.size||14,gap:4})}
+ function field(label,value){if(!String(value??'').trim())return;text(label+': '+value,{size:10,gap:1.5})}
+ async function photoDataURL(photo){
+  let blob=await photoGet(photo.id);if(!blob)return null;
+  if(!/image\/(png|jpeg|jpg)/i.test(blob.type||'')){
+    const activeSettings=loadPhotoSettings(),converted=await compressImage(blob,activeSettings.maxSide,activeSettings.quality/100);
+    blob=converted.blob;
+  }
+  return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob)});
+ }
+ async function photoGrid(photoRefs,cols,showCaptions){
+  if(!photoRefs.length)return;
+  const gap=4,cellW=(contentW-gap*(cols-1))/cols;
+  let col=0,rowMaxH=0,rowStartY=y;
+  for(const ref of photoRefs){
+   let dataURL;try{dataURL=await photoDataURL(ref.photo)}catch(e){continue}
+   if(!dataURL)continue;
+   const w=Number(ref.photo.w)||1200,h=Number(ref.photo.h)||800,imgH=cellW*(h/w);
+   if(col===0){ensureSpace(imgH+(showCaptions?6:0)+gap);rowStartY=y;rowMaxH=0}
+   const x=marginLeft+col*(cellW+gap),fmt=dataURL.startsWith('data:image/png')?'PNG':'JPEG';
+   try{doc.addImage(dataURL,fmt,x,rowStartY,cellW,imgH);pageStarted=true}catch(e){console.error('Falha ao inserir imagem no PDF',e)}
+   rowMaxH=Math.max(rowMaxH,imgH);
+   if(showCaptions){
+    doc.setFont(undefined,'normal');doc.setFontSize(8);
+    const capLines=doc.splitTextToSize(ref.code,cellW);
+    doc.text(capLines,x,rowStartY+imgH+3);
+    rowMaxH=Math.max(rowMaxH,imgH+3+capLines.length*3);
+   }
+   col++;
+   if(col===cols){col=0;y=rowStartY+rowMaxH+gap}
+  }
+  if(col>0)y=rowStartY+rowMaxH+gap;
+ }
+ const components=activeOutputComponents();
+ for(const component of components){
+  if(component==='process'){
+   heading(p.code||'Processo',{pageBreak:pageStarted,size:20});
+   field('Designação',p.name);field('ID Institucional',p.ref);field('Solicitante',p.requester);
+   field('Finalidade',p.purpose);field('Descrição do solicitado',p.requestDescription);
+   field('Base de valor',p.valueBase);field('Estado',p.status);field('Data de entrada',p.inputDate);field('Prazo',p.deadline);
+   text('Número de Ativos: '+reportAssets.length,{bold:true,size:12,gap:3});
+   for(const status of ['ON','OFF']){
+    if((status==='ON'&&!summaryConfig.on)||(status==='OFF'&&!summaryConfig.off))continue;
+    const rows=reportAssets.filter(a=>(a.status==='OFF'?'OFF':'ON')===status);
+    text('Status '+status+' — '+rows.length,{bold:true,size:11,gap:2});
+    rows.forEach(a=>text('  '+summaryConfig.fields.map(field2=>SUMMARY_FIELD_DEFS[field2]+': '+assetSummaryValue(a,field2)).join(' · '),{size:9,gap:1}));
+   }
+   field('Observações',p.obs);
+  }
+  if(component==='cover')for(const a of reportAssets){
+   const refs=(a.photos||[]).map((photo,index)=>({photo,index,code:photoCodeForReport(a,0,index)})).filter(r=>r.photo.cover);
+   if(!refs.length)continue;
+   heading((a.code||'Ativo')+' — '+(a.name||'Capa'),{pageBreak:true,size:16});
+   await photoGrid(refs,validReportCols(coverCols.value),false);
+  }
+  if(component==='characterization')for(const a of reportAssets){
+   heading((a.code||'Ativo')+' — '+(a.name||'Sem designação'),{pageBreak:true,size:16});
+   field('ID_Institucional',a.ref);field('Tipo',a.type);field('Grupo',a.group);field('Destino',a.currentUse);
+   field('Endereço / Local',a.local);field('Número',a.doorNumber);field('Piso / Andar',a.floor);
+   field('Código Postal',formatPostalCode(a.postalCode));field('Freguesia',a.freg);field('Concelho',a.conc);
+   field('ID externo',a.externalId);field('Hora da visita',a.visitTime);field('GPS',assetGPS(a));field('Observações do Ativo',a.obs);
+   text('Caracterização',{bold:true,size:13,gap:3});
+   configuredCharacterValues(a,a).forEach(([key,value])=>field(key,value));
+   const q=a.qtyAreas||{};
+   [['Documentação de referência',(q.documents||[]).join(', ')],['Quantidade',q.qtd],['Área de terreno (AT)',q.at],['Área de implantação (AI)',q.ai],['Área bruta privativa (ABP)',q.abp],['Área bruta dependente (ABD)',q.abd],['Sup. terreno (ST)',q.st],['Sup. coberta (SC)',q.sc],['Sup. descoberta (SD)',q.sd]].forEach(x=>field(x[0],x[1]));
+   field('Observações',a.char?.__obs);
+   const photoRefs=(a.photos||[]).map((photo,index)=>({photo,index,code:photoCodeForReport(a,0,index)+(photo.caption?' — '+photo.caption:'')}));
+   if(photoRefs.length){ensureSpace(8);text('Imagens',{bold:true,size:11,gap:2});await photoGrid(photoRefs,validReportCols(sheetCols.value),true)}
+  }
+  if(component==='visits'){
+   heading('Mapa de visitas do Processo',{pageBreak:true,size:16});
+   for(const visit of (p.visits||[])){
+    const people=(visit.participantIds||[]).map(id=>(p.participants||[]).find(person=>person.id===id)?.name).filter(Boolean).join(', ');
+    const assets=(visit.assets||[]).map(item=>item.code||p.assets.find(a=>a.id===item.assetId)?.code).filter(Boolean).join(', ');
+    text([visit.date,[visit.start,visit.end].filter(Boolean).join('–'),assets,people].filter(Boolean).join(' | '),{size:9,gap:1});
+   }
+   text('Detalhe das visitas',{bold:true,size:13,gap:3});
+   for(const visit of (p.visits||[])){
+    text((visit.type||'Visita')+' · '+(visit.date||'Sem data'),{bold:true,size:11,gap:2});
+    field('Hora',[visit.start,visit.end].filter(Boolean).join('–'));
+    field('Estado do tempo',visit.weather);
+    field('Intervenientes',(visit.participantIds||[]).map(id=>(p.participants||[]).find(person=>person.id===id)?.name).filter(Boolean).join(', '));
+    field('Ativos observados',(visit.assets||[]).map(item=>item.code||p.assets.find(a=>a.id===item.assetId)?.code).filter(Boolean).join(', '));
+    field('Condicionamentos',visit.constraints);
+    field('Observações',visit.obs);
+   }
+  }
+  if(component==='chronology'){
+   heading('Cronologia',{pageBreak:true,size:16});
+   for(const entry of (p.history||[]).slice().reverse()){
+    const date=new Date(entry.at),when=Number.isFinite(date.getTime())?date.toLocaleString('pt-PT'):'';
+    field(when||'Registo',entry.text||entry.type);
+   }
+  }
+ }
+ if(!components.length)text('O Resumo geral não tem fichas ativas.',{bold:true,size:14});
+ const pageCount=doc.internal.getNumberOfPages();
+ for(let i=1;i<=pageCount;i++){
+  doc.setPage(i);
+  doc.setFont(undefined,'normal');doc.setFontSize(Number(pageSettings.footerSize)||8);
+  doc.text(String(i)+' / '+pageCount,pageW-marginRight,pageH-6,{align:'right'});
+  if(pageSettings.footerAnalystVersion!==false){
+   const analyst=pageSettings.analystText||'';
+   doc.text([analyst,'Ativa '+APP_VERSION].filter(Boolean).join(' · '),marginLeft,pageH-6);
+  }
+ }
+ return doc.output('blob');
 }
 
 async function saveGeneratedFile(blob,suggestedName,mimeType='application/octet-stream'){
@@ -3844,8 +4020,8 @@ function buildXLSX(sheetName,rows){
 function processSummaryText(p){
  const lines=[p.code||'',p.name||'',p.ref||'','Solicitante: '+(p.requester||''),'Finalidade: '+(p.purpose||''),'Descrição do solicitado: '+(p.requestDescription||''),''];
  if((p.participants||[]).length){lines.push('INTERVENIENTES');(p.participants||[]).forEach(person=>lines.push([person.name,person.role,person.phone,person.email].filter(Boolean).join(' | ')));lines.push('')}
- const visited=(p.assets||[]).filter(a=>a.visitDate);if(visited.length){lines.push('VISITAS REGISTADAS NOS ATIVOS');visited.sort((a,b)=>String(a.visitDate).localeCompare(String(b.visitDate))).forEach(a=>lines.push([a.visitDate,[a.visitTime,a.visitEnd].filter(Boolean).join('-'),a.code,a.name,assetOperationalStatus(a)].filter(Boolean).join(' | ')));lines.push('')}
- (p.assets||[]).forEach(a=>{lines.push(a.code+' | '+(a.ref||'')+' | '+(a.name||'')+' | '+(a.group||'')+' | '+(a.currentUse||'')+' | '+assetOperationalStatus(a))});
+ const visited=selectedExportAssets(p).filter(a=>a.visitDate);if(visited.length){lines.push('VISITAS REGISTADAS NOS ATIVOS');visited.sort((a,b)=>String(a.visitDate).localeCompare(String(b.visitDate))).forEach(a=>lines.push([a.visitDate,[a.visitTime,a.visitEnd].filter(Boolean).join('-'),a.code,a.name,assetOperationalStatus(a)].filter(Boolean).join(' | ')));lines.push('')}
+ selectedExportAssets(p).forEach(a=>{lines.push(a.code+' | '+(a.ref||'')+' | '+(a.name||'')+' | '+(a.group||'')+' | '+(a.currentUse||'')+' | '+assetOperationalStatus(a))});
  return lines.join('\n');
 }
 function processHistoryText(p){return (p.history||[]).slice().reverse().map(h=>{const d=new Date(h.at),when=Number.isFinite(d.getTime())?d.toLocaleString('pt-PT'):'';return [when,h.text,h.origin?'Origem: '+h.origin:''].filter(Boolean).join(' | ')}).join('\n')||'Sem acontecimentos registados.'}
@@ -3855,7 +4031,7 @@ function kmlForAsset(p,a,gps){
 }
 function processDataRows(p){
  const rows=[['Código','ID Institucional','Designação','Grupo','Destino/Uso','Estado','Data Visita','Hora Início','Hora Fim','Freguesia','Concelho','GPS','Observações']];
- (p.assets||[]).forEach(a=>{
+ selectedExportAssets(p).forEach(a=>{
    rows.push([a.code||'',a.ref||'',a.name||'',a.group||'',a.currentUse||'',assetOperationalStatus(a),a.visitDate||'',a.visitTime||'',a.visitEnd||'',a.freg||'',a.conc||'',assetGPS(a),a.obs||'']);
  });
  return rows;
@@ -3867,8 +4043,9 @@ async function buildProcessZIP(p,wordBlob=null){
  entries.push({name:root+safeFileName(p.code||'Processo')+'_Cronologia.txt',data:encoder.encode(processHistoryText(p))});
  entries.push({name:root+safeFileName(p.code||'Processo')+'_Dados.xlsx',data:new Uint8Array(await buildXLSX('Ativos',processDataRows(p)).arrayBuffer())});
  if(wordBlob)entries.push({name:root+safeFileName(p.code||'Processo')+'_Ficha.docx',data:new Uint8Array(await wordBlob.arrayBuffer())});
- let done=0,total=(p.assets||[]).reduce((n,a)=>n+(a.photos?.length||0),0);
- for(const a of (p.assets||[])){
+ const reportAssets=selectedExportAssets(p);
+ let done=0,total=reportAssets.reduce((n,a)=>n+(a.photos?.length||0),0);
+ for(const a of reportAssets){
    const assetFolder=root+safeFileName(a.code||'Ativo')+'/';
    const gps=parseGPS(assetGPS(a));if(gps)entries.push({name:assetFolder+safeFileName((p.code||'Processo')+'_'+(a.code||'Ativo')+'_GPS')+'.kml',data:encoder.encode(kmlForAsset(p,a,gps))});
    const legendLines=[];
@@ -3895,7 +4072,7 @@ exportZIP.onclick=async()=>{
  }catch(e){console.error(e);zipInfo.textContent='Não foi possível criar o ZIP.';alert('Falha ao criar a exportação ZIP deste Processo.')}
  exportZIP.disabled=false;
 };
-exportSummary.onclick=async()=>{let p=syncPendingData();if(!p)return;let lines=[p.code,p.name,p.ref,'',...p.assets.map(a=>a.code+' | '+(a.ref||'')+' | '+(a.name||'')+' | '+(a.group||'')+' | '+(a.currentUse||''))],blob=new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'});await saveBlobToDestination(blob,safeFileName(p.code||'Processo')+'_Resumo.txt',zipInfo,'Resumo TXT pronto.')}
+exportSummary.onclick=async()=>{let p=syncPendingData();if(!p)return;let lines=[p.code,p.name,p.ref,'',...selectedExportAssets(p).map(a=>a.code+' | '+(a.ref||'')+' | '+(a.name||'')+' | '+(a.group||'')+' | '+(a.currentUse||''))],blob=new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'});await saveBlobToDestination(blob,safeFileName(p.code||'Processo')+'_Resumo.txt',zipInfo,'Resumo TXT pronto.')}
 function visitedAssetsUpToToday(p){
  const today=new Date().toISOString().slice(0,10);
  return (p.assets||[]).filter(a=>a.visitDate&&a.visitDate<=today).sort((a,b)=>String(a.visitDate+' '+(a.visitTime||'')).localeCompare(String(b.visitDate+' '+(b.visitTime||''))));
