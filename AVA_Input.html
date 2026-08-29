@@ -3650,11 +3650,21 @@ rejectPreview.onclick=()=>{
 };
 acceptPreview.onclick=async()=>{
  const p=proc();if(!p){alert('Selecione primeiro um Processo.');return}
+ // A pré-visualização já foi construída e validada no passo anterior (só chegamos
+ // aqui depois disso) — reconstruí-la outra vez agora, com o novo scan de orientação
+ // de todas as fotografias, introduzia um atraso entre o toque e window.print() que
+ // o Safari/iOS interpreta como "já não é uma ação direta do utilizador" e recusa
+ // abrir a caixa de diálogo de impressão, sem qualquer erro visível. Por isso aqui
+ // reutiliza-se o preview e o scan já existentes, e a impressão é chamada de imediato.
+ if(lastOrientationScan?.outliers?.length){
+   orientationInfo.scrollIntoView({behavior:'smooth',block:'center'});
+   alert('Existem fotografias com orientação divergente. Escolha Rodar, Eliminar ou Manter antes de produzir o documento.');
+   return;
+ }
  acceptPreview.disabled=true;rejectPreview.disabled=true;
  try{
-  if(!await renderReportPreview(true))return;
   folderInfo.textContent='PDF: no diálogo seguinte escolha “Guardar como PDF” e indique o destino.';
-  await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));window.print();
+  window.print();
   folderInfo.textContent='A gerar o documento Word da versão aceite…';
   const wordZip=await buildWordDOCX(p),blob=new Blob([wordZip],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
   await saveBlobToDestination(blob,safeFileName(p.code||'Processo')+'_Ficha.docx',folderInfo,'Versão aceite: PDF encaminhado e Word pronto.');
@@ -3662,7 +3672,21 @@ acceptPreview.onclick=async()=>{
  }catch(e){console.error(e);alert('Não foi possível concluir a exportação PDF + Word da versão aceite.')}
  finally{acceptPreview.disabled=false;rejectPreview.disabled=false}
 };
-printReport.onclick=async()=>{if(await renderReportPreview(true)){await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));folderInfo.textContent='No diálogo seguinte escolha “Guardar como PDF” e indique a pasta pretendida.';window.print()}};
+printReport.onclick=async()=>{
+ const p=proc();if(!p){alert('Selecione primeiro um Processo.');return}
+ // Reutiliza um preview já em ecrã e válido para este Processo (evita reconstruir
+ // tudo mesmo em cima do toque, o que pode fazer o Safari/iOS recusar window.print()
+ // — ver nota em acceptPreview.onclick).
+ const fresh=!reportPreview.classList.contains('hidden')&&lastOrientationScan?.processId===p.id;
+ if(!fresh&&!await renderReportPreview(true))return;
+ if(lastOrientationScan?.outliers?.length){
+   orientationInfo.scrollIntoView({behavior:'smooth',block:'center'});
+   alert('Existem fotografias com orientação divergente. Escolha Rodar, Eliminar ou Manter antes de produzir o documento.');
+   return;
+ }
+ folderInfo.textContent='No diálogo seguinte escolha “Guardar como PDF” e indique a pasta pretendida.';
+ window.print();
+};
 
 const SETTINGS_DB='Ativa_Settings_v1',DESTINATION_KEY='destination-folder';
 let destinationDirectory=null;
