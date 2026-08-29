@@ -3689,8 +3689,8 @@ acceptPreview.onclick=async()=>{
  acceptPreview.disabled=true;rejectPreview.disabled=true;
  try{
   folderInfo.textContent='A gerar o PDF da versão aceite…';
-  const pdfBlob=await buildReportPDF(p);
-  await saveBlobToDestination(pdfBlob,safeFileName(p.code||'Processo')+'_Ficha.pdf',folderInfo,'PDF pronto.');
+  const pdfResult=await buildReportPDF(p);
+  await saveBlobToDestination(pdfResult.blob,safeFileName(p.code||'Processo')+'_Ficha.pdf',folderInfo,'PDF pronto.'+(pdfResult.photoFailures?' ('+pdfResult.photoFailures+' fotografia(s) não incluída(s) — ver consola.)':''));
   folderInfo.textContent+=' A gerar o documento Word da versão aceite…';
   const wordZip=await buildWordDOCX(p),blob=new Blob([wordZip],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
   await saveBlobToDestination(blob,safeFileName(p.code||'Processo')+'_Ficha.docx',folderInfo,'Word pronto.',true);
@@ -3712,8 +3712,8 @@ printReport.onclick=async()=>{
  printReport.disabled=true;
  try{
   folderInfo.textContent='A gerar o PDF…';
-  const pdfBlob=await buildReportPDF(p);
-  await saveBlobToDestination(pdfBlob,safeFileName(p.code||'Processo')+'_Ficha.pdf',folderInfo,'PDF pronto.');
+  const pdfResult=await buildReportPDF(p);
+  await saveBlobToDestination(pdfResult.blob,safeFileName(p.code||'Processo')+'_Ficha.pdf',folderInfo,'PDF pronto.'+(pdfResult.photoFailures?' ('+pdfResult.photoFailures+' fotografia(s) não incluída(s) — ver consola.)':''));
  }catch(e){console.error(e);alert('Não foi possível gerar o PDF: '+(e?.message||e))}
  finally{printReport.disabled=false}
 };
@@ -3820,7 +3820,9 @@ async function buildReportPDF(p){
  const pageW=doc.internal.pageSize.getWidth(),pageH=doc.internal.pageSize.getHeight();
  const marginTop=Number(pageSettings.top)||15,marginRight=Number(pageSettings.right)||15,marginBottom=Number(pageSettings.bottom)||15,marginLeft=Number(pageSettings.left)||15;
  const contentW=pageW-marginLeft-marginRight;
- let y=marginTop,pageStarted=false;
+ let y=marginTop,pageStarted=false,currentComponent='';
+ const pageModel={};
+ function tagPage(){pageModel[doc.internal.getNumberOfPages()]=currentComponent}
  function newPage(){if(pageStarted)doc.addPage();pageStarted=true;y=marginTop}
  function ensureSpace(h){if(y+h>pageH-marginBottom)newPage()}
  function text(str,opts={}){
@@ -3829,30 +3831,35 @@ async function buildReportPDF(p){
   const lines=doc.splitTextToSize(value,contentW),lineH=(opts.size||10)*0.42;
   ensureSpace(lines.length*lineH+2);
   doc.text(lines,marginLeft,y);
-  pageStarted=true;
+  pageStarted=true;tagPage();
   y+=lines.length*lineH+(opts.gap??2);
  }
  function heading(str,opts={}){if(opts.pageBreak)newPage();else ensureSpace(10);text(str,{bold:true,size:opts.size||14,gap:4})}
  function field(label,value){if(!String(value??'').trim())return;text(label+': '+value,{size:10,gap:1.5})}
+ // jsPDF tem um descodificador de JPEG próprio, limitado (falha em silêncio com
+ // JPEGs progressivos ou CMYK que o <img> do próprio browser lê sem problema —
+ // exatamente o que a pré-visualização usa). Por isso a imagem é sempre
+ // redesenhada num canvas (via compressImage) antes de entrar no PDF, garantindo
+ // um JPEG plano que o jsPDF consegue sempre inserir, e usam-se as dimensões
+ // devolvidas por essa conversão em vez dos metadados gravados (podem ser nulos).
+ let photoFailures=0;
  async function photoDataURL(photo){
-  let blob=await photoGet(photo.id);if(!blob)return null;
-  if(!/image\/(png|jpeg|jpg)/i.test(blob.type||'')){
-    const activeSettings=loadPhotoSettings(),converted=await compressImage(blob,activeSettings.maxSide,activeSettings.quality/100);
-    blob=converted.blob;
-  }
-  return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob)});
+  const blob=await photoGet(photo.id);if(!blob)return null;
+  const activeSettings=loadPhotoSettings(),converted=await compressImage(blob,activeSettings.maxSide,activeSettings.quality/100);
+  const dataURL=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(converted.blob)});
+  return {dataURL,w:converted.w,h:converted.h};
  }
  async function photoGrid(photoRefs,cols,showCaptions){
   if(!photoRefs.length)return;
   const gap=4,cellW=(contentW-gap*(cols-1))/cols;
   let col=0,rowMaxH=0,rowStartY=y;
   for(const ref of photoRefs){
-   let dataURL;try{dataURL=await photoDataURL(ref.photo)}catch(e){continue}
-   if(!dataURL)continue;
-   const w=Number(ref.photo.w)||1200,h=Number(ref.photo.h)||800,imgH=cellW*(h/w);
+   let photoData;try{photoData=await photoDataURL(ref.photo)}catch(e){console.error('Falha ao preparar fotografia para o PDF',ref.photo?.id,e);photoFailures++;continue}
+   if(!photoData){photoFailures++;continue}
+   const w=Number(photoData.w)||Number(ref.photo.w)||1200,h=Number(photoData.h)||Number(ref.photo.h)||800,imgH=cellW*(h/w);
    if(col===0){ensureSpace(imgH+(showCaptions?6:0)+gap);rowStartY=y;rowMaxH=0}
-   const x=marginLeft+col*(cellW+gap),fmt=dataURL.startsWith('data:image/png')?'PNG':'JPEG';
-   try{doc.addImage(dataURL,fmt,x,rowStartY,cellW,imgH);pageStarted=true}catch(e){console.error('Falha ao inserir imagem no PDF',e)}
+   const x=marginLeft+col*(cellW+gap);
+   try{doc.addImage(photoData.dataURL,'JPEG',x,rowStartY,cellW,imgH);pageStarted=true;tagPage()}catch(e){console.error('Falha ao inserir imagem no PDF',ref.photo?.id,e);photoFailures++}
    rowMaxH=Math.max(rowMaxH,imgH);
    if(showCaptions){
     doc.setFont(undefined,'normal');doc.setFontSize(8);
@@ -3867,6 +3874,7 @@ async function buildReportPDF(p){
  }
  const components=activeOutputComponents();
  for(const component of components){
+  currentComponent=component;
   if(component==='process'){
    heading(p.code||'Processo',{pageBreak:pageStarted,size:20});
    field('Designação',p.name);field('ID Institucional',p.ref);field('Solicitante',p.requester);
@@ -3928,17 +3936,36 @@ async function buildReportPDF(p){
   }
  }
  if(!components.length)text('O Resumo geral não tem fichas ativas.',{bold:true,size:14});
+ // Cabeçalho e rodapé replicam exatamente os mesmos campos configurados em
+ // Config. Página (a mesma fonte usada pela pré-visualização em printBandHTML e
+ // pelo Word em wordBandXML), para que o PDF não perca o gabinete, o código do
+ // Processo/modelo, o analista/versão nem a paginação já estabelecidos.
+ const office=officeForProcess(p);
+ const headerLeftVal=String(pageFieldValue(pageSettings.headerLeft||'office',p)||'');
+ const headerCenterVal=String(pageFieldValue(pageSettings.headerCenter||'',p)||'');
+ const headerRightVal=String(pageFieldValue(pageSettings.headerRight||'',p)||'');
+ const headerExtraVal=String(office?.extra||'');
+ const headerSize=Math.max(9.5,Number(pageSettings.headerSize)||10);
+ const headerExtraSize=Math.max(8,Number(pageSettings.headerExtraSize)||8.5);
+ const footerFit=footerSizeAdjusted();
+ const analystVersion=['Ativa '+APP_VERSION,pageSettings.footerAnalystVersion!==false?(pageSettings.analystText||''):''].filter(Boolean).join(' * ');
  const pageCount=doc.internal.getNumberOfPages();
  for(let i=1;i<=pageCount;i++){
   doc.setPage(i);
-  doc.setFont(undefined,'normal');doc.setFontSize(Number(pageSettings.footerSize)||8);
-  doc.text(String(i)+' / '+pageCount,pageW-marginRight,pageH-6,{align:'right'});
-  if(pageSettings.footerAnalystVersion!==false){
-   const analyst=pageSettings.analystText||'';
-   doc.text([analyst,'Ativa '+APP_VERSION].filter(Boolean).join(' · '),marginLeft,pageH-6);
-  }
+  doc.setFont(undefined,'normal');doc.setFontSize(headerSize);
+  if(headerLeftVal)doc.text(headerLeftVal,marginLeft,10,{align:'left'});
+  if(headerCenterVal)doc.text(headerCenterVal,pageW/2,10,{align:'center'});
+  if(headerRightVal)doc.text(headerRightVal,pageW-marginRight,10,{align:'right'});
+  if(headerExtraVal){doc.setFontSize(headerExtraSize);doc.text(headerExtraVal,marginLeft,10+headerSize*0.42+2);}
+  const outModelName=footerOutModelName(pageModel[i]||'','Relatório',pageCount);
+  const footerLeftVal=[p.code||'',outModelName].filter(Boolean).join(' · ');
+  const footerRightVal=String(i)+' / '+pageCount;
+  doc.setFont(undefined,'normal');doc.setFontSize(footerFit.size);
+  doc.text(footerLeftVal,marginLeft,pageH-6,{align:'left'});
+  if(analystVersion)doc.text(analystVersion,pageW/2,pageH-6,{align:'center'});
+  doc.text(footerRightVal,pageW-marginRight,pageH-6,{align:'right'});
  }
- return doc.output('blob');
+ return {blob:doc.output('blob'),photoFailures};
 }
 
 async function saveGeneratedFile(blob,suggestedName,mimeType='application/octet-stream'){
