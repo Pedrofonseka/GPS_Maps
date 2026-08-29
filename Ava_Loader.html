@@ -864,12 +864,47 @@ function load(){
  }
  catch(e){return{processes:[]}}
 }
+const DB_FALLBACK_KEY='ativa_v2_db_fallback';
+async function saveDBFallback(){
+ try{
+   const store=await settingsStore('readwrite');
+   await new Promise((resolve,reject)=>{
+     const request=store.put({data:db,savedAt:new Date().toISOString()},DB_FALLBACK_KEY);
+     request.onsuccess=()=>resolve();request.onerror=()=>reject(request.error);
+   });
+ }catch(e){}
+}
+async function loadDBFallback(){
+ try{
+   const store=await settingsStore();
+   return await new Promise((resolve,reject)=>{
+     const request=store.get(DB_FALLBACK_KEY);
+     request.onsuccess=()=>resolve(request.result||null);request.onerror=()=>reject(request.error);
+   });
+ }catch(e){return null}
+}
+async function clearDBFallback(){
+ try{
+   const store=await settingsStore('readwrite');
+   await new Promise(resolve=>{const request=store.delete(DB_FALLBACK_KEY);request.onsuccess=request.onerror=()=>resolve()});
+ }catch(e){}
+}
+let dbSaveFailing=false;
 function save(){
  try{
    localStorage.setItem(KEY,JSON.stringify(db));
    localStorage.setItem(KEY+'_savedAt',new Date().toISOString());
+   if(dbSaveFailing){dbSaveFailing=false;clearDBFallback()}
+   return true;
  }catch(e){
-   alert('Não foi possível guardar os dados neste dispositivo. Faça uma cópia de segurança do arquivo.');
+   // localStorage está cheio: nada foi perdido — fica uma cópia de recurso em IndexedDB
+   // (sem o limite apertado do localStorage) até haver espaço para gravar em definitivo.
+   saveDBFallback();
+   if(!dbSaveFailing){
+     dbSaveFailing=true;
+     alert('Este dispositivo ficou sem espaço de armazenamento. Foi guardada uma cópia de recurso dos dados (nada foi perdido), mas a gravação definitiva está a falhar. Liberte espaço no dispositivo e, assim que possível, feche e reabra a aplicação para recuperar a cópia de recurso.');
+   }
+   return false;
  }
 }
 let storageWarnedAt=0;
@@ -1648,18 +1683,28 @@ restoreFile.onchange=async()=>{
    if(obj?.version&&compareAppVersions(obj.version,APP_VERSION)>0&&!confirm('Este Backup_IN foi criado pela versão '+obj.version+', mais recente do que a versão '+APP_VERSION+'. A estrutura é compatível. Pretende continuar?'))return;
    if(!confirm('Substituir o arquivo atual pelos '+incoming.processes.length+' Processo(s) desta cópia?'))return;
    db=normaliseDB(incoming);
+   const failed=[];
+   const persist=(label,key,value)=>{try{localStorage.setItem(key,value)}catch(e){failed.push(label)}};
    if(obj&&obj.groupConfig){
      Object.keys(groups).forEach(k=>{if(obj.groupConfig[k])groups[k]=obj.groupConfig[k]});
-     saveGroupConfig();
+     persist('Configuração de grupos',CFG_KEY,JSON.stringify(groups));
    }
-   if(obj&&obj.generalTables){try{localStorage.setItem(APP_TABLES_KEY,JSON.stringify(obj.generalTables))}catch(e){warnStorageFailure()}appTables=loadAppTables();saveAppTables();refreshConfiguredSelects()}
-   if(obj&&obj.photoSettings){try{localStorage.setItem(PHOTO_SETTINGS_KEY,JSON.stringify(obj.photoSettings));photoSettings=loadPhotoSettings()}catch(e){warnStorageFailure()}}
-   if(obj&&obj.pageSettings){try{localStorage.setItem(PAGE_SETTINGS_KEY,JSON.stringify(obj.pageSettings));pageSettings=loadPageSettings();applyPageSettings()}catch(e){warnStorageFailure()}}
-   if(obj&&obj.reportLayout){try{localStorage.setItem(REPORT_LAYOUT_KEY,JSON.stringify(obj.reportLayout));syncReportLayoutFromStorage()}catch(e){warnStorageFailure()}}
-   if(obj&&obj.outputComposition){try{localStorage.setItem(OUTPUT_COMPOSITION_KEY,JSON.stringify(obj.outputComposition));outputComposition=loadOutputComposition()}catch(e){warnStorageFailure()}}
+   if(obj&&obj.generalTables){persist('Tabelas gerais',APP_TABLES_KEY,JSON.stringify(obj.generalTables));appTables=loadAppTables();saveAppTables();refreshConfiguredSelects()}
+   if(obj&&obj.photoSettings){persist('Definições de fotografias',PHOTO_SETTINGS_KEY,JSON.stringify(obj.photoSettings));photoSettings=loadPhotoSettings()}
+   if(obj&&obj.pageSettings){persist('Definições de página',PAGE_SETTINGS_KEY,JSON.stringify(obj.pageSettings));pageSettings=loadPageSettings();applyPageSettings()}
+   if(obj&&obj.reportLayout){persist('Esquema do relatório',REPORT_LAYOUT_KEY,JSON.stringify(obj.reportLayout));syncReportLayoutFromStorage()}
+   if(obj&&obj.outputComposition){persist('Composição de saída',OUTPUT_COMPOSITION_KEY,JSON.stringify(obj.outputComposition));outputComposition=loadOutputComposition()}
    currentProcess=null;rememberCurrentProcess(); charAsset=null; charNUF=null; editingAsset=null;editingVisit=null;
-   save(); renderProcesses(); updateContext();
-   alert('Arquivo carregado com sucesso.');
+   const dbSaved=save();
+   renderProcesses(); updateContext();
+   if(!dbSaved)failed.unshift('Processos (base de dados principal)');
+   if(!failed.length){
+     alert('Arquivo carregado com sucesso.');
+   }else if(dbSaved){
+     alert('Os Processos foram carregados e gravados com sucesso. Por falta de espaço neste dispositivo, NÃO foi possível gravar de forma permanente: '+failed.join(', ')+'. Liberte espaço e repita o Backup_IN para gravar estas definições em definitivo.');
+   }else{
+     alert('Por falta de espaço neste dispositivo, os dados deste Backup_IN NÃO foram gravados de forma permanente (foi guardada uma cópia de recurso — nada foi perdido). Liberte espaço; ao reabrir a aplicação a cópia de recurso será recuperada automaticamente.');
+   }
  }catch(e){
    alert('Não foi possível carregar este arquivo de segurança.');
  }finally{
@@ -3792,6 +3837,23 @@ if(cfgSaveConstructionRules)cfgSaveConstructionRules.onclick=()=>{
  try{localStorage.setItem(CONSTRUCTION_RULES_KEY,cfgConstructionRules.value.trim()||CONSTRUCTION_RULES_DEFAULT);alert('Regras gerais guardadas e aplicáveis aos modelos de saída.')}catch(e){alert('Não foi possível guardar as regras.')}
 };
 
+async function checkDBFallbackRecovery(){
+ try{
+   const fb=await loadDBFallback();
+   if(!fb||!fb.data||!Array.isArray(fb.data.processes))return;
+   let localSavedAt='';try{localSavedAt=localStorage.getItem(KEY+'_savedAt')||''}catch(e){}
+   const localEmpty=!Array.isArray(db.processes)||!db.processes.length;
+   const fallbackNewer=!localSavedAt||fb.savedAt>localSavedAt;
+   if(!fallbackNewer)return;
+   const proceed=localEmpty||confirm('Foi encontrada uma cópia de recurso de dados mais recente, guardada quando este dispositivo ficou sem espaço de armazenamento. Pretende recuperá-la agora? (substitui os dados atualmente carregados pelos da cópia de recurso)');
+   if(!proceed)return;
+   db=normaliseDB(fb.data);
+   currentProcess=null;rememberCurrentProcess();
+   const ok=save();
+   renderProcesses();updateContext();
+   if(ok)alert('Cópia de recurso recuperada e gravada com sucesso.');
+ }catch(e){console.warn('Recuperação da cópia de recurso falhou:',e)}
+}
 function initialiseApp(){
  document.title='Ativa '+APP_VERSION;
  if(appVersionLabel)appVersionLabel.textContent=APP_VERSION;
@@ -3819,6 +3881,7 @@ function initialiseApp(){
    try{seedNUFVariablesOnce();migrateLegacyCharacterizationKeys();restoreLastActiveProcess();
 renderProcesses();updateContext()}catch(inner){console.error(inner)}
  }
+ checkDBFallbackRecovery();
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initialiseApp,{once:true});
 else initialiseApp();
