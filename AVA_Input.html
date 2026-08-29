@@ -4013,6 +4013,15 @@ async function buildReportPDF(p){
  }
  // Subtítulo — replica .report h3 (negrito, sem linha).
  function subheading(str){ensureSpace(10);text(str,{bold:true,size:12,gap:3})}
+ // Designação do Ativo no topo de página — linha divisória primeiro, depois o
+ // texto (mais pequeno que um título de secção normal) por baixo dela.
+ function assetHeading(str){
+  newPage();
+  doc.setDrawColor(...PDF_COLORS.bandLine);doc.setLineWidth(0.3);
+  doc.line(marginLeft,y,marginLeft+contentW,y);
+  y+=5;
+  text(str,{bold:true,size:12,gap:4});
+ }
  // Par etiqueta/valor em grelha de 2 colunas — replica .report-grid/.report-field
  // (etiqueta pequena em maiúsculas cinza, valor a preto, linha fina por baixo).
  function fieldGrid(pairs){
@@ -4101,11 +4110,11 @@ async function buildReportPDF(p){
   if(component==='cover')for(const a of reportAssets){
    const refs=(a.photos||[]).map((photo,index)=>({photo,index,code:photoCodeForReport(a,0,index)})).filter(r=>r.photo.cover);
    if(!refs.length)continue;
-   heading((a.code||'Ativo')+' — '+(a.name||'Capa'),{pageBreak:true,size:18});
+   assetHeading((a.code||'Ativo')+' — '+(a.name||'Capa'));
    await photoGrid(refs,validReportCols(coverCols.value),false);
   }
   if(component==='characterization')for(const a of reportAssets){
-   heading((a.code||'Ativo')+' — '+(a.name||'Sem designação'),{pageBreak:true,size:18});
+   assetHeading((a.code||'Ativo')+' — '+(a.name||'Sem designação'));
    fieldGrid(assetFieldPairs(a));
    if(String(a.obs||'').trim()){subheading('Observações do Ativo');text(a.obs,{size:10})}
    subheading('Caracterização');
