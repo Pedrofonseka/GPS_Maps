@@ -3679,8 +3679,16 @@ async function destinationAllowed(handle){
  if(!handle)return false;
  try{if((await handle.queryPermission({mode:'readwrite'}))==='granted')return true;return (await handle.requestPermission({mode:'readwrite'}))==='granted'}catch(e){return false}
 }
-chooseFolder.onclick=async()=>{
- if(!window.showDirectoryPicker){alert('Neste navegador a escolha permanente de uma pasta não está disponível. Os ficheiros serão enviados para Ficheiros / Transferências.');return}
+if(!window.showDirectoryPicker){
+ // Safari/iOS não implementa esta API (nenhuma versão a suporta) — não é algo
+ // que a app consiga contornar. Em vez de deixar o utilizador descobrir isto só
+ // depois de tocar no botão, o botão fica desativado e explica-se já a alternativa
+ // real: o botão "Guardar ficheiro…" que aparece a seguir a cada exportação,
+ // que abre o seletor nativo de partilha para guardar em Ficheiros (repetido a
+ // cada ficheiro, já que o Safari não permite memorizar uma pasta).
+ chooseFolder.disabled=true;
+ folderInfo.textContent='Neste navegador (Safari/iPhone) não é possível fixar uma pasta destino. Depois de gerar cada exportação, use o botão "Guardar ficheiro…" que aparece a seguir — abre o ecrã de partilha do iPhone, onde escolhe "Guardar em Ficheiros" e a pasta pretendida.';
+}else chooseFolder.onclick=async()=>{
  try{destinationDirectory=await window.showDirectoryPicker({mode:'readwrite'});await rememberDestination(destinationDirectory);folderInfo.textContent='Pasta destino: '+destinationDirectory.name}
  catch(e){if(e?.name!=='AbortError')alert('Não foi possível selecionar a pasta destino.')}
 };
