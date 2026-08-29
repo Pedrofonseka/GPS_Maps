@@ -3985,11 +3985,29 @@ async function buildReportPDF(p){
  const pageW=doc.internal.pageSize.getWidth(),pageH=doc.internal.pageSize.getHeight();
  const marginTop=Number(pageSettings.top)||15,marginRight=Number(pageSettings.right)||15,marginBottom=Number(pageSettings.bottom)||15,marginLeft=Number(pageSettings.left)||15;
  const contentW=pageW-marginLeft-marginRight;
- let y=marginTop,pageStarted=false,currentComponent='';
+ // Área reservada ao cabeçalho: replica a mesma regra do CSS de impressão
+ // (.print-header fica a 5mm do topo físico da página, dentro da margem) e o
+ // conteúdo — incluindo o título da página — só começa depois disso, com uma
+ // folga extra, nunca sobreposto ao cabeçalho nem à linha divisória por baixo.
+ const headerTopY=5;
+ const headerSizeCalc=Math.max(9.5,Number(pageSettings.headerSize)||10);
+ const headerExtraSizeCalc=Math.max(8,Number(pageSettings.headerExtraSize)||8.5);
+ const headerHasExtra=!!String(officeForProcess(p)?.extra||'').trim();
+ const headerBlockBottom=headerTopY+headerSizeCalc*0.42+(headerHasExtra?2+headerExtraSizeCalc*0.42:0);
+ const contentTop=Math.max(marginTop,headerBlockBottom+6);
+ let y=contentTop,pageStarted=false,currentComponent='';
  const pageModel={};
  function tagPage(){pageModel[doc.internal.getNumberOfPages()]=currentComponent}
- function newPage(){if(pageStarted)doc.addPage();pageStarted=true;y=marginTop}
+ function newPage(){if(pageStarted)doc.addPage();pageStarted=true;y=contentTop}
  function ensureSpace(h){if(y+h>pageH-marginBottom)newPage()}
+ // Título da página — replica reportPageTitleHTML (mesmas regras de
+ // pageTitleMode/pageTitleSize já definidas em Config. Página), sempre
+ // desenhado depois da área reservada ao cabeçalho.
+ function pageTitle(str){
+  if((pageSettings.pageTitleMode||'automatic')==='none')return;
+  ensureSpace(14);
+  text(str,{bold:true,size:clampPhotoSetting(pageSettings.pageTitleSize,8,18,12),gap:5});
+ }
  function ink(){doc.setTextColor(...PDF_COLORS.ink)}
  function text(str,opts={}){
   const value=String(str??'');if(!value.trim())return;
@@ -4015,8 +4033,8 @@ async function buildReportPDF(p){
  function subheading(str){ensureSpace(10);text(str,{bold:true,size:12,gap:3})}
  // Designação do Ativo no topo de página — linha divisória primeiro, depois o
  // texto (mais pequeno que um título de secção normal) por baixo dela.
- function assetHeading(str){
-  newPage();
+ function assetHeading(str,opts={}){
+  if(opts.pageBreak!==false)newPage();
   doc.setDrawColor(...PDF_COLORS.bandLine);doc.setLineWidth(0.3);
   doc.line(marginLeft,y,marginLeft+contentW,y);
   y+=5;
@@ -4096,7 +4114,9 @@ async function buildReportPDF(p){
  for(const component of components){
   currentComponent=component;
   if(component==='process'){
-   heading(p.code||'Processo',{pageBreak:pageStarted,size:20});
+   if(pageStarted)newPage();
+   pageTitle('Resumo');
+   heading(p.code||'Processo',{pageBreak:false,size:20});
    fieldGrid([['Designação',p.name],['ID Institucional',p.ref],['Solicitante',p.requester],['Finalidade',p.purpose],['Descrição do solicitado',p.requestDescription],['Base de valor',p.valueBase],['Estado',p.status],['Data de entrada',p.inputDate],['Prazo',p.deadline]]);
    text('Número de Ativos: '+reportAssets.length,{bold:true,size:12,gap:3});
    for(const status of ['ON','OFF']){
@@ -4113,8 +4133,11 @@ async function buildReportPDF(p){
    assetHeading((a.code||'Ativo')+' — '+(a.name||'Capa'));
    await photoGrid(refs,validReportCols(coverCols.value),false);
   }
+  if(component==='characterization'&&reportAssets.length){newPage();pageTitle('Caracterização')}
+  let firstCharAsset=true;
   if(component==='characterization')for(const a of reportAssets){
-   assetHeading((a.code||'Ativo')+' — '+(a.name||'Sem designação'));
+   assetHeading((a.code||'Ativo')+' — '+(a.name||'Sem designação'),{pageBreak:!firstCharAsset});
+   firstCharAsset=false;
    fieldGrid(assetFieldPairs(a));
    if(String(a.obs||'').trim()){subheading('Observações do Ativo');text(a.obs,{size:10})}
    subheading('Caracterização');
@@ -4125,7 +4148,8 @@ async function buildReportPDF(p){
    if(photoRefs.length){ensureSpace(10);subheading('Imagens');await photoGrid(photoRefs,validReportCols(sheetCols.value),true)}
   }
   if(component==='visits'){
-   heading('Mapa de visitas do Processo',{pageBreak:true,size:18});
+   newPage();pageTitle('Visitas');
+   subheading('Mapa de visitas do Processo');
    for(const visit of (p.visits||[])){
     const people=(visit.participantIds||[]).map(id=>(p.participants||[]).find(person=>person.id===id)?.name).filter(Boolean).join(', ');
     const assets=(visit.assets||[]).map(item=>item.code||p.assets.find(a=>a.id===item.assetId)?.code).filter(Boolean).join(', ');
@@ -4139,7 +4163,7 @@ async function buildReportPDF(p){
    }
   }
   if(component==='chronology'){
-   heading('Cronologia',{pageBreak:true,size:18});
+   newPage();pageTitle('Cronologia');
    for(const entry of (p.history||[]).slice().reverse()){
     const date=new Date(entry.at),when=Number.isFinite(date.getTime())?date.toLocaleString('pt-PT'):'';
     fieldGrid([[when||'Registo',entry.text||entry.type]]);
@@ -4163,12 +4187,12 @@ async function buildReportPDF(p){
  for(let i=1;i<=pageCount;i++){
   doc.setPage(i);
   doc.setFont(undefined,'normal');doc.setFontSize(headerSize);doc.setTextColor(...PDF_COLORS.band);
-  if(headerLeftVal)doc.text(headerLeftVal,marginLeft,10,{align:'left'});
-  if(headerCenterVal)doc.text(headerCenterVal,pageW/2,10,{align:'center'});
-  if(headerRightVal)doc.text(headerRightVal,pageW-marginRight,10,{align:'right'});
-  if(headerExtraVal){doc.setFontSize(headerExtraSize);doc.text(headerExtraVal,marginLeft,10+headerSize*0.42+2);}
+  if(headerLeftVal)doc.text(headerLeftVal,marginLeft,headerTopY,{align:'left'});
+  if(headerCenterVal)doc.text(headerCenterVal,pageW/2,headerTopY,{align:'center'});
+  if(headerRightVal)doc.text(headerRightVal,pageW-marginRight,headerTopY,{align:'right'});
+  if(headerExtraVal){doc.setFontSize(headerExtraSize);doc.text(headerExtraVal,marginLeft,headerTopY+headerSize*0.42+2);}
   doc.setDrawColor(...PDF_COLORS.bandLine);doc.setLineWidth(0.2);
-  doc.line(marginLeft,12.5,pageW-marginRight,12.5);
+  doc.line(marginLeft,headerBlockBottom+2,pageW-marginRight,headerBlockBottom+2);
   const outModelName=footerOutModelName(pageModel[i]||'','Relatório',pageCount);
   const footerLeftVal=[p.code||'',outModelName].filter(Boolean).join(' · ');
   const footerRightVal=String(i)+' / '+pageCount;
