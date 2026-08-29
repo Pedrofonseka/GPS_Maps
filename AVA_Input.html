@@ -42,7 +42,7 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
 .status-warn{color:#9a6700;font-weight:800}
 .progress{height:7px;background:#eceff2;border-radius:999px;overflow:hidden;margin-top:5px}
 .progress>span{display:block;height:100%;background:#7c8794;width:0}
-.dashboard-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.dashboard-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
 .dashboard-metric{border:1px solid var(--line);background:#fafbfc;border-radius:10px;padding:10px;min-width:0}
 .dashboard-value{display:block;font-size:24px;font-weight:850;line-height:1.05;font-variant-numeric:tabular-nums}
 .dashboard-label{display:block;color:var(--muted);font-size:11px;margin-top:4px}
@@ -68,7 +68,7 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
 .field-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .field-grid .wide{grid-column:1/-1}
 .char-section{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
-@media(max-width:520px){.field-grid{grid-template-columns:1fr}.dashboard-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}.dashboard-metric{padding:7px 4px}.dashboard-value{font-size:18px}.dashboard-label{font-size:9px}.dashboard-status.dashboard-status{grid-template-columns:repeat(5,minmax(54px,1fr));overflow-x:auto;padding-bottom:3px}.dashboard-lower{grid-template-columns:1fr}.dashboard-value{font-size:22px}}
+@media(max-width:520px){.field-grid{grid-template-columns:1fr}.dashboard-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}.dashboard-metric{padding:7px 4px}.dashboard-value{font-size:18px}.dashboard-label{font-size:9px}.dashboard-status.dashboard-status{grid-template-columns:repeat(5,minmax(54px,1fr));overflow-x:auto;padding-bottom:3px}.dashboard-lower{grid-template-columns:1fr}.dashboard-value{font-size:22px}}
 
 .photo-row{display:grid;grid-template-columns:120px minmax(0,1fr) auto;gap:10px;align-items:center}
 .photo-thumb{width:120px;height:90px;border-radius:8px;border:1px solid var(--line);object-fit:cover;background:#eef0f3}
@@ -348,12 +348,6 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
   </div>
   <div id="aKMLInfo" class="muted"></div>
   <label>Observações do Ativo</label><textarea id="aObs"></textarea>
-  <h3 style="margin-top:14px">Ativos do mesmo núcleo <small>— mesmo código agregador</small></h3>
-  <div id="nufsBox">
-   <div class="muted">Por defeito, o núcleo é único e contém apenas o Ativo de índice 1. Acrescente outro Ativo apenas quando existirem zonas suscetíveis de análise autónoma; todas mantêm o mesmo código agregador. Em cada Ativo abaixo: <b>Agregar ao mesmo núcleo</b> acrescenta uma parte com o mesmo código-base (ex.: 005.2); <b>Duplicar em núcleo diferente</b> cria um Ativo novo e independente (ex.: 006.1), com a classificação copiada mas endereço e fotografias em branco.</div>
-   <div class="actions"><button class="btn" id="addNUF">+ Agregar outro</button></div>
-   <div id="nufList" class="list"></div>
-  </div>
   <div class="actions"><button class="btn primary" id="saveAsset">Guardar Ativo</button><button class="btn" id="closeAsset">Fechar</button><button class="btn danger" id="deleteAsset">Eliminar</button></div>
  </div>
 </section>
@@ -373,7 +367,6 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
    <div class="label-line"><label>Destino <small>(seleção cumulativa)</small></label><button class="config-link" type="button" data-config-table="destinations" data-config-label="Destino">Editar tabela</button></div>
    <input id="cCurrentUse" type="hidden"><div id="cDestinationChecks" class="actions" style="margin:4px 0 10px"></div>
   </div>
-  <div id="nufChooser" class="tabs hidden"></div>
   <div class="actions" style="align-items:center"><div class="pill" id="groupPill"></div><button class="config-link" type="button" data-config-fields data-config-label="Campos de caracterização">Configurar campos</button></div>
   <div id="dynamicFields" class="char-section"></div>
   <div class="char-section">
@@ -583,7 +576,7 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
    <div><label>Rodapé direita</label><input id="cfgFooterTextRight" value="{pagina}/{paginas}" readonly></div>
   </div>
   <label>Analista</label><input id="cfgAnalystText" value="Pedro Fonseca"><label class="pill"><input id="cfgFooterAnalystVersion" type="checkbox" style="width:auto" checked> Incluir Release * Analista no rodapé central</label>
-  <div class="muted" style="margin-top:6px">Marcadores: {processo}, {documento}, {ativo}, {nuf}, {pagina}, {paginas}, {analista}, {versao}, {versaoRelatorio}. Ativo e SUB/NUF são usados apenas em saídas onde exista esse contexto hierárquico.</div>
+  <div class="muted" style="margin-top:6px">Marcadores: {processo}, {documento}, {ativo}, {pagina}, {paginas}, {analista}, {versao}, {versaoRelatorio}. {ativo} é usado apenas em saídas onde exista esse contexto.</div>
 
 <div class="muted">O rodapé usa os três campos de texto com marcadores acima.</div>
   <div class="actions"><button class="btn primary" id="cfgSavePage">Guardar layout</button><button class="btn" id="cfgResetPage">Repor layout</button></div>
@@ -631,10 +624,10 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
 // Several iOS file viewers/WebViews do not provide that legacy behaviour.
 const {
  aCode,aConc,aDoorNumber,aFloor,aFreg,aGPS,aGPSInfo,aGroupNo,aGroupWith,aGroupInfo,aInspectionStatus,aKMLInfo,aLocal,aName,aObs,aPostalCode,aRef,aStatus,aVisitDate,aVisitTime,aVisitEnd,assetStatusAuto,assetVisitPeople,aVisitOther,postalCodeSuggestions,cAssetType,cAssetGroup,cCurrentUse,cDestinationChecks,
- addNUF,addProcessStakeholder,assetEditor,assetEditorTitle,assetList,autoAssetCount,autoAssetRows,autoProcessCard,autoProcessCode,autoProcessName,autoProcessRef,backCharacter,backupAll,backupInfo,lastBackupInfo,cancelAutoProcess,cancelVisit,cObs,cameraPhoto,cancelNewProcess,createAutoProcess,downloadAssetTemplate,exportVisits,visitsReport,
+ addProcessStakeholder,assetEditor,assetEditorTitle,assetList,autoAssetCount,autoAssetRows,autoProcessCard,autoProcessCode,autoProcessName,autoProcessRef,backCharacter,backupAll,backupInfo,lastBackupInfo,cancelAutoProcess,cancelVisit,cObs,cameraPhoto,cancelNewProcess,createAutoProcess,downloadAssetTemplate,exportVisits,visitsReport,
  adjustOrientation,cfgAddField,cfgFieldHelp,cfgFieldHelpText,cfgFields,cfgFieldsSection,cfgFooterCenter,cfgFooterLeft,cfgFooterRight,cfgFooterSize,cfgFooterAutoFit,cfgFooterDistance,cfgFooterFontSizeLegacy,cfgFooterTextLeft,cfgFooterTextCenter,cfgFooterTextRight,cfgFooterAnalystVersion,cfgGroup,cfgGroupName,cfgHeaderCenter,cfgHeaderLeft,cfgHeaderRight,cfgHeaderSize,cfgHeaderDistance,cfgHeaderGabineteSize,cfgHeaderGabineteBold,cfgHeaderTitleSize,cfgHeaderTitleBold,cfgHeaderExtraEnabled,cfgHeaderExtraText,cfgHeaderExtraSize,cfgMarginBottom,cfgMarginLeft,cfgMarginRight,cfgMarginTop,cfgOutputHelp,cfgOutputHelpText,cfgOutputValues,cfgCoverContentValues,cfgResetCoverContent,cfgOutModelSelect,cfgOutModelZones,cfgOutModelAddField,cfgOutModelInfo,cfgOutputsSection,cfgFontFamily,cfgPageInfo,cfgPageOrientation,cfgTopContext,cfgTopContextSize,cfgPageTitleMode,cfgPageTitleSize,cfgPhotoInfo,cfgPhotoMaxSide,cfgPhotoQuality,cfgResetOutput,cfgResetPage,cfgResetPhotos,cfgRestore,cfgRotateQuality,cfgSavePage,cfgSavePhotos,cfgTable,cfgTableAdd,cfgTableGroup,cfgTableGroupBox,cfgTableNew,cfgTableNewLabel,cfgParishMunicipality,cfgParishMunicipalityBox,cfgTablesSection,cfgTableValues,cfgTableInfo,charTitle,characterEditor,characterList,characterPick,chooseFolder,closeAsset,closeConfig,coverCols,coverMinPhotos,
  configBody,configModal,configTabs,cfgPageSection,cfgPhotosSection,cfgStructureSection,dCode,dDeadline,dInputDate,dName,dOffice,dObs,dPurpose,dService,dRef,dRequestDescription,dRequester,dStatus,dValueBase,deleteAsset,deleteProcess,
- appVersionLabel,dashboardDeadlines,dashboardProgress,dashboardStats,dashboardStatus,downloadKML,dynamicFields,exportSummary,exportWord,exportZIP,filterProcessStatus,folderInfo,getGPS,groupPill,newAutoProcess,newVisit,nufChooser,nufList,nufsBox,newAsset,newProcess,
+ appVersionLabel,dashboardDeadlines,dashboardProgress,dashboardStats,dashboardStatus,downloadKML,dynamicFields,exportSummary,exportWord,exportZIP,filterProcessStatus,folderInfo,getGPS,groupPill,newAutoProcess,newVisit,newAsset,newProcess,
  municipalitySuggestions,newProcessCard,nextAsset,openConfig,openMap,pCode,pName,pRef,parishSuggestions,photoInfo,photoList,photos,piEmail,piName,piObs,piPhone,piReusable,piRole,previewReport,previewValidation,rejectPreview,acceptPreview,printReport,prevAsset,processList,
  processHistory,processStakeholderList,processStakeholdersCard,qABD,qABP,qAI,qAT,qDocs,qQtd,qSC,qSD,qST,restoreAll,restoreFile,saveAsset,saveData,saveNewProcess,saveVisit,
  orientationInfo,orientationMode,orientationReview,reportPreview,requesterSuggestions,scanOrientation,searchAsset,searchCharacter,searchProcess,sheetCols,stakeholderSuggestions,vConstraints,vDate,vEnd,visitAssets,visitEditor,visitList,visitParticipants,visitsCard,vObs,vStart,vType,vWeather,weatherSuggestions,zipInfo,cfgConstructionRules,cfgSaveConstructionRules,cfgSummaryON,cfgSummaryOFF,cfgSummaryFields
@@ -794,7 +787,7 @@ function renderLastBackupInfo(){
  lastBackupInfo.textContent='Última cópia de segurança (Backup_OUT): '+when+'.';
  lastBackupInfo.className=days>=7?'muted status-warn':'muted';
 }
-let db=load(), currentProcess=null, editingAsset=null, editingVisit=null, charAsset=null, charNUF=null;
+let db=load(), currentProcess=null, editingAsset=null, editingVisit=null, charAsset=null;
 function rememberCurrentProcess(){
  try{if(currentProcess)localStorage.setItem(LAST_PROCESS_KEY,currentProcess);else localStorage.removeItem(LAST_PROCESS_KEY)}catch(e){}
 }
@@ -842,6 +835,15 @@ function normaliseDB(raw){
    });
    let nextClusterSeed=(p.assets.length?Math.max(0,...p.assets.map(a=>a.clusterNo)):0)+1;
    p.assets.forEach(a=>{if(!a.clusterNo)a.clusterNo=nextClusterSeed++});
+   // O mecanismo antigo de "núcleo" (a.nufs — várias partes dentro de um só Ativo,
+   // partilhando classificação/localização) foi removido: a caracterização, as áreas
+   // e as fotografias passam a viver diretamente no Ativo. Uma instalação antiga com
+   // um Ativo já dividido em várias partes não perde essas partes — cada parte extra
+   // (além da primeira) transforma-se num Ativo irmão totalmente independente,
+   // agrupado com o original pelo mesmo número (ex.: 005.1/005.2), preservando fotos
+   // e texto exatamente como estavam.
+   const isGenericPartName=v=>!v||/^Item\s+\d+/i.test(v)||/^Núcleo geral$/i.test(v)||/^SUB\/NUF/i.test(v)||/^Parte principal$/i.test(v)||/^Núcleo\s+\d+/i.test(v)||/^Parte\s+\d+/i.test(v)||/^Ativo\s+\d+/i.test(v);
+   const extraAssets=[];
    p.assets.forEach(a=>{
      a.id=a.id||uid();a.idAtivo=a.idAtivo||a.id;
      a.status=a.status==='OFF'?'OFF':'ON';
@@ -849,27 +851,33 @@ function normaliseDB(raw){
      a.currentUse=String(a.currentUse||'');
      a.inspectionStatus=['partial','integral'].includes(a.inspectionStatus)?a.inspectionStatus:'';
      a.origin=a.origin||'legacy';
-     const legacy=Array.isArray(a.nufs)?a.nufs:(Array.isArray(a.items)?a.items:[]);
-     if(legacy.length){
-       a.nufs=legacy;
-       const first=a.nufs[0];
-       if(a.char&&Object.keys(a.char).length)first.char=Object.assign({},a.char,first.char||{});
-       if(a.qtyAreas&&Object.keys(a.qtyAreas).length)first.qtyAreas=Object.assign({},a.qtyAreas,first.qtyAreas||{});
-       if(Array.isArray(a.photos)&&a.photos.length){first.photos=Array.isArray(first.photos)?first.photos:[];const known=new Set(first.photos.map(p=>p.id));a.photos.forEach(p=>{if(!known.has(p.id))first.photos.unshift(p)})}
-     }
-     else{
-       const nid=uid();
-       a.nufs=[{id:nid,idNUF:nid,name:'Ativo 1',char:a.char||{},qtyAreas:a.qtyAreas||{},photos:Array.isArray(a.photos)?a.photos:[]}];
-     }
-     a.nufs.forEach((n,i)=>{
-       n.id=n.id||n.idNUF||uid();n.idNUF=n.idNUF||n.id;n.photos=Array.isArray(n.photos)?n.photos:[];n.char=n.char||{};if(Object.prototype.hasOwnProperty.call(n.char,'Descrição sumária')&&!Object.prototype.hasOwnProperty.call(n.char,'Composição')){n.char['Composição']=n.char['Descrição sumária'];delete n.char['Descrição sumária']}n.qtyAreas=n.qtyAreas||{};
-       if(!n.name||/^Item\s+\d+/i.test(n.name)||/^Núcleo geral$/i.test(n.name)||/^SUB\/NUF/i.test(n.name)||/^Parte principal$/i.test(n.name))n.name='Ativo '+String(i+1);
-       else if(/^Núcleo\s+\d+/i.test(n.name)||/^Parte\s+\d+/i.test(n.name))n.name='Ativo '+String(i+1);
-       n.code=(a.code||'ATV_001')+'_'+String(i+1).padStart(2,'0');
+     const legacyParts=Array.isArray(a.nufs)?a.nufs:(Array.isArray(a.items)?a.items:[]);
+     const parts=legacyParts.length?legacyParts:[{char:a.char||{},qtyAreas:a.qtyAreas||{},photos:Array.isArray(a.photos)?a.photos:[]}];
+     parts.forEach(n=>{
+       n.photos=Array.isArray(n.photos)?n.photos:[];
+       n.char=n.char||{};
+       if(Object.prototype.hasOwnProperty.call(n.char,'Descrição sumária')&&!Object.prototype.hasOwnProperty.call(n.char,'Composição')){n.char['Composição']=n.char['Descrição sumária'];delete n.char['Descrição sumária']}
+       n.qtyAreas=n.qtyAreas||{};
      });
-     a.split=true;a.char={};a.qtyAreas={};a.photos=[];
+     const [first,...rest]=parts;
+     a.char=first.char;a.qtyAreas=first.qtyAreas;a.photos=first.photos;
      try{delete a.items}catch(e){}
+     try{delete a.nufs}catch(e){}
+     try{delete a.split}catch(e){}
+     rest.forEach(n=>{
+       const nid=uid();
+       extraAssets.push({
+         id:nid,idAtivo:nid,
+         ref:'',name:isGenericPartName(n.name)?(a.name||''):n.name,status:a.status,type:a.type||'',group:a.group||'',currentUse:a.currentUse||'',
+         local:a.local||'',doorNumber:a.doorNumber||'',floor:a.floor||'',postalCode:a.postalCode||'',freg:a.freg||'',conc:a.conc||'',
+         visitDate:a.visitDate||'',visitTime:a.visitTime||'',visitEnd:a.visitEnd||'',visitParticipantIds:Array.isArray(a.visitParticipantIds)?a.visitParticipantIds.slice():[],visitOtherPeople:a.visitOtherPeople||'',
+         inspectionStatus:'',gps:a.gps||'',obs:'',origin:a.origin||'legacy',createdAt:new Date().toISOString(),
+         clusterNo:a.clusterNo,
+         char:n.char,qtyAreas:n.qtyAreas,photos:n.photos
+       });
+     });
    });
+   if(extraAssets.length)p.assets.push(...extraAssets);
    syncAssetCodes(p);
  });
  return clean;
@@ -1091,15 +1099,15 @@ const CHAR_KEY_MIGRATION_KEY='ativa_char_key_migration_2_0_c';
 function migrateLegacyCharacterizationKeys(){
  try{if(localStorage.getItem(CHAR_KEY_MIGRATION_KEY))return}catch(e){}
  let changed=false;
- (db.processes||[]).forEach(p=>(p.assets||[]).forEach(a=>(a.nufs||[]).forEach(n=>{
-   const char=n.char;if(!char||typeof char!=='object')return;
+ (db.processes||[]).forEach(p=>(p.assets||[]).forEach(a=>{
+   const char=a.char;if(!char||typeof char!=='object')return;
    Object.keys(LEGACY_FIELD_ID_MAP).forEach(oldLabel=>{
      const newId=LEGACY_FIELD_ID_MAP[oldLabel];
      if(char[oldLabel]!==undefined&&char[oldLabel]!==''&&(char[newId]===undefined||char[newId]==='')){
        char[newId]=char[oldLabel];changed=true;
      }
    });
- })));
+ }));
  if(changed)save();
  try{localStorage.setItem(CHAR_KEY_MIGRATION_KEY,'1')}catch(e){}
 }
@@ -1570,7 +1578,7 @@ function assetIsFed(a){
  if(!a)return false;
  const direct=[a.type,a.group,a.currentUse,a.local,a.freg,a.conc,a.externalId,a.visitTime,assetGPS(a),a.obs,a.inspectionStatus];
  if(direct.some(v=>String(v||'').trim()))return true;
- return (a.nufs||[]).some(n=>Object.values(n.char||{}).some(v=>String(v||'').trim())||Object.values(n.qtyAreas||{}).some(v=>String(v||'').trim())||(n.photos||[]).length);
+ return Object.values(a.char||{}).some(v=>String(v||'').trim())||Object.values(a.qtyAreas||{}).some(v=>String(v||'').trim())||(a.photos||[]).length>0;
 }
 function processIsFed(p){return !!p&&([p.requester,p.purpose,p.requestDescription,p.valueBase,p.inputDate,p.deadline,p.obs].some(v=>String(v||'').trim())||(p.participants||[]).length||(p.visits||[]).length||(p.assets||[]).some(assetIsFed))}
 function markProcessStarted(p){if(p&&!p.startedAt&&processIsFed(p)){p.startedAt=new Date().toISOString();historyAdd(p,'process_started','Alimentação do Processo iniciada.')}}
@@ -1592,7 +1600,7 @@ function renderProcessHistory(){
   return `<div class="item history-entry"><span class="item-main"><span class="item-title">${esc(h.text||h.type||'Registo')}</span>${h.origin?`<br><span class="item-sub">Origem: ${esc(h.origin)}</span>`:''}</span><span class="history-time">${esc(when)}</span></div>`;
  }).join('')||'<div class="muted">Ainda não existem acontecimentos registados.</div>';
 }
-function updateContext(){let p=proc(),a=asset()||p?.assets?.find(x=>x.id===editingAsset)||(!assetEditor?.classList.contains('hidden')?assetEditor._draft:null),n=a?.nufs?.find(x=>x.id===charNUF),nufIndex=a&&n?(a.nufs||[]).findIndex(x=>x.id===n.id):0;if(!p){document.getElementById('context').textContent='Nenhum processo selecionado';return}if(!a){document.getElementById('context').textContent=p.code||'Processo';return}const code=nufCode(a,Math.max(0,nufIndex));document.getElementById('context').textContent=[code,a.ref].filter(Boolean).join(' ')+' / '+(a.name||'Sem designação')}
+function updateContext(){let p=proc(),a=asset()||p?.assets?.find(x=>x.id===editingAsset)||(!assetEditor?.classList.contains('hidden')?assetEditor._draft:null);if(!p){document.getElementById('context').textContent='Nenhum processo selecionado';return}if(!a){document.getElementById('context').textContent=p.code||'Processo';return}document.getElementById('context').textContent=[a.code,a.ref].filter(Boolean).join(' ')+' / '+(a.name||'Sem designação')}
 function go(id){if(id!=='processos'&&!proc()){alert('Crie ou selecione primeiro um Processo.');id='processos'}document.querySelectorAll('main section').forEach(s=>s.classList.toggle('show',s.id===id));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.go===id));if(id==='processos')renderProcesses();if(id==='dados')fillData();if(id==='ativos')renderAssets();if(id==='caracterizar')renderCharacterList();updateContext();scrollTo(0,0)}
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{syncPendingData();go(b.dataset.go)});
 
@@ -1603,12 +1611,12 @@ function renderDashboardLight(){
  dashboardStatus.innerHTML='';dashboardProgress.innerHTML='<div class="muted">A carregar resumo…</div>';dashboardDeadlines.innerHTML='';
 }
 function renderDashboard(){
- const processes=db.processes||[],assets=processes.flatMap(p=>p.assets||[]),nufs=assets.flatMap(a=>a.nufs||[]);
- const photos=nufs.reduce((sum,n)=>sum+(n.photos||[]).length,0),progresses=assets.map(a=>charProgress(a).pct);
+ const processes=db.processes||[],assets=processes.flatMap(p=>p.assets||[]);
+ const photos=assets.reduce((sum,a)=>sum+(a.photos||[]).length,0),progresses=assets.map(a=>charProgress(a).pct);
  const average=progresses.length?Math.round(progresses.reduce((sum,n)=>sum+n,0)/progresses.length):0;
  const complete=progresses.filter(n=>n===100).length;
  dashboardStats.innerHTML=[
-  [processes.length,'Processos'],[assets.length,'Ativos'],[nufs.length,'SUB/NUF'],[photos,'Fotografias']
+  [processes.length,'Processos'],[assets.length,'Ativos'],[photos,'Fotografias']
  ].map(x=>`<div class="dashboard-metric"><span class="dashboard-value">${x[0]}</span><span class="dashboard-label">${x[1]}</span></div>`).join('');
  const statusNow=filterProcessStatus.value||'';
  dashboardStatus.innerHTML=[['','Todos'],['ON','ON'],['STBY','STBY'],['END','END'],['ANL','ANL']].map(([value,label])=>{
@@ -1640,7 +1648,7 @@ function renderProcesses(){
    .filter(p=>!st||(p.status||'ON')===st)
    .slice(0,15);
  document.getElementById('processList').innerHTML=arr.map(p=>{
-   const assets=p.assets||[],n=assets.length,gps=lightBoot?'…':assets.filter(a=>!!assetGPS(a)).length,kml=lightBoot?'…':assets.filter(a=>!!a.kmlGeneratedAt).length,photos=lightBoot?'…':assets.reduce((sum,a)=>sum+(a.nufs||[]).reduce((s,n)=>s+(n.photos||[]).length,0),0),stage=lightBoot?(p.startedAt?'Em alimentação':'Por iniciar'):processOperationalStage(p);
+   const assets=p.assets||[],n=assets.length,gps=lightBoot?'…':assets.filter(a=>!!assetGPS(a)).length,kml=lightBoot?'…':assets.filter(a=>!!a.kmlGeneratedAt).length,photos=lightBoot?'…':assets.reduce((sum,a)=>sum+(a.photos||[]).length,0),stage=lightBoot?(p.startedAt?'Em alimentação':'Por iniciar'):processOperationalStage(p);
    return `<div class="item process-card ${p.id===currentProcess?'process-active':''}">
     <button class="process-card-main" data-p="${p.id}" type="button"><span class="item-main">
       <span class="item-title">${esc(p.code||'Sem código')} · ${esc(p.name||'')}</span><br>
@@ -1671,7 +1679,8 @@ function renderAutomaticAssetRows(){
  autoAssetRows.innerHTML=Array.from({length:count},(_,index)=>`<div class="item auto-asset-row" data-auto-asset-row="${index}"><div class="auto-asset-code">ATV_${String(index+1).padStart(3,'0')}</div><div><label>Designação <small>(opcional)</small></label><input data-auto-name value="${esc(previous[index]?.name||'')}"></div></div>`).join('');
 }
 function automaticAsset(index,row,createdAt){
- const id=uid(),asset={id,idAtivo:id,code:'ATV_'+String(index+1).padStart(3,'0'),ref:'',name:row.querySelector('[data-auto-name]').value.trim(),status:'ON',type:'',group:'',currentUse:'',local:'',doorNumber:'',floor:'',postalCode:'',freg:'',conc:'',visitTime:'',inspectionStatus:'',gps:'',obs:'',split:true,nufs:[],origin:'automatic',createdAt};asset.nufs=[createNUF(asset)];return asset;
+ const id=uid();
+ return {id,idAtivo:id,clusterNo:index+1,code:'ATV_'+String(index+1).padStart(3,'0'),ref:'',name:row.querySelector('[data-auto-name]').value.trim(),status:'ON',type:'',group:'',currentUse:'',local:'',doorNumber:'',floor:'',postalCode:'',freg:'',conc:'',visitTime:'',inspectionStatus:'',gps:'',obs:'',char:{},qtyAreas:{},photos:[],origin:'automatic',createdAt};
 }
 newProcess.onclick=()=>{autoProcessCard.classList.add('hidden');newProcessCard.classList.remove('hidden')};
 newAutoProcess.onclick=()=>{newProcessCard.classList.add('hidden');autoProcessCard.classList.remove('hidden');renderAutomaticAssetRows();autoProcessCode.focus();autoProcessCard.scrollIntoView({behavior:'smooth',block:'start'})};
@@ -1738,7 +1747,7 @@ restoreFile.onchange=async()=>{
    if(obj&&obj.pageSettings){persist('Definições de página',PAGE_SETTINGS_KEY,JSON.stringify(obj.pageSettings));pageSettings=loadPageSettings();applyPageSettings()}
    if(obj&&obj.reportLayout){persist('Esquema do relatório',REPORT_LAYOUT_KEY,JSON.stringify(obj.reportLayout));syncReportLayoutFromStorage()}
    if(obj&&obj.outputComposition){persist('Composição de saída',OUTPUT_COMPOSITION_KEY,JSON.stringify(obj.outputComposition));outputComposition=loadOutputComposition()}
-   currentProcess=null;rememberCurrentProcess(); charAsset=null; charNUF=null; editingAsset=null;editingVisit=null;
+   currentProcess=null;rememberCurrentProcess(); charAsset=null; editingAsset=null;editingVisit=null;
    const dbSaved=save();
    renderProcesses(); updateContext();
    if(!dbSaved)failed.unshift('Processos (base de dados principal)');
@@ -1812,13 +1821,13 @@ function fillData(){let p=proc();if(!p)return;refreshConfiguredSelects();renderP
 
 saveData.onclick=()=>{syncDynamicProcessToBacking();let p=proc(),code=validatedProcessCode(p,true);Object.assign(p,{code,ref:dRef.value.trim(),name:dName.value.trim(),office:String(dOffice?.value||''),requester:dRequester.value.trim(),service:dService.value,purpose:dPurpose.value,requestDescription:dRequestDescription.value.trim(),valueBase:dValueBase.value,status:dStatus.value,inputDate:dInputDate.value,deadline:dDeadline.value,obs:dObs.value});rememberRequester(p.requester);markProcessStarted(p);save();go('ativos')};
 async function deleteProcessById(processId){
- const p=db.processes.find(item=>item.id===processId);if(!p)return;const assets=p.assets||[],nufs=assets.flatMap(a=>a.nufs||[]),photos=nufs.flatMap(n=>n.photos||[]),participants=p.participants||[],visits=p.visits||[];
- const summary=assets.length+' Ativo(s), '+nufs.length+' SUB/NUF, '+photos.length+' fotografia(s), '+participants.length+' Interveniente(s) e '+visits.length+' Visita(s)';
+ const p=db.processes.find(item=>item.id===processId);if(!p)return;const assets=p.assets||[],photos=assets.flatMap(a=>a.photos||[]),participants=p.participants||[],visits=p.visits||[];
+ const summary=assets.length+' Ativo(s), '+photos.length+' fotografia(s), '+participants.length+' Interveniente(s) e '+visits.length+' Visita(s)';
  if(!confirm('Eliminar o Processo “'+(p.code||p.name||'sem designação')+'”?\n\nConteúdo associado: '+summary+'.'))return;
  if((assets.length||participants.length||visits.length)&&!confirm('CONFIRMAÇÃO FINAL: eliminar definitivamente este Processo e todo o conteúdo associado? A recuperação posterior exige Backup_IN.'))return;
  deleteProcess.disabled=true;
  for(const photo of photos){const preview=photoPreviewUrls.get(photo.id);if(preview){URL.revokeObjectURL(preview);photoPreviewUrls.delete(photo.id)}try{await photoDeleteBlob(photo.id)}catch(e){}}
- db.processes=db.processes.filter(item=>item.id!==p.id);if(currentProcess===p.id)currentProcess=null;editingAsset=null;editingVisit=null;charAsset=null;charNUF=null;save();assetEditor.classList.add('hidden');characterEditor.classList.add('hidden');go('processos');deleteProcess.disabled=false;
+ db.processes=db.processes.filter(item=>item.id!==p.id);if(currentProcess===p.id)currentProcess=null;editingAsset=null;editingVisit=null;charAsset=null;save();assetEditor.classList.add('hidden');characterEditor.classList.add('hidden');go('processos');deleteProcess.disabled=false;
 }
 deleteProcess.onclick=()=>{const p=proc();if(p)void deleteProcessById(p.id)};
 
@@ -1834,16 +1843,10 @@ function syncAssetCodes(p){
    byCluster.get(a.clusterNo).push(a);
  });
  byCluster.forEach(members=>{
-   members.forEach((a,i)=>{a.code=clusterCode(a.clusterNo,i+1,members.length);syncNUFCodes(a)});
+   members.forEach((a,i)=>{a.code=clusterCode(a.clusterNo,i+1,members.length)});
  });
 }
 function clusterMembers(p,clusterNo){return (p.assets||[]).filter(a=>a.clusterNo===clusterNo)}
-function nufCode(a,index){return (a?.code||'ATV_001')+'.'+String(index+1)}
-function createNUF(a,name='Ativo 1'){
- const id=uid(),index=(a?.nufs||[]).length;
- return {id,idNUF:id,code:nufCode(a,index),name,char:{},qtyAreas:{},photos:[]};
-}
-function syncNUFCodes(a){(a.nufs||[]).forEach((n,i)=>{n.code=nufCode(a,i);n.id=n.id||n.idNUF||uid();n.idNUF=n.idNUF||n.id})}
 function parseGPS(value){
  const parts=String(value||'').trim().replace(/;/g,',').split(',').map(x=>x.trim());
  if(parts.length!==2)return null;
@@ -1860,7 +1863,7 @@ function renderAssets(){
  let p=proc();if(!p)return;let q=searchAsset.value.toLowerCase();let arr=p.assets.filter(a=>[a.code,a.ref,a.name,a.local,a.postalCode,a.group].join(' ').toLowerCase().includes(q)).slice(0,15);
  assetList.innerHTML=arr.map(a=>{
    const st=charProgress(a);
-   return `<button class="item" data-a="${a.id}" style="width:100%;text-align:left"><span class="item-main"><span class="item-title">${esc(a.code)} · ${esc(a.name||'Sem designação')}</span><br><span class="item-sub">${esc(a.ref||'')} ${esc(a.type||'')} ${esc(a.group||'')} ${esc(a.currentUse||'')} ${esc(a.local||'')} · ${(a.nufs||[]).length} agregado(s) · ${esc(assetOperationalStatus(a))}${assetGPS(a)?' · GPS':''}${a.kmlGeneratedAt?' · KML':''}</span><div class="progress"><span style="width:${st.pct}%"></span></div></span><span><span class="pill">${a.status==='OFF'?'OFF':'ON'}</span><br><span class="${st.pct===100?'status-ok':'status-warn'}">${st.pct}%</span></span></button>`
+   return `<button class="item" data-a="${a.id}" style="width:100%;text-align:left"><span class="item-main"><span class="item-title">${esc(a.code)} · ${esc(a.name||'Sem designação')}</span><br><span class="item-sub">${esc(a.ref||'')} ${esc(a.type||'')} ${esc(a.group||'')} ${esc(a.currentUse||'')} ${esc(a.local||'')} · ${esc(assetOperationalStatus(a))}${assetGPS(a)?' · GPS':''}${a.kmlGeneratedAt?' · KML':''}</span><div class="progress"><span style="width:${st.pct}%"></span></div></span><span><span class="pill">${a.status==='OFF'?'OFF':'ON'}</span><br><span class="${st.pct===100?'status-ok':'status-warn'}">${st.pct}%</span></span></button>`
  }).join('')||'<div class="muted">Ainda não existem Ativos.</div>';
  document.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>openAsset(b.dataset.a))
 }
@@ -1949,54 +1952,16 @@ function applyClusterChange(newClusterNo){
 aGroupWith.onchange=()=>{applyClusterChange(aGroupWith.value?Number(aGroupWith.value):null)};
 if(aGroupNo)aGroupNo.addEventListener('change',()=>{applyClusterChange(aGroupNo.value?Number(aGroupNo.value):null)});
 function openAsset(id){
- let p=proc();editingAsset=id;let a=id?p.assets.find(x=>x.id===id):{clusterNo:nextClusterNo(p),ref:'',name:'',status:'ON',type:'',group:'',currentUse:'',local:'',doorNumber:'',floor:'',postalCode:'',freg:'',conc:'',visitDate:'',visitTime:'',visitEnd:'',visitParticipantIds:[],visitOtherPeople:'',inspectionStatus:'',gps:'',obs:'',split:true,nufs:[],char:{},photos:[],origin:'manual'};
+ let p=proc();editingAsset=id;let a=id?p.assets.find(x=>x.id===id):{clusterNo:nextClusterNo(p),ref:'',name:'',status:'ON',type:'',group:'',currentUse:'',local:'',doorNumber:'',floor:'',postalCode:'',freg:'',conc:'',visitDate:'',visitTime:'',visitEnd:'',visitParticipantIds:[],visitOtherPeople:'',inspectionStatus:'',gps:'',obs:'',char:{},qtyAreas:{},photos:[],origin:'manual'};
  if(!id)a.code=clusterCode(a.clusterNo,1,1);
  if(aGPSInfo){aGPSInfo.textContent='';aGPSInfo.classList.remove('gps-weak')}
- if(!a.nufs?.length)a.nufs=[createNUF(a)];syncNUFCodes(a);
  refreshConfiguredSelects();assetEditor.classList.remove('hidden');assetEditorTitle.textContent=id?'Editar Ativo':'Novo Ativo';aCode.value=a.code;aRef.value=a.ref||'';aName.value=a.name||'';aStatus.value=a.status||'ON';aLocal.value=a.local||'';aDoorNumber.value=a.doorNumber||'';aFloor.value=a.floor||'';aPostalCode.value=formatPostalCode(a.postalCode||'');aFreg.value=a.freg||'';aConc.value=a.conc||'';aVisitDate.value=a.visitDate||'';aVisitTime.value=a.visitTime||'';aVisitEnd.value=a.visitEnd||'';a.visitParticipantIds=Array.isArray(a.visitParticipantIds)?a.visitParticipantIds:[];aVisitOther.value=a.visitOtherPeople||'';assetVisitPeople.innerHTML=(p.participants||[]).map(person=>`<label class="pill"><input type="checkbox" data-asset-visit-person="${person.id}" style="width:auto" ${a.visitParticipantIds.includes(person.id)?'checked':''}> ${esc([person.name,person.role].filter(Boolean).join(' — '))}</label>`).join('')||'<span class="muted">Não existem Intervenientes definidos no Processo; use o campo seguinte.</span>';assetVisitPeople.querySelectorAll('[data-asset-visit-person]').forEach(x=>x.onchange=persistExistingAsset);a.inspectionStatus=automaticInspectionStatus(a);aInspectionStatus.value=a.inspectionStatus;assetStatusAuto.textContent=assetOperationalStatus(a);aGPS.value=assetGPS(a);aObs.value=a.obs||'';
  renderGroupControl(p,a);
- nufsBox.classList.remove('hidden');renderNUFs(a);renderAssetDynamicVariables();deleteAsset.classList.toggle('hidden',!id);assetEditor._draft=a;updateContext()
-}
-addNUF.onclick=()=>{let a=assetEditor._draft,n=createNUF(a,'Ativo '+String(a.nufs.length+1));a.nufs.push(n);syncNUFCodes(a);renderNUFs(a);if(editingAsset){historyAdd(proc(),'asset_part_added',(a.code||'Núcleo')+' — Ativo '+n.code+' acrescentado.',a.id);saveSoon()}}
-function renderNUFs(a){
- syncNUFCodes(a);renderNUFDynamicVariables();
- nufList.innerHTML=(a.nufs||[]).map((n,i)=>`<div class="item nuf-row" style="align-items:flex-start"><span class="item-main" style="flex:1"><span class="item-title">${esc(n.code)}</span><input data-nuf-name="${n.id}" value="${esc(n.name)}" placeholder="Designação do Ativo" style="padding:7px;margin-top:5px"></span><span class="nuf-actions"><button class="btn" data-nuf-dup="${n.id}" title="Cria outro Ativo dentro deste mesmo núcleo (mesmo código-base)">Agregar ao mesmo núcleo</button><button class="btn" data-nuf-dup-new="${n.id}" title="Cria um Ativo novo e independente (novo núcleo, código próprio), com a classificação e caracterização copiadas">Duplicar em núcleo diferente</button><button class="btn danger" data-nuf-del="${n.id}">Eliminar</button></span></div>`).join('');
- document.querySelectorAll('[data-nuf-name]').forEach(x=>x.oninput=()=>{const n=a.nufs.find(v=>v.id===x.dataset.nufName);if(n)n.name=x.value;if(editingAsset)saveSoon()});
- document.querySelectorAll('[data-nuf-dup]').forEach(x=>x.onclick=()=>duplicateNUF(a,x.dataset.nufDup));
- document.querySelectorAll('[data-nuf-dup-new]').forEach(x=>x.onclick=()=>duplicateAsIndependentAsset(a,x.dataset.nufDupNew));
- document.querySelectorAll('[data-nuf-del]').forEach(x=>x.onclick=()=>deleteNUF(a,x.dataset.nufDel));
-}
-async function duplicateNUF(a,id){
- const source=a.nufs.find(n=>n.id===id);if(!source)return;
- const clone=JSON.parse(JSON.stringify(source)),newId=uid();clone.id=newId;clone.idNUF=newId;clone.name='Ativo '+String(a.nufs.length+1);clone.photos=[];
- a.nufs.push(clone);syncNUFCodes(a);if(editingAsset){historyAdd(proc(),'asset_part_duplicated',(a.code||'Ativo')+' — criado '+clone.code+' com os dados-base; fotografias não copiadas.',a.id);save()}renderNUFs(a);
-}
-function duplicateAsIndependentAsset(a,id){
- const p=proc();if(!p)return;
- const source=a.nufs.find(n=>n.id===id);if(!source)return;
- if(!confirm('Criar um novo Ativo independente (novo núcleo, com o próprio código) a partir de "'+(source.name||'Ativo 1')+'"?\n\nA classificação e a caracterização são copiadas; endereço, GPS, dados da visita e fotografias ficam em branco, por se tratar de outro local.'))return;
- const newAsset={ref:'',name:a.name||'',status:'ON',type:a.type||'',group:a.group||'',currentUse:a.currentUse||'',local:'',doorNumber:'',floor:'',postalCode:'',freg:'',conc:'',visitDate:'',visitTime:'',visitEnd:'',visitParticipantIds:[],visitOtherPeople:'',inspectionStatus:'',gps:'',obs:'',split:true,nufs:[],char:{},photos:[],origin:'manual'};
- newAsset.clusterNo=nextClusterNo(p);newAsset.id=uid();newAsset.idAtivo=newAsset.id;newAsset.createdAt=new Date().toISOString();
- const firstNUF=createNUF(newAsset,'Ativo 1');
- firstNUF.char=JSON.parse(JSON.stringify(source.char||{}));firstNUF.qtyAreas=JSON.parse(JSON.stringify(source.qtyAreas||{}));
- newAsset.nufs=[firstNUF];newAsset.inspectionStatus=automaticInspectionStatus(newAsset);
- p.assets.push(newAsset);
- syncAssetCodes(p);
- historyAdd(p,'asset_created',newAsset.code+' — criado como núcleo independente a partir de '+(a.code||'Ativo')+' ('+(source.name||'Ativo 1')+'); classificação e caracterização copiadas, localização e fotografias por preencher.',newAsset.id,'manual');
- save();
- assetEditor.classList.add('hidden');
- renderAssets();
- openAsset(newAsset.id);
-}
-async function deleteNUF(a,id){
- if(a.nufs.length<=1){alert('O núcleo tem de manter pelo menos o Ativo de índice 1.');return}
- const n=a.nufs.find(v=>v.id===id);if(!n||!confirm('Eliminar este Ativo e as respetivas fotografias?'))return;
- for(const p of (n.photos||[])){try{await photoDeleteBlob(p.id)}catch(e){}}
- a.nufs=a.nufs.filter(v=>v.id!==id);syncNUFCodes(a);if(editingAsset){historyAdd(proc(),'nuf_deleted',(a.code||'Ativo')+' — '+(n.code||'SUB/NUF')+' eliminado.',a.id);save()}renderNUFs(a);
+ deleteAsset.classList.toggle('hidden',!id);assetEditor._draft=a;updateContext()
 }
 saveAsset.onclick=()=>{let p=proc(),a=assetEditor._draft,previousInspection=a.inspectionStatus||'';Object.assign(a,{ref:aRef.value.trim(),name:aName.value.trim(),status:aStatus.value||'ON',local:aLocal.value.trim(),doorNumber:aDoorNumber.value.trim(),floor:aFloor.value.trim(),postalCode:formatPostalCode(aPostalCode.value),freg:aFreg.value.trim(),conc:aConc.value.trim(),visitDate:aVisitDate.value,visitTime:aVisitTime.value,visitEnd:aVisitEnd.value,visitParticipantIds:[...assetVisitPeople.querySelectorAll('[data-asset-visit-person]:checked')].map(x=>x.dataset.assetVisitPerson),visitOtherPeople:aVisitOther.value.trim(),
- gps:aGPS.value.trim(),obs:aObs.value,
- split:true});a.inspectionStatus=automaticInspectionStatus(a);if(!a.nufs?.length)a.nufs=[createNUF(a)];if(!editingAsset){const later=!!p.startedAt;a.id=uid();a.idAtivo=a.id;a.createdAt=new Date().toISOString();a.origin='manual';if(!Number.isFinite(a.clusterNo)||a.clusterNo<=0)a.clusterNo=nextClusterNo(p);p.assets.push(a);syncAssetCodes(p);historyAdd(p,'asset_created',(a.code||'Ativo')+(later?' — acrescentado posteriormente.':' — criado.'),a.id,'manual');if(a.inspectionStatus)historyAdd(p,'inspection_changed',(a.code||'Ativo')+' — estado inicial: '+inspectionLabel(a.inspectionStatus)+'.',a.id)}else{a.idAtivo=a.idAtivo||a.id;syncAssetCodes(p)}if(editingAsset&&previousInspection!==(a.inspectionStatus||''))historyAdd(p,'inspection_changed',(a.code||'Ativo')+' — estado alterado para: '+inspectionLabel(a.inspectionStatus)+'.',a.id);markAssetStarted(p,a);save();assetEditor.classList.add('hidden');renderAssets()}
+ gps:aGPS.value.trim(),obs:aObs.value
+ });a.inspectionStatus=automaticInspectionStatus(a);if(!editingAsset){const later=!!p.startedAt;a.id=uid();a.idAtivo=a.id;a.createdAt=new Date().toISOString();a.origin='manual';if(!Number.isFinite(a.clusterNo)||a.clusterNo<=0)a.clusterNo=nextClusterNo(p);p.assets.push(a);syncAssetCodes(p);historyAdd(p,'asset_created',(a.code||'Ativo')+(later?' — acrescentado posteriormente.':' — criado.'),a.id,'manual');if(a.inspectionStatus)historyAdd(p,'inspection_changed',(a.code||'Ativo')+' — estado inicial: '+inspectionLabel(a.inspectionStatus)+'.',a.id)}else{a.idAtivo=a.idAtivo||a.id;syncAssetCodes(p)}if(editingAsset&&previousInspection!==(a.inspectionStatus||''))historyAdd(p,'inspection_changed',(a.code||'Ativo')+' — estado alterado para: '+inspectionLabel(a.inspectionStatus)+'.',a.id);markAssetStarted(p,a);save();assetEditor.classList.add('hidden');renderAssets()}
 
 getGPS.onclick=()=>{
  if(!navigator.geolocation){alert('Este navegador não permite obter o GPS. Introduza as coordenadas manualmente.');aGPS.focus();return}
@@ -2034,7 +1999,7 @@ downloadKML.onclick=async()=>{
 function escXML(value){return String(value||'').replace(/[<>&'\"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;',"'":'&apos;','"':'&quot;'}[c]))}
 
 closeAsset.onclick=()=>assetEditor.classList.add('hidden');
-deleteAsset.onclick=async()=>{if(!editingAsset)return;let p=proc(),a=p?.assets.find(x=>x.id===editingAsset);if(!a)return;const photos=(a.nufs||[]).flatMap(n=>n.photos||[]);if(!confirm('Eliminar este Ativo'+(photos.length?' e as respetivas '+photos.length+' fotografia(s)':'')+'?'))return;deleteAsset.disabled=true;for(const photo of photos){const preview=photoPreviewUrls.get(photo.id);if(preview){URL.revokeObjectURL(preview);photoPreviewUrls.delete(photo.id)}try{await photoDeleteBlob(photo.id)}catch(e){}}historyAdd(p,'asset_deleted',(a.code||'Ativo')+' — eliminado.',editingAsset);p.assets=p.assets.filter(item=>item.id!==editingAsset);editingAsset=null;syncAssetCodes(p);save();assetEditor.classList.add('hidden');renderAssets();deleteAsset.disabled=false};
+deleteAsset.onclick=async()=>{if(!editingAsset)return;let p=proc(),a=p?.assets.find(x=>x.id===editingAsset);if(!a)return;const photos=a.photos||[];if(!confirm('Eliminar este Ativo'+(photos.length?' e as respetivas '+photos.length+' fotografia(s)':'')+'?'))return;deleteAsset.disabled=true;for(const photo of photos){const preview=photoPreviewUrls.get(photo.id);if(preview){URL.revokeObjectURL(preview);photoPreviewUrls.delete(photo.id)}try{await photoDeleteBlob(photo.id)}catch(e){}}historyAdd(p,'asset_deleted',(a.code||'Ativo')+' — eliminado.',editingAsset);p.assets=p.assets.filter(item=>item.id!==editingAsset);editingAsset=null;syncAssetCodes(p);save();assetEditor.classList.add('hidden');renderAssets();deleteAsset.disabled=false};
 
 function fieldSchema(a){
  const vars=activeVariablesFor(nufVariables,String(a?.group||''));
@@ -2056,38 +2021,26 @@ function targetProgress(t,a){
  const done=basis.filter(f=>String(data[f.k]||'').trim()).length;
  return basis.length?Math.round(done/basis.length*100):0;
 }
-function charProgress(a){
- if(a.nufs?.length){
-   const vals=a.nufs.map(it=>targetProgress(it,a));
-   return {pct: vals.length?Math.round(vals.reduce((x,y)=>x+y,0)/vals.length):0};
- }
- return {pct:0};
-}
+function charProgress(a){return {pct:targetProgress(a,a)}}
 function renderCharacterList(){
  let p=proc();if(!p)return;let q=searchCharacter.value.toLowerCase();let arr=p.assets.filter(a=>[a.code,a.ref,a.name,a.group].join(' ').toLowerCase().includes(q)).slice(0,15);
  characterList.innerHTML=arr.map(a=>{
    const st=charProgress(a), gn=groups[a.group]?.name||'Grupo não definido';
-   return `<button class="item" data-c="${a.id}" style="width:100%;text-align:left"><span class="item-main"><span class="item-title">${esc(a.code)} · ${esc(a.name||'Sem designação')}</span><br><span class="item-sub">${esc(a.type||'')} · ${esc(gn)} · ${(a.nufs||[]).length} SUB/NUF</span><div class="progress"><span style="width:${st.pct}%"></span></div></span><span class="${st.pct===100?'status-ok':'status-warn'}">${st.pct}%</span></button>`
+   return `<button class="item" data-c="${a.id}" style="width:100%;text-align:left"><span class="item-main"><span class="item-title">${esc(a.code)} · ${esc(a.name||'Sem designação')}</span><br><span class="item-sub">${esc(a.type||'')} · ${esc(gn)}</span><div class="progress"><span style="width:${st.pct}%"></span></div></span><span class="${st.pct===100?'status-ok':'status-warn'}">${st.pct}%</span></button>`
  }).join('')||'<div class="muted">Não existem Ativos para caracterizar.</div>';
  document.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>openCharacter(b.dataset.c))
 }
 searchCharacter.oninput=renderCharacterList;
-function openCharacter(id,nufId=null){charAsset=id;let a=asset();if(!a)return;if(!a.nufs?.length)a.nufs=[createNUF(a)];syncNUFCodes(a);charNUF=nufId||a.nufs[0].id;characterPick.classList.add('hidden');characterEditor.classList.remove('hidden');renderCharacterEditor();updateContext()}
-function targetChar(){let a=asset();return a?.nufs?.find(n=>n.id===charNUF)||a?.nufs?.[0]||null}
+function openCharacter(id){charAsset=id;let a=asset();if(!a)return;characterPick.classList.add('hidden');characterEditor.classList.remove('hidden');renderCharacterEditor();updateContext()}
+function targetChar(){return asset()}
 function renderCharacterEditor(){
  let a=asset(),t=targetChar(),g=groups[a.group];
  if(!t)return;
- const ni=a.nufs.findIndex(n=>n.id===t.id);
- charTitle.textContent=(t.code||nufCode(a,ni))+' — '+(t.name||'SUB/NUF');
+ charTitle.textContent=a.code+' — '+(a.name||'Ativo');
  fillConfiguredSelect(cAssetType,(appTables.assetTypes||[]).map(x=>x.name),a.type||'');
  const typeDefinition=assetTypeDefinition(a.type);cAssetGroup.value=a.group||typeDefinition?.group||'';
  renderDestinationOptions(a.currentUse||'');
  groupPill.textContent='Grupo: '+(a.group||'não definido')+(g?' — '+g.name:'');
- if(a.nufs.length){
-   nufChooser.classList.remove('hidden');
-   nufChooser.innerHTML=a.nufs.map((n,i)=>`<button data-nuf="${n.id}" class="${n.id===charNUF?'on':''}">${esc(nufCode(a,i))}<br><small>${esc(n.name||'SUB/NUF')}</small></button>`).join('');
-   document.querySelectorAll('[data-nuf]').forEach(b=>b.onclick=()=>{charNUF=b.dataset.nuf;renderCharacterEditor();updateContext()})
- }else nufChooser.classList.add('hidden');
 
  let data=t.char||{}, fs=fieldSchema(a);
  dynamicFields.innerHTML='<div class="field-grid">'+fs.map(f=>{
@@ -2307,17 +2260,11 @@ function photoCode(index){
  const a=asset();
  const raw=(a?.code||'ATV_001').match(/\d+/)?.[0]||'1';
  const assetNo=String(Number(raw)||1).padStart(3,'0');
- let nufPart='';
- if(charNUF&&a?.nufs?.length>1){
-   const nufIndex=a.nufs.findIndex(it=>it.id===charNUF);
-   if(nufIndex>=0)nufPart='_'+String(nufIndex+1).padStart(2,'0');
- }
- return assetNo+nufPart+'_IMG_'+String(index+1).padStart(2,'0');
+ return assetNo+'_1_IMG_'+String(index+1).padStart(2,'0');
 }
 function photoAssociation(){
- const a=asset(),t=targetChar();
- if((a?.nufs||[]).length<=1)return (a?.code||'Ativo')+' · '+(a?.name||'Ativo simples');
- return (a?.code||'Ativo')+' · '+(t?.code||'SUB/NUF')+' · '+(t?.name||'SUB/NUF');
+ const a=asset();
+ return (a?.code||'Ativo')+' · '+(a?.name||'Ativo simples');
 }
 function safeFileName(value){
  return String(value||'fotografia').replace(/[\\/:*?"<>|]+/g,'_').replace(/\s+/g,'_').slice(0,90);
@@ -2330,7 +2277,7 @@ async function addPhotoFiles(files){
  const t=targetChar();
  if(!t){
    const info=document.getElementById('photoInfo');
-   if(info)info.textContent='Fotografias selecionadas, mas não existe um SUB/NUF ativo para as guardar.';
+   if(info)info.textContent='Fotografias selecionadas, mas não existe um Ativo ativo para as guardar.';
    return;
  }
 
@@ -2601,7 +2548,7 @@ async function deletePhoto(i){
  lastOrientationScan=null;save();renderCharacterEditor();
 }
 
-backCharacter.onclick=()=>{characterEditor.classList.add('hidden');characterPick.classList.remove('hidden');charAsset=null;charNUF=null;renderCharacterList();updateContext()}
+backCharacter.onclick=()=>{characterEditor.classList.add('hidden');characterPick.classList.remove('hidden');charAsset=null;renderCharacterList();updateContext()}
 function moveChar(d){let p=proc(),i=p.assets.findIndex(a=>a.id===charAsset);let j=i+d;if(j>=0&&j<p.assets.length)openCharacter(p.assets[j].id)}
 prevAsset.onclick=()=>moveChar(-1);nextAsset.onclick=()=>moveChar(1);
 
@@ -2938,7 +2885,7 @@ function initConfig(section='tables',tableKey=''){
 }
 function sameFieldName(a,b){return String(a||'').localeCompare(String(b||''),'pt',{sensitivity:'base'})===0}
 function configuredFieldDataContainers(groupKey){
- const containers=[];(db.processes||[]).forEach(p=>(p.assets||[]).forEach(a=>{if(a.group!==groupKey)return;if(a.char)containers.push(a.char);(a.nufs||[]).forEach(n=>{if(n.char)containers.push(n.char)})}));return containers;
+ const containers=[];(db.processes||[]).forEach(p=>(p.assets||[]).forEach(a=>{if(a.group!==groupKey)return;if(a.char)containers.push(a.char)}));return containers;
 }
 function renameConfiguredFieldData(groupKey,oldName,newName){
  const containers=configuredFieldDataContainers(groupKey);
@@ -3410,15 +3357,14 @@ async function photoOrientation(photo){
  }finally{URL.revokeObjectURL(url)}
 }
 function orientationLabel(value){return value==='portrait'?'retrato':value==='landscape'?'paisagem':'sem predominância'}
-function assetHasSubdivision(a){return (a?.nufs||[]).length>1}
-function photoGridLabel(a,t,nufIndex){return assetHasSubdivision(a)?nufCode(a,nufIndex)+' · '+(t?.name||'SUB/NUF'):(a?.code||'Ativo')+' · '+(a?.name||'Ativo simples')}
+function photoGridLabel(a){return (a?.code||'Ativo')+' · '+(a?.name||'Ativo simples')}
 async function scanPhotoOrientations(){
  const p=syncPendingData();if(!p){alert('Selecione primeiro um Processo.');return null}
  const refs=[],grids=[];
- (p.assets||[]).forEach(a=>(a.nufs||[]).forEach((t,nufIndex)=>{
-   const grid={a,t,nufIndex,label:photoGridLabel(a,t,nufIndex),refs:[],counts:{portrait:0,landscape:0,square:0,missing:0}};grids.push(grid);
-   (t.photos||[]).forEach((photo,index)=>{const ref={photo,a,t,nufIndex,index,grid};refs.push(ref);grid.refs.push(ref)});
- }));
+ (p.assets||[]).forEach(a=>{
+   const grid={a,label:photoGridLabel(a),refs:[],counts:{portrait:0,landscape:0,square:0,missing:0}};grids.push(grid);
+   (a.photos||[]).forEach((photo,index)=>{const ref={photo,a,index,grid};refs.push(ref);grid.refs.push(ref)});
+ });
  orientationReview.classList.add('hidden');orientationReview.innerHTML='';
  if(!refs.length){orientationInfo.textContent='Este Processo ainda não tem fotografias.';adjustOrientation.disabled=true;scanOrientation.disabled=false;return null}
  scanOrientation.disabled=true;adjustOrientation.disabled=true;orientationInfo.textContent='A verificar '+refs.length+' fotografia(s)…';
@@ -3441,17 +3387,17 @@ function renderOrientationReview(outliers){
  const intro=document.createElement('div');intro.className='muted';intro.textContent='Resolva cada fotografia divergente antes do preview:';orientationReview.appendChild(intro);
  outliers.forEach(ref=>{
    const row=document.createElement('div');row.className='item orientation-review-row';
-   const image=document.createElement('img');image.className='orientation-review-photo';image.alt=photoCodeForReport(ref.a,ref.nufIndex,ref.index);
+   const image=document.createElement('img');image.className='orientation-review-photo';image.alt=photoCodeForReport(ref.a,0,ref.index);
    Promise.resolve().then(async()=>{try{const blob=await photoGet(ref.photo.id);if(!blob)return;const url=URL.createObjectURL(blob);image.onload=image.onerror=()=>URL.revokeObjectURL(url);image.src=url}catch(e){}});
-   const label=document.createElement('span');label.className='item-main';label.innerHTML='<span class="item-title">'+esc(photoCodeForReport(ref.a,ref.nufIndex,ref.index))+'</span><br><span class="item-sub">'+esc(ref.grid.label+' · '+orientationLabel(ref.orientation)+' → grelha '+orientationLabel(ref.grid.target))+'</span>';
+   const label=document.createElement('span');label.className='item-main';label.innerHTML='<span class="item-title">'+esc(photoCodeForReport(ref.a,0,ref.index))+'</span><br><span class="item-sub">'+esc(ref.grid.label+' · '+orientationLabel(ref.orientation)+' → grelha '+orientationLabel(ref.grid.target))+'</span>';
    const actions=document.createElement('span');actions.className='photo-actions';
    const rotate=document.createElement('button');rotate.className='btn';rotate.textContent='Rodar';rotate.onclick=async()=>{rotate.disabled=true;try{await rotatePhotoRecord(ref.photo,90);delete ref.photo.orientationKeep;save();await scanPhotoOrientations()}catch(e){alert('Não foi possível rodar esta fotografia.')}};
-   const remove=document.createElement('button');remove.className='btn danger';remove.textContent='Eliminar';remove.onclick=async()=>{if(!confirm('Eliminar esta fotografia?'))return;ref.t.photos=ref.t.photos.filter(x=>x.id!==ref.photo.id);try{await photoDeleteBlob(ref.photo.id)}catch(e){}save();await scanPhotoOrientations()};
+   const remove=document.createElement('button');remove.className='btn danger';remove.textContent='Eliminar';remove.onclick=async()=>{if(!confirm('Eliminar esta fotografia?'))return;ref.a.photos=ref.a.photos.filter(x=>x.id!==ref.photo.id);try{await photoDeleteBlob(ref.photo.id)}catch(e){}save();await scanPhotoOrientations()};
    const keep=document.createElement('button');keep.className='btn';keep.textContent='Manter';keep.onclick=async()=>{ref.photo.orientationKeep=ref.orientation;save();await scanPhotoOrientations()};
    actions.append(rotate,remove,keep);row.append(image,label,actions);orientationReview.appendChild(row);
  });
 }
-orientationMode.onchange=()=>{lastOrientationScan=null;(proc()?.assets||[]).forEach(a=>(a.nufs||[]).forEach(t=>(t.photos||[]).forEach(photo=>delete photo.orientationKeep)));adjustOrientation.disabled=true;orientationInfo.textContent='Orientação alterada. Clique em “Verificar fotos” para recalcular.';orientationReview.classList.add('hidden');save()};
+orientationMode.onchange=()=>{lastOrientationScan=null;(proc()?.assets||[]).forEach(a=>(a.photos||[]).forEach(photo=>delete photo.orientationKeep));adjustOrientation.disabled=true;orientationInfo.textContent='Orientação alterada. Clique em “Verificar fotos” para recalcular.';orientationReview.classList.add('hidden');save()};
 scanOrientation.onclick=()=>{void scanPhotoOrientations()};
 adjustOrientation.onclick=async()=>{
  let scan=lastOrientationScan;
@@ -3553,19 +3499,16 @@ function shuffleRefs(list){
 async function collectCoverPhotoRefs(p){
  const marked=[],others=[];
  for(const a of (p.assets||[])){
-  for(let nufIndex=0;nufIndex<(a.nufs||[]).length;nufIndex++){
-   const nuf=a.nufs[nufIndex];
-   for(let index=0;index<(nuf.photos||[]).length;index++){
-    const photo=nuf.photos[index];
+   for(let index=0;index<(a.photos||[]).length;index++){
+    const photo=a.photos[index];
     try{
      const orientation=await photoOrientation(photo);
      // Capa: apenas fotografias horizontais/paisagem. As restantes não são apagadas do arquivo.
      if(orientation!=='landscape')continue;
-     const ref={photo,a,nuf,nufIndex,index};
+     const ref={photo,a,index};
      (photo.cover?marked:others).push(ref);
     }catch(e){}
    }
-  }
  }
  const minimum=Math.max(validReportCols(coverCols.value),Math.max(0,Math.min(20,Number(coverMinPhotos?.value)||0)));
  const selected=marked.slice();
@@ -3594,7 +3537,7 @@ async function renderReportPreview(strictOrientation=false){
  syncReportLayoutFromStorage();
  pageSettings=loadPageSettings();applyPageSettings();
  clearReportURLs();
- const targets=[];(p.assets||[]).forEach((a,assetIndex)=>(a.nufs||[]).forEach((t,nufIndex)=>targets.push({key:'r_'+assetIndex+'_'+nufIndex,t,a,nufIndex,assetIndex,title:assetHasSubdivision(a)?nufCode(a,nufIndex)+' — '+(t.name||'SUB/NUF'):'Imagens'})));
+ const targets=[];(p.assets||[]).forEach((a,assetIndex)=>targets.push({key:'r_'+assetIndex,t:a,a,assetIndex,title:'Imagens'}));
  const processHTML=()=>{
    const centerRows=outModelRows('process','center',true);
    const fields=centerRows.map(row=>{
@@ -3667,13 +3610,13 @@ async function renderReportPreview(strictOrientation=false){
        if(photo.cover&&coverHolder){
          const coverURL=URL.createObjectURL(blob);reportObjectURLs.add(coverURL);
          const figure=document.createElement('figure');figure.className='report-cover-photo';
-         const img=document.createElement('img');img.alt=photoCodeForReport(target.a,target.nufIndex,index);const coverLoad=waitForReportImage(img,photo);img.src=coverURL;
+         const img=document.createElement('img');img.alt=photoCodeForReport(target.a,0,index);const coverLoad=waitForReportImage(img,photo);img.src=coverURL;
          figure.appendChild(img);coverHolder.appendChild(figure);loads.push(coverLoad);
        }
        if(sheetHolder){
          const sheetURL=URL.createObjectURL(blob);reportObjectURLs.add(sheetURL);
          const figure=document.createElement('figure');figure.className='report-photo';
-         const img=document.createElement('img');img.alt=photoCodeForReport(target.a,target.nufIndex,index);const sheetLoad=waitForReportImage(img,photo);img.src=sheetURL;
+         const img=document.createElement('img');img.alt=photoCodeForReport(target.a,0,index);const sheetLoad=waitForReportImage(img,photo);img.src=sheetURL;
          const cap=document.createElement('figcaption');cap.textContent=img.alt+(photo.caption?' — '+photo.caption:'');
          figure.appendChild(img);figure.appendChild(cap);sheetHolder.appendChild(figure);loads.push(sheetLoad);
        }
@@ -3775,8 +3718,8 @@ async function buildWordDOCX(p){
  const components=activeOutputComponents();
  for(const component of components){
   if(component==='process'){body.push(wordParagraph(p.code||'Processo',{bold:true,size:36,pageBreak:body.length>0}),wordField('Designação',p.name),wordField('ID Institucional',p.ref),wordField('Solicitante',p.requester),wordField('Finalidade',p.purpose),wordField('Descrição do solicitado',p.requestDescription),wordField('Base de valor',p.valueBase),wordField('Estado',p.status),wordField('Data de entrada',p.inputDate),wordField('Prazo',p.deadline),wordParagraph('Número de Ativos: '+(p.assets||[]).length,{bold:true,size:22}));for(const status of ['ON','OFF']){if((status==='ON'&&!summaryConfig.on)||(status==='OFF'&&!summaryConfig.off))continue;const rows=(p.assets||[]).filter(a=>(a.status==='OFF'?'OFF':'ON')===status);body.push(wordParagraph('Status '+status+' — '+rows.length,{bold:true,size:20}));rows.forEach(a=>body.push(wordParagraph('    '+summaryConfig.fields.map(field=>SUMMARY_FIELD_DEFS[field]+': '+assetSummaryValue(a,field)).join(' · '),{size:17}))) }body.push(wordField('Observações',p.obs))}
-  if(component==='cover')for(const a of (p.assets||[]))for(let nufIndex=0;nufIndex<(a.nufs||[]).length;nufIndex++){const t=a.nufs[nufIndex],refs=(t.photos||[]).map((photo,index)=>({photo,index})).filter(ref=>ref.photo.cover);if(!refs.length)continue;body.push(wordParagraph((a.code||'Ativo')+' — '+(assetHasSubdivision(a)?nufCode(a,nufIndex)+' · '+(t.name||'SUB/NUF'):(a.name||'Capa')),{bold:true,size:28,pageBreak:true}));await appendWordPhotos(a,nufIndex,refs,validReportCols(coverCols.value),false)}
-  if(component==='characterization')for(const a of (p.assets||[])){body.push(wordParagraph((a.code||'Ativo')+' — '+(a.name||'Sem designação'),{bold:true,size:28,pageBreak:true}),wordField('ID_Institucional',a.ref),wordField('Tipo',a.type),wordField('Grupo',a.group),wordField('Destino',a.currentUse),wordField('Endereço / Local',a.local),wordField('Número',a.doorNumber),wordField('Piso / Andar',a.floor),wordField('Código Postal',formatPostalCode(a.postalCode)),wordField('Freguesia',a.freg),wordField('Concelho',a.conc),wordField('ID externo',a.externalId),wordField('Hora da visita',a.visitTime),wordField('GPS',assetGPS(a)),wordField('Observações do Ativo',a.obs));for(let nufIndex=0;nufIndex<(a.nufs||[]).length;nufIndex++){const t=a.nufs[nufIndex],title=assetHasSubdivision(a)?nufCode(a,nufIndex)+' — '+(t.name||'SUB/NUF'):'Caracterização';body.push(wordParagraph(title,{bold:true,size:24}));configuredCharacterValues(t,a).forEach(([key,value])=>body.push(wordField(key,value)));const q=t.qtyAreas||{};[['Documentação de referência',(q.documents||[]).join(', ')],['Quantidade',q.qtd],['Área de terreno (AT)',q.at],['Área de implantação (AI)',q.ai],['Área bruta privativa (ABP)',q.abp],['Área bruta dependente (ABD)',q.abd],['Sup. terreno (ST)',q.st],['Sup. coberta (SC)',q.sc],['Sup. descoberta (SD)',q.sd]].forEach(x=>body.push(wordField(x[0],x[1])));body.push(wordField('Observações',t.char?.__obs));await appendWordPhotos(a,nufIndex,(t.photos||[]).map((photo,index)=>({photo,index})),validReportCols(sheetCols.value),true)}}
+  if(component==='cover')for(const a of (p.assets||[])){const refs=(a.photos||[]).map((photo,index)=>({photo,index})).filter(ref=>ref.photo.cover);if(!refs.length)continue;body.push(wordParagraph((a.code||'Ativo')+' — '+(a.name||'Capa'),{bold:true,size:28,pageBreak:true}));await appendWordPhotos(a,0,refs,validReportCols(coverCols.value),false)}
+  if(component==='characterization')for(const a of (p.assets||[])){body.push(wordParagraph((a.code||'Ativo')+' — '+(a.name||'Sem designação'),{bold:true,size:28,pageBreak:true}),wordField('ID_Institucional',a.ref),wordField('Tipo',a.type),wordField('Grupo',a.group),wordField('Destino',a.currentUse),wordField('Endereço / Local',a.local),wordField('Número',a.doorNumber),wordField('Piso / Andar',a.floor),wordField('Código Postal',formatPostalCode(a.postalCode)),wordField('Freguesia',a.freg),wordField('Concelho',a.conc),wordField('ID externo',a.externalId),wordField('Hora da visita',a.visitTime),wordField('GPS',assetGPS(a)),wordField('Observações do Ativo',a.obs));body.push(wordParagraph('Caracterização',{bold:true,size:24}));configuredCharacterValues(a,a).forEach(([key,value])=>body.push(wordField(key,value)));const q=a.qtyAreas||{};[['Documentação de referência',(q.documents||[]).join(', ')],['Quantidade',q.qtd],['Área de terreno (AT)',q.at],['Área de implantação (AI)',q.ai],['Área bruta privativa (ABP)',q.abp],['Área bruta dependente (ABD)',q.abd],['Sup. terreno (ST)',q.st],['Sup. coberta (SC)',q.sc],['Sup. descoberta (SD)',q.sd]].forEach(x=>body.push(wordField(x[0],x[1])));body.push(wordField('Observações',a.char?.__obs));await appendWordPhotos(a,0,(a.photos||[]).map((photo,index)=>({photo,index})),validReportCols(sheetCols.value),true)}
   if(component==='visits'){body.push(wordParagraph('Mapa de visitas do Processo',{bold:true,size:28,pageBreak:true}));for(const visit of (p.visits||[])){const people=(visit.participantIds||[]).map(id=>(p.participants||[]).find(person=>person.id===id)?.name).filter(Boolean).join(', '),assets=(visit.assets||[]).map(item=>item.code||p.assets.find(a=>a.id===item.assetId)?.code).filter(Boolean).join(', ');body.push(wordParagraph([visit.date,[visit.start,visit.end].filter(Boolean).join('–'),assets,people].filter(Boolean).join(' | '),{size:18}))}body.push(wordParagraph('Detalhe das visitas',{bold:true,size:24}));for(const visit of (p.visits||[])){body.push(wordParagraph((visit.type||'Visita')+' · '+(visit.date||'Sem data'),{bold:true,size:22}),wordField('Hora',[visit.start,visit.end].filter(Boolean).join('–')),wordField('Estado do tempo',visit.weather),wordField('Intervenientes',(visit.participantIds||[]).map(id=>(p.participants||[]).find(person=>person.id===id)?.name).filter(Boolean).join(', ')),wordField('Ativos observados',(visit.assets||[]).map(item=>item.code||p.assets.find(a=>a.id===item.assetId)?.code).filter(Boolean).join(', ')),wordField('Condicionamentos',visit.constraints),wordField('Observações',visit.obs))}}
   if(component==='chronology'){body.push(wordParagraph('Cronologia',{bold:true,size:28,pageBreak:true}));for(const entry of (p.history||[]).slice().reverse()){const date=new Date(entry.at),when=Number.isFinite(date.getTime())?date.toLocaleString('pt-PT'):'';body.push(wordField(when||'Registo',entry.text||entry.type))}}
  }
@@ -3870,7 +3813,7 @@ function processSummaryText(p){
  const lines=[p.code||'',p.name||'',p.ref||'','Solicitante: '+(p.requester||''),'Finalidade: '+(p.purpose||''),'Descrição do solicitado: '+(p.requestDescription||''),''];
  if((p.participants||[]).length){lines.push('INTERVENIENTES');(p.participants||[]).forEach(person=>lines.push([person.name,person.role,person.phone,person.email].filter(Boolean).join(' | ')));lines.push('')}
  const visited=(p.assets||[]).filter(a=>a.visitDate);if(visited.length){lines.push('VISITAS REGISTADAS NOS ATIVOS');visited.sort((a,b)=>String(a.visitDate).localeCompare(String(b.visitDate))).forEach(a=>lines.push([a.visitDate,[a.visitTime,a.visitEnd].filter(Boolean).join('-'),a.code,a.name,assetOperationalStatus(a)].filter(Boolean).join(' | ')));lines.push('')}
- (p.assets||[]).forEach(a=>{lines.push(a.code+' | '+(a.ref||'')+' | '+(a.name||'')+' | '+(a.group||'')+' | '+(a.currentUse||'')+' | '+assetOperationalStatus(a));(a.nufs||[]).forEach((n,i)=>lines.push('  '+nufCode(a,i)+' | '+(n.name||'SUB/NUF')))});
+ (p.assets||[]).forEach(a=>{lines.push(a.code+' | '+(a.ref||'')+' | '+(a.name||'')+' | '+(a.group||'')+' | '+(a.currentUse||'')+' | '+assetOperationalStatus(a))});
  return lines.join('\n');
 }
 function processHistoryText(p){return (p.history||[]).slice().reverse().map(h=>{const d=new Date(h.at),when=Number.isFinite(d.getTime())?d.toLocaleString('pt-PT'):'';return [when,h.text,h.origin?'Origem: '+h.origin:''].filter(Boolean).join(' | ')}).join('\n')||'Sem acontecimentos registados.'}
@@ -3882,7 +3825,6 @@ function processDataRows(p){
  const rows=[['Código','ID Institucional','Designação','Grupo','Destino/Uso','Estado','Data Visita','Hora Início','Hora Fim','Freguesia','Concelho','GPS','Observações']];
  (p.assets||[]).forEach(a=>{
    rows.push([a.code||'',a.ref||'',a.name||'',a.group||'',a.currentUse||'',assetOperationalStatus(a),a.visitDate||'',a.visitTime||'',a.visitEnd||'',a.freg||'',a.conc||'',assetGPS(a),a.obs||'']);
-   if((a.nufs||[]).length>1)a.nufs.forEach((n,i)=>rows.push(['  '+nufCode(a,i),'','  '+(n.name||'SUB/NUF'),'','','','','','','','','','']));
  });
  return rows;
 }
@@ -3893,27 +3835,22 @@ async function buildProcessZIP(p,wordBlob=null){
  entries.push({name:root+safeFileName(p.code||'Processo')+'_Cronologia.txt',data:encoder.encode(processHistoryText(p))});
  entries.push({name:root+safeFileName(p.code||'Processo')+'_Dados.xlsx',data:new Uint8Array(await buildXLSX('Ativos',processDataRows(p)).arrayBuffer())});
  if(wordBlob)entries.push({name:root+safeFileName(p.code||'Processo')+'_Ficha.docx',data:new Uint8Array(await wordBlob.arrayBuffer())});
- let done=0,total=(p.assets||[]).reduce((n,a)=>n+(a.nufs||[]).reduce((m,nuf)=>m+(nuf.photos?.length||0),0),0);
+ let done=0,total=(p.assets||[]).reduce((n,a)=>n+(a.photos?.length||0),0);
  for(const a of (p.assets||[])){
    const assetFolder=root+safeFileName(a.code||'Ativo')+'/';
    const gps=parseGPS(assetGPS(a));if(gps)entries.push({name:assetFolder+safeFileName((p.code||'Processo')+'_'+(a.code||'Ativo')+'_GPS')+'.kml',data:encoder.encode(kmlForAsset(p,a,gps))});
-   const targets=a.nufs||[];
-   for(let nufIndex=0;nufIndex<targets.length;nufIndex++){
-     const t=targets[nufIndex];
-     const targetFolder=root+safeFileName(nufCode(a,nufIndex)+'_'+(t.name||'Parte'))+'/';
-     const legendLines=[];
-     for(let i=0;i<(t.photos||[]).length;i++){
-       const photo=t.photos[i],code=photoCodeForReport(a,nufIndex,i);done++;zipInfo.textContent='A preparar fotografia '+done+' de '+total+'…';
-       try{
-         const blob=await photoGet(photo.id);if(!blob){missing.push(code);continue}
-         const ext=(blob.type||photo.type||'').includes('png')?'.png':'.jpg';
-         entries.push({name:targetFolder+safeFileName(code)+ext,data:new Uint8Array(await blob.arrayBuffer())});
-         legendLines.push(code+' | '+(photo.cover?'CAPA | ':'')+(photo.caption||''));
-       }catch(e){missing.push(code)}
-       if(done%3===0)await new Promise(resolve=>requestAnimationFrame(resolve));
-     }
-     if(legendLines.length)entries.push({name:targetFolder+'Legendas_Fotos.txt',data:encoder.encode(legendLines.join('\n'))});
+   const legendLines=[];
+   for(let i=0;i<(a.photos||[]).length;i++){
+     const photo=a.photos[i],code=photoCodeForReport(a,0,i);done++;zipInfo.textContent='A preparar fotografia '+done+' de '+total+'…';
+     try{
+       const blob=await photoGet(photo.id);if(!blob){missing.push(code);continue}
+       const ext=(blob.type||photo.type||'').includes('png')?'.png':'.jpg';
+       entries.push({name:assetFolder+safeFileName(code)+ext,data:new Uint8Array(await blob.arrayBuffer())});
+       legendLines.push(code+' | '+(photo.cover?'CAPA | ':'')+(photo.caption||''));
+     }catch(e){missing.push(code)}
+     if(done%3===0)await new Promise(resolve=>requestAnimationFrame(resolve));
    }
+   if(legendLines.length)entries.push({name:assetFolder+'Legendas_Fotos.txt',data:encoder.encode(legendLines.join('\n'))});
  }
  if(missing.length)entries.push({name:root+'Avisos_Exportacao.txt',data:encoder.encode('Fotografias não disponíveis neste dispositivo:\n'+missing.join('\n'))});
  return {blob:makeStoredZIP(entries),missing,count:entries.length};
@@ -3926,7 +3863,7 @@ exportZIP.onclick=async()=>{
  }catch(e){console.error(e);zipInfo.textContent='Não foi possível criar o ZIP.';alert('Falha ao criar a exportação ZIP deste Processo.')}
  exportZIP.disabled=false;
 };
-exportSummary.onclick=async()=>{let p=syncPendingData();if(!p)return;let lines=[p.code,p.name,p.ref,'',...p.assets.map(a=>a.code+' | '+(a.ref||'')+' | '+(a.name||'')+' | '+(a.group||'')+' | '+(a.currentUse||'')+' | SUB/NUF: '+(a.nufs||[]).map((n,i)=>nufCode(a,i)+' — '+(n.name||'')).join(', '))],blob=new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'});await saveBlobToDestination(blob,safeFileName(p.code||'Processo')+'_Resumo.txt',zipInfo,'Resumo TXT pronto.')}
+exportSummary.onclick=async()=>{let p=syncPendingData();if(!p)return;let lines=[p.code,p.name,p.ref,'',...p.assets.map(a=>a.code+' | '+(a.ref||'')+' | '+(a.name||'')+' | '+(a.group||'')+' | '+(a.currentUse||''))],blob=new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'});await saveBlobToDestination(blob,safeFileName(p.code||'Processo')+'_Resumo.txt',zipInfo,'Resumo TXT pronto.')}
 function visitedAssetsUpToToday(p){
  const today=new Date().toISOString().slice(0,10);
  return (p.assets||[]).filter(a=>a.visitDate&&a.visitDate<=today).sort((a,b)=>String(a.visitDate+' '+(a.visitTime||'')).localeCompare(String(b.visitDate+' '+(b.visitTime||''))));
