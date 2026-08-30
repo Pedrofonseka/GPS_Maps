@@ -1165,7 +1165,7 @@ const {
 }=Object.fromEntries(Array.from(document.querySelectorAll('[id]'),el=>[el.id,el]));
 const cfgAnalystText=document.getElementById('cfgAnalystText');
 
-const APP_VERSION='2.9.4',DATA_SCHEMA_VERSION=3,KEY='ativa_v2_db';
+const APP_VERSION='2.9.5',DATA_SCHEMA_VERSION=3,KEY='ativa_v2_db';
 const CONSTRUCTION_RULES_KEY='ativa_construction_rules_v2';
 const CONSTRUCTION_RULES_DEFAULT=`Todas as fotografias ficam centradas na respetiva célula.
 As fotografias são numeradas pelo índice do Ativo dentro do núcleo e pelo número sequencial: 005_1_IMG_01.
@@ -2771,6 +2771,73 @@ function latLngToTile(lat,lon,zoom){
  return {x:Math.floor(xtile),y:Math.floor(ytile),fracX:xtile-Math.floor(xtile),fracY:ytile-Math.floor(ytile)};
 }
 function gpsTileURL(mode,zoom,tile){return mode==='satellite'?'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/'+zoom+'/'+tile.y+'/'+tile.x:'https://tile.openstreetmap.org/'+zoom+'/'+tile.x+'/'+tile.y+'.png'}
+function loadTileImage(url){
+ return new Promise((resolve,reject)=>{
+   const img=new Image();
+   // Necessário para poder desenhar o mosaico num canvas e exportá-lo como
+   // fotografia (canvas.toBlob) sem o servidor de mapas ter de autorizar
+   // explicitamente esta origem file:// — sem isto o canvas fica "tainted" e
+   // toBlob falha silenciosamente.
+   img.crossOrigin='anonymous';
+   img.onload=()=>resolve(img);
+   img.onerror=()=>reject(new Error('Falha ao carregar o quadrante do mapa'));
+   img.src=url;
+ });
+}
+// Gera uma imagem do mapa (mosaico 3x3 de quadrantes, com um pin no ponto exato)
+// a partir de coordenadas GPS — a mesma fonte de mapas já usada na
+// pré-visualização em ecrã, mas composta num canvas para poder ser guardada
+// como fotografia normal (fica disponível offline depois de capturada uma vez).
+async function captureMapImageBlob(gps,mode=gpsPreviewMode,zoom=17){
+ const tile=latLngToTile(gps.lat,gps.lon,zoom),tileSize=256,grid=3,canvasSize=tileSize*grid;
+ const canvas=document.createElement('canvas');canvas.width=canvasSize;canvas.height=canvasSize;
+ const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Sem memória suficiente para preparar o mapa.');
+ ctx.fillStyle='#e5e7eb';ctx.fillRect(0,0,canvasSize,canvasSize);
+ let loaded=0;
+ for(let dy=-1;dy<=1;dy++){
+   for(let dx=-1;dx<=1;dx++){
+     try{
+       const img=await loadTileImage(gpsTileURL(mode,zoom,{x:tile.x+dx,y:tile.y+dy}));
+       ctx.drawImage(img,(dx+1)*tileSize,(dy+1)*tileSize,tileSize,tileSize);
+       loaded++;
+     }catch(e){/* quadrante em falta fica com o fundo neutro; não trava o mosaico */}
+   }
+ }
+ if(!loaded)throw new Error('Não foi possível carregar o mapa (sem ligação à Internet?).');
+ const px=tileSize+tile.fracX*tileSize,py=tileSize+tile.fracY*tileSize;
+ ctx.font='48px sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';
+ ctx.fillText('📍',px,py+4);
+ const blob=await new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('Falha ao gerar a imagem do mapa')),'image/jpeg',0.85));
+ return {blob,w:canvasSize,h:canvasSize};
+}
+// Atualiza (ou cria) a fotografia de mapa do Ativo em edição a partir do campo
+// de GPS atual — chamado sempre que as coordenadas ficam confirmadas (GPS
+// obtido, pré-visualizadas, ou coladas manualmente depois de as encontrar no
+// Google Maps). Substitui sempre a mesma fotografia de mapa em vez de
+// acumular uma nova a cada alteração de coordenadas.
+async function updateAssetMapImage(){
+ const p=proc(),a=editingAsset?p?.assets.find(x=>x.id===editingAsset):assetEditor?._draft;
+ const gps=a&&parseGPS(a.gps);
+ if(!a||!gps)return;
+ try{
+   const cap=await captureMapImageBlob(gps);
+   a.photos=Array.isArray(a.photos)?a.photos:[];
+   let mapPhoto=a.photos.find(ph=>ph.mapImage);
+   const id=mapPhoto?mapPhoto.id:'ph_'+uid();
+   await photoPut(id,cap.blob);
+   if(mapPhoto){mapPhoto.w=cap.w;mapPhoto.h=cap.h;mapPhoto.size=cap.blob.size;mapPhoto.capturedAt=new Date().toISOString()}
+   else{
+     mapPhoto={id,name:'Mapa (gerado automaticamente)',type:'image/jpeg',originalSize:cap.blob.size,size:cap.blob.size,caption:'',state:'ON',cover:false,mapImage:true,createdAt:new Date().toISOString(),capturedAt:new Date().toISOString(),w:cap.w,h:cap.h};
+     a.photos.push(mapPhoto);
+   }
+   save();
+ }catch(e){
+   // Falha silenciosa e não bloqueante (normalmente falta de ligação à
+   // Internet): as coordenadas GPS já ficaram gravadas de qualquer forma, só a
+   // imagem automática do mapa não pôde ser preparada agora.
+   console.warn('Não foi possível gerar a imagem do mapa automaticamente:',e);
+ }
+}
 function showGPSPreview(value=aGPS.value){
  if(!aGPSPreview)return false;
  const gps=parseGPS(value);aGPSPreview.innerHTML='';
@@ -2816,7 +2883,7 @@ function persistExistingAsset(){
  const el=document.getElementById(id); if(!el)return;
  el.addEventListener(el.tagName==='SELECT'?'change':'blur',persistExistingAsset);
 });
-aGPS.addEventListener('change',()=>{if(parseGPS(aGPS.value)){aGPS.value=parseGPS(aGPS.value).text;showGPSPreview(aGPS.value);refreshOpenOutputs()}else if(aGPSPreview)aGPSPreview.innerHTML=''});
+aGPS.addEventListener('change',()=>{if(parseGPS(aGPS.value)){aGPS.value=parseGPS(aGPS.value).text;persistExistingAsset();showGPSPreview(aGPS.value);refreshOpenOutputs();void updateAssetMapImage()}else if(aGPSPreview)aGPSPreview.innerHTML=''});
 aPostalCode.addEventListener('input',()=>{const formatted=formatPostalCode(aPostalCode.value);if(formatted!==aPostalCode.value)aPostalCode.value=formatted});
 aFreg.addEventListener('change',()=>{const match=(appTables.parishes||[]).find(x=>x.name.localeCompare(aFreg.value.trim(),'pt',{sensitivity:'base'})===0);if(match?.municipality)aConc.value=match.municipality;persistExistingAsset()});
 document.getElementById('aVisitDateBtn')?.addEventListener('click',()=>{
@@ -2914,13 +2981,13 @@ getGPS.onclick=()=>{
      aGPSInfo.classList.toggle('gps-weak',weak);
    }
    persistExistingAsset();getGPS.disabled=false;getGPS.textContent='Obter GPS';
-   showGPSPreview(aGPS.value);
+   showGPSPreview(aGPS.value);void updateAssetMapImage();
  },()=>{
    getGPS.disabled=false;getGPS.textContent='Obter GPS';
    alert('Não foi possível obter o GPS automaticamente. Introduza as coordenadas manualmente.');aGPS.focus();
  },{enableHighAccuracy:true,timeout:12000,maximumAge:30000});
 };
-previewGPS.onclick=()=>{const gps=parseGPS(aGPS.value);if(!gps){alert('Indique coordenadas válidas no formato latitude,longitude.');aGPS.focus();return}aGPS.value=gps.text;persistExistingAsset();showGPSPreview(gps.text)};
+previewGPS.onclick=()=>{const gps=parseGPS(aGPS.value);if(!gps){alert('Indique coordenadas válidas no formato latitude,longitude.');aGPS.focus();return}aGPS.value=gps.text;persistExistingAsset();showGPSPreview(gps.text);void updateAssetMapImage()};
 openMap.onclick=async()=>{
  syncPendingData();
  const gps=parseGPS(aGPS.value);
