@@ -649,7 +649,7 @@ const {
 }=Object.fromEntries(Array.from(document.querySelectorAll('[id]'),el=>[el.id,el]));
 const cfgAnalystText=document.getElementById('cfgAnalystText');
 
-const APP_VERSION='2.1.0',DATA_SCHEMA_VERSION=2,KEY='ativa_v2_db';
+const APP_VERSION='2.2.0',DATA_SCHEMA_VERSION=2,KEY='ativa_v2_db';
 const CONSTRUCTION_RULES_KEY='ativa_construction_rules_v2';
 const CONSTRUCTION_RULES_DEFAULT=`Todas as fotografias ficam centradas na respetiva célula.
 As fotografias são numeradas pelo índice do Ativo dentro do núcleo e pelo número sequencial: 005_1_IMG_01.
@@ -2546,7 +2546,7 @@ async function renderPhotoList(t){
 
    const title=document.createElement('span');
    title.className='item-title photo-code';
-   title.textContent=(p.cover?'CAPA · ':'')+photoCode(i);
+   title.textContent=(p.cover?'CAPA · ':'')+(p.mapImage?'MAPA · ':'')+photoCode(i);
 
    const br=document.createElement('br');
    const sub=document.createElement('span');
@@ -2584,6 +2584,16 @@ async function renderPhotoList(t){
    const coverText=document.createElement('span');coverText.textContent='Capa';
    coverLabel.appendChild(coverTick);coverLabel.appendChild(coverText);
    actions.appendChild(coverLabel);
+
+   const mapLabel=document.createElement('label');
+   mapLabel.className='btn cover-toggle';
+   mapLabel.title='Usar esta fotografia como imagem do Google Maps na capa (largura dupla, uma por ativo)';
+   const mapTick=document.createElement('input');
+   mapTick.type='checkbox';mapTick.checked=!!p.mapImage;
+   mapTick.onchange=()=>toggleMapImage(i,mapTick.checked);
+   const mapText=document.createElement('span');mapText.textContent='Mapa';
+   mapLabel.appendChild(mapTick);mapLabel.appendChild(mapText);
+   actions.appendChild(mapLabel);
 
    const up=document.createElement('button');
    up.type='button'; up.className='btn'; up.textContent='↑'; up.disabled=i===0;
@@ -2661,6 +2671,11 @@ function togglePhotoCover(i,checked){
    alert('Pode selecionar até 6 fotografias de capa.');renderPhotoList(t);return;
  }
  a[i].cover=checked;lastOrientationScan=null;save();renderPhotoList(t);
+}
+function toggleMapImage(i,checked){
+ const t=targetChar(),a=t?.photos||[];if(!a[i])return;
+ if(checked)a.forEach((p,j)=>{if(j!==i)p.mapImage=false});
+ a[i].mapImage=checked;lastOrientationScan=null;save();renderPhotoList(t);
 }
 async function deletePhoto(i){
  let t=targetChar();if(!t.photos)return;
@@ -4011,7 +4026,7 @@ async function buildWordDOCX(p){
  const components=activeOutputComponents();
  for(const component of components){
   if(component==='process'){body.push(wordParagraph(p.code||'Processo',{bold:true,size:36,pageBreak:body.length>0}),wordField('Designação',p.name),wordField('ID Institucional',p.ref),wordField('Solicitante',p.requester),wordField('Finalidade',p.purpose),wordField('Descrição do solicitado',p.requestDescription),wordField('Base de valor',p.valueBase),wordField('Estado',p.status),wordField('Data de entrada',p.inputDate),wordField('Prazo',p.deadline),wordParagraph('Número de Ativos: '+reportAssets.length,{bold:true,size:22}));for(const status of ['ON','OFF']){if((status==='ON'&&!summaryConfig.on)||(status==='OFF'&&!summaryConfig.off))continue;const rows=reportAssets.filter(a=>(a.status==='OFF'?'OFF':'ON')===status);body.push(wordParagraph('Status '+status+' — '+rows.length,{bold:true,size:20}));rows.forEach(a=>body.push(wordParagraph('    '+summaryConfig.fields.map(field=>SUMMARY_FIELD_DEFS[field]+': '+assetSummaryValue(a,field)).join(' · '),{size:17}))) }body.push(wordField('Observações',p.obs))}
-  if(component==='cover')for(const a of reportAssets){const refs=(a.photos||[]).map((photo,index)=>({photo,index})).filter(ref=>ref.photo.cover);if(!refs.length)continue;body.push(wordParagraph((a.code||'Ativo')+' — '+(a.name||'Capa'),{bold:true,size:28,pageBreak:true}));await appendWordPhotos(a,0,refs,validReportCols(coverCols.value),false)}
+  if(component==='cover')for(const a of reportAssets){const refs=(a.photos||[]).map((photo,index)=>({photo,index})).filter(ref=>ref.photo.cover||ref.photo.mapImage);if(!refs.length)continue;body.push(wordParagraph((a.code||'Ativo')+' — '+(a.name||'Capa'),{bold:true,size:28,pageBreak:true}));const mapRefs=refs.filter(r=>r.photo.mapImage),regularRefs=refs.filter(r=>!r.photo.mapImage);if(regularRefs.length)await appendWordPhotos(a,0,regularRefs,validReportCols(coverCols.value),false);if(mapRefs.length)await appendWordPhotos(a,0,mapRefs.slice(0,1),1,false)}
   if(component==='characterization')for(const a of reportAssets){body.push(wordParagraph((a.code||'Ativo')+' — '+(a.name||'Sem designação'),{bold:true,size:28,pageBreak:true}),wordField('ID_Institucional',a.ref),wordField('Tipo',a.type),wordField('Grupo',a.group),wordField('Destino',a.currentUse),wordField('Endereço / Local',a.local),wordField('Número',a.doorNumber),wordField('Piso / Andar',a.floor),wordField('Código Postal',formatPostalCode(a.postalCode)),wordField('Freguesia',a.freg),wordField('Concelho',a.conc),wordField('ID externo',a.externalId),wordField('Hora da visita',a.visitTime),wordField('GPS',assetGPS(a)),wordField('Observações do Ativo',a.obs));body.push(wordParagraph('Caracterização',{bold:true,size:24}));configuredCharacterValues(a,a).forEach(([key,value])=>body.push(wordField(key,value)));const q=a.qtyAreas||{};[['Documentação de referência',(q.documents||[]).join(', ')],['Quantidade',q.qtd],['Área de terreno (AT)',q.at],['Área de implantação (AI)',q.ai],['Área bruta privativa (ABP)',q.abp],['Área bruta dependente (ABD)',q.abd],['Sup. terreno (ST)',q.st],['Sup. coberta (SC)',q.sc],['Sup. descoberta (SD)',q.sd]].forEach(x=>body.push(wordField(x[0],x[1])));body.push(wordField('Observações',a.char?.__obs));await appendWordPhotos(a,0,(a.photos||[]).map((photo,index)=>({photo,index})),validReportCols(sheetCols.value),true)}
   if(component==='visits'){body.push(wordParagraph('Mapa de visitas do Processo',{bold:true,size:28,pageBreak:true}));for(const visit of (p.visits||[])){const people=(visit.participantIds||[]).map(id=>(p.participants||[]).find(person=>person.id===id)?.name).filter(Boolean).join(', '),assets=(visit.assets||[]).map(item=>item.code||p.assets.find(a=>a.id===item.assetId)?.code).filter(Boolean).join(', ');body.push(wordParagraph([visit.date,[visit.start,visit.end].filter(Boolean).join('–'),assets,people].filter(Boolean).join(' | '),{size:18}))}body.push(wordParagraph('Detalhe das visitas',{bold:true,size:24}));for(const visit of (p.visits||[])){body.push(wordParagraph((visit.type||'Visita')+' · '+(visit.date||'Sem data'),{bold:true,size:22}),wordField('Hora',[visit.start,visit.end].filter(Boolean).join('–')),wordField('Estado do tempo',visit.weather),wordField('Intervenientes',(visit.participantIds||[]).map(id=>(p.participants||[]).find(person=>person.id===id)?.name).filter(Boolean).join(', ')),wordField('Ativos observados',(visit.assets||[]).map(item=>item.code||p.assets.find(a=>a.id===item.assetId)?.code).filter(Boolean).join(', ')),wordField('Condicionamentos',visit.constraints),wordField('Observações',visit.obs))}}
   if(component==='chronology'){body.push(wordParagraph('Cronologia',{bold:true,size:28,pageBreak:true}));for(const entry of (p.history||[]).slice().reverse()){const date=new Date(entry.at),when=Number.isFinite(date.getTime())?date.toLocaleString('pt-PT'):'';body.push(wordField(when||'Registo',entry.text||entry.type))}}
@@ -4181,6 +4196,14 @@ async function buildReportPDF(p){
   }
   if(col>0)y=rowStartY+rowMaxH+gap;
  }
+ // Na capa do ativo, a foto marcada como imagem do Google Maps sai sempre
+ // à parte, a largura dupla (uma só coluna), depois das fotos normais.
+ async function coverPhotoGrid(coverRefs,cols){
+  if(!coverRefs.length)return;
+  const mapRefs=coverRefs.filter(r=>r.photo.mapImage),regularRefs=coverRefs.filter(r=>!r.photo.mapImage);
+  if(regularRefs.length)await photoGrid(regularRefs,cols,false);
+  if(mapRefs.length)await photoGrid(mapRefs.slice(0,1),1,false);
+ }
  const assetFieldPairs=a=>[['ID_Institucional',a.ref],['Tipo',a.type],['Grupo',a.group],['Destino',a.currentUse],['Endereço / Local',a.local],['Número',a.doorNumber],['Piso / Andar',a.floor],['Código Postal',formatPostalCode(a.postalCode)],['Freguesia',a.freg],['Concelho',a.conc],['Hora da visita',a.visitTime],['GPS',assetGPS(a)]];
  const areaFieldPairs=q=>[['Documentação de referência',(q.documents||[]).join(', ')],['Quantidade',q.qtd],['Área de terreno (AT)',q.at],['Área de implantação (AI)',q.ai],['Área bruta privativa (ABP)',q.abp],['Área bruta dependente (ABD)',q.abd],['Sup. terreno (ST)',q.st],['Sup. coberta (SC)',q.sc],['Sup. descoberta (SD)',q.sd]];
  async function renderAssetCharacterizationBody(a){
@@ -4221,13 +4244,13 @@ async function buildReportPDF(p){
    coverCharDone=true;
    let firstAssetBlock=true;
    for(const a of reportAssets){
-    const coverRefs=(a.photos||[]).map((photo,index)=>({photo,index,code:photoCodeForReport(a,0,index)})).filter(r=>r.photo.cover);
+    const coverRefs=(a.photos||[]).map((photo,index)=>({photo,index,code:photoCodeForReport(a,0,index)})).filter(r=>r.photo.cover||r.photo.mapImage);
     if(coverRefs.length){
      currentComponent='cover';
      assetHeading((a.code||'Ativo')+' — '+(a.name||'Sem designação'),{pageBreak:!firstAssetBlock});
      firstAssetBlock=false;
      subheading('Capa');
-     await photoGrid(coverRefs,validReportCols(coverCols.value),false);
+     await coverPhotoGrid(coverRefs,validReportCols(coverCols.value));
     }
     currentComponent='characterization';
     assetHeading((a.code||'Ativo')+' — '+(a.name||'Sem designação'),{pageBreak:!firstAssetBlock});
@@ -4237,11 +4260,11 @@ async function buildReportPDF(p){
    continue;
   }
   if(component==='cover'&&!hasChar)for(const a of reportAssets){
-   const refs=(a.photos||[]).map((photo,index)=>({photo,index,code:photoCodeForReport(a,0,index)})).filter(r=>r.photo.cover);
+   const refs=(a.photos||[]).map((photo,index)=>({photo,index,code:photoCodeForReport(a,0,index)})).filter(r=>r.photo.cover||r.photo.mapImage);
    if(!refs.length)continue;
    assetHeading((a.code||'Ativo')+' — '+(a.name||'Sem designação'));
    subheading('Capa');
-   await photoGrid(refs,validReportCols(coverCols.value),false);
+   await coverPhotoGrid(refs,validReportCols(coverCols.value));
   }
   if(component==='characterization'&&!hasCover){
    if(reportAssets.length){newPage();pageTitle('Caracterização')}
@@ -4424,7 +4447,7 @@ async function buildProcessZIP(p,wordBlob=null){
        const blob=await photoGet(photo.id);if(!blob){missing.push(code);continue}
        const ext=(blob.type||photo.type||'').includes('png')?'.png':'.jpg';
        entries.push({name:assetFolder+safeFileName(code)+ext,data:new Uint8Array(await blob.arrayBuffer())});
-       legendLines.push(code+' | '+(photo.cover?'CAPA | ':'')+(photo.caption||''));
+       legendLines.push(code+' | '+(photo.cover?'CAPA | ':'')+(photo.mapImage?'MAPA | ':'')+(photo.caption||''));
      }catch(e){missing.push(code)}
      if(done%3===0)await new Promise(resolve=>requestAnimationFrame(resolve));
    }
