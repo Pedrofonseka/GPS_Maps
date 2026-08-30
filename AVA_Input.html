@@ -651,7 +651,7 @@ const {
 }=Object.fromEntries(Array.from(document.querySelectorAll('[id]'),el=>[el.id,el]));
 const cfgAnalystText=document.getElementById('cfgAnalystText');
 
-const APP_VERSION='2.3.0',DATA_SCHEMA_VERSION=2,KEY='ativa_v2_db';
+const APP_VERSION='2.3.1',DATA_SCHEMA_VERSION=2,KEY='ativa_v2_db';
 const CONSTRUCTION_RULES_KEY='ativa_construction_rules_v2';
 const CONSTRUCTION_RULES_DEFAULT=`Todas as fotografias ficam centradas na respetiva célula.
 As fotografias são numeradas pelo índice do Ativo dentro do núcleo e pelo número sequencial: 005_1_IMG_01.
@@ -3552,9 +3552,8 @@ const OUTPUT_COMPOSITION_DEFAULT=[
  {id:'process',name:'Ficha de resumo do Processo',enabled:true},
  {id:'cover',name:'Capa',enabled:true},
  {id:'characterization',name:'Fichas de caracterização',enabled:true},
- {id:'visits',name:'Visitas',enabled:false}
+ {id:'visits',name:'Visitas',enabled:true}
 ];
-const OUTPUT_STRUCTURAL_IDS=['processCover','cover'];
 function loadOutputComposition(){
  try{
    const saved=JSON.parse(localStorage.getItem(OUTPUT_COMPOSITION_KEY)||'[]');
@@ -3565,15 +3564,10 @@ function loadOutputComposition(){
      if(base&&!result.some(x=>x.id===base.id))result.push({id:base.id,name:base.name,enabled:item.enabled!==false});
    });
    OUTPUT_COMPOSITION_DEFAULT.forEach(base=>{if(!result.some(x=>x.id===base.id))result.push({...base})});
-   // Migration rule: the Capa de processo and the Capa do ativo are structural,
-   // never optional. Old saved configurations must never suppress either one.
-   OUTPUT_STRUCTURAL_IDS.forEach(id=>{
-     let item=result.find(x=>x.id===id);
-     if(!item){item={id,name:OUTPUT_COMPOSITION_DEFAULT.find(b=>b.id===id).name,enabled:true};result.push(item)}
-     item.enabled=true;
-   });
+   // A Capa de processo abre sempre o documento — só a posição é fixa; tal como
+   // todas as outras fichas, o utilizador pode ligá-la e desligá-la livremente.
    const processCover=result.find(item=>item.id==='processCover');
-   return [processCover,...result.filter(item=>item.id!=='processCover')];
+   return processCover?[processCover,...result.filter(item=>item.id!=='processCover')]:result;
  }catch(e){return OUTPUT_COMPOSITION_DEFAULT.map(item=>({...item}))}
 }
 let outputComposition=loadOutputComposition();
@@ -3581,10 +3575,10 @@ function saveOutputComposition(){try{localStorage.setItem(OUTPUT_COMPOSITION_KEY
 function renderOutputComposition(){
  const containers=[cfgOutputValues,document.getElementById('exportOutputValues')].filter(Boolean);
  if(!containers.length)return;
- const html=outputComposition.map((item,index)=>`<div class="item"><label class="item-main" style="display:flex;align-items:center;gap:8px;margin:0"><input type="checkbox" data-output-enabled="${index}" style="width:auto" ${item.enabled?'checked':''} ${OUTPUT_STRUCTURAL_IDS.includes(item.id)?'disabled title="Esta ficha faz parte estrutural do documento"':''}><span class="item-title">${esc(item.name)}</span></label><span class="photo-actions"><button class="btn" data-output-up="${index}" ${index===0?'disabled':''}>↑</button><button class="btn" data-output-down="${index}" ${index===outputComposition.length-1?'disabled':''}>↓</button></span></div>`).join('');
+ const html=outputComposition.map((item,index)=>`<div class="item"><label class="item-main" style="display:flex;align-items:center;gap:8px;margin:0"><input type="checkbox" data-output-enabled="${index}" style="width:auto" ${item.enabled?'checked':''}><span class="item-title">${esc(item.name)}</span></label><span class="photo-actions"><button class="btn" data-output-up="${index}" ${index===0?'disabled':''}>↑</button><button class="btn" data-output-down="${index}" ${index===outputComposition.length-1?'disabled':''}>↓</button></span></div>`).join('');
  containers.forEach(container=>{
   container.innerHTML=html;
-  container.querySelectorAll('[data-output-enabled]').forEach(input=>input.onchange=()=>{const item=outputComposition[Number(input.dataset.outputEnabled)];if(OUTPUT_STRUCTURAL_IDS.includes(item.id)){input.checked=true;return}item.enabled=input.checked;saveOutputComposition();renderOutputComposition();refreshOpenOutputs()});
+  container.querySelectorAll('[data-output-enabled]').forEach(input=>input.onchange=()=>{const item=outputComposition[Number(input.dataset.outputEnabled)];item.enabled=input.checked;saveOutputComposition();renderOutputComposition();refreshOpenOutputs()});
   container.querySelectorAll('[data-output-up]').forEach(button=>button.onclick=()=>moveOutputComposition(Number(button.dataset.outputUp),-1));
   container.querySelectorAll('[data-output-down]').forEach(button=>button.onclick=()=>moveOutputComposition(Number(button.dataset.outputDown),1));
  });
@@ -4078,7 +4072,14 @@ async function buildWordDOCX(p){
  async function appendWordPhotos(a,nufIndex,photoRefs,cols,showCaptions){const cellWidth=Math.floor(5400000/cols),imageHeight=2100000;let cells=[];for(const ref of photoRefs){const photo=ref.photo,index=ref.index;try{let blob=await photoGet(photo.id);if(!blob)continue;let ext=(blob.type||'').includes('png')?'png':'jpeg';if(!/image\/(png|jpeg|jpg)/i.test(blob.type||'')){const activeSettings=loadPhotoSettings(),converted=await compressImage(blob,activeSettings.maxSide,activeSettings.quality/100);blob=converted.blob;ext='jpeg'}imageNo++;const fileExt=ext==='png'?'png':'jpg',rid='rId'+imageNo,w=Number(photo.w)||1200,h=Number(photo.h)||800,scale=Math.min(cellWidth/w,imageHeight/h),cx=Math.max(1,Math.round(w*scale)),cy=Math.max(1,Math.round(h*scale));entries.push({name:'word/media/image'+imageNo+'.'+fileExt,data:new Uint8Array(await blob.arrayBuffer())});rels.push('<Relationship Id="'+rid+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image'+imageNo+'.'+fileExt+'"/>');cells.push({image:wordDrawing(rid,imageNo,cx,cy),caption:showCaptions?wordParagraph(photoCodeForReport(a,nufIndex,index)+(photo.caption?' — '+photo.caption:''),{size:16}):''});if(cells.length===cols){body.push(wordPhotoTable(cells,cols,showCaptions));cells=[]}}catch(e){console.error(e)}}if(cells.length)body.push(wordPhotoTable(cells,cols,showCaptions))}
  const components=activeOutputComponents();
  for(const component of components){
-  if(component==='processCover'){body.push(wordParagraph(p.code||'Processo',{bold:true,size:40,pageBreak:body.length>0}),wordParagraph(p.name||'',{bold:true,size:26}),wordField('ID Institucional',p.ref),wordField('Solicitante',p.requester),wordField('Finalidade',p.purpose),wordField('Descrição do solicitado',p.requestDescription),wordField('Base de valor',p.valueBase),wordField('Estado',p.status),wordField('Data de entrada',p.inputDate),wordField('Prazo',p.deadline))}
+  if(component==='processCover'){
+   const service=serviceDesignation(p.service||p.serviceType||p.purpose||'Avaliação');
+   body.push(wordParagraph('Relatório de '+service,{bold:true,size:36,pageBreak:body.length>0}));
+   const centerRows=outModelRows('cover','center',true);
+   centerRows.forEach(row=>body.push(wordField(OUT_MODEL_FIELDS[row.field]||row.field,outFieldValue(row.field,p,1,reportAssets.length))));
+   const processCoverRefs=await collectCoverPhotoRefs(p);
+   if(processCoverRefs.length)await appendWordPhotos(null,0,processCoverRefs,validReportCols(coverCols.value),false);
+  }
   if(component==='process'){body.push(wordParagraph(p.code||'Processo',{bold:true,size:36,pageBreak:body.length>0}),wordField('Designação',p.name),wordField('ID Institucional',p.ref),wordField('Solicitante',p.requester),wordField('Finalidade',p.purpose),wordField('Descrição do solicitado',p.requestDescription),wordField('Base de valor',p.valueBase),wordField('Estado',p.status),wordField('Data de entrada',p.inputDate),wordField('Prazo',p.deadline),wordParagraph('Número de Ativos: '+reportAssets.length,{bold:true,size:22}));for(const status of ['ON','OFF']){if((status==='ON'&&!summaryConfig.on)||(status==='OFF'&&!summaryConfig.off))continue;const rows=reportAssets.filter(a=>(a.status==='OFF'?'OFF':'ON')===status);body.push(wordParagraph('Status '+status+' — '+rows.length,{bold:true,size:20}));rows.forEach(a=>body.push(wordParagraph('    '+summaryConfig.fields.map(field=>SUMMARY_FIELD_DEFS[field]+': '+assetSummaryValue(a,field)).join(' · '),{size:17}))) }body.push(wordField('Observações',p.obs))}
   if(component==='cover')for(const a of reportAssets){const refs=(a.photos||[]).map((photo,index)=>({photo,index})).filter(ref=>ref.photo.cover||ref.photo.mapImage);if(!refs.length)continue;body.push(wordParagraph((a.code||'Ativo')+' — '+(a.name||'Capa'),{bold:true,size:28,pageBreak:true}));const mapRefs=refs.filter(r=>r.photo.mapImage),regularRefs=refs.filter(r=>!r.photo.mapImage);if(regularRefs.length)await appendWordPhotos(a,0,regularRefs,validReportCols(coverCols.value),false);if(mapRefs.length)await appendWordPhotos(a,0,mapRefs.slice(0,1),1,false)}
   if(component==='characterization')for(const a of reportAssets){body.push(wordParagraph((a.code||'Ativo')+' — '+(a.name||'Sem designação'),{bold:true,size:28,pageBreak:true}),wordField('ID_Institucional',a.ref),wordField('Tipo',a.type),wordField('Grupo',a.group),wordField('Destino',a.currentUse),wordField('Endereço / Local',a.local),wordField('Número',a.doorNumber),wordField('Piso / Andar',a.floor),wordField('Código Postal',formatPostalCode(a.postalCode)),wordField('Freguesia',a.freg),wordField('Concelho',a.conc),wordField('ID externo',a.externalId),wordField('Hora da visita',a.visitTime),wordField('GPS',assetGPS(a)),wordField('Observações do Ativo',a.obs));body.push(wordParagraph('Caracterização',{bold:true,size:24}));configuredCharacterValues(a,a).forEach(([key,value])=>body.push(wordField(key,value)));const q=a.qtyAreas||{};[['Documentação de referência',(q.documents||[]).join(', ')],['Quantidade',q.qtd],['Área de terreno (AT)',q.at],['Área de implantação (AI)',q.ai],['Área bruta privativa (ABP)',q.abp],['Área bruta dependente (ABD)',q.abd],['Sup. terreno (ST)',q.st],['Sup. coberta (SC)',q.sc],['Sup. descoberta (SD)',q.sd]].forEach(x=>body.push(wordField(x[0],x[1])));body.push(wordField('Observações',a.char?.__obs));await appendWordPhotos(a,0,(a.photos||[]).map((photo,index)=>({photo,index})),validReportCols(sheetCols.value),true)}
@@ -4276,11 +4277,17 @@ async function buildReportPDF(p){
  for(const component of components){
   currentComponent=component;
   if(component==='processCover'){
+   // Mesmo conteúdo da Capa que já existia na pré-visualização em ecrã: título
+   // com a designação do serviço, os campos configurados no modelo de saída
+   // 'cover' e as fotografias representativas dos Ativos (collectCoverPhotoRefs).
    if(pageStarted)newPage();
-   pageTitle('Capa de Processo');
-   heading(p.code||'Processo',{pageBreak:false,size:22});
-   if(String(p.name||'').trim())text(p.name,{bold:true,size:14,gap:6});
-   fieldGrid([['ID Institucional',p.ref],['Solicitante',p.requester],['Finalidade',p.purpose],['Descrição do solicitado',p.requestDescription],['Base de valor',p.valueBase],['Estado',p.status],['Data de entrada',p.inputDate],['Prazo',p.deadline]]);
+   const service=serviceDesignation(p.service||p.serviceType||p.purpose||'Avaliação');
+   pageTitle('Relatório de '+service);
+   const centerRows=outModelRows('cover','center',true);
+   const centerValues=centerRows.map(row=>[OUT_MODEL_FIELDS[row.field]||row.field,outFieldValue(row.field,p,1,reportAssets.length)]).filter(x=>String(x[1]||'').trim());
+   if(centerValues.length)fieldGrid(centerValues);
+   const processCoverRefs=await collectCoverPhotoRefs(p);
+   if(processCoverRefs.length){ensureSpace(10);await photoGrid(processCoverRefs,validReportCols(coverCols.value),false)}
   }
   if(component==='process'){
    if(pageStarted)newPage();
@@ -4303,6 +4310,9 @@ async function buildReportPDF(p){
   if((component==='cover'||component==='characterization')&&hasCover&&hasChar){
    if(coverCharDone)continue;
    coverCharDone=true;
+   // Cada saída selecionada começa sempre numa página nova, sem misturar
+   // conteúdo do tipo anterior — mesmo a primeira Capa deste bloco.
+   if(pageStarted)newPage();
    let firstAssetBlock=true;
    for(const a of reportAssets){
     const coverRefs=(a.photos||[]).map((photo,index)=>({photo,index,code:photoCodeForReport(a,0,index)})).filter(r=>r.photo.cover||r.photo.mapImage);
