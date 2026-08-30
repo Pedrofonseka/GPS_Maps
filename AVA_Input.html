@@ -659,7 +659,7 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
 </head>
 <body>
 <header>
- <div class="header-line"><div class="brand">AVA_Input <span id="appVersionLabel" style="font-size:11px;font-weight:600"></span></div><button class="btn header-config" id="openConfig" type="button">⚙ Config</button></div>
+ <div class="header-line"><div class="brand">AVA_Input <span id="appVersionLabel" style="font-size:11px;font-weight:600"></span> <span id="saveStatus" class="pill" style="font-size:10px">Guardado</span></div><button class="btn header-config" id="openConfig" type="button">⚙ Config</button></div>
  <div id="context" class="ctx">Nenhum processo selecionado</div>
  <nav>
   <button data-go="processos" class="on">1 Processos</button>
@@ -883,6 +883,8 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
   <label>Ativos a incluir nesta exportação <small class="note">(desmarque os que não quer incluir agora — a caracterização de cada um continua gravada; isto só afeta o que sai nesta exportação)</small></label>
   <div class="actions"><button class="btn" id="exportSelectAll" type="button">Selecionar todos</button><button class="btn" id="exportSelectNone" type="button">Nenhum</button></div>
   <div id="exportAssetSelector" class="list" style="margin-top:6px"></div>
+  <div class="actions"><button class="btn" id="exportValidate" type="button">Verificar dados antes de exportar</button></div>
+  <div id="exportValidationSummary" class="list" style="margin-top:6px"></div>
   <label style="margin-top:12px">Conteúdo a incluir na saída <small class="note">(as setas definem a sequência no PDF/Word; a Capa de processo e a Capa de cada Ativo são estruturais)</small></label>
   <div id="exportOutputValues" class="list" style="margin-top:6px"></div>
   <label class="btn cover-toggle" style="margin-top:8px;display:inline-flex"><input type="checkbox" id="embedStatusCaptions" style="width:auto"><span>Incorporar o estado (ON/OFF) do Ativo nas legendas das fotografias</span></label>
@@ -933,11 +935,11 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
 
 <details class="config-block" id="cfgStructureBlock" open>
   <summary>1 · Estrutura de Variáveis</summary>
-  <div class="muted">Estrutura 2.0: Processo → Núcleo agregador → Ativo(s). Cada ficha caracteriza um Ativo. Por defeito, cada núcleo é único e contém apenas o Ativo de índice 1.</div>
+  <div class="muted">Estrutura 2.1: Processo → Ativo → Caracterização. Quando necessário, vários Ativos podem partilhar o mesmo número-base e distinguir-se por posição (por exemplo, ATV_005.1 e ATV_005.2).</div>
   <div class="list" style="margin-top:8px">
     <div class="item"><span class="item-main"><span class="item-title">1 — Processo</span><br><span class="item-sub">Bloco estrutural ativo</span></span></div>
     <div class="item"><span class="item-main"><span class="item-title">2 — Ativo</span><br><span class="item-sub">Bloco estrutural preparado</span></span></div>
-    <div class="item"><span class="item-main"><span class="item-title">3 — Parte do Ativo</span><br><span class="item-sub">Índice 1 por defeito; 2, 3… para análise autónoma agregada</span></span></div>
+    <div class="item"><span class="item-main"><span class="item-title">3 — Caracterização do Ativo</span><br><span class="item-sub">Dados técnicos, quantidades, fotografias e observações do próprio Ativo</span></span></div>
   </div>
 </details>
 
@@ -945,7 +947,7 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
 <div class="list">
 <div class="item"><span class="item-main"><b>Processo</b><br><span class="item-sub">Motor de variáveis ativo</span></span><span class="pill">Estruturado</span></div>
 <div class="item"><span class="item-main"><b>Ativo</b><br><span class="item-sub">Motor + variáveis base + grupos aplicáveis</span></span><span class="pill">Estruturado</span></div>
-<div class="item"><span class="item-main"><b>Parte do Ativo</b><br><span class="item-sub">Caracterização, fotografias e legenda próprias</span></span><span class="pill">Estruturado</span></div>
+<div class="item"><span class="item-main"><b>Caracterização do Ativo</b><br><span class="item-sub">Caracterização, fotografias e legendas próprias</span></span><span class="pill">Estruturado</span></div>
 </div></details>
 <details class="config-block"><summary>3 · Estrutura — Transferência</summary><div class="muted">Exporta a definição atual dos blocos e tabelas para revisão e futura importação.</div><div class="actions"><button class="small" type="button" onclick="exportVariableStructure()">Exportar estrutura JSON</button><button class="small" type="button" onclick="exportVariableStructureXLSX()">Exportar estrutura (Excel)</button></div></details>
 <details class="config-block" id="cfgStructureDiagnostics">
@@ -1165,10 +1167,10 @@ const {
 }=Object.fromEntries(Array.from(document.querySelectorAll('[id]'),el=>[el.id,el]));
 const cfgAnalystText=document.getElementById('cfgAnalystText');
 
-const APP_VERSION='2.9.5',DATA_SCHEMA_VERSION=3,KEY='ativa_v2_db';
+const APP_VERSION='2.9.9',DATA_SCHEMA_VERSION=4,KEY='ativa_v2_db';
 const CONSTRUCTION_RULES_KEY='ativa_construction_rules_v2';
 const CONSTRUCTION_RULES_DEFAULT=`Todas as fotografias ficam centradas na respetiva célula.
-As fotografias são numeradas pelo índice do Ativo dentro do núcleo e pelo número sequencial: 005_1_IMG_01.
+As fotografias são numeradas pelo número do Ativo, eventual posição no agrupamento e número sequencial: 005_1_IMG_01.
 Cada fotografia dispõe de um espaço de legenda.
 O texto é justificado, exceto quando o comprimento é inferior à largura disponível; nesse caso fica alinhado à esquerda.
 Qualquer alteração a informação previamente introduzida provoca refresh imediato dos cartões e formulários dependentes.
@@ -1266,7 +1268,7 @@ const LEGACY_GROUP_SCHEMAS={
    ]}
 };
 const groups=LEGACY_GROUP_SCHEMAS; // nomes/âmbito dos grupos; os campos de caracterização vêm de NUF_VARIABLE_DEFAULTS
-const CONSERVATION_OPTIONS=['Muito bom','Bom','Razoável','Mau','Muito mau'];
+const CONSERVATION_OPTIONS=['Impróprio','Sofrível','Aceitável','Razoável','Bom','Muito bom'];
 const TOPOGRAPHY_OPTIONS=['Plana','Suave','Acidentada','Mista'];
 const NUF_VARIABLE_DEFAULTS=[
  {id:'descricao_sumaria',label:'Descrição do conjunto',type:'textarea',wide:1,groups:['TOF','TRN','TAC','EDC','VEI','MOB','MEQ','OTS','NID','SEP']},
@@ -1368,8 +1370,22 @@ function normaliseDB(raw){
  // Accept both the current database and older full-backup envelopes.
  const source=(raw&&raw.data&&Array.isArray(raw.data.processes))?raw.data:raw;
  const clean=(source&&typeof source==='object')?source:{};
- clean.schemaVersion=Number(clean.schemaVersion)||DATA_SCHEMA_VERSION;
+ const incomingSchemaVersion=Number(clean.schemaVersion)||0;
  clean.processes=(Array.isArray(clean.processes)?clean.processes:[]).filter(p=>p&&typeof p==='object');
+ // As transformações de estruturas antigas só podem correr uma vez. Uma base
+ // já migrada recebe apenas garantias mínimas, sem voltar a separar partes,
+ // renumerar Ativos ou remover referências fotográficas repetidas.
+ if(incomingSchemaVersion>=DATA_SCHEMA_VERSION){
+  clean.processes.forEach(p=>{
+   p.history=Array.isArray(p.history)?p.history:[];
+   p.participants=Array.isArray(p.participants)?p.participants:[];
+   p.visits=Array.isArray(p.visits)?p.visits:[];
+   p.assets=(Array.isArray(p.assets)?p.assets:[]).filter(a=>a&&typeof a==='object');
+   p.assets.forEach(a=>{a.photos=Array.isArray(a.photos)?a.photos:[];a.char=a.char&&typeof a.char==='object'?a.char:{};a.qtyAreas=a.qtyAreas&&typeof a.qtyAreas==='object'?a.qtyAreas:{}});
+  });
+  clean.schemaVersion=DATA_SCHEMA_VERSION;
+  return clean;
+ }
  clean.processes.forEach(p=>{
   // Um Processo com dados inesperados nunca pode travar a migração dos
   // restantes Processos — o mesmo raciocínio do try/catch por Ativo, um
@@ -1481,6 +1497,7 @@ function normaliseDB(raw){
      seenPhotoIds.set(id,a.code||a.id);return true;
    });
  }));
+ clean.schemaVersion=DATA_SCHEMA_VERSION;
  return clean;
 }
 function load(){
@@ -1575,7 +1592,7 @@ function applyPrimaryConfigSnapshot(cfg){
  try{if(Array.isArray(cfg.outputComposition))outputComposition=cfg.outputComposition}catch(e){}
  try{if(Array.isArray(cfg.coverContent))coverContent=cfg.coverContent}catch(e){}
  try{if(cfg.outModels&&typeof cfg.outModels==='object')outModels=cfg.outModels}catch(e){}
- try{if(cfg.summaryConfig)summaryConfig=cfg.summaryConfig}catch(e){}
+ try{if(cfg.summaryConfig)summaryConfig=normalizeSummaryConfig(cfg.summaryConfig)}catch(e){}
  return true;
 }
 async function saveConfigurationPrimary(){
@@ -1626,6 +1643,20 @@ async function clearDBFallback(){
  }catch(e){}
 }
 let dbSaveFailing=false,lastFallbackWrite=Promise.resolve(false);
+let fallbackScheduleTimer=null,fallbackScheduleAt='',fallbackScheduleResolvers=[];
+function setSaveStatus(text,failed=false){const el=document.getElementById('saveStatus');if(!el)return;el.textContent=text;el.style.background=failed?'#fde8e8':text==='Guardado'?'#e9f7ee':'#fff4bd';el.style.color=failed?'#a01818':''}
+function scheduleDBFallback(savedAt,delay=650){
+ fallbackScheduleAt=savedAt||new Date().toISOString();
+ clearTimeout(fallbackScheduleTimer);
+ const promise=new Promise(resolve=>fallbackScheduleResolvers.push(resolve));
+ fallbackScheduleTimer=setTimeout(async()=>{
+  fallbackScheduleTimer=null;
+  const resolvers=fallbackScheduleResolvers.splice(0),at=fallbackScheduleAt;
+  const ok=await saveDBFallback(at);
+  resolvers.forEach(resolve=>resolve(ok));
+ },delay);
+ return promise;
+}
 function save(){
  // Guarda-se sempre também uma cópia em IndexedDB, com o mesmo instante da
  // gravação em localStorage — não só quando esta falha. Assim, se alguma
@@ -1634,11 +1665,15 @@ function save(){
  // Ficheiros, onde as fotografias sempre gravaram bem) nunca fica muito
  // desatualizada — o arranque seguinte deteta e recupera automaticamente.
  const savedAt=new Date().toISOString();
+ setSaveStatus('A guardar…');
  try{
    localStorage.setItem(KEY,JSON.stringify(db));
    localStorage.setItem(KEY+'_savedAt',savedAt);
    dbSaveFailing=false;
-   lastFallbackWrite=saveDBFallback(savedAt);
+   // Agrupa alterações próximas numa única escrita da cópia de recurso. Evita
+   // clonar e gravar toda a base por cada tecla ou fotografia de um lote.
+   lastFallbackWrite=scheduleDBFallback(savedAt);
+   lastFallbackWrite.then(ok=>setSaveStatus(ok?'Guardado':'Guardado localmente',false));
    return true;
  }catch(e){
    // A gravação em localStorage falhou (comum em pré-visualizações file:// tipo app
@@ -1646,7 +1681,11 @@ function save(){
    // recurso em IndexedDB, quando esta também estiver disponível nesta página.
    const alreadyFailing=dbSaveFailing;
    dbSaveFailing=true;
+   clearTimeout(fallbackScheduleTimer);fallbackScheduleTimer=null;
+   const queuedResolvers=fallbackScheduleResolvers.splice(0);
    lastFallbackWrite=saveDBFallback();
+   lastFallbackWrite.then(ok=>queuedResolvers.forEach(resolve=>resolve(ok)));
+   lastFallbackWrite.then(ok=>setSaveStatus(ok?'Guardado':'Falha ao guardar',!ok));
    lastFallbackWrite.then(ok=>{
      if(alreadyFailing||ok)return;
      alert('Não foi possível gravar os dados nesta página, nem sequer na base de dados de recurso — há um risco real de perder as próximas alterações se a página for recarregada. '+storageIssueGuidance());
@@ -2008,7 +2047,7 @@ function renderAssetVariablesTable(){
 }
 function moveAssetVariable(i,d){const j=i+d;if(j<0||j>=assetVariables.length)return;[assetVariables[i],assetVariables[j]]=[assetVariables[j],assetVariables[i]];saveAssetVariables();refreshVariableArchitecture()}
 function saveAssetVariableRow(i){const body=document.getElementById('cfgAssetVariablesBody');assetVariables[i]={...assetVariables[i],label:body.querySelector(`[data-av-label="${i}"]`).value.trim()||assetVariables[i].label,state:body.querySelector(`[data-av-state="${i}"]`).value,type:body.querySelector(`[data-av-type="${i}"]`).value,table:body.querySelector(`[data-av-table="${i}"]`).value};saveAssetVariables();refreshVariableArchitecture()}
-function deleteAssetVariable(i){const v=assetVariables[i];if(v.state==='deleted'){if(!confirm('Eliminar definitivamente esta variável da estrutura?'))return;assetVariables.splice(i,1)}else{if(!confirm('Marcar esta variável como Eliminada?'))return;v.state='deleted'}saveAssetVariables();refreshVariableArchitecture()}
+function deleteAssetVariable(i){const v=assetVariables[i];if(v.state==='deleted'){alert('Esta variável já está arquivada. É mantida para que os dados históricos continuem interpretáveis.');return}if(!confirm('Arquivar esta variável? Deixará de aparecer no preenchimento, mas os dados históricos serão preservados.'))return;v.state='deleted';saveAssetVariables();refreshVariableArchitecture()}
 function addAssetVariable(){assetVariables.push(normalizeVariable({id:'asset_custom_'+Date.now(),label:'Nova variável',type:'text',state:'active'},assetVariables.length));saveAssetVariables();refreshVariableArchitecture()}
 
 function renderNUFVariablesTable(){
@@ -2022,7 +2061,7 @@ function renderNUFVariablesTable(){
 }
 function moveNUFVariable(i,d){const j=i+d;if(j<0||j>=nufVariables.length)return;[nufVariables[i],nufVariables[j]]=[nufVariables[j],nufVariables[i]];saveNUFVariables();refreshVariableArchitecture()}
 function saveNUFVariableRow(i){const b=document.getElementById('cfgNUFVariablesBody');nufVariables[i]={...nufVariables[i],label:b.querySelector(`[data-nv-label="${i}"]`).value.trim()||nufVariables[i].label,state:b.querySelector(`[data-nv-state="${i}"]`).value,type:b.querySelector(`[data-nv-type="${i}"]`).value,table:b.querySelector(`[data-nv-table="${i}"]`).value};saveNUFVariables();refreshVariableArchitecture()}
-function deleteNUFVariable(i){const v=nufVariables[i];if(v.state==='deleted'){if(!confirm('Eliminar definitivamente esta variável da estrutura?'))return;nufVariables.splice(i,1)}else{if(!confirm('Marcar esta variável como Eliminada?'))return;v.state='deleted'}saveNUFVariables();refreshVariableArchitecture()}
+function deleteNUFVariable(i){const v=nufVariables[i];if(v.state==='deleted'){alert('Esta variável já está arquivada. É mantida para que os dados históricos continuem interpretáveis.');return}if(!confirm('Arquivar esta variável? Deixará de aparecer no preenchimento, mas os dados históricos serão preservados.'))return;v.state='deleted';saveNUFVariables();refreshVariableArchitecture()}
 function addNUFVariable(){nufVariables.push(normalizeVariable({id:'nuf_custom_'+Date.now(),label:'Nova variável',type:'text',state:'active',groups:[]},nufVariables.length));saveNUFVariables();refreshVariableArchitecture()}
 
 function structureDiagnosticData(){
@@ -2381,7 +2420,7 @@ function updateWorkflowGuide(id){
  workflowBack.textContent=index>0?'← '+WORKFLOW_STEPS[index-1].title.replace(/^\d+ · /,''):'← Voltar';
  if(index<WORKFLOW_STEPS.length-1)workflowNext.textContent=WORKFLOW_STEPS[index+1].title.replace(/^\d+ · /,'')+' →';
 }
-function go(id){if(currentWorkflowView==='ativos'&&id!=='ativos'&&!assetEditor.classList.contains('hidden')&&!editingAsset){alert('Guarde ou feche o novo Ativo antes de mudar de etapa.');return}if(id!=='processos'&&!proc()){alert('Crie ou selecione primeiro um Processo.');id='processos'}void sessionDiagnosticBreadcrumb(id);document.querySelectorAll('main section').forEach(s=>s.classList.toggle('show',s.id===id));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.go===id));updateWorkflowGuide(id);if(id==='processos')renderProcesses();if(id==='dados')fillData();if(id==='ativos')renderAssets();if(id==='caracterizar')renderCharacterList();if(id==='exportar'){renderExportAssetSelector();renderOutputComposition()}updateContext();scrollTo(0,0)}
+function go(id){if(currentWorkflowView==='ativos'&&id!=='ativos'&&!assetEditor.classList.contains('hidden')&&!editingAsset){alert('Guarde ou feche o novo Ativo antes de mudar de etapa.');return}if(id!=='processos'&&!proc()){alert('Crie ou selecione primeiro um Processo.');id='processos'}void sessionDiagnosticBreadcrumb(id);document.querySelectorAll('main section').forEach(s=>s.classList.toggle('show',s.id===id));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.go===id));updateWorkflowGuide(id);if(id==='processos')renderProcesses();if(id==='dados')fillData();if(id==='ativos')renderAssets();if(id==='caracterizar')renderCharacterList();if(id==='exportar'){renderExportAssetSelector();renderOutputComposition();void runExportPreflight(false)}updateContext();scrollTo(0,0)}
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{syncPendingData();go(b.dataset.go)});
 workflowBack.onclick=()=>{syncPendingData();const index=WORKFLOW_STEPS.findIndex(step=>step.id===currentWorkflowView);if(index>0)go(WORKFLOW_STEPS[index-1].id)};
 workflowNext.onclick=()=>{
@@ -2431,8 +2470,7 @@ function renderProcesses(){
  let st=(document.getElementById('filterProcessStatus')?.value||'');
  let arr=db.processes
    .filter(p=>[p.code,p.ref,p.name,p.requester].join(' ').toLowerCase().includes(q))
-   .filter(p=>!st||(p.status||'ON')===st)
-   .slice(0,15);
+   .filter(p=>!st||(p.status||'ON')===st);
  document.getElementById('processList').innerHTML=arr.map(p=>{
    const assets=p.assets||[],n=assets.length,gps=lightBoot?'…':assets.filter(a=>!!assetGPS(a)).length,kml=lightBoot?'…':assets.filter(a=>!!a.kmlGeneratedAt).length,photos=lightBoot?'…':assets.reduce((sum,a)=>sum+(a.photos||[]).length,0),stage=lightBoot?(p.startedAt?'Em alimentação':'Por iniciar'):processOperationalStage(p);
    return `<div class="item process-card ${p.id===currentProcess?'process-active':''}">
@@ -2856,7 +2894,7 @@ function assetGPS(a){
  return '';
 }
 function renderAssets(){
- let p=proc();if(!p)return;let q=searchAsset.value.toLowerCase();let arr=p.assets.filter(a=>[a.code,a.ref,a.name,a.local,a.postalCode,a.group].join(' ').toLowerCase().includes(q)).slice(0,15);
+ let p=proc();if(!p)return;let q=searchAsset.value.toLowerCase();let arr=p.assets.filter(a=>[a.code,a.ref,a.name,a.local,a.postalCode,a.group].join(' ').toLowerCase().includes(q));
  assetList.innerHTML=arr.map(a=>{
    const st=charProgress(a);
    return `<button class="item" data-a="${a.id}" style="width:100%;text-align:left"><span class="item-main"><span class="item-title">${esc(a.code)} · ${esc(a.name||'Sem designação')}</span><br><span class="item-sub">${esc(a.ref||'')} ${esc(a.type||'')} ${esc(a.group||'')} ${esc(a.currentUse||'')} ${esc(a.local||'')} · ${esc(assetOperationalStatus(a))}${assetGPS(a)?' · GPS':''}${a.kmlGeneratedAt?' · KML':''}</span><div class="progress"><span style="width:${st.pct}%"></span></div></span><span class="${st.pct===100?'status-ok':'status-warn'}">${st.pct}%</span></button>`
@@ -3064,7 +3102,7 @@ function targetProgress(t,a){
 }
 function charProgress(a){return {pct:targetProgress(a,a)}}
 function renderCharacterList(){
- let p=proc();if(!p)return;let q=searchCharacter.value.toLowerCase();let arr=p.assets.filter(a=>[a.code,a.ref,a.name,a.group].join(' ').toLowerCase().includes(q)).slice(0,15);
+ let p=proc();if(!p)return;let q=searchCharacter.value.toLowerCase();let arr=p.assets.filter(a=>[a.code,a.ref,a.name,a.group].join(' ').toLowerCase().includes(q));
  characterList.innerHTML=arr.map(a=>{
    const st=charProgress(a), gn=groups[a.group]?.name||'Grupo não definido';
    return `<button class="item" data-c="${a.id}" style="width:100%;text-align:left"><span class="item-main"><span class="item-title">${esc(a.code)} · ${esc(a.name||'Sem designação')}</span><br><span class="item-sub">${esc(a.type||'')} · ${esc(gn)}</span><div class="progress"><span style="width:${st.pct}%"></span></div></span><span class="${st.pct===100?'status-ok':'status-warn'}">${st.pct}%</span></button>`
@@ -4394,7 +4432,14 @@ cfgRestore.onclick=()=>{
 
 const SUMMARY_CONFIG_KEY='ativa_fxresum_config_v1';
 const SUMMARY_FIELD_DEFS={code:'Código',name:'Designação',status:'Estado',ref:'ID Institucional',type:'Tipo',group:'Grupo',local:'Localização'};
-function loadSummaryConfig(){try{const saved=JSON.parse(localStorage.getItem(SUMMARY_CONFIG_KEY)||'null');if(saved){const savedStages=saved.stages&&typeof saved.stages==='object'?saved.stages:null;const stages=Object.fromEntries(ASSET_STAGES.map(stage=>[stage,savedStages?savedStages[stage]!==false:true]));return{stages,fields:Array.isArray(saved.fields)?saved.fields.filter(x=>SUMMARY_FIELD_DEFS[x]):['code','name','status']}}}catch(e){}return{stages:Object.fromEntries(ASSET_STAGES.map(stage=>[stage,true])),fields:['code','name','status']}}
+function normalizeSummaryConfig(value){
+ const source=value&&typeof value==='object'?value:{};
+ const savedStages=source.stages&&typeof source.stages==='object'?source.stages:{};
+ const stages=Object.fromEntries(ASSET_STAGES.map(stage=>[stage,savedStages[stage]!==false]));
+ const validFields=Array.isArray(source.fields)?source.fields.filter(field=>SUMMARY_FIELD_DEFS[field]):[];
+ return{stages,fields:validFields.length?validFields:['code','name','status']};
+}
+function loadSummaryConfig(){try{return normalizeSummaryConfig(JSON.parse(localStorage.getItem(SUMMARY_CONFIG_KEY)||'null'))}catch(e){return normalizeSummaryConfig(null)}}
 let summaryConfig=loadSummaryConfig();
 function saveSummaryConfig(){try{localStorage.setItem(SUMMARY_CONFIG_KEY,JSON.stringify(summaryConfig))}catch(e){warnStorageFailure()}void saveConfigurationPrimary()}
 function renderSummaryConfig(){
@@ -4737,12 +4782,55 @@ function renderExportAssetSelector(){
  const assets=p.assets||[];
  box.innerHTML=assets.map(a=>`<label class="pill" style="display:flex;align-items:center;gap:6px;margin:3px 0"><input type="checkbox" data-export-asset="${a.id}" style="width:auto" ${exportSelection.excluded.has(a.id)?'':'checked'}> ${esc(a.code)} · ${esc(a.name||'Sem designação')}</label>`).join('')||'<div class="muted">Não existem Ativos neste Processo.</div>';
  box.querySelectorAll('[data-export-asset]').forEach(cb=>cb.onchange=()=>{
-  const id=cb.dataset.exportAsset;
-  if(cb.checked)exportSelection.excluded.delete(id);else exportSelection.excluded.add(id);
+ const id=cb.dataset.exportAsset;
+ if(cb.checked)exportSelection.excluded.delete(id);else exportSelection.excluded.add(id);
+  void runExportPreflight(false);
  });
 }
-document.getElementById('exportSelectAll')?.addEventListener('click',()=>{const p=proc();if(!p)return;exportSelection={processId:p.id,excluded:new Set()};renderExportAssetSelector()});
-document.getElementById('exportSelectNone')?.addEventListener('click',()=>{const p=proc();if(!p)return;exportSelection={processId:p.id,excluded:new Set((p.assets||[]).map(a=>a.id))};renderExportAssetSelector()});
+document.getElementById('exportSelectAll')?.addEventListener('click',()=>{const p=proc();if(!p)return;exportSelection={processId:p.id,excluded:new Set()};renderExportAssetSelector();void runExportPreflight(false)});
+document.getElementById('exportSelectNone')?.addEventListener('click',()=>{const p=proc();if(!p)return;exportSelection={processId:p.id,excluded:new Set((p.assets||[]).map(a=>a.id))};renderExportAssetSelector();void runExportPreflight(false)});
+async function runExportPreflight(showAlert=false){
+ const p=proc(),errors=[],warnings=[];
+ if(!p)errors.push('Não existe um Processo selecionado.');
+ const assets=p?selectedExportAssets(p):[];
+ if(p&&!String(p.code||'').trim())errors.push('O Processo não tem código.');
+ if(p&&!String(p.name||'').trim())warnings.push('O Processo não tem designação.');
+ if(p&&!assets.length)errors.push('Não está selecionado nenhum Ativo para exportar.');
+ const seenCodes=new Set();
+ for(const a of assets){
+  const code=String(a.code||'').trim(),label=code||'Ativo sem código';
+  if(!code)errors.push('Existe um Ativo sem código.');
+  else if(seenCodes.has(code.toLocaleLowerCase('pt-PT')))errors.push('Código de Ativo repetido: '+code+'.');
+  else seenCodes.add(code.toLocaleLowerCase('pt-PT'));
+  if(!String(a.name||'').trim())warnings.push(label+': falta a designação.');
+  if(!String(a.type||'').trim())warnings.push(label+': falta o Tipo de Ativo.');
+  if(!String(a.group||'').trim()||a.group==='NID')warnings.push(label+': grupo técnico não definido.');
+  // GPS inválido e problemas numa fotografia isolada (incluindo uma referência
+  // órfã antiga, algo que já aconteceu neste ficheiro por bugs de gravação
+  // entretanto corrigidos) nunca devem impedir a exportação inteira — o próprio
+  // gerador de PDF/Word já ignora essas fotografias de forma graciosa e reporta
+  // quantas ficaram de fora. Bloquear aqui só transforma um problema pontual e
+  // já tolerado num impasse total, sem forma de produzir nada.
+  if(a.gps&&!parseGPS(assetGPS(a)))warnings.push(label+': coordenadas GPS inválidas — serão ignoradas.');
+  if(!(a.photos||[]).length)warnings.push(label+': não tem fotografias.');
+  for(const photo of (a.photos||[])){
+   if(photo.processing)warnings.push(label+': existe uma fotografia ainda em processamento — aguarde antes de produzir o documento final.');
+   else if(photo.error)warnings.push(label+': existe uma fotografia com erro e não será incluída.');
+   else{try{if(!await photoGet(photo.id))warnings.push(label+': fotografia indisponível e será ignorada ('+(photo.name||photo.id)+').')}catch(e){warnings.push(label+': não foi possível confirmar uma fotografia; poderá ser ignorada.')}
+  }
+  }
+  const archived=(nufVariables||[]).filter(v=>v.state==='deleted'&&a.char&&String(a.char[v.id]??'').trim()).map(v=>v.label);
+  if(archived.length)warnings.push(label+': contém dados em variável(is) arquivada(s): '+archived.join(', ')+'.');
+ }
+ const box=document.getElementById('exportValidationSummary');
+ if(box){
+  const items=[...errors.map(x=>['Erro',x,'#fde8e8']),...warnings.map(x=>['Aviso',x,'#fff4bd'])];
+  box.innerHTML=items.length?items.map(([kind,msg,color])=>`<div class="item" style="background:${color}"><span class="item-main"><b>${kind}</b><br><span class="item-sub">${esc(msg)}</span></span></div>`).join(''):'<div class="item" style="background:#e9f7ee"><span class="item-main"><b>Pronto para exportar</b><br><span class="item-sub">Não foram encontrados erros nem avisos.</span></span></div>';
+ }
+ if(showAlert)alert(errors.length?'A exportação tem '+errors.length+' erro(s) que devem ser corrigidos. Consulte a verificação apresentada.':warnings.length?'A exportação não tem erros bloqueantes, mas apresenta '+warnings.length+' aviso(s).':'Verificação concluída sem erros nem avisos.');
+ return {errors,warnings,ok:errors.length===0};
+}
+document.getElementById('exportValidate')?.addEventListener('click',()=>{void runExportPreflight(true)});
 cfgResetOutput.onclick=()=>{if(!confirm('Repor a composição recomendada do Resumo geral?'))return;outputComposition=OUTPUT_COMPOSITION_DEFAULT.map(item=>({...item}));saveOutputComposition();renderOutputComposition();refreshOpenOutputs()};
 
 const REPORT_LAYOUT_KEY='ativa_report_layout_v1';
@@ -4965,6 +5053,8 @@ function filterPreviewPhotos(photoRefs){
 }
 async function renderReportPreview(strictOrientation=false){
  const p=syncPendingData();if(!p){alert('Selecione primeiro um Processo.');return false}
+ const preflight=await runExportPreflight(false);
+ if(!preflight.ok){document.getElementById('exportValidationSummary')?.scrollIntoView({behavior:'smooth',block:'center'});alert('A exportação contém erros bloqueantes. Corrija os itens indicados na verificação antes de continuar.');return false}
  const components=activeOutputComponents(),orientationScan=components.some(id=>id==='cover'||id==='characterization')?await scanPhotoOrientations():null;
  if(orientationScan?.outliers?.length&&strictOrientation){
    orientationInfo.scrollIntoView({behavior:'smooth',block:'center'});
@@ -5237,7 +5327,7 @@ function wordBandXML(kind,p){const fields=kind==='header'?[pageSettings.headerLe
 async function buildWordDOCX(p){
  pageSettings=loadPageSettings();const encoder=new TextEncoder(),entries=[],rels=[],body=[];let imageNo=0;
  const reportAssets=selectedExportAssets(p);
- async function appendWordPhotos(a,nufIndex,photoRefs,cols,showCaptions){const cellWidth=Math.floor(5400000/cols),imageHeight=2100000;let cells=[];for(const ref of photoRefs){const photo=ref.photo,index=ref.index;try{let blob=await photoGet(photo.id);if(!blob)continue;let ext=(blob.type||'').includes('png')?'png':'jpeg';if(!/image\/(png|jpeg|jpg)/i.test(blob.type||'')){const activeSettings=loadPhotoSettings(),converted=await compressImage(blob,activeSettings.maxSide,activeSettings.quality/100);blob=converted.blob;ext='jpeg'}imageNo++;const fileExt=ext==='png'?'png':'jpg',rid='rId'+imageNo,w=Number(photo.w)||1200,h=Number(photo.h)||800,scale=Math.min(cellWidth/w,imageHeight/h),cx=Math.max(1,Math.round(w*scale)),cy=Math.max(1,Math.round(h*scale));entries.push({name:'word/media/image'+imageNo+'.'+fileExt,data:new Uint8Array(await blob.arrayBuffer())});rels.push('<Relationship Id="'+rid+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image'+imageNo+'.'+fileExt+'"/>');cells.push({image:wordDrawing(rid,imageNo,cx,cy),caption:showCaptions?wordParagraph(photoCaptionLine(a,nufIndex,index,photo),{size:16}):''});if(cells.length===cols){body.push(wordPhotoTable(cells,cols,showCaptions));cells=[]}}catch(e){console.error(e)}}if(cells.length)body.push(wordPhotoTable(cells,cols,showCaptions))}
+ async function appendWordPhotos(a,nufIndex,photoRefs,cols,showCaptions){const cellWidth=Math.floor(5400000/cols),imageHeight=2100000;let cells=[];for(const ref of photoRefs){const photo=ref.photo,index=ref.index;try{let blob=await photoGet(photo.id);if(!blob)continue;let ext=(blob.type||'').includes('png')?'png':'jpeg',w=Number(photo.w)||1200,h=Number(photo.h)||800;if(photoCompressionOverride||!/image\/(png|jpeg|jpg)/i.test(blob.type||'')){const activeSettings=loadPhotoSettings(),converted=await compressImage(blob,activeSettings.maxSide,activeSettings.quality/100,activeSettings.targetKB);blob=converted.blob;ext='jpeg';w=converted.w||w;h=converted.h||h}imageNo++;const fileExt=ext==='png'?'png':'jpg',rid='rId'+imageNo,scale=Math.min(cellWidth/w,imageHeight/h),cx=Math.max(1,Math.round(w*scale)),cy=Math.max(1,Math.round(h*scale));entries.push({name:'word/media/image'+imageNo+'.'+fileExt,data:new Uint8Array(await blob.arrayBuffer())});rels.push('<Relationship Id="'+rid+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image'+imageNo+'.'+fileExt+'"/>');cells.push({image:wordDrawing(rid,imageNo,cx,cy),caption:showCaptions?wordParagraph(photoCaptionLine(a,nufIndex,index,photo),{size:16}):''});if(cells.length===cols){body.push(wordPhotoTable(cells,cols,showCaptions));cells=[]}}catch(e){console.error(e)}}if(cells.length)body.push(wordPhotoTable(cells,cols,showCaptions))}
  const components=activeOutputComponents();
  for(const component of components){
   if(component==='processCover'){
@@ -5668,18 +5758,19 @@ function xlsxSheetXML(rows){
  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>'+body+'</sheetData></worksheet>';
 }
 function buildXLSX(sheetName,rows){
- const encoder=new TextEncoder();
- const contentTypes='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>';
+ const encoder=new TextEncoder(),source=Array.isArray(sheetName)?sheetName:[{name:sheetName||'Folha1',rows:rows||[]}],used=new Set();
+ const sheets=source.map((sheet,index)=>{let name=String(sheet?.name||'Folha'+(index+1)).replace(/[\\/*?:\[\]]/g,' ').trim().slice(0,31)||'Folha'+(index+1),base=name,n=2;while(used.has(name.toLocaleLowerCase('pt-PT')))name=(base.slice(0,27)+' '+n++).slice(0,31);used.add(name.toLocaleLowerCase('pt-PT'));return{name,rows:Array.isArray(sheet?.rows)?sheet.rows:[]}});
+ const worksheetTypes=sheets.map((_,i)=>'<Override PartName="/xl/worksheets/sheet'+(i+1)+'.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join('');
+ const contentTypes='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'+worksheetTypes+'</Types>';
  const rootRels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>';
- const safeName=escXML(String(sheetName||'Folha1').slice(0,31));
- const workbookXML='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="'+safeName+'" sheetId="1" r:id="rId1"/></sheets></workbook>';
- const workbookRels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>';
+ const workbookXML='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>'+sheets.map((sheet,i)=>'<sheet name="'+escXML(sheet.name)+'" sheetId="'+(i+1)+'" r:id="rId'+(i+1)+'"/>').join('')+'</sheets></workbook>';
+ const workbookRels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+sheets.map((_,i)=>'<Relationship Id="rId'+(i+1)+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet'+(i+1)+'.xml"/>').join('')+'</Relationships>';
  const entries=[
    {name:'[Content_Types].xml',data:encoder.encode(contentTypes)},
    {name:'_rels/.rels',data:encoder.encode(rootRels)},
    {name:'xl/workbook.xml',data:encoder.encode(workbookXML)},
    {name:'xl/_rels/workbook.xml.rels',data:encoder.encode(workbookRels)},
-   {name:'xl/worksheets/sheet1.xml',data:encoder.encode(xlsxSheetXML(rows))}
+   ...sheets.map((sheet,i)=>({name:'xl/worksheets/sheet'+(i+1)+'.xml',data:encoder.encode(xlsxSheetXML(sheet.rows))}))
  ];
  const zipBlob=makeStoredZIP(entries);
  return new Blob([zipBlob],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
@@ -5703,12 +5794,26 @@ function processDataRows(p){
  });
  return rows;
 }
+function processWorkbookSheets(p){
+ const assets=selectedExportAssets(p),processRows=[['Campo','Valor'],['Código',p.code||''],['ID Institucional',p.ref||''],['Designação',p.name||''],['Gabinete',typeof p.office==='string'?p.office:String(p.office?.name||'')],['Solicitante',p.requester||''],['Serviço',p.service||''],['Finalidade',p.purpose||''],['Descrição do solicitado',p.requestDescription||''],['Base de valor',p.valueBase||''],['Estado',p.status||''],['Data de entrada',p.inputDate||''],['Prazo',p.deadline||''],['Observações',p.obs||'']];
+ const charRows=[['Ativo','Variável','Valor']],quantityRows=[['Ativo','Documentação','QTD','AT','AI','ABP','ABD','ST','SC','SD']],photoRows=[['Ativo','Código fotografia','Nome original','Estado','Capa','Mapa','Legenda','Tamanho KB']],visitRows=[['Data','Início','Fim','Tipo','Tempo','Ativos','Intervenientes','Condicionamentos','Observações']],peopleRows=[['Nome / Entidade','Função','Telefone','Email','Observações','Tabela geral']],historyRows=[['Data/Hora','Tipo','Descrição','Ativo','Origem']];
+ assets.forEach(a=>{
+  configuredCharacterValues(a,a).forEach(([key,value])=>charRows.push([a.code||'',key,value]));
+  if(a.char?.__obs)charRows.push([a.code||'','Observações de caracterização',a.char.__obs]);
+  const q=a.qtyAreas||{};quantityRows.push([a.code||'',(q.documents||[]).join('; '),q.qtd||'',q.at||'',q.ai||'',q.abp||'',q.abd||'',q.st||'',q.sc||'',q.sd||'']);
+  (a.photos||[]).forEach((photo,index)=>photoRows.push([a.code||'',photoCodeForReport(a,0,index),photo.name||'',photo.state||'ON',photo.cover?'SIM':'NÃO',photo.mapImage?'SIM':'NÃO',photo.caption||'',photo.size?Math.round(photo.size/1024):'']));
+ });
+ (p.visits||[]).forEach(visit=>visitRows.push([visit.date||'',visit.start||'',visit.end||'',visit.type||'',visit.weather||'',(visit.assets||[]).map(item=>item.code||assets.find(a=>a.id===item.assetId)?.code||'').filter(Boolean).join('; '),(visit.participantIds||[]).map(id=>(p.participants||[]).find(person=>person.id===id)?.name||'').filter(Boolean).join('; '),visit.constraints||'',visit.obs||'']));
+ (p.participants||[]).forEach(person=>peopleRows.push([person.name||'',person.role||'',person.phone||'',person.email||'',person.obs||'',person.reusable?'SIM':'NÃO']));
+ (p.history||[]).forEach(entry=>historyRows.push([entry.at||'',entry.type||'',entry.text||'',entry.assetId||'',entry.origin||'']));
+ return [{name:'Processo',rows:processRows},{name:'Ativos',rows:processDataRows(p)},{name:'Caracterização',rows:charRows},{name:'Quantidades',rows:quantityRows},{name:'Fotografias',rows:photoRows},{name:'Visitas',rows:visitRows},{name:'Intervenientes',rows:peopleRows},{name:'Cronologia',rows:historyRows}];
+}
 async function buildProcessZIP(p,wordBlob=null,pdfBlob=null){
  const encoder=new TextEncoder(),root=safeFileName(p.code||'Processo')+'_Export/',entries=[],missing=[];
  entries.push({name:root+safeFileName(p.code||'Processo')+'_Dados.json',data:encoder.encode(JSON.stringify({app:'AVA_Input',version:APP_VERSION,schemaVersion:DATA_SCHEMA_VERSION,exportedAt:new Date().toISOString(),process:p},null,2))});
  entries.push({name:root+safeFileName(p.code||'Processo')+'_Resumo.txt',data:encoder.encode(processSummaryText(p))});
  entries.push({name:root+safeFileName(p.code||'Processo')+'_Cronologia.txt',data:encoder.encode(processHistoryText(p))});
- entries.push({name:root+safeFileName(p.code||'Processo')+'_Dados.xlsx',data:new Uint8Array(await buildXLSX('Ativos',processDataRows(p)).arrayBuffer())});
+ entries.push({name:root+safeFileName(p.code||'Processo')+'_Dados.xlsx',data:new Uint8Array(await buildXLSX(processWorkbookSheets(p)).arrayBuffer())});
  if(pdfBlob)entries.push({name:root+safeFileName(p.code||'Processo')+'_Ficha.pdf',data:new Uint8Array(await pdfBlob.arrayBuffer())});
  if(wordBlob)entries.push({name:root+safeFileName(p.code||'Processo')+'_Ficha.docx',data:new Uint8Array(await wordBlob.arrayBuffer())});
  const reportAssets=selectedExportAssets(p);
@@ -5720,7 +5825,8 @@ async function buildProcessZIP(p,wordBlob=null,pdfBlob=null){
    for(let i=0;i<(a.photos||[]).length;i++){
      const photo=a.photos[i],code=photoCodeForReport(a,0,i);done++;zipInfo.textContent='A preparar fotografia '+done+' de '+total+'…';
      try{
-       const blob=await photoGet(photo.id);if(!blob){missing.push(code);continue}
+       let blob=await photoGet(photo.id);if(!blob){missing.push(code);continue}
+       if(photoCompressionOverride){const activeSettings=loadPhotoSettings(),converted=await compressImage(blob,activeSettings.maxSide,activeSettings.quality/100,activeSettings.targetKB);blob=converted.blob}
        const ext=(blob.type||photo.type||'').includes('png')?'.png':'.jpg';
        entries.push({name:assetFolder+safeFileName(code)+ext,data:new Uint8Array(await blob.arrayBuffer())});
        legendLines.push(code+' | '+(photo.cover?'CAPA | ':'')+(photo.mapImage?'MAPA | ':'')+(photo.caption||''));
@@ -5861,7 +5967,7 @@ async function initialiseApp(){
    // isso não deve voltar a rebentar aqui — mas se algo mesmo assim falhar, nunca
    // mais esconder isso num simples aviso de consola: os dados ficariam presos no
    // estado não migrado (ex.: fotografias invisíveis) sem o utilizador saber porquê.
-   const finishLightBoot=()=>{try{db=normaliseDB(db);auditLog('boot_migrated',auditPhotoSnapshot(db));reconcileUnclassifiedAssets();lightBoot=false;renderProcesses()}catch(e){console.error('Falha ao concluir a migração dos dados',e);alert('Ocorreu um problema ao preparar os dados guardados. Os dados não foram apagados, mas alguma informação pode não aparecer corretamente até isto ser corrigido. Por favor avise o suporte.')}};
+   const finishLightBoot=()=>{try{db=normaliseDB(db);auditLog('boot_migrated',auditPhotoSnapshot(db));reconcileUnclassifiedAssets();save();lightBoot=false;renderProcesses()}catch(e){console.error('Falha ao concluir a migração dos dados',e);alert('Ocorreu um problema ao preparar os dados guardados. Os dados não foram apagados, mas alguma informação pode não aparecer corretamente até isto ser corrigido. Por favor avise o suporte.')}};
    if(typeof requestIdleCallback==='function')requestIdleCallback(finishLightBoot,{timeout:3000});else setTimeout(finishLightBoot,1800);
  }catch(e){
    console.error('Falha ao iniciar AVA_Input:',e);
