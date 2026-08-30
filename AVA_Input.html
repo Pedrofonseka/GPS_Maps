@@ -889,7 +889,7 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
   <div id="exportOutputValues" class="list" style="margin-top:6px"></div>
   <label class="btn cover-toggle" style="margin-top:8px;display:inline-flex"><input type="checkbox" id="embedStatusCaptions" style="width:auto"><span>Incorporar o estado (ON/OFF) do Ativo nas legendas das fotografias</span></label>
   <div class="row">
-   <div><label>Colunas das fotografias da capa</label><select id="coverCols"><option value="1">1 coluna</option><option value="2" selected>2 colunas</option><option value="3">3 colunas</option><option value="4">4 colunas</option><option value="5">5 colunas</option></select><label style="margin-top:8px">N.º mínimo de fotografias da capa</label><input id="coverMinPhotos" type="number" inputmode="numeric" min="0" max="20" step="1" value="2"></div>
+   <div><label>Colunas da Capa do Processo</label><select id="coverCols" disabled><option value="3" selected>3 colunas (fixo)</option></select><label style="margin-top:8px">N.º mínimo de fotografias da Capa do Processo</label><input id="coverMinPhotos" type="number" inputmode="numeric" min="9" max="9" step="1" value="9" readonly></div>
    <div><label>Colunas das fotografias na ficha</label><select id="sheetCols"><option value="1">1 coluna</option><option value="2" selected>2 colunas</option><option value="3">3 colunas</option><option value="4">4 colunas</option><option value="5">5 colunas</option></select></div>
   </div>
   <div class="row">
@@ -1167,7 +1167,7 @@ const {
 }=Object.fromEntries(Array.from(document.querySelectorAll('[id]'),el=>[el.id,el]));
 const cfgAnalystText=document.getElementById('cfgAnalystText');
 
-const APP_VERSION='2.9.11',DATA_SCHEMA_VERSION=4,KEY='ativa_v2_db';
+const APP_VERSION='2.9.12',DATA_SCHEMA_VERSION=4,KEY='ativa_v2_db';
 const CONSTRUCTION_RULES_KEY='ativa_construction_rules_v2';
 const CONSTRUCTION_RULES_DEFAULT=`Todas as fotografias ficam centradas na respetiva célula.
 As fotografias são numeradas pelo número do Ativo, eventual posição no agrupamento e número sequencial: 005_1_IMG_01.
@@ -4441,8 +4441,10 @@ function normalizeSummaryConfig(value){
 }
 function loadSummaryConfig(){try{return normalizeSummaryConfig(JSON.parse(localStorage.getItem(SUMMARY_CONFIG_KEY)||'null'))}catch(e){return normalizeSummaryConfig(null)}}
 let summaryConfig=loadSummaryConfig();
+function currentSummaryConfig(){summaryConfig=normalizeSummaryConfig(summaryConfig);return summaryConfig}
 function saveSummaryConfig(){try{localStorage.setItem(SUMMARY_CONFIG_KEY,JSON.stringify(summaryConfig))}catch(e){warnStorageFailure()}void saveConfigurationPrimary()}
 function renderSummaryConfig(){
+ currentSummaryConfig();
  if(!cfgSummaryFields)return;
  if(cfgSummaryStages)cfgSummaryStages.innerHTML=ASSET_STAGES.map(stage=>`<label class="pill"><input type="checkbox" data-summary-stage="${esc(stage)}" style="width:auto" ${summaryConfig.stages[stage]!==false?'checked':''}> ${esc(stage)}</label>`).join('');
  cfgSummaryFields.innerHTML=Object.entries(SUMMARY_FIELD_DEFS).map(([id,label])=>`<label class="item"><span>${esc(label)}</span><input type="checkbox" data-summary-field="${id}" style="width:auto" ${summaryConfig.fields.includes(id)?'checked':''}></label>`).join('');
@@ -4451,7 +4453,7 @@ function renderSummaryConfig(){
  cfgSummaryFields.querySelectorAll('[data-summary-field]').forEach(x=>x.onchange=persist);
 }
 function assetSummaryValue(a,field){if(field==='status')return assetOperationalStatus(a);if(field==='local')return [a.local,a.doorNumber,a.floor,formatPostalCode(a.postalCode),a.freg,a.conc].filter(Boolean).join(', ');return a[field]||''}
-function assetSummaryHTML(p){const assets=selectedExportAssets(p);return `<div class="fxresum"><h3>Número de Ativos: ${assets.length}</h3>`+ASSET_STAGES.filter(stage=>summaryConfig.stages[stage]!==false).map(stage=>{const rows=assets.filter(a=>assetOperationalStatus(a)===stage);return `<div class="fxresum-group"><b>${esc(stage)} — ${rows.length}</b>${rows.map(a=>`<div class="fxresum-row">${summaryConfig.fields.map(field=>`<span><b>${esc(SUMMARY_FIELD_DEFS[field])}:</b> ${esc(assetSummaryValue(a,field))}</span>`).join(' · ')}</div>`).join('')||'<div class="fxresum-row">Sem Ativos.</div>'}</div>`}).join('')+'</div>'}
+function assetSummaryHTML(p){const assets=selectedExportAssets(p),cfg=currentSummaryConfig();return `<div class="fxresum"><h3>Número de Ativos: ${assets.length}</h3>`+ASSET_STAGES.filter(stage=>cfg.stages[stage]!==false).map(stage=>{const rows=assets.filter(a=>assetOperationalStatus(a)===stage);return `<div class="fxresum-group"><b>${esc(stage)} — ${rows.length}</b>${rows.map(a=>`<div class="fxresum-row">${cfg.fields.map(field=>`<span><b>${esc(SUMMARY_FIELD_DEFS[field])}:</b> ${esc(assetSummaryValue(a,field))}</span>`).join(' · ')}</div>`).join('')||'<div class="fxresum-row">Sem Ativos.</div>'}</div>`}).join('')+'</div>'}
 const OUT_MODEL_KEY='ativa_out_models_v2';
 const OUT_MODEL_LABELS={cover:'Capa',process:'Resumo',characterization:'Caracterização',visits:'Visitas',chronology:'Cronologia'};
 const OUT_MODEL_FIELDS={
@@ -4851,11 +4853,15 @@ document.getElementById('exportValidate')?.addEventListener('click',()=>{void ru
 cfgResetOutput.onclick=()=>{if(!confirm('Repor a composição recomendada do Resumo geral?'))return;outputComposition=OUTPUT_COMPOSITION_DEFAULT.map(item=>({...item}));saveOutputComposition();renderOutputComposition();refreshOpenOutputs()};
 
 const REPORT_LAYOUT_KEY='ativa_report_layout_v1';
+// A Capa de Processo é uma amostra representativa do conjunto de Ativos, não um
+// espaço de composição livre — fixa em 3 colunas / 9 fotografias para manter
+// sempre a mesma leitura visual, independentemente da configuração do utilizador.
+const PROCESS_COVER_COLUMNS=3,PROCESS_COVER_MIN_PHOTOS=9;
 let primaryReportLayoutOverride=null;
-function loadReportLayout(){try{return Object.assign({cover:2,sheet:2,coverMin:2,embedStatus:false},primaryReportLayoutOverride||{},JSON.parse(localStorage.getItem(REPORT_LAYOUT_KEY)||'{}'))}catch(e){return Object.assign({cover:2,sheet:2,coverMin:2,embedStatus:false},primaryReportLayoutOverride||{})}}
+function loadReportLayout(){let cfg;try{cfg=Object.assign({sheet:2,embedStatus:false},primaryReportLayoutOverride||{},JSON.parse(localStorage.getItem(REPORT_LAYOUT_KEY)||'{}'))}catch(e){cfg=Object.assign({sheet:2,embedStatus:false},primaryReportLayoutOverride||{})}cfg.cover=PROCESS_COVER_COLUMNS;cfg.coverMin=PROCESS_COVER_MIN_PHOTOS;return cfg}
 function validReportCols(value){const n=Number(value);return Number.isInteger(n)&&n>=1&&n<=5?n:2}
 function saveReportLayout(){
- const cfg={cover:validReportCols(coverCols.value),sheet:validReportCols(sheetCols.value),coverMin:Math.max(0,Math.min(20,Number(coverMinPhotos?.value)||0)),embedStatus:!!document.getElementById('embedStatusCaptions')?.checked};
+ const cfg={cover:PROCESS_COVER_COLUMNS,sheet:validReportCols(sheetCols.value),coverMin:PROCESS_COVER_MIN_PHOTOS,embedStatus:!!document.getElementById('embedStatusCaptions')?.checked};
  primaryReportLayoutOverride=cfg;
  try{localStorage.setItem(REPORT_LAYOUT_KEY,JSON.stringify(cfg))}catch(e){warnStorageFailure()}
  void saveConfigurationPrimary();
@@ -4876,7 +4882,7 @@ function applyReportLayout(){
 function refreshOpenOutputs(){applyPageSettings();if(reportPreview&&!reportPreview.classList.contains('hidden')&&proc())void renderReportPreview()}
 function syncReportLayoutFromStorage(){
  const cfg=loadReportLayout();
- coverCols.value=String(validReportCols(cfg.cover));sheetCols.value=String(validReportCols(cfg.sheet));if(coverMinPhotos)coverMinPhotos.value=String(Math.max(0,Math.min(20,Number(cfg.coverMin)||0)));
+ coverCols.value=String(PROCESS_COVER_COLUMNS);sheetCols.value=String(validReportCols(cfg.sheet));if(coverMinPhotos)coverMinPhotos.value=String(PROCESS_COVER_MIN_PHOTOS);
  const embedStatusInput=document.getElementById('embedStatusCaptions');if(embedStatusInput)embedStatusInput.checked=!!cfg.embedStatus;
  applyReportLayout();
 }
@@ -5042,22 +5048,32 @@ function shuffleRefs(list){
  return arr;
 }
 async function collectCoverPhotoRefs(p){
- const marked=[],others=[];
+ const marked=[],pools=[];
  for(const a of selectedExportAssets(p)){
+   const candidates=[];
    for(let index=0;index<(a.photos||[]).length;index++){
     const photo=a.photos[index];
+    // A imagem Google Maps pertence exclusivamente à Capa do Ativo. Nunca é
+    // usada como fotografia da Capa de Processo, nem no preenchimento aleatório.
+    if(photo.mapImage)continue;
     try{
      const orientation=await photoOrientation(photo);
      // Capa: apenas fotografias horizontais/paisagem. As restantes não são apagadas do arquivo.
      if(orientation!=='landscape')continue;
      const ref={photo,a,index};
-     (photo.cover?marked:others).push(ref);
+     (photo.cover?marked:candidates).push(ref);
     }catch(e){}
    }
+   if(candidates.length)pools.push(shuffleRefs(candidates));
  }
- const minimum=Math.max(validReportCols(coverCols.value),Math.max(0,Math.min(20,Number(coverMinPhotos?.value)||0)));
+ const minimum=PROCESS_COVER_MIN_PHOTOS;
  const selected=marked.slice();
- if(selected.length<minimum)selected.push(...shuffleRefs(others).slice(0,minimum-selected.length));
+ // Completa por rondas entre os Ativos, em ordem aleatória, para evitar que as
+ // nove imagens sejam retiradas quase todas do mesmo Ativo.
+ const activePools=shuffleRefs(pools);
+ while(selected.length<minimum&&activePools.some(pool=>pool.length)){
+  for(const pool of activePools){if(selected.length>=minimum)break;if(pool.length)selected.push(pool.shift())}
+ }
  return selected;
 }
 
@@ -5069,6 +5085,7 @@ function filterPreviewPhotos(photoRefs){
  return (photoRefs||[]).filter(ref=>!isRotatedPhotoMeta(ref?.photo||ref));
 }
 async function renderReportPreview(strictOrientation=false){
+ currentSummaryConfig();
  const p=syncPendingData();if(!p){alert('Selecione primeiro um Processo.');return false}
  const preflight=await runExportPreflight(false);
  if(!preflight.ok){document.getElementById('exportValidationSummary')?.scrollIntoView({behavior:'smooth',block:'center'});alert('A exportação contém erros bloqueantes. Corrija os itens indicados na verificação antes de continuar.');return false}
@@ -5106,14 +5123,22 @@ async function renderReportPreview(strictOrientation=false){
    const photos=refs.length?`<div class="report-cover-photos" data-cover-master="1"></div>`:'';
    return `<section class="report-cover-block report-document-cover">${printBandHTML('header',p,'Capa',1,previewLogicalTotal,'cover')}${outZoneHTML('cover','top',p,1,previewLogicalTotal)}<div class="report-page-title" style="font-size:${clampPhotoSetting(pageSettings.pageTitleSize,8,18,12)}pt;font-weight:700;margin:0 0 10px">${esc(title)}</div>${detailsHTML}<div class="report-cover-body">${photos}</div>${outZoneHTML('cover','bottom',p,1,previewLogicalTotal)}${printBandHTML('footer',p,'Capa',1,previewLogicalTotal,'cover')}</section>`;
  };
- const characterizationHTML=()=>{if(!reportAssets.length)return'<p class="muted">Não existem Ativos selecionados para caracterização.</p>';return`<section>${reportPageTitleHTML(p,'Caracterização',false)}`+reportAssets.map((a,assetIndex)=>`<article class="report-asset"><h2>${esc(a.code||'Ativo')} — ${esc(a.name||'Sem designação')}</h2><div class="report-grid">${[['ID_Institucional',a.ref],['Tipo',a.type],['Grupo',a.group],['Destino',a.currentUse],['Endereço / Local',a.local],['Número',a.doorNumber],['Piso / Andar',a.floor],['Código Postal',formatPostalCode(a.postalCode)],['Freguesia',a.freg],['Concelho',a.conc],['Hora da visita',a.visitTime],['GPS',assetGPS(a)]].map(x=>reportField(x[0],x[1])).join('')}</div>${reportText('Observações do Ativo',a.obs)}${targets.filter(target=>target.assetIndex===assetIndex).map(target=>reportTargetHTML(target.t,target.a,target.title,target.key,{cover:false,sheet:true})).join('')}</article>`).join('')+`</section>`};
+ // A Capa do Ativo contém exclusivamente a imagem do Google Maps, em página
+ // própria — quando a Caracterização também está ativa, essa imagem passa a
+ // sair encostada ao início da própria ficha de caracterização do Ativo, em
+ // vez de duplicar uma página de capa separada para o mesmo Ativo.
+ const assetMapPageHTML=(a,assetIndex)=>{const hasMap=(a.photos||[]).some(photo=>photo.mapImage);return hasMap?`<article class="report-asset asset-map-cover"><h2>${esc(a.code||'Ativo')} — ${esc(a.name||'Sem designação')}</h2><div class="report-cover-photos asset-map-photo" data-asset-map="${assetIndex}" style="display:flex;justify-content:center;align-items:flex-start"></div></article>`:''};
+ const assetCoverHTML=()=>{const rows=reportAssets.map(assetMapPageHTML).join('');return rows?`<section>${rows}</section>`:'<p class="muted">Não existem imagens Google Maps nos Ativos selecionados.</p>'};
+ const characterizationHTML=()=>{if(!reportAssets.length)return'<p class="muted">Não existem Ativos selecionados para caracterização.</p>';const withMap=components.includes('cover');return`<section>${reportPageTitleHTML(p,'Caracterização',false)}`+reportAssets.map((a,assetIndex)=>(withMap?assetMapPageHTML(a,assetIndex):'')+`<article class="report-asset"><h2>${esc(a.code||'Ativo')} — ${esc(a.name||'Sem designação')}</h2><div class="report-grid">${[['ID_Institucional',a.ref],['Tipo',a.type],['Grupo',a.group],['Destino',a.currentUse],['Endereço / Local',a.local],['Número',a.doorNumber],['Piso / Andar',a.floor],['Código Postal',formatPostalCode(a.postalCode)],['Freguesia',a.freg],['Concelho',a.conc],['Hora da visita',a.visitTime],['GPS',assetGPS(a)]].map(x=>reportField(x[0],x[1])).join('')}</div>${reportText('Observações do Ativo',a.obs)}${targets.filter(target=>target.assetIndex===assetIndex).map(target=>reportTargetHTML(target.t,target.a,target.title,target.key,{cover:false,sheet:true})).join('')}</article>`).join('')+`</section>`};
  const visitsHTML=()=>{const rows=(p.visits||[]).map(visit=>{const people=(visit.participantIds||[]).map(id=>(p.participants||[]).find(person=>person.id===id)?.name).filter(Boolean).join(', '),assets=(visit.assets||[]).map(item=>item.code||p.assets.find(a=>a.id===item.assetId)?.code).filter(Boolean).join(', ');return{visit,people,assets}});const map=rows.length?`<h3>Mapa de visitas do Processo</h3><table class="visit-map"><thead><tr><th>Data / Hora</th><th>Ativos</th><th>Intervenientes</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${esc([x.visit.date,[x.visit.start,x.visit.end].filter(Boolean).join('–')].filter(Boolean).join(' · '))}</td><td>${esc(x.assets)}</td><td>${esc(x.people)}</td></tr>`).join('')}</tbody></table>`:'';return`<section class="report-asset">${reportPageTitleHTML(p,'Visitas',false)}${map}${rows.map(x=>`<div class="report-item"><h3>${esc(x.visit.type||'Visita')} · ${esc(x.visit.date||'Sem data')}</h3><div class="report-grid">${[['Hora',[x.visit.start,x.visit.end].filter(Boolean).join('–')],['Estado do tempo',x.visit.weather],['Intervenientes',x.people],['Ativos observados',x.assets],['Condicionamentos',x.visit.constraints]].map(y=>reportField(y[0],y[1])).join('')}</div>${reportText('Observações',x.visit.obs)}</div>`).join('')||'<p class="muted">Não existem visitas registadas.</p>'}</section>`};
  const chronologyHTML=()=>`<section class="report-asset">${reportPageTitleHTML(p,'Cronologia',false)}${(p.history||[]).slice().reverse().map(entry=>{const date=new Date(entry.at),when=Number.isFinite(date.getTime())?date.toLocaleString('pt-PT'):'';return`<div class="report-field"><b>${esc(when)}</b>${esc(entry.text||entry.type||'Registo')}</div>`}).join('')||'<p class="muted">Não existem acontecimentos registados.</p>'}</section>`;
- const builders={process:processHTML,characterization:characterizationHTML,visits:visitsHTML,chronology:chronologyHTML};
- // A Capa é estrutural e é sempre montada antes das restantes fichas.
- const orderedComponents=components.filter(id=>id!=='cover');if(!orderedComponents.includes('process'))orderedComponents.unshift('process');
+ const builders={process:processHTML,cover:assetCoverHTML,characterization:characterizationHTML,visits:visitsHTML,chronology:chronologyHTML};
+ // A Capa (do Ativo) só sai como página estrutural própria quando a
+ // Caracterização não está ativa — caso contrário a imagem do mapa já sai
+ // embutida no início de cada ficha de caracterização, evitando duplicação.
+ const orderedComponents=components.filter(id=>!(id==='cover'&&components.includes('characterization')));if(!orderedComponents.includes('process'))orderedComponents.unshift('process');
  const previewLogicalTotal=1+orderedComponents.length;
- const outputLabels={process:'Resumo',characterization:'Caracterização',visits:'Visitas',chronology:'Cronologia'};
+ const outputLabels={process:'Resumo',cover:'Capa do Ativo',characterization:'Caracterização',visits:'Visitas',chronology:'Cronologia'};
  const previewPages=[];
  previewPages.push(await coverHTML());
  let renderedCount=0;
@@ -5147,6 +5172,12 @@ async function renderReportPreview(strictOrientation=false){
     figure.appendChild(img);masterCover.appendChild(figure);loads.push(load);
    }catch(e){}
   }
+ }
+ for(let assetIndex=0;assetIndex<reportAssets.length;assetIndex++){
+  const a=reportAssets[assetIndex],holder=reportPreview.querySelector('[data-asset-map="'+assetIndex+'"]');
+  const ref=(a.photos||[]).map((photo,index)=>({photo,index})).find(item=>item.photo.mapImage);
+  if(!holder||!ref)continue;
+  try{const blob=await photoGet(ref.photo.id);if(!blob)continue;const url=URL.createObjectURL(blob);reportObjectURLs.add(url);const figure=document.createElement('figure');figure.className='report-cover-photo photo-landscape';figure.style.cssText='width:100%;height:auto;display:flex;justify-content:center';const img=document.createElement('img');img.alt='Google Maps — '+(a.code||'Ativo');img.style.cssText='display:block;width:auto;max-width:100%;height:auto;max-height:5cm;object-fit:contain;margin:0 auto';const load=waitForReportImage(img,ref.photo);img.src=url;figure.appendChild(img);holder.appendChild(figure);loads.push(load)}catch(e){}
  }
  for(const target of targets){
    const coverHolder=null;
@@ -5336,7 +5367,15 @@ async function saveBlobToDestination(blob,fileName,statusElement=folderInfo,read
  return false;
 }
 function wordParagraph(text,opts={}){const value=String(text??'');if(!value.trim())return '';const alignment=opts.adaptive?(isShortParagraph(opts.adaptiveValue??value)?'left':'both'):(opts.align||'left');return '<w:p><w:pPr>'+(opts.pageBreak?'<w:pageBreakBefore/>':'')+'<w:jc w:val="'+alignment+'"/></w:pPr><w:r><w:rPr>'+(opts.bold?'<w:b/>':'')+(opts.size?'<w:sz w:val="'+opts.size+'"/>':'')+'</w:rPr><w:t xml:space="preserve">'+escXML(value)+'</w:t></w:r></w:p>'}
-function wordField(label,value){if(!String(value??'').trim())return '';const narrative=/observ|descri|solicitado|condicion|anomalia|limita|benfeitoria|aprecia/i.test(String(label));return wordParagraph(label+': '+value,{adaptive:narrative,adaptiveValue:value})}
+// A etiqueta do campo ("Designação:", "Estado:", …) sai sempre a negrito e um
+// ponto abaixo do tamanho do texto correspondente, para se distinguir do valor
+// sem competir visualmente com ele.
+function wordFieldParagraph(label,value,opts={}){
+ const alignment=opts.adaptive?(isShortParagraph(opts.adaptiveValue??value)?'left':'both'):(opts.align||'left');
+ const valueSize=opts.size||20,labelSize=Math.max(12,valueSize-2);
+ return '<w:p><w:pPr><w:jc w:val="'+alignment+'"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="'+labelSize+'"/></w:rPr><w:t xml:space="preserve">'+escXML(label+': ')+'</w:t></w:r><w:r><w:rPr><w:sz w:val="'+valueSize+'"/></w:rPr><w:t xml:space="preserve">'+escXML(value)+'</w:t></w:r></w:p>';
+}
+function wordField(label,value){if(!String(value??'').trim())return '';const narrative=/observ|descri|solicitado|condicion|anomalia|limita|benfeitoria|aprecia/i.test(String(label));return wordFieldParagraph(label,value,{adaptive:narrative,adaptiveValue:value})}
 function wordDrawing(rId,id,cx,cy){return '<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="'+cx+'" cy="'+cy+'"/><wp:docPr id="'+id+'" name="Fotografia '+id+'"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="'+id+'" name="Fotografia '+id+'"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="'+rId+'"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+cx+'" cy="'+cy+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>'}
 function wordPhotoTable(cells,cols,showCaptions=true){
  while(cells.length<cols)cells.push(null);
@@ -5352,10 +5391,12 @@ function wordPhotoTable(cells,cols,showCaptions=true){
 function wordBandCell(field,p,size,align){const value=pageFieldValue(field,p),content=value==='__PAGE__'?'<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> PAGE </w:instrText></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>':'<w:r><w:rPr><w:sz w:val="'+(size*2)+'"/></w:rPr><w:t>'+escXML(value)+'</w:t></w:r>';return '<w:tc><w:tcPr><w:tcW w:w="3000" w:type="dxa"/></w:tcPr><w:p><w:pPr><w:jc w:val="'+align+'"/></w:pPr>'+content+'</w:p></w:tc>'}
 function wordBandXML(kind,p){const fields=kind==='header'?[pageSettings.headerLeft,pageSettings.headerCenter,pageSettings.headerRight]:[pageSettings.footerLeft,pageSettings.footerCenter,pageSettings.footerRight],size=kind==='header'?pageSettings.headerSize:pageSettings.footerSize,tag=kind==='header'?'hdr':'ftr';return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:'+tag+' xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/></w:tblPr><w:tblGrid><w:gridCol w:w="3000"/><w:gridCol w:w="3000"/><w:gridCol w:w="3000"/></w:tblGrid><w:tr>'+wordBandCell(fields[0],p,size,'left')+wordBandCell(fields[1],p,size,'center')+wordBandCell(fields[2],p,size,'right')+'</w:tr></w:tbl></w:'+tag+'>'}
 async function buildWordDOCX(p){
+ currentSummaryConfig();
  pageSettings=loadPageSettings();const encoder=new TextEncoder(),entries=[],rels=[],body=[];let imageNo=0;
  const reportAssets=selectedExportAssets(p);
- async function appendWordPhotos(a,nufIndex,photoRefs,cols,showCaptions){const cellWidth=Math.floor(5400000/cols),imageHeight=2100000;let cells=[];for(const ref of photoRefs){const photo=ref.photo,index=ref.index;try{let blob=await photoGet(photo.id);if(!blob)continue;let ext=(blob.type||'').includes('png')?'png':'jpeg',w=Number(photo.w)||1200,h=Number(photo.h)||800;if(photoCompressionOverride||!/image\/(png|jpeg|jpg)/i.test(blob.type||'')){const activeSettings=loadPhotoSettings(),converted=await compressImage(blob,activeSettings.maxSide,activeSettings.quality/100,activeSettings.targetKB);blob=converted.blob;ext='jpeg';w=converted.w||w;h=converted.h||h}imageNo++;const fileExt=ext==='png'?'png':'jpg',rid='rId'+imageNo,scale=Math.min(cellWidth/w,imageHeight/h),cx=Math.max(1,Math.round(w*scale)),cy=Math.max(1,Math.round(h*scale));entries.push({name:'word/media/image'+imageNo+'.'+fileExt,data:new Uint8Array(await blob.arrayBuffer())});rels.push('<Relationship Id="'+rid+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image'+imageNo+'.'+fileExt+'"/>');cells.push({image:wordDrawing(rid,imageNo,cx,cy),caption:showCaptions?wordParagraph(photoCaptionLine(a,nufIndex,index,photo),{size:16}):'',cy});if(cells.length===cols){body.push(wordPhotoTable(cells,cols,showCaptions));cells=[]}}catch(e){console.error(e)}}if(cells.length)body.push(wordPhotoTable(cells,cols,showCaptions))}
+ async function appendWordPhotos(a,nufIndex,photoRefs,cols,showCaptions,maxHeight=2100000){const cellWidth=Math.floor(5400000/cols),imageHeight=maxHeight;let cells=[];for(const ref of photoRefs){const photo=ref.photo,index=ref.index;try{let blob=await photoGet(photo.id);if(!blob)continue;let ext=(blob.type||'').includes('png')?'png':'jpeg',w=Number(photo.w)||1200,h=Number(photo.h)||800;if(photoCompressionOverride||!/image\/(png|jpeg|jpg)/i.test(blob.type||'')){const activeSettings=loadPhotoSettings(),converted=await compressImage(blob,activeSettings.maxSide,activeSettings.quality/100,activeSettings.targetKB);blob=converted.blob;ext='jpeg';w=converted.w||w;h=converted.h||h}imageNo++;const fileExt=ext==='png'?'png':'jpg',rid='rId'+imageNo,scale=Math.min(cellWidth/w,imageHeight/h),cx=Math.max(1,Math.round(w*scale)),cy=Math.max(1,Math.round(h*scale));entries.push({name:'word/media/image'+imageNo+'.'+fileExt,data:new Uint8Array(await blob.arrayBuffer())});rels.push('<Relationship Id="'+rid+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image'+imageNo+'.'+fileExt+'"/>');cells.push({image:wordDrawing(rid,imageNo,cx,cy),caption:showCaptions?wordParagraph(photoCaptionLine(a,nufIndex,index,photo),{size:16}):'',cy});if(cells.length===cols){body.push(wordPhotoTable(cells,cols,showCaptions));cells=[]}}catch(e){console.error(e)}}if(cells.length)body.push(wordPhotoTable(cells,cols,showCaptions))}
  const components=activeOutputComponents();
+ const wordHasCover=components.includes('cover'),wordHasCharacterization=components.includes('characterization');
  for(const component of components){
   if(component==='processCover'){
    const service=serviceDesignation(p.service||p.serviceType||p.purpose||'Avaliação');
@@ -5363,11 +5404,11 @@ async function buildWordDOCX(p){
    const centerRows=outModelRows('cover','center',true);
    centerRows.forEach(row=>body.push(wordField(OUT_MODEL_FIELDS[row.field]||row.field,outFieldValue(row.field,p,1,reportAssets.length))));
    const processCoverRefs=await collectCoverPhotoRefs(p);
-   if(processCoverRefs.length)await appendWordPhotos(null,0,processCoverRefs,validReportCols(coverCols.value),false);
+   if(processCoverRefs.length)await appendWordPhotos(null,0,processCoverRefs,PROCESS_COVER_COLUMNS,false);
   }
   if(component==='process'){body.push(wordParagraph(p.code||'Processo',{bold:true,size:36,pageBreak:body.length>0}),wordField('Designação',p.name),wordField('ID Institucional',p.ref),wordField('Solicitante',p.requester),wordField('Finalidade',p.purpose),wordField('Descrição do solicitado',p.requestDescription),wordField('Base de valor',p.valueBase),wordField('Estado',p.status),wordField('Data de entrada',p.inputDate),wordField('Prazo',p.deadline),wordParagraph('Número de Ativos: '+reportAssets.length,{bold:true,size:22}));for(const stage of ASSET_STAGES){if(summaryConfig.stages[stage]===false)continue;const rows=reportAssets.filter(a=>assetOperationalStatus(a)===stage);body.push(wordParagraph(stage+' — '+rows.length,{bold:true,size:20}));rows.forEach(a=>body.push(wordParagraph('    '+summaryConfig.fields.map(field=>SUMMARY_FIELD_DEFS[field]+': '+assetSummaryValue(a,field)).join(' · '),{size:17}))) }body.push(wordField('Observações',p.obs))}
-  if(component==='cover')for(const a of reportAssets){const refs=(a.photos||[]).map((photo,index)=>({photo,index})).filter(ref=>ref.photo.cover||ref.photo.mapImage);if(!refs.length)continue;body.push(wordParagraph((a.code||'Ativo')+' — '+(a.name||'Capa'),{bold:true,size:28,pageBreak:true}));const mapRefs=refs.filter(r=>r.photo.mapImage),regularRefs=refs.filter(r=>!r.photo.mapImage);if(regularRefs.length)await appendWordPhotos(a,0,regularRefs,validReportCols(coverCols.value),false);if(mapRefs.length)await appendWordPhotos(a,0,mapRefs.slice(0,1),1,false)}
-  if(component==='characterization')for(const a of reportAssets){body.push(wordParagraph((a.code||'Ativo')+' — '+(a.name||'Sem designação'),{bold:true,size:28,pageBreak:true}),wordField('ID_Institucional',a.ref),wordField('Tipo',a.type),wordField('Grupo',a.group),wordField('Destino',a.currentUse),wordField('Endereço / Local',a.local),wordField('Número',a.doorNumber),wordField('Piso / Andar',a.floor),wordField('Código Postal',formatPostalCode(a.postalCode)),wordField('Freguesia',a.freg),wordField('Concelho',a.conc),wordField('ID externo',a.externalId),wordField('Hora da visita',a.visitTime),wordField('GPS',assetGPS(a)),wordField('Observações do Ativo',a.obs));body.push(wordParagraph('Caracterização',{bold:true,size:24}));configuredCharacterValues(a,a).forEach(([key,value])=>body.push(wordField(key,value)));const q=a.qtyAreas||{};[['Documentação de referência',(q.documents||[]).join(', ')],['Quantidade',q.qtd],['Área de terreno (AT)',q.at],['Área de implantação (AI)',q.ai],['Área bruta privativa (ABP)',q.abp],['Área bruta dependente (ABD)',q.abd],['Sup. terreno (ST)',q.st],['Sup. coberta (SC)',q.sc],['Sup. descoberta (SD)',q.sd]].forEach(x=>body.push(wordField(x[0],x[1])));body.push(wordField('Observações',a.char?.__obs));await appendWordPhotos(a,0,(a.photos||[]).map((photo,index)=>({photo,index})),validReportCols(sheetCols.value),true)}
+  if(component==='cover'&&!wordHasCharacterization)for(const a of reportAssets){const mapRefs=(a.photos||[]).map((photo,index)=>({photo,index})).filter(ref=>ref.photo.mapImage).slice(0,1);if(!mapRefs.length)continue;body.push(wordParagraph((a.code||'Ativo')+' — '+(a.name||'Sem designação'),{bold:true,size:28,pageBreak:true}));await appendWordPhotos(a,0,mapRefs,1,false,1800000)}
+  if(component==='characterization')for(const a of reportAssets){if(wordHasCover){const mapRefs=(a.photos||[]).map((photo,index)=>({photo,index})).filter(ref=>ref.photo.mapImage).slice(0,1);if(mapRefs.length){body.push(wordParagraph((a.code||'Ativo')+' — '+(a.name||'Sem designação'),{bold:true,size:28,pageBreak:true}));await appendWordPhotos(a,0,mapRefs,1,false,1800000)}}body.push(wordParagraph((a.code||'Ativo')+' — '+(a.name||'Sem designação'),{bold:true,size:28,pageBreak:true}),wordField('ID_Institucional',a.ref),wordField('Tipo',a.type),wordField('Grupo',a.group),wordField('Destino',a.currentUse),wordField('Endereço / Local',a.local),wordField('Número',a.doorNumber),wordField('Piso / Andar',a.floor),wordField('Código Postal',formatPostalCode(a.postalCode)),wordField('Freguesia',a.freg),wordField('Concelho',a.conc),wordField('ID externo',a.externalId),wordField('Hora da visita',a.visitTime),wordField('GPS',assetGPS(a)),wordField('Observações do Ativo',a.obs));body.push(wordParagraph('Caracterização',{bold:true,size:24}));configuredCharacterValues(a,a).forEach(([key,value])=>body.push(wordField(key,value)));const q=a.qtyAreas||{};[['Documentação de referência',(q.documents||[]).join(', ')],['Quantidade',q.qtd],['Área de terreno (AT)',q.at],['Área de implantação (AI)',q.ai],['Área bruta privativa (ABP)',q.abp],['Área bruta dependente (ABD)',q.abd],['Sup. terreno (ST)',q.st],['Sup. coberta (SC)',q.sc],['Sup. descoberta (SD)',q.sd]].forEach(x=>body.push(wordField(x[0],x[1])));body.push(wordField('Observações',a.char?.__obs));await appendWordPhotos(a,0,(a.photos||[]).map((photo,index)=>({photo,index})),validReportCols(sheetCols.value),true)}
   if(component==='visits'){body.push(wordParagraph('Mapa de visitas do Processo',{bold:true,size:28,pageBreak:true}));for(const visit of (p.visits||[])){const people=(visit.participantIds||[]).map(id=>(p.participants||[]).find(person=>person.id===id)?.name).filter(Boolean).join(', '),assets=(visit.assets||[]).map(item=>item.code||p.assets.find(a=>a.id===item.assetId)?.code).filter(Boolean).join(', ');body.push(wordParagraph([visit.date,[visit.start,visit.end].filter(Boolean).join('–'),assets,people].filter(Boolean).join(' | '),{size:18}))}body.push(wordParagraph('Detalhe das visitas',{bold:true,size:24}));for(const visit of (p.visits||[])){body.push(wordParagraph((visit.type||'Visita')+' · '+(visit.date||'Sem data'),{bold:true,size:22}),wordField('Hora',[visit.start,visit.end].filter(Boolean).join('–')),wordField('Estado do tempo',visit.weather),wordField('Intervenientes',(visit.participantIds||[]).map(id=>(p.participants||[]).find(person=>person.id===id)?.name).filter(Boolean).join(', ')),wordField('Ativos observados',(visit.assets||[]).map(item=>item.code||p.assets.find(a=>a.id===item.assetId)?.code).filter(Boolean).join(', ')),wordField('Condicionamentos',visit.constraints),wordField('Observações',visit.obs))}}
   if(component==='chronology'){body.push(wordParagraph('Cronologia',{bold:true,size:28,pageBreak:true}));for(const entry of (p.history||[]).slice().reverse()){const date=new Date(entry.at),when=Number.isFinite(date.getTime())?date.toLocaleString('pt-PT'):'';body.push(wordField(when||'Registo',entry.text||entry.type))}}
  }
@@ -5388,6 +5429,7 @@ async function buildWordDOCX(p){
 // de cabeçalho/rodapé) em vez de um simples despejo de texto.
 const PDF_COLORS={ink:[32,36,42],muted:[105,113,124],line:[236,238,241],gold:[214,180,56],band:[68,68,68],bandLine:[187,187,187],photoBorder:[221,221,221],photoBg:[242,243,245]};
 async function buildReportPDF(p){
+ currentSummaryConfig();
  if(!(window.jspdf&&window.jspdf.jsPDF))throw new Error('O motor PDF incorporado não ficou disponível. Feche e volte a abrir este ficheiro; se o problema persistir, use uma nova cópia da aplicação.');
  const {jsPDF}=window.jspdf;
  const reportAssets=selectedExportAssets(p);
@@ -5536,13 +5578,20 @@ async function buildReportPDF(p){
   }
   if(col>0)y=rowStartY+rowMaxH+gap;
  }
- // Na capa do ativo, a foto marcada como imagem do Google Maps sai sempre
- // à parte, a largura dupla (uma só coluna), depois das fotos normais.
- async function coverPhotoGrid(coverRefs,cols){
-  if(!coverRefs.length)return;
-  const mapRefs=coverRefs.filter(r=>r.photo.mapImage),regularRefs=coverRefs.filter(r=>!r.photo.mapImage);
-  if(regularRefs.length)await photoGrid(regularRefs,cols,false);
-  if(mapRefs.length)await photoGrid(mapRefs.slice(0,1),1,false);
+ // A Capa do Ativo contém exclusivamente o Google Maps, em largura integral,
+ // imediatamente depois do título. As fotos de capa pertencem ao Processo.
+ async function coverPhotoGrid(coverRefs){
+  const mapRefs=(coverRefs||[]).filter(r=>r.photo.mapImage).slice(0,1);
+  if(!mapRefs.length)return;
+  const ref=mapRefs[0];let photoData;
+  try{photoData=await photoDataURL(ref.photo)}catch(e){console.error('Falha ao preparar Google Maps para o PDF',ref.photo?.id,e);photoFailures++;return}
+  if(!photoData){photoFailures++;return}
+  const w=Number(photoData.w)||Number(ref.photo.w)||1200,h=Number(photoData.h)||Number(ref.photo.h)||800,maxH=50;
+  let drawW=contentW,drawH=drawW*(h/w);
+  if(drawH>maxH){drawH=maxH;drawW=drawH*(w/h)}
+  const x=marginLeft+(contentW-drawW)/2;
+  ensureSpace(drawH+4);
+  try{doc.addImage(photoData.dataURL,'JPEG',x,y,drawW,drawH);doc.setDrawColor(...PDF_COLORS.photoBorder);doc.setLineWidth(0.2);doc.rect(x,y,drawW,drawH);pageStarted=true;tagPage();y+=drawH+4}catch(e){console.error('Falha ao inserir Google Maps no PDF',ref.photo?.id,e);photoFailures++}
  }
  const assetFieldPairs=a=>[['ID_Institucional',a.ref],['Tipo',a.type],['Grupo',a.group],['Destino',a.currentUse],['Endereço / Local',a.local],['Número',a.doorNumber],['Piso / Andar',a.floor],['Código Postal',formatPostalCode(a.postalCode)],['Freguesia',a.freg],['Concelho',a.conc],['Hora da visita',a.visitTime],['GPS',assetGPS(a)]];
  const areaFieldPairs=q=>[['Documentação de referência',(q.documents||[]).join(', ')],['Quantidade',q.qtd],['Área de terreno (AT)',q.at],['Área de implantação (AI)',q.ai],['Área bruta privativa (ABP)',q.abp],['Área bruta dependente (ABD)',q.abd],['Sup. terreno (ST)',q.st],['Sup. coberta (SC)',q.sc],['Sup. descoberta (SD)',q.sd]];
@@ -5572,7 +5621,7 @@ async function buildReportPDF(p){
    const centerValues=centerRows.map(row=>[OUT_MODEL_FIELDS[row.field]||row.field,outFieldValue(row.field,p,1,reportAssets.length)]).filter(x=>String(x[1]||'').trim());
    if(centerValues.length)fieldGrid(centerValues);
    const processCoverRefs=await collectCoverPhotoRefs(p);
-   if(processCoverRefs.length){ensureSpace(10);await photoGrid(processCoverRefs,validReportCols(coverCols.value),false)}
+   if(processCoverRefs.length){ensureSpace(10);await photoGrid(processCoverRefs,PROCESS_COVER_COLUMNS,false)}
   }
   if(component==='process'){
    if(pageStarted)newPage();
@@ -5600,13 +5649,12 @@ async function buildReportPDF(p){
    if(pageStarted)newPage();
    let firstAssetBlock=true;
    for(const a of reportAssets){
-    const coverRefs=(a.photos||[]).map((photo,index)=>({photo,index,code:photoCodeForReport(a,0,index)})).filter(r=>r.photo.cover||r.photo.mapImage);
+    const coverRefs=(a.photos||[]).map((photo,index)=>({photo,index,code:photoCodeForReport(a,0,index)})).filter(r=>r.photo.mapImage).slice(0,1);
     if(coverRefs.length){
      currentComponent='cover';
      assetHeading((a.code||'Ativo')+' — '+(a.name||'Sem designação'),{pageBreak:!firstAssetBlock});
      firstAssetBlock=false;
-     subheading('Capa');
-     await coverPhotoGrid(coverRefs,validReportCols(coverCols.value));
+     await coverPhotoGrid(coverRefs);
     }
     currentComponent='characterization';
     assetHeading((a.code||'Ativo')+' — '+(a.name||'Sem designação'),{pageBreak:!firstAssetBlock});
@@ -5616,11 +5664,10 @@ async function buildReportPDF(p){
    continue;
   }
   if(component==='cover'&&!hasChar)for(const a of reportAssets){
-   const refs=(a.photos||[]).map((photo,index)=>({photo,index,code:photoCodeForReport(a,0,index)})).filter(r=>r.photo.cover||r.photo.mapImage);
+   const refs=(a.photos||[]).map((photo,index)=>({photo,index,code:photoCodeForReport(a,0,index)})).filter(r=>r.photo.mapImage).slice(0,1);
    if(!refs.length)continue;
    assetHeading((a.code||'Ativo')+' — '+(a.name||'Sem designação'));
-   subheading('Capa');
-   await coverPhotoGrid(refs,validReportCols(coverCols.value));
+   await coverPhotoGrid(refs);
   }
   if(component==='characterization'&&!hasCover){
    if(reportAssets.length){newPage();pageTitle('Caracterização')}
@@ -5815,10 +5862,38 @@ function kmlForAsset(p,a,gps){
  return '<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><Placemark><name>'+escXML(label)+'</name><Point><coordinates>'+gps.lon+','+gps.lat+',0</coordinates></Point></Placemark></Document></kml>';
 }
 function processDataRows(p){
- const rows=[['Código','ID Institucional','Designação','Grupo','Destino/Uso','Estado','Data Visita','Hora Início','Hora Fim','Freguesia','Concelho','GPS','Observações']];
+ const rows=[['Código','ID Institucional','Designação','Tipo','Grupo','Destino/Uso','Estado','Data Visita','Hora Início','Hora Fim','Endereço/Local','Número','Piso/Andar','Código Postal','Freguesia','Concelho','GPS','Observações']];
  selectedExportAssets(p).forEach(a=>{
-   rows.push([a.code||'',a.ref||'',a.name||'',a.group||'',a.currentUse||'',assetOperationalStatus(a),a.visitDate||'',a.visitTime||'',a.visitEnd||'',a.freg||'',a.conc||'',assetGPS(a),a.obs||'']);
+   rows.push([a.code||'',a.ref||'',a.name||'',a.type||'',a.group||'',a.currentUse||'',assetOperationalStatus(a),a.visitDate||'',a.visitTime||'',a.visitEnd||'',a.local||'',a.doorNumber||'',a.floor||'',formatPostalCode(a.postalCode),a.freg||'',a.conc||'',assetGPS(a),a.obs||'']);
  });
+ return rows;
+}
+function workbookCellValue(value){
+ if(value===null||value===undefined)return'';
+ if(Array.isArray(value))return value.map(item=>item&&typeof item==='object'?JSON.stringify(item):String(item)).join('; ');
+ if(typeof value==='object')return JSON.stringify(value);
+ return String(value);
+}
+function appendWorkbookObject(rows,level,processCode,assetCode,block,obj){
+ if(!obj||typeof obj!=='object')return;
+ Object.entries(obj).forEach(([field,value])=>rows.push([level,processCode||'',assetCode||'',block,field,workbookCellValue(value)]));
+}
+function completeWorkbookRows(p,assets){
+ const rows=[['Nível','Processo','Ativo','Bloco','Campo','Valor']];
+ const processFields={Código:p.code,ID_Institucional:p.ref,Designação:p.name,Gabinete:typeof p.office==='string'?p.office:p.office?.name,Solicitante:p.requester,Serviço:p.service,Finalidade:p.purpose,Descrição_do_solicitado:p.requestDescription,Base_de_valor:p.valueBase,Estado:p.status,Data_de_entrada:p.inputDate,Prazo:p.deadline,Observações:p.obs};
+ appendWorkbookObject(rows,'Processo',p.code,'','Dados do Processo',processFields);
+ appendWorkbookObject(rows,'Processo',p.code,'','Variáveis adicionais',p.vars);
+ assets.forEach(a=>{
+  const assetFields={Código:a.code,ID_Institucional:a.ref,Designação:a.name,Tipo:a.type,Grupo:a.group,Destino_Uso:a.currentUse,Estado:assetOperationalStatus(a),Data_Visita:a.visitDate,Hora_Início:a.visitTime,Hora_Fim:a.visitEnd,Endereço_Local:a.local,Número:a.doorNumber,Piso_Andar:a.floor,Código_Postal:formatPostalCode(a.postalCode),Freguesia:a.freg,Concelho:a.conc,GPS:assetGPS(a),Observações:a.obs};
+  appendWorkbookObject(rows,'Ativo',p.code,a.code,'Dados do Ativo',assetFields);
+  appendWorkbookObject(rows,'Ativo',p.code,a.code,'Variáveis adicionais',a.vars);
+  appendWorkbookObject(rows,'Ativo',p.code,a.code,'Caracterização',a.char);
+  appendWorkbookObject(rows,'Ativo',p.code,a.code,'Quantidades e áreas',a.qtyAreas);
+  (a.photos||[]).forEach((photo,index)=>appendWorkbookObject(rows,'Fotografia',p.code,a.code,photoCodeForReport(a,0,index),{Nome_original:photo.name,Estado:photo.state||'ON',Capa:photo.cover?'SIM':'NÃO',Mapa:photo.mapImage?'SIM':'NÃO',Legenda:photo.caption,Tamanho_KB:photo.size?Math.round(photo.size/1024):'',Largura:photo.w,Altura:photo.h}));
+ });
+ (p.visits||[]).forEach((visit,index)=>appendWorkbookObject(rows,'Visita',p.code,'','Visita '+(index+1),visit));
+ (p.participants||[]).forEach((person,index)=>appendWorkbookObject(rows,'Interveniente',p.code,'','Interveniente '+(index+1),person));
+ (p.history||[]).forEach((entry,index)=>appendWorkbookObject(rows,'Cronologia',p.code,entry.assetId||'','Registo '+(index+1),entry));
  return rows;
 }
 function processWorkbookSheets(p){
@@ -5833,7 +5908,7 @@ function processWorkbookSheets(p){
  (p.visits||[]).forEach(visit=>visitRows.push([visit.date||'',visit.start||'',visit.end||'',visit.type||'',visit.weather||'',(visit.assets||[]).map(item=>item.code||assets.find(a=>a.id===item.assetId)?.code||'').filter(Boolean).join('; '),(visit.participantIds||[]).map(id=>(p.participants||[]).find(person=>person.id===id)?.name||'').filter(Boolean).join('; '),visit.constraints||'',visit.obs||'']));
  (p.participants||[]).forEach(person=>peopleRows.push([person.name||'',person.role||'',person.phone||'',person.email||'',person.obs||'',person.reusable?'SIM':'NÃO']));
  (p.history||[]).forEach(entry=>historyRows.push([entry.at||'',entry.type||'',entry.text||'',entry.assetId||'',entry.origin||'']));
- return [{name:'Processo',rows:processRows},{name:'Ativos',rows:processDataRows(p)},{name:'Caracterização',rows:charRows},{name:'Quantidades',rows:quantityRows},{name:'Fotografias',rows:photoRows},{name:'Visitas',rows:visitRows},{name:'Intervenientes',rows:peopleRows},{name:'Cronologia',rows:historyRows}];
+ return [{name:'Dados completos',rows:completeWorkbookRows(p,assets)},{name:'Processo',rows:processRows},{name:'Ativos',rows:processDataRows(p)},{name:'Caracterização',rows:charRows},{name:'Quantidades',rows:quantityRows},{name:'Fotografias',rows:photoRows},{name:'Visitas',rows:visitRows},{name:'Intervenientes',rows:peopleRows},{name:'Cronologia',rows:historyRows}];
 }
 async function buildProcessZIP(p,wordBlob=null,pdfBlob=null){
  const encoder=new TextEncoder(),root=safeFileName(p.code||'Processo')+'_Export/',entries=[],missing=[];
