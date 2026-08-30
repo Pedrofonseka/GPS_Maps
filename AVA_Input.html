@@ -709,7 +709,7 @@ const {
 }=Object.fromEntries(Array.from(document.querySelectorAll('[id]'),el=>[el.id,el]));
 const cfgAnalystText=document.getElementById('cfgAnalystText');
 
-const APP_VERSION='2.6.0',DATA_SCHEMA_VERSION=2,KEY='ativa_v2_db';
+const APP_VERSION='2.6.1',DATA_SCHEMA_VERSION=2,KEY='ativa_v2_db';
 const CONSTRUCTION_RULES_KEY='ativa_construction_rules_v2';
 const CONSTRUCTION_RULES_DEFAULT=`Todas as fotografias ficam centradas na respetiva célula.
 As fotografias são numeradas pelo índice do Ativo dentro do núcleo e pelo número sequencial: 005_1_IMG_01.
@@ -2686,7 +2686,10 @@ async function addPhotoFiles(files){
      +(photoStorageMode==='session'?' · armazenamento temporário':'');
  }
 
- markAssetStarted(proc(),asset());save();
+ // Última gravação deste lote: espera-se pela confirmação real da cópia de
+ // recurso (não só pelo disparo em segundo plano) antes de dar como concluído
+ // — o utilizador tende a fechar a app logo a seguir a ver "carregada(s)".
+ markAssetStarted(proc(),asset());await saveDurable();
  await renderPhotoList(t);
 }
 const elPhotos=document.getElementById('photos');
