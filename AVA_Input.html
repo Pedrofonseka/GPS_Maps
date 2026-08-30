@@ -961,11 +961,11 @@ function storageIssueGuidance(){
  if(location.protocol==='file:')return 'Isto costuma acontecer quando o ficheiro é aberto a partir da pré-visualização da app Ficheiros, que restringe a gravação — normalmente NÃO é falta de espaço no aparelho. Toque no ícone de partilha e escolha "Abrir no Safari" (ou: toque sem soltar no ficheiro → Partilhar → Safari); depois, em Safari, use Partilhar → Adicionar ao Ecrã Principal para evitar repetir isto.';
  return 'Verifique o espaço de armazenamento disponível para este site (Definições do navegador → Privacidade/Dados de sites); pode também acontecer em navegação privada.';
 }
-async function saveDBFallback(){
+async function saveDBFallback(savedAt){
  try{
    const store=await settingsStore('readwrite');
    await new Promise((resolve,reject)=>{
-     const request=store.put({data:db,savedAt:new Date().toISOString()},DB_FALLBACK_KEY);
+     const request=store.put({data:db,savedAt:savedAt||new Date().toISOString()},DB_FALLBACK_KEY);
      request.onsuccess=()=>resolve();request.onerror=()=>reject(request.error);
    });
    return true;
@@ -988,10 +988,18 @@ async function clearDBFallback(){
 }
 let dbSaveFailing=false;
 function save(){
+ // Guarda-se sempre também uma cópia em IndexedDB, com o mesmo instante da
+ // gravação em localStorage — não só quando esta falha. Assim, se alguma
+ // gravação futura falhar silenciosamente sem o utilizador reparar, a cópia
+ // em IndexedDB (que já se provou fiável mesmo na pré-visualização da app
+ // Ficheiros, onde as fotografias sempre gravaram bem) nunca fica muito
+ // desatualizada — o arranque seguinte deteta e recupera automaticamente.
+ const savedAt=new Date().toISOString();
  try{
    localStorage.setItem(KEY,JSON.stringify(db));
-   localStorage.setItem(KEY+'_savedAt',new Date().toISOString());
-   if(dbSaveFailing){dbSaveFailing=false;clearDBFallback()}
+   localStorage.setItem(KEY+'_savedAt',savedAt);
+   dbSaveFailing=false;
+   saveDBFallback(savedAt);
    return true;
  }catch(e){
    // A gravação em localStorage falhou (comum em pré-visualizações file:// tipo app
