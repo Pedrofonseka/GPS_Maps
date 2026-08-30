@@ -649,7 +649,7 @@ const {
 }=Object.fromEntries(Array.from(document.querySelectorAll('[id]'),el=>[el.id,el]));
 const cfgAnalystText=document.getElementById('cfgAnalystText');
 
-const APP_VERSION='2.2.2',DATA_SCHEMA_VERSION=2,KEY='ativa_v2_db';
+const APP_VERSION='2.2.3',DATA_SCHEMA_VERSION=2,KEY='ativa_v2_db';
 const CONSTRUCTION_RULES_KEY='ativa_construction_rules_v2';
 const CONSTRUCTION_RULES_DEFAULT=`Todas as fotografias ficam centradas na respetiva célula.
 As fotografias são numeradas pelo índice do Ativo dentro do núcleo e pelo número sequencial: 005_1_IMG_01.
@@ -1026,7 +1026,10 @@ function save(){
 // ter sido confirmada (o IndexedDB só dispara onsuccess após o commit).
 async function saveDurable(){
  const ok=save();
- try{await lastFallbackWrite}catch(e){}
+ // Nunca deixar a interface presa à espera para sempre: se a cópia de recurso
+ // demorar de mais (ou ficar bloqueada) segue-se em frente — a gravação em
+ // localStorage, se tiver sido bem sucedida, já aconteceu de forma síncrona.
+ try{await Promise.race([lastFallbackWrite,new Promise(resolve=>setTimeout(resolve,4000))])}catch(e){}
  return ok;
 }
 let storageWarnedAt=0;
@@ -2990,26 +2993,32 @@ document.getElementById('orphanAssign')?.addEventListener('click',async()=>{
  const selected=[...document.querySelectorAll('#orphanGrid [data-orphan]:checked')].map(cb=>cb.dataset.orphan);
  if(!selected.length){alert('Selecione pelo menos uma fotografia.');return}
  const assignButton=document.getElementById('orphanAssign');assignButton.disabled=true;
- a.photos=Array.isArray(a.photos)?a.photos:[];
- const alreadyOnAsset=new Set(a.photos.map(x=>x&&x.id));
- for(const id of selected){
-   if(alreadyOnAsset.has(id))continue;
-   let w=1200,h=800;
-   try{
-     const blob=await photoGet(id);
-     if(blob){
-       const dims=await new Promise((resolve,reject)=>{const img=new Image(),url=URL.createObjectURL(blob);img.onload=()=>{resolve({w:img.naturalWidth,h:img.naturalHeight});URL.revokeObjectURL(url)};img.onerror=()=>{URL.revokeObjectURL(url);reject()};img.src=url});
-       w=dims.w||w;h=dims.h||h;
-     }
-   }catch(e){}
-   a.photos.push({id,w,h,cover:a.photos.length===0,caption:'',createdAt:new Date().toISOString(),recovered:true});
-   alreadyOnAsset.add(id);
+ try{
+   a.photos=Array.isArray(a.photos)?a.photos:[];
+   const alreadyOnAsset=new Set(a.photos.map(x=>x&&x.id));
+   for(const id of selected){
+     if(alreadyOnAsset.has(id))continue;
+     let w=1200,h=800;
+     try{
+       const blob=await photoGet(id);
+       if(blob){
+         const dims=await new Promise((resolve,reject)=>{const img=new Image(),url=URL.createObjectURL(blob);img.onload=()=>{resolve({w:img.naturalWidth,h:img.naturalHeight});URL.revokeObjectURL(url)};img.onerror=()=>{URL.revokeObjectURL(url);reject()};img.src=url});
+         w=dims.w||w;h=dims.h||h;
+       }
+     }catch(e){}
+     a.photos.push({id,w,h,cover:a.photos.length===0,caption:'',createdAt:new Date().toISOString(),recovered:true});
+     alreadyOnAsset.add(id);
+   }
+   historyAdd(p,'photos_recovered',selected.length+' fotografia(s) órfã(s) atribuída(s) a '+(a.code||'Ativo')+'.',a.id);
+   const ok=await saveDurable();
+   alert(selected.length+' fotografia(s) atribuída(s) a '+(a.code||'Ativo')+'.'+(ok?'':' Atenção: a gravação definitiva falhou nesta página — foi guardada uma cópia de recurso, mas evite fechar a app antes de a reabrir e confirmar que a atribuição se manteve.'));
+   await renderOrphanRecovery();
+ }catch(e){
+   console.error('Falha ao atribuir fotografias órfãs',e);
+   alert('Ocorreu um erro inesperado ao atribuir as fotografias. Tente novamente; se persistir, avise o suporte.');
+ }finally{
+   assignButton.disabled=false;
  }
- historyAdd(p,'photos_recovered',selected.length+' fotografia(s) órfã(s) atribuída(s) a '+(a.code||'Ativo')+'.',a.id);
- const ok=await saveDurable();
- assignButton.disabled=false;
- alert(selected.length+' fotografia(s) atribuída(s) a '+(a.code||'Ativo')+'.'+(ok?'':' Atenção: a gravação definitiva falhou nesta página — foi guardada uma cópia de recurso, mas evite fechar a app antes de a reabrir e confirmar que a atribuição se manteve.'));
- await renderOrphanRecovery();
 });
 // Elimina definitivamente ficheiros órfãos escolhidos pelo utilizador — útil
 // quando duas entradas órfãs são, ao olhar para elas, a mesma fotografia
@@ -3966,8 +3975,24 @@ printReport.onclick=async()=>{
 
 const SETTINGS_DB='Ativa_Settings_v1',DESTINATION_KEY='destination-folder';
 let destinationDirectory=null;
-function settingsStore(mode='readonly'){
- return new Promise((resolve,reject)=>{const request=indexedDB.open(SETTINGS_DB,1);request.onupgradeneeded=()=>{if(!request.result.objectStoreNames.contains('settings'))request.result.createObjectStore('settings')};request.onsuccess=()=>resolve(request.result.transaction('settings',mode).objectStore('settings'));request.onerror=()=>reject(request.error)});
+// Uma só ligação reutilizada, nunca uma nova a cada chamada: abrir e nunca fechar
+// (como acontecia antes) acumula ligações IndexedDB ao longo da sessão — em iOS/
+// WebKit isso acaba por bloquear indefinidamente aberturas seguintes, travando
+// silenciosamente qualquer gravação que dependa desta store (ex.: atribuir fotos
+// órfãs deixa de responder, sem qualquer erro visível).
+let settingsDBPromise=null;
+function settingsDB(){
+ if(!settingsDBPromise)settingsDBPromise=new Promise((resolve,reject)=>{
+   const request=indexedDB.open(SETTINGS_DB,1);
+   request.onupgradeneeded=()=>{if(!request.result.objectStoreNames.contains('settings'))request.result.createObjectStore('settings')};
+   request.onsuccess=()=>{request.result.onclose=()=>{settingsDBPromise=null};resolve(request.result)};
+   request.onerror=()=>{settingsDBPromise=null;reject(request.error)};
+ });
+ return settingsDBPromise;
+}
+async function settingsStore(mode='readonly'){
+ const database=await settingsDB();
+ return database.transaction('settings',mode).objectStore('settings');
 }
 async function rememberDestination(handle){try{const store=await settingsStore('readwrite');await new Promise((resolve,reject)=>{const request=store.put(handle,DESTINATION_KEY);request.onsuccess=()=>resolve();request.onerror=()=>reject(request.error)})}catch(e){}}
 async function forgetDestination(){try{const store=await settingsStore('readwrite');await new Promise(resolve=>{const request=store.delete(DESTINATION_KEY);request.onsuccess=request.onerror=()=>resolve()})}catch(e){}}
