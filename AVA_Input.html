@@ -1158,7 +1158,7 @@ const {
 }=Object.fromEntries(Array.from(document.querySelectorAll('[id]'),el=>[el.id,el]));
 const cfgAnalystText=document.getElementById('cfgAnalystText');
 
-const APP_VERSION='2.8.2',DATA_SCHEMA_VERSION=3,KEY='ativa_v2_db';
+const APP_VERSION='2.8.3',DATA_SCHEMA_VERSION=3,KEY='ativa_v2_db';
 const CONSTRUCTION_RULES_KEY='ativa_construction_rules_v2';
 const CONSTRUCTION_RULES_DEFAULT=`Todas as fotografias ficam centradas na respetiva célula.
 As fotografias são numeradas pelo índice do Ativo dentro do núcleo e pelo número sequencial: 005_1_IMG_01.
@@ -3781,7 +3781,9 @@ function outFieldValue(field,p,pageNo,totalPages){
  if(field==='status')return p?.status||'';
  if(field==='inputDate')return p?.inputDate||'';
  if(field==='deadline')return p?.deadline||'';
- if(field==='local')return (p?.assets||[]).map(a=>a.local).find(Boolean)||'';
+ // Não existe campo "local" ao nível do Processo: o endereço é uma
+ // propriedade de cada Ativo, nunca do Processo — que pode decorrer em
+ // vários locais diferentes. Ver localização em cada Ativo/Resumo por Ativo.
  if(field==='analyst')return pageSettings.analystText||'';
  if(field==='appVersion')return 'AVA_Input '+APP_VERSION;
  if(field==='page')return pageNo&&totalPages?pageNo+'/'+totalPages:'';
@@ -4237,7 +4239,7 @@ const OUT_MODEL_LABELS={cover:'Capa',process:'Resumo',characterization:'Caracter
 const OUT_MODEL_FIELDS={
  processCodeName:'Processo + Designação',processRef:'ID Institucional',requester:'Solicitante / Destinatário',
  service:'Serviço',purpose:'Finalidade',requestDescription:'Descrição sucinta',valueBase:'Base de valor',
- status:'Estado',inputDate:'Data de entrada',deadline:'Prazo',local:'Local',analyst:'Analista',appVersion:'Release',
+ status:'Estado',inputDate:'Data de entrada',deadline:'Prazo',analyst:'Analista',appVersion:'Release',
  page:'Paginação'
 };
 const OUT_MODEL_DEFAULT_ROWS={
@@ -4246,7 +4248,6 @@ const OUT_MODEL_DEFAULT_ROWS={
   {field:'requester',zone:'center',enabled:true},
   {field:'requestDescription',zone:'center',enabled:true},
   {field:'purpose',zone:'center',enabled:true},
-  {field:'local',zone:'center',enabled:true},
   {field:'inputDate',zone:'center',enabled:true}
  ],
  process:[
@@ -4421,7 +4422,6 @@ const COVER_CONTENT_DEFAULT=[
  {id:'requester',name:'Solicitante / Destinatário',enabled:true},
  {id:'requestDescription',name:'Descrição sucinta',enabled:true},
  {id:'purpose',name:'Finalidade',enabled:true},
- {id:'local',name:'Local',enabled:true},
  {id:'date',name:'Data',enabled:true}
 ];
 function loadCoverContent(){
@@ -4439,7 +4439,7 @@ function renderCoverContentConfig(){
  if(!cfgCoverContentValues)return;
  normalizeOutModelRows('cover');
  const coverRows=outModels.cover||[];
- const recommended=['requestDescription','requester','purpose','local','inputDate'];
+ const recommended=['requestDescription','requester','purpose','inputDate'];
  const ensureRow=field=>{
    let row=coverRows.find(r=>r.field===field);
    if(!row){
