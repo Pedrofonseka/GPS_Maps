@@ -1166,7 +1166,7 @@ const {
 }=Object.fromEntries(Array.from(document.querySelectorAll('[id]'),el=>[el.id,el]));
 const cfgAnalystText=document.getElementById('cfgAnalystText');
 
-const APP_VERSION='2.9.0',DATA_SCHEMA_VERSION=3,KEY='ativa_v2_db';
+const APP_VERSION='2.9.1',DATA_SCHEMA_VERSION=3,KEY='ativa_v2_db';
 const CONSTRUCTION_RULES_KEY='ativa_construction_rules_v2';
 const CONSTRUCTION_RULES_DEFAULT=`Todas as fotografias ficam centradas na respetiva célula.
 As fotografias são numeradas pelo índice do Ativo dentro do núcleo e pelo número sequencial: 005_1_IMG_01.
@@ -2913,12 +2913,40 @@ getGPS.onclick=()=>{
  },{enableHighAccuracy:true,timeout:12000,maximumAge:30000});
 };
 previewGPS.onclick=()=>{const gps=parseGPS(aGPS.value);if(!gps){alert('Indique coordenadas válidas no formato latitude,longitude.');aGPS.focus();return}aGPS.value=gps.text;persistExistingAsset();showGPSPreview(gps.text)};
-openMap.onclick=()=>{
+openMap.onclick=async()=>{
  syncPendingData();
  const gps=parseGPS(aGPS.value);
- if(!gps){alert('Indique coordenadas válidas no formato latitude,longitude.');aGPS.focus();return}
- aGPS.value=gps.text;persistExistingAsset();
- window.open('https://www.openstreetmap.org/?mlat='+encodeURIComponent(gps.lat)+'&mlon='+encodeURIComponent(gps.lon)+'#map=18/'+encodeURIComponent(gps.lat)+'/'+encodeURIComponent(gps.lon),'_blank');
+ if(gps){
+   aGPS.value=gps.text;persistExistingAsset();
+   window.open('https://www.openstreetmap.org/?mlat='+encodeURIComponent(gps.lat)+'&mlon='+encodeURIComponent(gps.lon)+'#map=18/'+encodeURIComponent(gps.lat)+'/'+encodeURIComponent(gps.lon),'_blank');
+   return;
+ }
+ // Sem coordenadas GPS: em vez de bloquear, usa o endereço/localidade já
+ // preenchido no Ativo para abrir o mapa por pesquisa — mais fiável do que a
+ // posição atual do telemóvel, que pode não coincidir com o Ativo (ex.: a
+ // preencher dados no escritório, não no local).
+ const address=[aLocal?.value,aDoorNumber?.value,aFloor?.value,formatPostalCode(aPostalCode?.value),aFreg?.value,aConc?.value].map(v=>String(v||'').trim()).filter(Boolean).join(', ');
+ if(address){
+   persistExistingAsset();
+   window.open('https://www.openstreetmap.org/search?query='+encodeURIComponent(address+', Portugal'),'_blank');
+   return;
+ }
+ // Sem GPS e sem qualquer endereço: como último recurso, tenta a posição atual
+ // do telemóvel (mesma API já usada em "Obter GPS") — só ajuda se o utilizador
+ // estiver fisicamente junto ao Ativo, por isso vem depois do endereço, nunca
+ // antes.
+ if(navigator.geolocation){
+   openMap.disabled=true;const originalLabel=openMap.textContent;openMap.textContent='A localizar…';
+   const pos=await new Promise(resolve=>navigator.geolocation.getCurrentPosition(p=>resolve(p),()=>resolve(null),{enableHighAccuracy:true,timeout:8000,maximumAge:30000}));
+   openMap.disabled=false;openMap.textContent=originalLabel;
+   if(pos){
+     const lat=Number(pos.coords.latitude).toFixed(6),lon=Number(pos.coords.longitude).toFixed(6);
+     window.open('https://www.openstreetmap.org/?mlat='+encodeURIComponent(lat)+'&mlon='+encodeURIComponent(lon)+'#map=17/'+encodeURIComponent(lat)+'/'+encodeURIComponent(lon),'_blank');
+     alert('Sem coordenadas nem endereço registados para este Ativo — o mapa abriu na posição atual do telemóvel, como referência aproximada. Se estiver junto ao imóvel, use "Obter GPS" para gravar a localização exata.');
+     return;
+   }
+ }
+ alert('Indique coordenadas GPS, ou pelo menos o Endereço/Local, Freguesia ou Concelho, antes de abrir o mapa.');aGPS.focus();
 };
 downloadKML.onclick=async()=>{
  syncPendingData();
