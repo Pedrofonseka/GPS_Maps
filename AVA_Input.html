@@ -649,7 +649,7 @@ const {
 }=Object.fromEntries(Array.from(document.querySelectorAll('[id]'),el=>[el.id,el]));
 const cfgAnalystText=document.getElementById('cfgAnalystText');
 
-const APP_VERSION='2.2.1',DATA_SCHEMA_VERSION=2,KEY='ativa_v2_db';
+const APP_VERSION='2.2.2',DATA_SCHEMA_VERSION=2,KEY='ativa_v2_db';
 const CONSTRUCTION_RULES_KEY='ativa_construction_rules_v2';
 const CONSTRUCTION_RULES_DEFAULT=`Todas as fotografias ficam centradas na respetiva célula.
 As fotografias são numeradas pelo índice do Ativo dentro do núcleo e pelo número sequencial: 005_1_IMG_01.
@@ -986,7 +986,7 @@ async function clearDBFallback(){
    await new Promise(resolve=>{const request=store.delete(DB_FALLBACK_KEY);request.onsuccess=request.onerror=()=>resolve()});
  }catch(e){}
 }
-let dbSaveFailing=false;
+let dbSaveFailing=false,lastFallbackWrite=Promise.resolve(false);
 function save(){
  // Guarda-se sempre também uma cópia em IndexedDB, com o mesmo instante da
  // gravação em localStorage — não só quando esta falha. Assim, se alguma
@@ -999,7 +999,7 @@ function save(){
    localStorage.setItem(KEY,JSON.stringify(db));
    localStorage.setItem(KEY+'_savedAt',savedAt);
    dbSaveFailing=false;
-   saveDBFallback(savedAt);
+   lastFallbackWrite=saveDBFallback(savedAt);
    return true;
  }catch(e){
    // A gravação em localStorage falhou (comum em pré-visualizações file:// tipo app
@@ -1007,7 +1007,8 @@ function save(){
    // recurso em IndexedDB, quando esta também estiver disponível nesta página.
    const alreadyFailing=dbSaveFailing;
    dbSaveFailing=true;
-   saveDBFallback().then(ok=>{
+   lastFallbackWrite=saveDBFallback();
+   lastFallbackWrite.then(ok=>{
      if(alreadyFailing)return;
      alert((ok
        ? 'Não foi possível gravar os dados de forma permanente nesta página. Foi guardada uma cópia de recurso e nada foi perdido até agora, mas as próximas alterações ficam em risco enquanto isto não for resolvido.'
@@ -1016,6 +1017,17 @@ function save(){
    });
    return false;
  }
+}
+// Para operações críticas e irreversíveis (ex.: atribuir fotografias órfãs), não
+// basta chamar save() — a cópia em IndexedDB é escrita em segundo plano (fire-and-
+// -forget) e, se o utilizador fechar a app mesmo depois de ver "sucesso", essa
+// escrita pode nunca chegar a terminar. Esperar aqui pela mesma promessa garante
+// que só se mostra sucesso ao utilizador depois da gravação de recurso realmente
+// ter sido confirmada (o IndexedDB só dispara onsuccess após o commit).
+async function saveDurable(){
+ const ok=save();
+ try{await lastFallbackWrite}catch(e){}
+ return ok;
 }
 let storageWarnedAt=0;
 function warnStorageFailure(){
@@ -2994,9 +3006,9 @@ document.getElementById('orphanAssign')?.addEventListener('click',async()=>{
    alreadyOnAsset.add(id);
  }
  historyAdd(p,'photos_recovered',selected.length+' fotografia(s) órfã(s) atribuída(s) a '+(a.code||'Ativo')+'.',a.id);
- save();
+ const ok=await saveDurable();
  assignButton.disabled=false;
- alert(selected.length+' fotografia(s) atribuída(s) a '+(a.code||'Ativo')+'.');
+ alert(selected.length+' fotografia(s) atribuída(s) a '+(a.code||'Ativo')+'.'+(ok?'':' Atenção: a gravação definitiva falhou nesta página — foi guardada uma cópia de recurso, mas evite fechar a app antes de a reabrir e confirmar que a atribuição se manteve.'));
  await renderOrphanRecovery();
 });
 // Elimina definitivamente ficheiros órfãos escolhidos pelo utilizador — útil
@@ -4528,7 +4540,7 @@ async function checkDBFallbackRecovery(){
    // Aplica-se sempre automaticamente; o aviso é informativo, não uma pergunta.
    db=normaliseDB(fb.data);
    currentProcess=null;rememberCurrentProcess();
-   const ok=save();
+   const ok=await saveDurable();
    renderProcesses();updateContext();
    if(!localEmpty)alert('Foi recuperada automaticamente uma cópia de recurso mais recente (gravada porque a gravação definitiva estava a falhar). '+(ok?'Já foi gravada com sucesso.':'Continua sem conseguir gravar de forma permanente nesta página — '+storageIssueGuidance()));
  }catch(e){console.warn('Recuperação da cópia de recurso falhou:',e)}
