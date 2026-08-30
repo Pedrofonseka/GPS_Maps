@@ -92,6 +92,13 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
  .orientation-review-photo{width:120px;height:90px}
  .orientation-review-row .photo-actions{grid-column:1/-1}
 }
+/* Enquanto se escreve a legenda, a fotografia cresce para se ver bem o que se
+   está a descrever, em vez de ficar espremida numa miniatura pequena. */
+.photo-row{transition:grid-template-columns .15s}
+.photo-thumb{transition:width .15s,height .15s}
+.photo-row:focus-within{grid-template-columns:1fr!important;row-gap:8px}
+.photo-row:focus-within .photo-thumb{width:100%!important;max-width:420px;height:auto!important;aspect-ratio:4/3;justify-self:center}
+.photo-row:focus-within .photo-actions{grid-column:1/-1;justify-content:flex-start}
 
 .native-file-btn{display:inline-flex;align-items:center;justify-content:center}
 .native-file-input{
@@ -418,6 +425,7 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
   <div id="exportAssetSelector" class="list" style="margin-top:6px"></div>
   <label style="margin-top:12px">Conteúdo a incluir na saída <small class="note">(as setas definem a sequência no PDF/Word; a Capa de processo e a Capa de cada Ativo são estruturais)</small></label>
   <div id="exportOutputValues" class="list" style="margin-top:6px"></div>
+  <label class="btn cover-toggle" style="margin-top:8px;display:inline-flex"><input type="checkbox" id="embedStatusCaptions" style="width:auto"><span>Incorporar o estado (ON/OFF) do Ativo nas legendas das fotografias</span></label>
   <div class="row">
    <div><label>Colunas das fotografias da capa</label><select id="coverCols"><option value="1">1 coluna</option><option value="2" selected>2 colunas</option><option value="3">3 colunas</option><option value="4">4 colunas</option><option value="5">5 colunas</option></select><label style="margin-top:8px">N.º mínimo de fotografias da capa</label><input id="coverMinPhotos" type="number" inputmode="numeric" min="0" max="20" step="1" value="2"></div>
    <div><label>Colunas das fotografias na ficha</label><select id="sheetCols"><option value="1">1 coluna</option><option value="2" selected>2 colunas</option><option value="3">3 colunas</option><option value="4">4 colunas</option><option value="5">5 colunas</option></select></div>
@@ -651,7 +659,7 @@ const {
 }=Object.fromEntries(Array.from(document.querySelectorAll('[id]'),el=>[el.id,el]));
 const cfgAnalystText=document.getElementById('cfgAnalystText');
 
-const APP_VERSION='2.3.1',DATA_SCHEMA_VERSION=2,KEY='ativa_v2_db';
+const APP_VERSION='2.3.2',DATA_SCHEMA_VERSION=2,KEY='ativa_v2_db';
 const CONSTRUCTION_RULES_KEY='ativa_construction_rules_v2';
 const CONSTRUCTION_RULES_DEFAULT=`Todas as fotografias ficam centradas na respetiva célula.
 As fotografias são numeradas pelo índice do Ativo dentro do núcleo e pelo número sequencial: 005_1_IMG_01.
@@ -3612,10 +3620,10 @@ document.getElementById('exportSelectNone')?.addEventListener('click',()=>{const
 cfgResetOutput.onclick=()=>{if(!confirm('Repor a composição recomendada do Resumo geral?'))return;outputComposition=OUTPUT_COMPOSITION_DEFAULT.map(item=>({...item}));saveOutputComposition();renderOutputComposition();refreshOpenOutputs()};
 
 const REPORT_LAYOUT_KEY='ativa_report_layout_v1';
-function loadReportLayout(){try{return Object.assign({cover:2,sheet:2,coverMin:2},JSON.parse(localStorage.getItem(REPORT_LAYOUT_KEY)||'{}'))}catch(e){return{cover:2,sheet:2,coverMin:2}}}
+function loadReportLayout(){try{return Object.assign({cover:2,sheet:2,coverMin:2,embedStatus:false},JSON.parse(localStorage.getItem(REPORT_LAYOUT_KEY)||'{}'))}catch(e){return{cover:2,sheet:2,coverMin:2,embedStatus:false}}}
 function validReportCols(value){const n=Number(value);return Number.isInteger(n)&&n>=1&&n<=5?n:2}
 function saveReportLayout(){
- const cfg={cover:validReportCols(coverCols.value),sheet:validReportCols(sheetCols.value),coverMin:Math.max(0,Math.min(20,Number(coverMinPhotos?.value)||0))};
+ const cfg={cover:validReportCols(coverCols.value),sheet:validReportCols(sheetCols.value),coverMin:Math.max(0,Math.min(20,Number(coverMinPhotos?.value)||0)),embedStatus:!!document.getElementById('embedStatusCaptions')?.checked};
  try{localStorage.setItem(REPORT_LAYOUT_KEY,JSON.stringify(cfg))}catch(e){warnStorageFailure()}
  applyReportLayout();
 }
@@ -3635,11 +3643,12 @@ function refreshOpenOutputs(){applyPageSettings();if(reportPreview&&!reportPrevi
 function syncReportLayoutFromStorage(){
  const cfg=loadReportLayout();
  coverCols.value=String(validReportCols(cfg.cover));sheetCols.value=String(validReportCols(cfg.sheet));if(coverMinPhotos)coverMinPhotos.value=String(Math.max(0,Math.min(20,Number(cfg.coverMin)||0)));
+ const embedStatusInput=document.getElementById('embedStatusCaptions');if(embedStatusInput)embedStatusInput.checked=!!cfg.embedStatus;
  applyReportLayout();
 }
 syncReportLayoutFromStorage();
 coverCols.onchange=()=>{saveReportLayout();if(!reportPreview.classList.contains('hidden'))void renderReportPreview()};
-sheetCols.onchange=()=>{saveReportLayout();if(!reportPreview.classList.contains('hidden'))void renderReportPreview()};if(coverMinPhotos)coverMinPhotos.onchange=()=>{saveReportLayout();if(!reportPreview.classList.contains('hidden'))void renderReportPreview()};
+sheetCols.onchange=()=>{saveReportLayout();if(!reportPreview.classList.contains('hidden'))void renderReportPreview()};if(coverMinPhotos)coverMinPhotos.onchange=()=>{saveReportLayout();if(!reportPreview.classList.contains('hidden'))void renderReportPreview()};document.getElementById('embedStatusCaptions')?.addEventListener('change',()=>{saveReportLayout();if(!reportPreview.classList.contains('hidden'))void renderReportPreview()});
 
 let lastOrientationScan=null;
 async function photoOrientation(photo){
@@ -3741,6 +3750,13 @@ function reportTargetHTML(t,a,title,key,parts={cover:true,sheet:true}){
 function photoCodeForReport(a,nufIndex,index){
  const raw=(a?.code||'ATV_001').match(/\d+/)?.[0]||'1',assetNo=String(Number(raw)||1).padStart(3,'0');
  return assetNo+'_'+String((nufIndex??0)+1)+'_IMG_'+String(index+1).padStart(2,'0');
+}
+// Como no FoTopics: quando ativado, cada legenda passa a ser resumida por um
+// prefixo de estado antes do código — ex.: "[ON] - 001_1_IMG_03 — legenda".
+function photoCaptionLine(a,nufIndex,index,photo){
+ const code=photoCodeForReport(a,nufIndex,index);
+ const prefix=loadReportLayout().embedStatus?'['+(a?.status==='OFF'?'OFF':'ON')+'] - ':'';
+ return prefix+code+(photo?.caption?' — '+photo.caption:'');
 }
 function waitForReportImage(img,photo){
  return new Promise(resolve=>{
@@ -3913,7 +3929,7 @@ async function renderReportPreview(strictOrientation=false){
          const sheetURL=URL.createObjectURL(blob);reportObjectURLs.add(sheetURL);
          const figure=document.createElement('figure');figure.className='report-photo';
          const img=document.createElement('img');img.alt=photoCodeForReport(target.a,0,index);const sheetLoad=waitForReportImage(img,photo);img.src=sheetURL;
-         const cap=document.createElement('figcaption');cap.textContent=img.alt+(photo.caption?' — '+photo.caption:'');
+         const cap=document.createElement('figcaption');cap.textContent=photoCaptionLine(target.a,0,index,photo);
          figure.appendChild(img);figure.appendChild(cap);sheetHolder.appendChild(figure);loads.push(sheetLoad);
        }
      }catch(e){}
@@ -4069,7 +4085,7 @@ function wordBandXML(kind,p){const fields=kind==='header'?[pageSettings.headerLe
 async function buildWordDOCX(p){
  pageSettings=loadPageSettings();const encoder=new TextEncoder(),entries=[],rels=[],body=[];let imageNo=0;
  const reportAssets=selectedExportAssets(p);
- async function appendWordPhotos(a,nufIndex,photoRefs,cols,showCaptions){const cellWidth=Math.floor(5400000/cols),imageHeight=2100000;let cells=[];for(const ref of photoRefs){const photo=ref.photo,index=ref.index;try{let blob=await photoGet(photo.id);if(!blob)continue;let ext=(blob.type||'').includes('png')?'png':'jpeg';if(!/image\/(png|jpeg|jpg)/i.test(blob.type||'')){const activeSettings=loadPhotoSettings(),converted=await compressImage(blob,activeSettings.maxSide,activeSettings.quality/100);blob=converted.blob;ext='jpeg'}imageNo++;const fileExt=ext==='png'?'png':'jpg',rid='rId'+imageNo,w=Number(photo.w)||1200,h=Number(photo.h)||800,scale=Math.min(cellWidth/w,imageHeight/h),cx=Math.max(1,Math.round(w*scale)),cy=Math.max(1,Math.round(h*scale));entries.push({name:'word/media/image'+imageNo+'.'+fileExt,data:new Uint8Array(await blob.arrayBuffer())});rels.push('<Relationship Id="'+rid+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image'+imageNo+'.'+fileExt+'"/>');cells.push({image:wordDrawing(rid,imageNo,cx,cy),caption:showCaptions?wordParagraph(photoCodeForReport(a,nufIndex,index)+(photo.caption?' — '+photo.caption:''),{size:16}):''});if(cells.length===cols){body.push(wordPhotoTable(cells,cols,showCaptions));cells=[]}}catch(e){console.error(e)}}if(cells.length)body.push(wordPhotoTable(cells,cols,showCaptions))}
+ async function appendWordPhotos(a,nufIndex,photoRefs,cols,showCaptions){const cellWidth=Math.floor(5400000/cols),imageHeight=2100000;let cells=[];for(const ref of photoRefs){const photo=ref.photo,index=ref.index;try{let blob=await photoGet(photo.id);if(!blob)continue;let ext=(blob.type||'').includes('png')?'png':'jpeg';if(!/image\/(png|jpeg|jpg)/i.test(blob.type||'')){const activeSettings=loadPhotoSettings(),converted=await compressImage(blob,activeSettings.maxSide,activeSettings.quality/100);blob=converted.blob;ext='jpeg'}imageNo++;const fileExt=ext==='png'?'png':'jpg',rid='rId'+imageNo,w=Number(photo.w)||1200,h=Number(photo.h)||800,scale=Math.min(cellWidth/w,imageHeight/h),cx=Math.max(1,Math.round(w*scale)),cy=Math.max(1,Math.round(h*scale));entries.push({name:'word/media/image'+imageNo+'.'+fileExt,data:new Uint8Array(await blob.arrayBuffer())});rels.push('<Relationship Id="'+rid+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image'+imageNo+'.'+fileExt+'"/>');cells.push({image:wordDrawing(rid,imageNo,cx,cy),caption:showCaptions?wordParagraph(photoCaptionLine(a,nufIndex,index,photo),{size:16}):''});if(cells.length===cols){body.push(wordPhotoTable(cells,cols,showCaptions));cells=[]}}catch(e){console.error(e)}}if(cells.length)body.push(wordPhotoTable(cells,cols,showCaptions))}
  const components=activeOutputComponents();
  for(const component of components){
   if(component==='processCover'){
@@ -4268,7 +4284,7 @@ async function buildReportPDF(p){
   fieldGrid(configuredCharacterValues(a,a));
   fieldGrid(areaFieldPairs(a.qtyAreas||{}));
   if(String(a.char?.__obs||'').trim()){subheading('Observações');text(a.char.__obs,{size:10})}
-  const photoRefs=(a.photos||[]).map((photo,index)=>({photo,index,code:photoCodeForReport(a,0,index)+(photo.caption?' — '+photo.caption:'')}));
+  const photoRefs=(a.photos||[]).map((photo,index)=>({photo,index,code:photoCaptionLine(a,0,index,photo)}));
   if(photoRefs.length){ensureSpace(10);subheading('Imagens');await photoGrid(photoRefs,validReportCols(sheetCols.value),true)}
  }
  const components=activeOutputComponents();
