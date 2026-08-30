@@ -1165,7 +1165,7 @@ const {
 }=Object.fromEntries(Array.from(document.querySelectorAll('[id]'),el=>[el.id,el]));
 const cfgAnalystText=document.getElementById('cfgAnalystText');
 
-const APP_VERSION='2.9.2',DATA_SCHEMA_VERSION=3,KEY='ativa_v2_db';
+const APP_VERSION='2.9.3',DATA_SCHEMA_VERSION=3,KEY='ativa_v2_db';
 const CONSTRUCTION_RULES_KEY='ativa_construction_rules_v2';
 const CONSTRUCTION_RULES_DEFAULT=`Todas as fotografias ficam centradas na respetiva célula.
 As fotografias são numeradas pelo índice do Ativo dentro do núcleo e pelo número sequencial: 005_1_IMG_01.
@@ -2147,7 +2147,7 @@ const APP_TABLE_DEFAULTS={
  services:['Ava - Avaliação','Idv - Ideia do Valor','Ins - Inspeção','Lev - Levantamento','Per - Peritagem'],
  purposes:[],
  valueBases:['Valor de mercado','Valor Especial','Valor de Hipoteca','Valor de Expropriação'],
- processStatuses:[],
+ processStatuses:['ON','STBY','END','ANL'],
  offices:[{id:'office_ptv',name:'Ptv — Peritava',extra:'peritava@gmail.com · Peritos avaliadores'},{id:'office_prf',name:'Prf — Proficis',extra:'proficis.peritos@gmail.com · Engenheiros * Peritos avaliadores'},{id:'office_pfk',name:'PFK — Pedro Fonseca',extra:'pedrofonseka@gmail.com · Peritagens'}],
  assetTypes:[
   {id:'type_casa',name:'Casa',group:'EDC'},{id:'type_apartamento',name:'Apartamento',group:'EDC'},
@@ -2189,10 +2189,16 @@ let appTables=loadAppTables();
 // Canonical values introduced in 2.0.1. Existing user additions are preserved.
 const REQUIRED_DESTINATIONS=['Habitação','Comércio','Serviços','Indústria','Café','Aviário','Estaleiro','Armazém','Arrumos','Garagem','Desporto'];
 const REQUIRED_VALUE_BASES=['Valor de mercado','Valor Especial','Valor de Hipoteca','Valor de Expropriação'];
+// Sem estes valores, o campo "Estado do Processo" (variável configurável com tipo
+// select ligado a esta tabela) não tinha opções e caía para uma caixa de texto
+// livre — deixando escrever qualquer coisa num campo que o dashboard e os
+// relatórios comparam sempre contra estes 4 códigos exatos.
+const REQUIRED_PROCESS_STATUSES=['ON','STBY','END','ANL'];
 const REQUIRED_ASSET_TYPES=APP_TABLE_DEFAULTS.assetTypes;
 function mergeCanonicalValues(current,required){const out=Array.isArray(current)?[...current]:[];required.forEach(value=>{if(!out.some(item=>String(item).localeCompare(value,'pt',{sensitivity:'base'})===0))out.push(value)});return normalizeGeneralTable(out)}
 appTables.destinations=mergeCanonicalValues(appTables.destinations,REQUIRED_DESTINATIONS);
 appTables.valueBases=mergeCanonicalValues(appTables.valueBases,REQUIRED_VALUE_BASES);
+appTables.processStatuses=mergeCanonicalValues(appTables.processStatuses,REQUIRED_PROCESS_STATUSES);
 REQUIRED_ASSET_TYPES.forEach(required=>{const existing=(appTables.assetTypes||[]).find(item=>String(item.name||'').localeCompare(required.name,'pt',{sensitivity:'base'})===0);if(existing){existing.name=required.name;existing.group=required.group}else appTables.assetTypes.push({...required})});
 sortAssetTypes(appTables.assetTypes);
 
@@ -3066,6 +3072,14 @@ function syncPendingData(notifyCode=false){
  clearTimeout(saveTimer);saveTimer=null;
  const visibleSection=document.querySelector('main section.show')?.id||'';
  const p=proc();
+ // Só há uma gravação por fazer (a "flush" de uma escrita adiada por saveSoon())
+ // quando existe mesmo um ecrã de edição ativo. Chamar save() sempre, mesmo sem
+ // nada para gravar, é o que já causou perda real de dados: esta função corre em
+ // todo o evento pagehide/visibilitychange (troca de app, recarregar a página),
+ // e nesses momentos o "db" em memória pode ainda não refletir o estado mais
+ // recente gravado — gravar às cegas nessa janela substitui dados bons por um
+ // instantâneo desatualizado ou vazio.
+ let touched=false;
  if(p&&visibleSection==='dados'){
    syncDynamicProcessToBacking();
    Object.assign(p,{
@@ -3074,10 +3088,12 @@ function syncPendingData(notifyCode=false){
      status:dStatus.value,inputDate:dInputDate.value,deadline:dDeadline.value,obs:dObs.value
    });
    markProcessStarted(p);
+   touched=true;
  }
- if(p&&visibleSection==='ativos'&&editingAsset&&!assetEditor.classList.contains('hidden'))persistExistingAsset();
- if(p&&visibleSection==='caracterizar'&&!characterEditor.classList.contains('hidden'))persistCharacter();
- save();updateContext();
+ if(p&&visibleSection==='ativos'&&editingAsset&&!assetEditor.classList.contains('hidden')){persistExistingAsset();touched=true}
+ if(p&&visibleSection==='caracterizar'&&!characterEditor.classList.contains('hidden')){persistCharacter();touched=true}
+ if(touched)save();
+ updateContext();
  return p;
 }
 dynamicFields.addEventListener('change',persistCharacter);
@@ -5720,6 +5736,14 @@ async function checkDBFallbackRecovery(){
    if(!fb||!fb.data||!Array.isArray(fb.data.processes))return;
    let localSavedAt='';try{localSavedAt=localStorage.getItem(KEY+'_savedAt')||''}catch(e){}
    const localEmpty=!Array.isArray(db.processes)||!db.processes.length;
+   const fallbackEmpty=!fb.data.processes.length;
+   // A cópia de recurso só deve substituir o que está em localStorage quando é
+   // realmente uma recuperação de dados perdidos — nunca ao contrário. Uma cópia
+   // de recurso vazia (ex.: gravada num arranque limpo, sem Processos, de uma
+   // cópia diferente do ficheiro) nunca pode apagar Processos que já existem
+   // localmente, mesmo que o seu carimbo de tempo seja "mais recente": isso já
+   // causou perda real de dados no passado.
+   if(fallbackEmpty&&!localEmpty)return;
    const fallbackNewer=!localSavedAt||fb.savedAt>=localSavedAt;
    if(!fallbackNewer)return;
    if(fb.config)applyPrimaryConfigSnapshot(fb.config);
