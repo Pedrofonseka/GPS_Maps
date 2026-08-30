@@ -649,7 +649,7 @@ const {
 }=Object.fromEntries(Array.from(document.querySelectorAll('[id]'),el=>[el.id,el]));
 const cfgAnalystText=document.getElementById('cfgAnalystText');
 
-const APP_VERSION='2.0.9-C',DATA_SCHEMA_VERSION=2,KEY='ativa_v2_db';
+const APP_VERSION='2.1.0',DATA_SCHEMA_VERSION=2,KEY='ativa_v2_db';
 const CONSTRUCTION_RULES_KEY='ativa_construction_rules_v2';
 const CONSTRUCTION_RULES_DEFAULT=`Todas as fotografias ficam centradas na respetiva célula.
 As fotografias são numeradas pelo índice do Ativo dentro do núcleo e pelo número sequencial: 005_1_IMG_01.
@@ -1777,7 +1777,7 @@ backupAll.onclick=async()=>{
  syncPendingData();
  backupAll.disabled=true;backupInfo.textContent='A preparar o Backup_OUT…';
  const payload={
-   app:'Ativa',
+   app:'AVA_Input',
    version:APP_VERSION,
    schemaVersion:DATA_SCHEMA_VERSION,
    exportedAt:new Date().toISOString(),
@@ -2263,7 +2263,7 @@ async function photoListAllKeys(){
 // na estrutura antiga do NUF, e se os ficheiros das fotografias continuam
 // fisicamente na base de dados do aparelho mesmo que a app não os mostre.
 async function runDataDiagnostics(){
- const lines=['=== Diagnóstico Ativa '+APP_VERSION+' ==='];
+ const lines=['=== Diagnóstico AVA_Input '+APP_VERSION+' ==='];
  lines.push('lightBoot ainda ativo (migração por concluir): '+(lightBoot?'SIM':'não'));
  lines.push('Erros de migração registados: '+(migrationErrors.length?migrationErrors.length:'nenhum'));
  migrationErrors.forEach(m=>lines.push('  - '+m));
@@ -2756,7 +2756,7 @@ function pageFieldValue(field,p){
 }
 
  if(field==='processOutModel')return [p?.code,p?._outModelName||'Relatório'].filter(Boolean).join(' · ');
- if(field==='releaseAnalyst')return ['Ativa '+APP_VERSION,pageSettings.analystText||''].filter(Boolean).join(' * ');
+ if(field==='releaseAnalyst')return ['AVA_Input '+APP_VERSION,pageSettings.analystText||''].filter(Boolean).join(' * ');
 if(field==='processCode')return p?.code||'';if(field==='processName')return p?.name||'';if(field==='processRef')return p?.ref||'';if(field==='processCodeName')return [p?.code,p?.name].filter(Boolean).join(' — ');if(field==='service')return serviceDesignation(p?.service);if(field==='purpose')return p?.purpose||'';if(field==='requester')return p?.requester||'';if(field==='date')return new Date().toLocaleDateString('pt-PT');return field==='page'?'__PAGE__':''}
 function markerText(template,p,doc='Relatório',pageNo='',totalPages=''){
  const analyst=pageSettings.footerAnalystVersion!==false?(pageSettings.analystText||''):'';
@@ -2766,7 +2766,7 @@ function markerText(template,p,doc='Relatório',pageNo='',totalPages=''){
   .replace(/\{ativo\}/gi,'')
   .replace(/\{nuf\}/gi,'')
   .replace(/\{analista\}/gi,analyst)
-  .replace(/\{versao\}/gi,'Ativa '+APP_VERSION)
+  .replace(/\{versao\}/gi,'AVA_Input '+APP_VERSION)
   .replace(/\{versaoRelatorio\}/gi,'')
   .replace(/\{paginas\}/gi,String(totalPages||''))
   .replace(/\{pagina\}/gi,String(pageNo||''));
@@ -2799,7 +2799,7 @@ function outFieldValue(field,p,pageNo,totalPages){
  if(field==='deadline')return p?.deadline||'';
  if(field==='local')return (p?.assets||[]).map(a=>a.local).find(Boolean)||'';
  if(field==='analyst')return pageSettings.analystText||'';
- if(field==='appVersion')return 'Ativa '+APP_VERSION;
+ if(field==='appVersion')return 'AVA_Input '+APP_VERSION;
  if(field==='page')return pageNo&&totalPages?pageNo+'/'+totalPages:'';
  return '';
 }
@@ -2888,7 +2888,7 @@ function printBandHTML(kind,p,doc='Relatório',pageNo='',totalPages='',modelId='
  const fit=footerSizeAdjusted();
  const outModelName=footerOutModelName(modelId,doc,totalPages);
  const left=[p?.code||'',outModelName].filter(Boolean).join(' · ');
- const center=['Ativa '+APP_VERSION,pageSettings.analystText||''].filter(Boolean).join(' * ');
+ const center=['AVA_Input '+APP_VERSION,pageSettings.analystText||''].filter(Boolean).join(' * ');
  const right=(pageNo&&totalPages)?String(pageNo)+'/'+String(totalPages):'';
  return `<div class="document-footer-shell" data-footer-warn="${fit.warn?'1':'0'}"><div class="document-footer-office-extra" style="font-size:${Math.max(5,fit.size-0.5)}pt">${esc(officeExtra)}</div><div class="document-band document-footer" style="font-size:${fit.size}pt"><span>${esc(left)}</span><span>${esc(center)}</span><span>${esc(right)}</span></div></div>`;
 }
@@ -4102,10 +4102,10 @@ async function buildReportPDF(p){
  // Designação do Ativo no topo de página — linha divisória primeiro, depois o
  // texto (mais pequeno que um título de secção normal) por baixo dela.
  function assetHeading(str,opts={}){
+  // Não desenhar aqui uma segunda linha divisória: a banda do cabeçalho já
+  // desenha uma, na mesma posição fixa, em todas as páginas — duplicá-la
+  // aqui dava duas linhas muito próximas em vez de uma só.
   if(opts.pageBreak!==false)newPage();
-  doc.setDrawColor(...PDF_COLORS.bandLine);doc.setLineWidth(0.3);
-  doc.line(marginLeft,y,marginLeft+contentW,y);
-  y+=5;
   text(str,{bold:true,size:12,gap:4});
  }
  // Par etiqueta/valor em grelha de 2 colunas — replica .report-grid/.report-field
@@ -4250,7 +4250,7 @@ async function buildReportPDF(p){
  const headerSize=Math.max(9.5,Number(pageSettings.headerSize)||10);
  const headerExtraSize=Math.max(8,Number(pageSettings.headerExtraSize)||8.5);
  const footerFit=footerSizeAdjusted();
- const analystVersion=['Ativa '+APP_VERSION,pageSettings.footerAnalystVersion!==false?(pageSettings.analystText||''):''].filter(Boolean).join(' * ');
+ const analystVersion=['AVA_Input '+APP_VERSION,pageSettings.footerAnalystVersion!==false?(pageSettings.analystText||''):''].filter(Boolean).join(' * ');
  const pageCount=doc.internal.getNumberOfPages();
  for(let i=1;i<=pageCount;i++){
   doc.setPage(i);
@@ -4370,7 +4370,7 @@ function processDataRows(p){
 }
 async function buildProcessZIP(p,wordBlob=null){
  const encoder=new TextEncoder(),root=safeFileName(p.code||'Processo')+'_Export/',entries=[],missing=[];
- entries.push({name:root+safeFileName(p.code||'Processo')+'_Dados.json',data:encoder.encode(JSON.stringify({app:'Ativa',version:APP_VERSION,schemaVersion:DATA_SCHEMA_VERSION,exportedAt:new Date().toISOString(),process:p},null,2))});
+ entries.push({name:root+safeFileName(p.code||'Processo')+'_Dados.json',data:encoder.encode(JSON.stringify({app:'AVA_Input',version:APP_VERSION,schemaVersion:DATA_SCHEMA_VERSION,exportedAt:new Date().toISOString(),process:p},null,2))});
  entries.push({name:root+safeFileName(p.code||'Processo')+'_Resumo.txt',data:encoder.encode(processSummaryText(p))});
  entries.push({name:root+safeFileName(p.code||'Processo')+'_Cronologia.txt',data:encoder.encode(processHistoryText(p))});
  entries.push({name:root+safeFileName(p.code||'Processo')+'_Dados.xlsx',data:new Uint8Array(await buildXLSX('Ativos',processDataRows(p)).arrayBuffer())});
@@ -4497,7 +4497,7 @@ function initialiseApp(){
    const finishLightBoot=()=>{try{db=normaliseDB(db);reconcileUnclassifiedAssets();lightBoot=false;renderProcesses()}catch(e){console.error('Falha ao concluir a migração dos dados',e);alert('Ocorreu um problema ao preparar os dados guardados. Os dados não foram apagados, mas alguma informação pode não aparecer corretamente até isto ser corrigido. Por favor avise o suporte.')}};
    if(typeof requestIdleCallback==='function')requestIdleCallback(finishLightBoot,{timeout:3000});else setTimeout(finishLightBoot,1800);
  }catch(e){
-   console.error('Falha ao iniciar Ativa:',e);
+   console.error('Falha ao iniciar AVA_Input:',e);
    db=normaliseDB(db);
    try{seedNUFVariablesOnce();migrateLegacyCharacterizationKeys();migrateCaracterizacaoFields();restoreLastActiveProcess();
 renderProcesses();updateContext()}catch(inner){console.error(inner)}
