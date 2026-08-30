@@ -1165,7 +1165,7 @@ const {
 }=Object.fromEntries(Array.from(document.querySelectorAll('[id]'),el=>[el.id,el]));
 const cfgAnalystText=document.getElementById('cfgAnalystText');
 
-const APP_VERSION='2.9.3',DATA_SCHEMA_VERSION=3,KEY='ativa_v2_db';
+const APP_VERSION='2.9.4',DATA_SCHEMA_VERSION=3,KEY='ativa_v2_db';
 const CONSTRUCTION_RULES_KEY='ativa_construction_rules_v2';
 const CONSTRUCTION_RULES_DEFAULT=`Todas as fotografias ficam centradas na respetiva célula.
 As fotografias são numeradas pelo índice do Ativo dentro do núcleo e pelo número sequencial: 005_1_IMG_01.
@@ -1901,7 +1901,10 @@ function renderProcessDynamicForm(){
  const p=proc();if(!p){box.innerHTML='';return}
  const map=processBackingMap();
  // O Código do Processo é chave primária: só é introduzido no momento da criação.
- const activeVariables=processVariables.filter(v=>v.id!=='processCode'&&v.state!=='suspended'&&v.state!=='deleted');
+ // processStatus (ON/STBY/END/ANL) não é um dado a preencher pelo utilizador —
+ // é um estado de gestão do processo, comparado em código pelo dashboard e pelos
+ // relatórios; nunca deve aparecer como campo de texto/lista livre neste formulário.
+ const activeVariables=processVariables.filter(v=>v.id!=='processCode'&&v.id!=='processStatus'&&v.state!=='suspended'&&v.state!=='deleted');
  box.innerHTML=activeVariables.map((v,i)=>{
    const back=map[v.id],value=back?.value??'';
    const tableVals=processVariableTableValues(v.table);
