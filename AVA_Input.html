@@ -805,7 +805,6 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
    <label style="margin-top:6px">Número deste Ativo <small class="note">(dois Ativos com o mesmo número ficam agrupados; use isto para corrigir um número que ficou por atribuir)</small></label>
    <input id="aGroupNo" type="number" min="1" inputmode="numeric">
   </details>
-  <div><label>Status do Ativo</label><select id="aStatus"><option value="ON">ON — Ativo</option><option value="OFF">OFF — Suspenso/inativo</option></select></div>
   <label>Designação</label><input id="aName">
   <label>Endereço / Local</label><input id="aLocal">
   <div class="address-compact"><div><label>Número</label><input id="aDoorNumber" inputmode="text" autocomplete="address-line2" placeholder="12-A"></div><div><label>Piso / Andar</label><input id="aFloor" autocomplete="address-line3" placeholder="2.º Esq."></div><div><div class="label-line"><label>Código Postal</label><button class="config-link" type="button" data-config-table="postalCodes" data-config-label="Código Postal">Editar</button></div><input id="aPostalCode" list="postalCodeSuggestions" inputmode="numeric" autocomplete="postal-code" placeholder="0000-000"><datalist id="postalCodeSuggestions"></datalist></div></div>
@@ -1133,8 +1132,8 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
   </details>
   <details class="config-block">
    <summary>4 · FXresum — filtros dos Ativos</summary>
-   <p class="muted">Escolha os estados e os campos que integram a listagem identada do resumo do Processo.</p>
-   <div class="actions"><label class="pill"><input id="cfgSummaryON" type="checkbox" style="width:auto"> Incluir ON</label><label class="pill"><input id="cfgSummaryOFF" type="checkbox" style="width:auto"> Incluir OFF</label></div>
+   <p class="muted">Escolha os estados (calculados automaticamente a partir da visita e da caracterização) e os campos que integram a listagem identada do resumo do Processo.</p>
+   <div id="cfgSummaryStages" class="actions"></div>
    <div id="cfgSummaryFields" class="list" style="margin-top:8px"></div>
   </details>
   <details class="config-block">
@@ -1155,18 +1154,18 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
 // Do not depend on browsers exposing element IDs as automatic global variables.
 // Several iOS file viewers/WebViews do not provide that legacy behaviour.
 const {
- aCode,aConc,aDoorNumber,aFloor,aFreg,aGPS,aGPSInfo,aGroupNo,aGroupWith,aGroupInfo,aInspectionStatus,aKMLInfo,aLocal,aName,aObs,aPostalCode,aRef,aStatus,aVisitDate,aVisitTime,aVisitEnd,assetStatusAuto,assetVisitPeople,aVisitOther,postalCodeSuggestions,cAssetType,cAssetGroup,cCurrentUse,cDestinationChecks,
+ aCode,aConc,aDoorNumber,aFloor,aFreg,aGPS,aGPSInfo,aGroupNo,aGroupWith,aGroupInfo,aInspectionStatus,aKMLInfo,aLocal,aName,aObs,aPostalCode,aRef,aVisitDate,aVisitTime,aVisitEnd,assetStatusAuto,assetVisitPeople,aVisitOther,postalCodeSuggestions,cAssetType,cAssetGroup,cCurrentUse,cDestinationChecks,
  addProcessStakeholder,assetEditor,assetEditorTitle,assetList,autoAssetCount,autoAssetRows,autoProcessCard,autoProcessCode,autoProcessName,autoProcessRef,backCharacter,backupAll,backupInfo,lastBackupInfo,cancelAutoProcess,cancelVisit,cObs,cameraPhoto,cancelNewProcess,createAutoProcess,downloadAssetTemplate,exportVisits,visitsReport,
  adjustOrientation,cfgAddField,cfgFieldHelp,cfgFieldHelpText,cfgFields,cfgFieldsSection,cfgFooterCenter,cfgFooterLeft,cfgFooterRight,cfgFooterSize,cfgFooterAutoFit,cfgFooterDistance,cfgFooterFontSizeLegacy,cfgFooterTextLeft,cfgFooterTextCenter,cfgFooterTextRight,cfgFooterAnalystVersion,cfgGroup,cfgGroupName,cfgHeaderCenter,cfgHeaderLeft,cfgHeaderRight,cfgHeaderSize,cfgHeaderDistance,cfgHeaderGabineteSize,cfgHeaderGabineteBold,cfgHeaderTitleSize,cfgHeaderTitleBold,cfgHeaderExtraEnabled,cfgHeaderExtraText,cfgHeaderExtraSize,cfgMarginBottom,cfgMarginLeft,cfgMarginRight,cfgMarginTop,cfgOutputHelp,cfgOutputHelpText,cfgOutputValues,cfgCoverContentValues,cfgResetCoverContent,cfgOutModelSelect,cfgOutModelZones,cfgOutModelAddField,cfgOutModelInfo,cfgOutputsSection,cfgFontFamily,cfgPageInfo,cfgPageOrientation,cfgTopContext,cfgTopContextSize,cfgPageTitleMode,cfgPageTitleSize,cfgPhotoInfo,cfgPhotoMaxSide,cfgPhotoQuality,cfgPhotoTargetKB,cfgResetOutput,cfgResetPage,cfgResetPhotos,cfgRestore,cfgRotateQuality,cfgSavePage,cfgSavePhotos,cfgTable,cfgTableAdd,cfgTableGroup,cfgTableGroupBox,cfgTableNew,cfgTableNewLabel,cfgParishMunicipality,cfgParishMunicipalityBox,cfgTablesSection,cfgTableValues,cfgTableInfo,charTitle,characterEditor,characterList,characterPick,chooseFolder,closeAsset,closeConfig,coverCols,coverMinPhotos,
  configBody,configModal,configTabs,cfgPageSection,cfgPhotosSection,cfgStructureSection,dCode,dDeadline,dInputDate,dName,dOffice,dObs,dPurpose,dService,dRef,dRequestDescription,dRequester,dStatus,dValueBase,deleteAsset,deleteProcess,workflowGuide,workflowGuideTitle,workflowGuideNote,workflowBack,workflowNext,
  appVersionLabel,dashboardDeadlines,dashboardProgress,dashboardStats,dashboardStatus,downloadKML,dynamicFields,exportSummary,exportWord,exportZIP,filterProcessStatus,folderInfo,getGPS,previewGPS,aGPSPreview,groupPill,newAutoProcess,newVisit,newAsset,newProcess,
  municipalitySuggestions,newProcessCard,nextAsset,openConfig,openMap,pCode,pName,pRef,parishSuggestions,photoInfo,photoList,photos,piEmail,piName,piObs,piPhone,piReusable,piRole,previewReport,previewValidation,rejectPreview,acceptPreview,printReport,prevAsset,processList,
  processHistory,processStakeholderList,processStakeholdersCard,qABD,qABP,qAI,qAT,qDocs,qQtd,qSC,qSD,qST,restoreAll,restoreFile,saveAsset,saveAssetContinue,saveData,saveNewProcess,saveVisit,
- orientationInfo,orientationMode,orientationReview,reportPreview,requesterSuggestions,scanOrientation,searchAsset,searchCharacter,searchProcess,sheetCols,stakeholderSuggestions,vConstraints,vDate,vEnd,visitAssets,visitEditor,visitList,visitParticipants,visitsCard,vObs,vStart,vType,vWeather,weatherSuggestions,zipInfo,cfgConstructionRules,cfgSaveConstructionRules,cfgSummaryON,cfgSummaryOFF,cfgSummaryFields
+ orientationInfo,orientationMode,orientationReview,reportPreview,requesterSuggestions,scanOrientation,searchAsset,searchCharacter,searchProcess,sheetCols,stakeholderSuggestions,vConstraints,vDate,vEnd,visitAssets,visitEditor,visitList,visitParticipants,visitsCard,vObs,vStart,vType,vWeather,weatherSuggestions,zipInfo,cfgConstructionRules,cfgSaveConstructionRules,cfgSummaryStages,cfgSummaryFields
 }=Object.fromEntries(Array.from(document.querySelectorAll('[id]'),el=>[el.id,el]));
 const cfgAnalystText=document.getElementById('cfgAnalystText');
 
-const APP_VERSION='2.9.1',DATA_SCHEMA_VERSION=3,KEY='ativa_v2_db';
+const APP_VERSION='2.9.2',DATA_SCHEMA_VERSION=3,KEY='ativa_v2_db';
 const CONSTRUCTION_RULES_KEY='ativa_construction_rules_v2';
 const CONSTRUCTION_RULES_DEFAULT=`Todas as fotografias ficam centradas na respetiva célula.
 As fotografias são numeradas pelo índice do Ativo dentro do núcleo e pelo número sequencial: 005_1_IMG_01.
@@ -1411,8 +1410,7 @@ function normaliseDB(raw){
      // presas nos nufs antigos, invisíveis, embora não apagadas).
      try{
        a.id=a.id||uid();a.idAtivo=a.idAtivo||a.id;
-       a.status=a.status==='OFF'?'OFF':'ON';
-       delete a.docDesc;
+       delete a.status;delete a.docDesc;
        a.currentUse=String(a.currentUse||'');
        a.inspectionStatus=['partial','integral'].includes(a.inspectionStatus)?a.inspectionStatus:'';
        a.origin=a.origin||'legacy';
@@ -1447,7 +1445,7 @@ function normaliseDB(raw){
          const nid=uid();
          extraAssets.push({
            id:nid,idAtivo:nid,
-           ref:'',name:isGenericPartName(n.name)?(a.name||''):n.name,status:a.status,type:a.type||'',group:a.group||'',currentUse:a.currentUse||'',
+           ref:'',name:isGenericPartName(n.name)?(a.name||''):n.name,type:a.type||'',group:a.group||'',currentUse:a.currentUse||'',
            local:a.local||'',doorNumber:a.doorNumber||'',floor:a.floor||'',postalCode:a.postalCode||'',freg:a.freg||'',conc:a.conc||'',
            visitDate:a.visitDate||'',visitTime:a.visitTime||'',visitEnd:a.visitEnd||'',visitParticipantIds:Array.isArray(a.visitParticipantIds)?a.visitParticipantIds.slice():[],visitOtherPeople:a.visitOtherPeople||'',
            inspectionStatus:'',gps:a.gps||'',obs:'',origin:a.origin||'legacy',createdAt:new Date().toISOString(),
@@ -2343,6 +2341,7 @@ function markProcessStarted(p){if(p&&!p.startedAt&&processIsFed(p)){p.startedAt=
 function markAssetStarted(p,a){if(p&&a&&!a.startedAt&&assetIsFed(a)){a.startedAt=new Date().toISOString();historyAdd(p,'asset_started',(a.code||'Ativo')+' — alimentação iniciada.',a.id,a.origin||'manual');markProcessStarted(p)}}
 function inspectionLabel(value){return value==='integral'?'Observação integral':value==='partial'?'Observação parcial':'Não observado'}
 function automaticInspectionStatus(a){if(!a?.visitDate)return '';return charProgress(a).pct>=100?'integral':'partial'}
+const ASSET_STAGES=['Por visitar','Visita registada','Em caracterização','Concluído'];
 function assetOperationalStatus(a){if(!a?.visitDate)return 'Por visitar';const pct=charProgress(a).pct;if(pct>=100)return 'Concluído';if(pct>0)return 'Em caracterização';return 'Visita registada'}
 function processOperationalStage(p){
  const assets=p?.assets||[];
@@ -2784,7 +2783,7 @@ function renderAssets(){
  let p=proc();if(!p)return;let q=searchAsset.value.toLowerCase();let arr=p.assets.filter(a=>[a.code,a.ref,a.name,a.local,a.postalCode,a.group].join(' ').toLowerCase().includes(q)).slice(0,15);
  assetList.innerHTML=arr.map(a=>{
    const st=charProgress(a);
-   return `<button class="item" data-a="${a.id}" style="width:100%;text-align:left"><span class="item-main"><span class="item-title">${esc(a.code)} · ${esc(a.name||'Sem designação')}</span><br><span class="item-sub">${esc(a.ref||'')} ${esc(a.type||'')} ${esc(a.group||'')} ${esc(a.currentUse||'')} ${esc(a.local||'')} · ${esc(assetOperationalStatus(a))}${assetGPS(a)?' · GPS':''}${a.kmlGeneratedAt?' · KML':''}</span><div class="progress"><span style="width:${st.pct}%"></span></div></span><span><span class="pill">${a.status==='OFF'?'OFF':'ON'}</span><br><span class="${st.pct===100?'status-ok':'status-warn'}">${st.pct}%</span></span></button>`
+   return `<button class="item" data-a="${a.id}" style="width:100%;text-align:left"><span class="item-main"><span class="item-title">${esc(a.code)} · ${esc(a.name||'Sem designação')}</span><br><span class="item-sub">${esc(a.ref||'')} ${esc(a.type||'')} ${esc(a.group||'')} ${esc(a.currentUse||'')} ${esc(a.local||'')} · ${esc(assetOperationalStatus(a))}${assetGPS(a)?' · GPS':''}${a.kmlGeneratedAt?' · KML':''}</span><div class="progress"><span style="width:${st.pct}%"></span></div></span><span class="${st.pct===100?'status-ok':'status-warn'}">${st.pct}%</span></button>`
  }).join('')||'<div class="muted">Ainda não existem Ativos.</div>';
  document.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>openAsset(b.dataset.a))
 }
@@ -2794,7 +2793,7 @@ function persistExistingAsset(){
  let p=proc(),a=editingAsset?p?.assets.find(x=>x.id===editingAsset):assetEditor?._draft; if(!a)return;
  const previousInspection=a.inspectionStatus||'';
  Object.assign(a,{
-   ref:aRef.value.trim(),name:aName.value.trim(),status:aStatus.value||'ON',
+   ref:aRef.value.trim(),name:aName.value.trim(),
    local:aLocal.value.trim(),doorNumber:aDoorNumber.value.trim(),floor:aFloor.value.trim(),postalCode:formatPostalCode(aPostalCode.value),freg:aFreg.value.trim(),conc:aConc.value.trim(),
    visitDate:aVisitDate.value,visitTime:aVisitTime.value,visitEnd:aVisitEnd.value,visitParticipantIds:[...assetVisitPeople.querySelectorAll('[data-asset-visit-person]:checked')].map(x=>x.dataset.assetVisitPerson),visitOtherPeople:aVisitOther.value.trim(),
    gps:aGPS.value.trim(),obs:aObs.value
@@ -2804,7 +2803,7 @@ function persistExistingAsset(){
  if(editingAsset){markAssetStarted(p,a);saveSoon()}
  updateContext();
 }
-['aRef','aName','aStatus','aLocal','aDoorNumber','aFloor','aPostalCode','aFreg','aConc','aVisitTime','aVisitEnd','aVisitOther','aGPS','aObs'].forEach(id=>{
+['aRef','aName','aLocal','aDoorNumber','aFloor','aPostalCode','aFreg','aConc','aVisitTime','aVisitEnd','aVisitOther','aGPS','aObs'].forEach(id=>{
  const el=document.getElementById(id); if(!el)return;
  el.addEventListener(el.tagName==='SELECT'?'change':'blur',persistExistingAsset);
 });
@@ -2883,12 +2882,12 @@ function openAsset(id){
  if(!id)a.code=clusterCode(a.clusterNo,1,1);
  if(aGPSInfo){aGPSInfo.textContent='';aGPSInfo.classList.remove('gps-weak')}
  if(aGPSPreview)aGPSPreview.innerHTML='';
- refreshConfiguredSelects();assetEditor.classList.remove('hidden');assetEditorTitle.textContent=id?'Editar Ativo':'Novo Ativo';aCode.value=a.code;aRef.value=a.ref||'';aName.value=a.name||'';aStatus.value=a.status||'ON';aLocal.value=a.local||'';aDoorNumber.value=a.doorNumber||'';aFloor.value=a.floor||'';aPostalCode.value=formatPostalCode(a.postalCode||'');aFreg.value=a.freg||'';aConc.value=a.conc||'';aVisitDate.value=a.visitDate||'';if(document.getElementById('aVisitDateBtn'))document.getElementById('aVisitDateBtn').textContent=a.visitDate?formatDatePT(a.visitDate):'Escolher data…';aVisitTime.value=a.visitTime||'';aVisitEnd.value=a.visitEnd||'';a.visitParticipantIds=Array.isArray(a.visitParticipantIds)?a.visitParticipantIds:[];aVisitOther.value=a.visitOtherPeople||'';assetVisitPeople.innerHTML=(p.participants||[]).map(person=>`<label class="pill"><input type="checkbox" data-asset-visit-person="${person.id}" style="width:auto" ${a.visitParticipantIds.includes(person.id)?'checked':''}> ${esc([person.name,person.role].filter(Boolean).join(' — '))}</label>`).join('')||'<span class="muted">Não existem Intervenientes definidos no Processo; use o campo seguinte.</span>';assetVisitPeople.querySelectorAll('[data-asset-visit-person]').forEach(x=>x.onchange=persistExistingAsset);a.inspectionStatus=automaticInspectionStatus(a);aInspectionStatus.value=a.inspectionStatus;assetStatusAuto.textContent=assetOperationalStatus(a);aGPS.value=assetGPS(a);aObs.value=a.obs||'';
+ refreshConfiguredSelects();assetEditor.classList.remove('hidden');assetEditorTitle.textContent=id?'Editar Ativo':'Novo Ativo';aCode.value=a.code;aRef.value=a.ref||'';aName.value=a.name||'';aLocal.value=a.local||'';aDoorNumber.value=a.doorNumber||'';aFloor.value=a.floor||'';aPostalCode.value=formatPostalCode(a.postalCode||'');aFreg.value=a.freg||'';aConc.value=a.conc||'';aVisitDate.value=a.visitDate||'';if(document.getElementById('aVisitDateBtn'))document.getElementById('aVisitDateBtn').textContent=a.visitDate?formatDatePT(a.visitDate):'Escolher data…';aVisitTime.value=a.visitTime||'';aVisitEnd.value=a.visitEnd||'';a.visitParticipantIds=Array.isArray(a.visitParticipantIds)?a.visitParticipantIds:[];aVisitOther.value=a.visitOtherPeople||'';assetVisitPeople.innerHTML=(p.participants||[]).map(person=>`<label class="pill"><input type="checkbox" data-asset-visit-person="${person.id}" style="width:auto" ${a.visitParticipantIds.includes(person.id)?'checked':''}> ${esc([person.name,person.role].filter(Boolean).join(' — '))}</label>`).join('')||'<span class="muted">Não existem Intervenientes definidos no Processo; use o campo seguinte.</span>';assetVisitPeople.querySelectorAll('[data-asset-visit-person]').forEach(x=>x.onchange=persistExistingAsset);a.inspectionStatus=automaticInspectionStatus(a);aInspectionStatus.value=a.inspectionStatus;assetStatusAuto.textContent=assetOperationalStatus(a);aGPS.value=assetGPS(a);aObs.value=a.obs||'';
  renderGroupControl(p,a);
  deleteAsset.classList.toggle('hidden',!id);assetEditor._draft=a;updateContext()
  if(parseGPS(aGPS.value))showGPSPreview(aGPS.value);
 }
-function saveAssetForm(continueToRecollection=false){let p=proc(),a=assetEditor._draft,previousInspection=a.inspectionStatus||'';Object.assign(a,{ref:aRef.value.trim(),name:aName.value.trim(),status:aStatus.value||'ON',local:aLocal.value.trim(),doorNumber:aDoorNumber.value.trim(),floor:aFloor.value.trim(),postalCode:formatPostalCode(aPostalCode.value),freg:aFreg.value.trim(),conc:aConc.value.trim(),visitDate:aVisitDate.value,visitTime:aVisitTime.value,visitEnd:aVisitEnd.value,visitParticipantIds:[...assetVisitPeople.querySelectorAll('[data-asset-visit-person]:checked')].map(x=>x.dataset.assetVisitPerson),visitOtherPeople:aVisitOther.value.trim(),
+function saveAssetForm(continueToRecollection=false){let p=proc(),a=assetEditor._draft,previousInspection=a.inspectionStatus||'';Object.assign(a,{ref:aRef.value.trim(),name:aName.value.trim(),local:aLocal.value.trim(),doorNumber:aDoorNumber.value.trim(),floor:aFloor.value.trim(),postalCode:formatPostalCode(aPostalCode.value),freg:aFreg.value.trim(),conc:aConc.value.trim(),visitDate:aVisitDate.value,visitTime:aVisitTime.value,visitEnd:aVisitEnd.value,visitParticipantIds:[...assetVisitPeople.querySelectorAll('[data-asset-visit-person]:checked')].map(x=>x.dataset.assetVisitPerson),visitOtherPeople:aVisitOther.value.trim(),
  gps:aGPS.value.trim(),obs:aObs.value
  });a.inspectionStatus=automaticInspectionStatus(a);if(!editingAsset){const later=!!p.startedAt;a.id=uid();a.idAtivo=a.id;a.createdAt=new Date().toISOString();a.origin='manual';if(!Number.isFinite(a.clusterNo)||a.clusterNo<=0)a.clusterNo=nextClusterNo(p);p.assets.push(a);syncAssetCodes(p);historyAdd(p,'asset_created',(a.code||'Ativo')+(later?' — acrescentado posteriormente.':' — criado.'),a.id,'manual');if(a.inspectionStatus)historyAdd(p,'inspection_changed',(a.code||'Ativo')+' — estado inicial: '+inspectionLabel(a.inspectionStatus)+'.',a.id)}else{a.idAtivo=a.idAtivo||a.id;syncAssetCodes(p)}if(editingAsset&&previousInspection!==(a.inspectionStatus||''))historyAdd(p,'inspection_changed',(a.code||'Ativo')+' — estado alterado para: '+inspectionLabel(a.inspectionStatus)+'.',a.id);markAssetStarted(p,a);save();assetEditor.classList.add('hidden');renderAssets();if(continueToRecollection){go('caracterizar');openCharacter(a.id)}}
 saveAsset.onclick=()=>saveAssetForm(false);
@@ -2916,19 +2915,24 @@ previewGPS.onclick=()=>{const gps=parseGPS(aGPS.value);if(!gps){alert('Indique c
 openMap.onclick=async()=>{
  syncPendingData();
  const gps=parseGPS(aGPS.value);
+ // Google Maps (em vez do OpenStreetMap): a mesma URL de pesquisa aceita tanto
+ // coordenadas como texto de endereço e, ao contrário da página de resultados
+ // do OpenStreetMap, foca sempre a região certa em vez de abrir num mapa
+ // genérico da Europa.
  if(gps){
    aGPS.value=gps.text;persistExistingAsset();
-   window.open('https://www.openstreetmap.org/?mlat='+encodeURIComponent(gps.lat)+'&mlon='+encodeURIComponent(gps.lon)+'#map=18/'+encodeURIComponent(gps.lat)+'/'+encodeURIComponent(gps.lon),'_blank');
+   window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(gps.lat+','+gps.lon),'_blank');
    return;
  }
  // Sem coordenadas GPS: em vez de bloquear, usa o endereço/localidade já
- // preenchido no Ativo para abrir o mapa por pesquisa — mais fiável do que a
- // posição atual do telemóvel, que pode não coincidir com o Ativo (ex.: a
- // preencher dados no escritório, não no local).
+ // preenchido no Ativo, com o detalhe que existir (rua e número, ou só
+ // freguesia/concelho) — mais fiável do que a posição atual do telemóvel, que
+ // pode não coincidir com o Ativo (ex.: a preencher dados no escritório, não
+ // no local).
  const address=[aLocal?.value,aDoorNumber?.value,aFloor?.value,formatPostalCode(aPostalCode?.value),aFreg?.value,aConc?.value].map(v=>String(v||'').trim()).filter(Boolean).join(', ');
  if(address){
    persistExistingAsset();
-   window.open('https://www.openstreetmap.org/search?query='+encodeURIComponent(address+', Portugal'),'_blank');
+   window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(address+', Portugal'),'_blank');
    return;
  }
  // Sem GPS e sem qualquer endereço: como último recurso, tenta a posição atual
@@ -2941,7 +2945,7 @@ openMap.onclick=async()=>{
    openMap.disabled=false;openMap.textContent=originalLabel;
    if(pos){
      const lat=Number(pos.coords.latitude).toFixed(6),lon=Number(pos.coords.longitude).toFixed(6);
-     window.open('https://www.openstreetmap.org/?mlat='+encodeURIComponent(lat)+'&mlon='+encodeURIComponent(lon)+'#map=17/'+encodeURIComponent(lat)+'/'+encodeURIComponent(lon),'_blank');
+     window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(lat+','+lon),'_blank');
      alert('Sem coordenadas nem endereço registados para este Ativo — o mapa abriu na posição atual do telemóvel, como referência aproximada. Se estiver junto ao imóvel, use "Obter GPS" para gravar a localização exata.');
      return;
    }
@@ -4303,13 +4307,20 @@ cfgRestore.onclick=()=>{
 
 
 const SUMMARY_CONFIG_KEY='ativa_fxresum_config_v1';
-const SUMMARY_FIELD_DEFS={code:'Código',name:'Designação',status:'Status',ref:'ID Institucional',type:'Tipo',group:'Grupo',local:'Localização'};
-function loadSummaryConfig(){try{const saved=JSON.parse(localStorage.getItem(SUMMARY_CONFIG_KEY)||'null');if(saved)return{on:saved.on!==false,off:saved.off!==false,fields:Array.isArray(saved.fields)?saved.fields.filter(x=>SUMMARY_FIELD_DEFS[x]):['code','name','status']}}catch(e){}return{on:true,off:true,fields:['code','name','status']}}
+const SUMMARY_FIELD_DEFS={code:'Código',name:'Designação',status:'Estado',ref:'ID Institucional',type:'Tipo',group:'Grupo',local:'Localização'};
+function loadSummaryConfig(){try{const saved=JSON.parse(localStorage.getItem(SUMMARY_CONFIG_KEY)||'null');if(saved){const savedStages=saved.stages&&typeof saved.stages==='object'?saved.stages:null;const stages=Object.fromEntries(ASSET_STAGES.map(stage=>[stage,savedStages?savedStages[stage]!==false:true]));return{stages,fields:Array.isArray(saved.fields)?saved.fields.filter(x=>SUMMARY_FIELD_DEFS[x]):['code','name','status']}}}catch(e){}return{stages:Object.fromEntries(ASSET_STAGES.map(stage=>[stage,true])),fields:['code','name','status']}}
 let summaryConfig=loadSummaryConfig();
 function saveSummaryConfig(){try{localStorage.setItem(SUMMARY_CONFIG_KEY,JSON.stringify(summaryConfig))}catch(e){warnStorageFailure()}void saveConfigurationPrimary()}
-function renderSummaryConfig(){if(!cfgSummaryFields)return;cfgSummaryON.checked=summaryConfig.on;cfgSummaryOFF.checked=summaryConfig.off;cfgSummaryFields.innerHTML=Object.entries(SUMMARY_FIELD_DEFS).map(([id,label])=>`<label class="item"><span>${esc(label)}</span><input type="checkbox" data-summary-field="${id}" style="width:auto" ${summaryConfig.fields.includes(id)?'checked':''}></label>`).join('');const persist=()=>{summaryConfig.on=cfgSummaryON.checked;summaryConfig.off=cfgSummaryOFF.checked;summaryConfig.fields=[...cfgSummaryFields.querySelectorAll('[data-summary-field]:checked')].map(x=>x.dataset.summaryField);saveSummaryConfig()};cfgSummaryON.onchange=persist;cfgSummaryOFF.onchange=persist;cfgSummaryFields.querySelectorAll('[data-summary-field]').forEach(x=>x.onchange=persist)}
-function assetSummaryValue(a,field){if(field==='status')return a.status==='OFF'?'OFF':'ON';if(field==='local')return [a.local,a.doorNumber,a.floor,formatPostalCode(a.postalCode),a.freg,a.conc].filter(Boolean).join(', ');return a[field]||''}
-function assetSummaryHTML(p){const assets=selectedExportAssets(p),groups=[['ON',summaryConfig.on],['OFF',summaryConfig.off]];return `<div class="fxresum"><h3>Número de Ativos: ${assets.length}</h3>`+groups.filter(([,enabled])=>enabled).map(([status])=>{const rows=assets.filter(a=>(a.status==='OFF'?'OFF':'ON')===status);return `<div class="fxresum-group"><b>Status ${status} — ${rows.length}</b>${rows.map(a=>`<div class="fxresum-row">${summaryConfig.fields.map(field=>`<span><b>${esc(SUMMARY_FIELD_DEFS[field])}:</b> ${esc(assetSummaryValue(a,field))}</span>`).join(' · ')}</div>`).join('')||'<div class="fxresum-row">Sem Ativos.</div>'}</div>`}).join('')+'</div>'}
+function renderSummaryConfig(){
+ if(!cfgSummaryFields)return;
+ if(cfgSummaryStages)cfgSummaryStages.innerHTML=ASSET_STAGES.map(stage=>`<label class="pill"><input type="checkbox" data-summary-stage="${esc(stage)}" style="width:auto" ${summaryConfig.stages[stage]!==false?'checked':''}> ${esc(stage)}</label>`).join('');
+ cfgSummaryFields.innerHTML=Object.entries(SUMMARY_FIELD_DEFS).map(([id,label])=>`<label class="item"><span>${esc(label)}</span><input type="checkbox" data-summary-field="${id}" style="width:auto" ${summaryConfig.fields.includes(id)?'checked':''}></label>`).join('');
+ const persist=()=>{if(cfgSummaryStages)ASSET_STAGES.forEach(stage=>{summaryConfig.stages[stage]=!!cfgSummaryStages.querySelector(`[data-summary-stage="${stage.replace(/"/g,'\\"')}"]`)?.checked});summaryConfig.fields=[...cfgSummaryFields.querySelectorAll('[data-summary-field]:checked')].map(x=>x.dataset.summaryField);saveSummaryConfig()};
+ cfgSummaryStages?.querySelectorAll('[data-summary-stage]').forEach(x=>x.onchange=persist);
+ cfgSummaryFields.querySelectorAll('[data-summary-field]').forEach(x=>x.onchange=persist);
+}
+function assetSummaryValue(a,field){if(field==='status')return assetOperationalStatus(a);if(field==='local')return [a.local,a.doorNumber,a.floor,formatPostalCode(a.postalCode),a.freg,a.conc].filter(Boolean).join(', ');return a[field]||''}
+function assetSummaryHTML(p){const assets=selectedExportAssets(p);return `<div class="fxresum"><h3>Número de Ativos: ${assets.length}</h3>`+ASSET_STAGES.filter(stage=>summaryConfig.stages[stage]!==false).map(stage=>{const rows=assets.filter(a=>assetOperationalStatus(a)===stage);return `<div class="fxresum-group"><b>${esc(stage)} — ${rows.length}</b>${rows.map(a=>`<div class="fxresum-row">${summaryConfig.fields.map(field=>`<span><b>${esc(SUMMARY_FIELD_DEFS[field])}:</b> ${esc(assetSummaryValue(a,field))}</span>`).join(' · ')}</div>`).join('')||'<div class="fxresum-row">Sem Ativos.</div>'}</div>`}).join('')+'</div>'}
 const OUT_MODEL_KEY='ativa_out_models_v2';
 const OUT_MODEL_LABELS={cover:'Capa',process:'Resumo',characterization:'Caracterização',visits:'Visitas',chronology:'Cronologia'};
 const OUT_MODEL_FIELDS={
@@ -5151,7 +5162,7 @@ async function buildWordDOCX(p){
    const processCoverRefs=await collectCoverPhotoRefs(p);
    if(processCoverRefs.length)await appendWordPhotos(null,0,processCoverRefs,validReportCols(coverCols.value),false);
   }
-  if(component==='process'){body.push(wordParagraph(p.code||'Processo',{bold:true,size:36,pageBreak:body.length>0}),wordField('Designação',p.name),wordField('ID Institucional',p.ref),wordField('Solicitante',p.requester),wordField('Finalidade',p.purpose),wordField('Descrição do solicitado',p.requestDescription),wordField('Base de valor',p.valueBase),wordField('Estado',p.status),wordField('Data de entrada',p.inputDate),wordField('Prazo',p.deadline),wordParagraph('Número de Ativos: '+reportAssets.length,{bold:true,size:22}));for(const status of ['ON','OFF']){if((status==='ON'&&!summaryConfig.on)||(status==='OFF'&&!summaryConfig.off))continue;const rows=reportAssets.filter(a=>(a.status==='OFF'?'OFF':'ON')===status);body.push(wordParagraph('Status '+status+' — '+rows.length,{bold:true,size:20}));rows.forEach(a=>body.push(wordParagraph('    '+summaryConfig.fields.map(field=>SUMMARY_FIELD_DEFS[field]+': '+assetSummaryValue(a,field)).join(' · '),{size:17}))) }body.push(wordField('Observações',p.obs))}
+  if(component==='process'){body.push(wordParagraph(p.code||'Processo',{bold:true,size:36,pageBreak:body.length>0}),wordField('Designação',p.name),wordField('ID Institucional',p.ref),wordField('Solicitante',p.requester),wordField('Finalidade',p.purpose),wordField('Descrição do solicitado',p.requestDescription),wordField('Base de valor',p.valueBase),wordField('Estado',p.status),wordField('Data de entrada',p.inputDate),wordField('Prazo',p.deadline),wordParagraph('Número de Ativos: '+reportAssets.length,{bold:true,size:22}));for(const stage of ASSET_STAGES){if(summaryConfig.stages[stage]===false)continue;const rows=reportAssets.filter(a=>assetOperationalStatus(a)===stage);body.push(wordParagraph(stage+' — '+rows.length,{bold:true,size:20}));rows.forEach(a=>body.push(wordParagraph('    '+summaryConfig.fields.map(field=>SUMMARY_FIELD_DEFS[field]+': '+assetSummaryValue(a,field)).join(' · '),{size:17}))) }body.push(wordField('Observações',p.obs))}
   if(component==='cover')for(const a of reportAssets){const refs=(a.photos||[]).map((photo,index)=>({photo,index})).filter(ref=>ref.photo.cover||ref.photo.mapImage);if(!refs.length)continue;body.push(wordParagraph((a.code||'Ativo')+' — '+(a.name||'Capa'),{bold:true,size:28,pageBreak:true}));const mapRefs=refs.filter(r=>r.photo.mapImage),regularRefs=refs.filter(r=>!r.photo.mapImage);if(regularRefs.length)await appendWordPhotos(a,0,regularRefs,validReportCols(coverCols.value),false);if(mapRefs.length)await appendWordPhotos(a,0,mapRefs.slice(0,1),1,false)}
   if(component==='characterization')for(const a of reportAssets){body.push(wordParagraph((a.code||'Ativo')+' — '+(a.name||'Sem designação'),{bold:true,size:28,pageBreak:true}),wordField('ID_Institucional',a.ref),wordField('Tipo',a.type),wordField('Grupo',a.group),wordField('Destino',a.currentUse),wordField('Endereço / Local',a.local),wordField('Número',a.doorNumber),wordField('Piso / Andar',a.floor),wordField('Código Postal',formatPostalCode(a.postalCode)),wordField('Freguesia',a.freg),wordField('Concelho',a.conc),wordField('ID externo',a.externalId),wordField('Hora da visita',a.visitTime),wordField('GPS',assetGPS(a)),wordField('Observações do Ativo',a.obs));body.push(wordParagraph('Caracterização',{bold:true,size:24}));configuredCharacterValues(a,a).forEach(([key,value])=>body.push(wordField(key,value)));const q=a.qtyAreas||{};[['Documentação de referência',(q.documents||[]).join(', ')],['Quantidade',q.qtd],['Área de terreno (AT)',q.at],['Área de implantação (AI)',q.ai],['Área bruta privativa (ABP)',q.abp],['Área bruta dependente (ABD)',q.abd],['Sup. terreno (ST)',q.st],['Sup. coberta (SC)',q.sc],['Sup. descoberta (SD)',q.sd]].forEach(x=>body.push(wordField(x[0],x[1])));body.push(wordField('Observações',a.char?.__obs));await appendWordPhotos(a,0,(a.photos||[]).map((photo,index)=>({photo,index})),validReportCols(sheetCols.value),true)}
   if(component==='visits'){body.push(wordParagraph('Mapa de visitas do Processo',{bold:true,size:28,pageBreak:true}));for(const visit of (p.visits||[])){const people=(visit.participantIds||[]).map(id=>(p.participants||[]).find(person=>person.id===id)?.name).filter(Boolean).join(', '),assets=(visit.assets||[]).map(item=>item.code||p.assets.find(a=>a.id===item.assetId)?.code).filter(Boolean).join(', ');body.push(wordParagraph([visit.date,[visit.start,visit.end].filter(Boolean).join('–'),assets,people].filter(Boolean).join(' | '),{size:18}))}body.push(wordParagraph('Detalhe das visitas',{bold:true,size:24}));for(const visit of (p.visits||[])){body.push(wordParagraph((visit.type||'Visita')+' · '+(visit.date||'Sem data'),{bold:true,size:22}),wordField('Hora',[visit.start,visit.end].filter(Boolean).join('–')),wordField('Estado do tempo',visit.weather),wordField('Intervenientes',(visit.participantIds||[]).map(id=>(p.participants||[]).find(person=>person.id===id)?.name).filter(Boolean).join(', ')),wordField('Ativos observados',(visit.assets||[]).map(item=>item.code||p.assets.find(a=>a.id===item.assetId)?.code).filter(Boolean).join(', ')),wordField('Condicionamentos',visit.constraints),wordField('Observações',visit.obs))}}
@@ -5366,10 +5377,10 @@ async function buildReportPDF(p){
    heading(p.code||'Processo',{pageBreak:false,size:20});
    fieldGrid([['Designação',p.name],['ID Institucional',p.ref],['Solicitante',p.requester],['Finalidade',p.purpose],['Descrição do solicitado',p.requestDescription],['Base de valor',p.valueBase],['Estado',p.status],['Data de entrada',p.inputDate],['Prazo',p.deadline]]);
    text('Número de Ativos: '+reportAssets.length,{bold:true,size:12,gap:3});
-   for(const status of ['ON','OFF']){
-    if((status==='ON'&&!summaryConfig.on)||(status==='OFF'&&!summaryConfig.off))continue;
-    const rows=reportAssets.filter(a=>(a.status==='OFF'?'OFF':'ON')===status);
-    text('Status '+status+' — '+rows.length,{bold:true,size:11,gap:2});
+   for(const stage of ASSET_STAGES){
+    if(summaryConfig.stages[stage]===false)continue;
+    const rows=reportAssets.filter(a=>assetOperationalStatus(a)===stage);
+    text(stage+' — '+rows.length,{bold:true,size:11,gap:2});
     rows.forEach(a=>text('  '+summaryConfig.fields.map(field2=>SUMMARY_FIELD_DEFS[field2]+': '+assetSummaryValue(a,field2)).join(' · '),{size:9,gap:1,color:PDF_COLORS.muted}));
    }
    if(String(p.obs||'').trim()){subheading('Observações');text(p.obs,{size:10})}
