@@ -4039,6 +4039,11 @@ async function buildReportPDF(p){
  pageSettings=loadPageSettings();
  const landscape=pageSettings.orientation==='landscape';
  const doc=new jsPDF({unit:'mm',format:'a4',orientation:landscape?'landscape':'portrait'});
+ // jsPDF só tem 3 famílias base embutidas (helvetica/times/courier) — mapeia-se
+ // a fonte já escolhida em Config. Página (usada pela pré-visualização) para a
+ // mais próxima, em vez de ignorar a escolha e usar sempre a fonte por omissão.
+ const PDF_FONT_MAP={arial:'helvetica',helvetica:'helvetica',verdana:'helvetica',tahoma:'helvetica',trebuchet:'helvetica',segoe:'helvetica',system:'helvetica',times:'times',georgia:'times',courier:'courier'};
+ const pdfFont=PDF_FONT_MAP[pageSettings.fontFamily]||'helvetica';
  const pageW=doc.internal.pageSize.getWidth(),pageH=doc.internal.pageSize.getHeight();
  const marginTop=Number(pageSettings.top)||15,marginRight=Number(pageSettings.right)||15,marginBottom=Number(pageSettings.bottom)||15,marginLeft=Number(pageSettings.left)||15;
  const contentW=pageW-marginLeft-marginRight;
@@ -4079,7 +4084,7 @@ async function buildReportPDF(p){
  function ink(){doc.setTextColor(...PDF_COLORS.ink)}
  function text(str,opts={}){
   const value=String(str??'');if(!value.trim())return;
-  doc.setFont(undefined,opts.bold?'bold':'normal');doc.setFontSize(opts.size||10);
+  doc.setFont(pdfFont,opts.bold?'bold':'normal');doc.setFontSize(opts.size||10);
   doc.setTextColor(...(opts.color||PDF_COLORS.ink));
   const lines=doc.splitTextToSize(value,opts.width||contentW),lineH=(opts.size||10)*0.42;
   ensureSpace(lines.length*lineH+2);
@@ -4116,18 +4121,18 @@ async function buildReportPDF(p){
   const gap=6,colW=(contentW-gap)/2;
   for(let i=0;i<visible.length;i+=2){
    const row=visible.slice(i,i+2);
-   doc.setFont(undefined,'normal');doc.setFontSize(9.5);
+   doc.setFont(pdfFont,'normal');doc.setFontSize(9.5);
    const valueLines=row.map(([,v])=>doc.splitTextToSize(String(v),colW));
    const rowH=Math.max(...valueLines.map(lines=>4+lines.length*3.7))+2;
    ensureSpace(rowH);
    row.forEach(([label,],idx)=>{
     const x=marginLeft+idx*(colW+gap);
-    doc.setFont(undefined,'normal');doc.setFontSize(7.3);doc.setTextColor(...PDF_COLORS.muted);
+    doc.setFont(pdfFont,'normal');doc.setFontSize(7.3);doc.setTextColor(...PDF_COLORS.muted);
     doc.text(String(label).toUpperCase(),x,y);
    });
    row.forEach((pair,idx)=>{
     const x=marginLeft+idx*(colW+gap);
-    doc.setFont(undefined,'normal');doc.setFontSize(9.5);doc.setTextColor(...PDF_COLORS.ink);
+    doc.setFont(pdfFont,'normal');doc.setFontSize(9.5);doc.setTextColor(...PDF_COLORS.ink);
     doc.text(valueLines[idx],x,y+4);
     doc.setDrawColor(...PDF_COLORS.line);doc.setLineWidth(0.15);
     doc.line(x,y+rowH-1.5,x+colW,y+rowH-1.5);
@@ -4165,7 +4170,7 @@ async function buildReportPDF(p){
    doc.setDrawColor(...PDF_COLORS.photoBorder);doc.setLineWidth(0.2);doc.rect(x,rowStartY,cellW,imgH);
    rowMaxH=Math.max(rowMaxH,imgH);
    if(showCaptions){
-    doc.setFont(undefined,'normal');doc.setFontSize(7.5);doc.setTextColor(...PDF_COLORS.muted);
+    doc.setFont(pdfFont,'normal');doc.setFontSize(7.5);doc.setTextColor(...PDF_COLORS.muted);
     const capLines=doc.splitTextToSize(ref.code,cellW);
     doc.text(capLines,x,rowStartY+imgH+3);
     rowMaxH=Math.max(rowMaxH,imgH+3+capLines.length*3);
@@ -4178,7 +4183,19 @@ async function buildReportPDF(p){
  }
  const assetFieldPairs=a=>[['ID_Institucional',a.ref],['Tipo',a.type],['Grupo',a.group],['Destino',a.currentUse],['Endereço / Local',a.local],['Número',a.doorNumber],['Piso / Andar',a.floor],['Código Postal',formatPostalCode(a.postalCode)],['Freguesia',a.freg],['Concelho',a.conc],['Hora da visita',a.visitTime],['GPS',assetGPS(a)]];
  const areaFieldPairs=q=>[['Documentação de referência',(q.documents||[]).join(', ')],['Quantidade',q.qtd],['Área de terreno (AT)',q.at],['Área de implantação (AI)',q.ai],['Área bruta privativa (ABP)',q.abp],['Área bruta dependente (ABD)',q.abd],['Sup. terreno (ST)',q.st],['Sup. coberta (SC)',q.sc],['Sup. descoberta (SD)',q.sd]];
+ async function renderAssetCharacterizationBody(a){
+  fieldGrid(assetFieldPairs(a));
+  if(String(a.obs||'').trim()){subheading('Observações do Ativo');text(a.obs,{size:10})}
+  subheading('Caracterização');
+  fieldGrid(configuredCharacterValues(a,a));
+  fieldGrid(areaFieldPairs(a.qtyAreas||{}));
+  if(String(a.char?.__obs||'').trim()){subheading('Observações');text(a.char.__obs,{size:10})}
+  const photoRefs=(a.photos||[]).map((photo,index)=>({photo,index,code:photoCodeForReport(a,0,index)+(photo.caption?' — '+photo.caption:'')}));
+  if(photoRefs.length){ensureSpace(10);subheading('Imagens');await photoGrid(photoRefs,validReportCols(sheetCols.value),true)}
+ }
  const components=activeOutputComponents();
+ const hasCover=components.includes('cover'),hasChar=components.includes('characterization');
+ let coverCharDone=false;
  for(const component of components){
   currentComponent=component;
   if(component==='process'){
@@ -4195,25 +4212,45 @@ async function buildReportPDF(p){
    }
    if(String(p.obs||'').trim()){subheading('Observações');text(p.obs,{size:10})}
   }
-  if(component==='cover')for(const a of reportAssets){
+  // Quando Capa e Caracterização estão ambas ativas, a Capa serve de separador
+  // entre Ativos: por cada Ativo sai sempre a Capa (se tiver fotos de capa)
+  // imediatamente seguida da sua Caracterização — nunca todas as Capas
+  // primeiro e as Caracterizações depois.
+  if((component==='cover'||component==='characterization')&&hasCover&&hasChar){
+   if(coverCharDone)continue;
+   coverCharDone=true;
+   let firstAssetBlock=true;
+   for(const a of reportAssets){
+    const coverRefs=(a.photos||[]).map((photo,index)=>({photo,index,code:photoCodeForReport(a,0,index)})).filter(r=>r.photo.cover);
+    if(coverRefs.length){
+     currentComponent='cover';
+     assetHeading((a.code||'Ativo')+' — '+(a.name||'Sem designação'),{pageBreak:!firstAssetBlock});
+     firstAssetBlock=false;
+     subheading('Capa');
+     await photoGrid(coverRefs,validReportCols(coverCols.value),false);
+    }
+    currentComponent='characterization';
+    assetHeading((a.code||'Ativo')+' — '+(a.name||'Sem designação'),{pageBreak:!firstAssetBlock});
+    firstAssetBlock=false;
+    await renderAssetCharacterizationBody(a);
+   }
+   continue;
+  }
+  if(component==='cover'&&!hasChar)for(const a of reportAssets){
    const refs=(a.photos||[]).map((photo,index)=>({photo,index,code:photoCodeForReport(a,0,index)})).filter(r=>r.photo.cover);
    if(!refs.length)continue;
-   assetHeading((a.code||'Ativo')+' — '+(a.name||'Capa'));
+   assetHeading((a.code||'Ativo')+' — '+(a.name||'Sem designação'));
+   subheading('Capa');
    await photoGrid(refs,validReportCols(coverCols.value),false);
   }
-  if(component==='characterization'&&reportAssets.length){newPage();pageTitle('Caracterização')}
-  let firstCharAsset=true;
-  if(component==='characterization')for(const a of reportAssets){
-   assetHeading((a.code||'Ativo')+' — '+(a.name||'Sem designação'),{pageBreak:!firstCharAsset});
-   firstCharAsset=false;
-   fieldGrid(assetFieldPairs(a));
-   if(String(a.obs||'').trim()){subheading('Observações do Ativo');text(a.obs,{size:10})}
-   subheading('Caracterização');
-   fieldGrid(configuredCharacterValues(a,a));
-   fieldGrid(areaFieldPairs(a.qtyAreas||{}));
-   if(String(a.char?.__obs||'').trim()){subheading('Observações');text(a.char.__obs,{size:10})}
-   const photoRefs=(a.photos||[]).map((photo,index)=>({photo,index,code:photoCodeForReport(a,0,index)+(photo.caption?' — '+photo.caption:'')}));
-   if(photoRefs.length){ensureSpace(10);subheading('Imagens');await photoGrid(photoRefs,validReportCols(sheetCols.value),true)}
+  if(component==='characterization'&&!hasCover){
+   if(reportAssets.length){newPage();pageTitle('Caracterização')}
+   let firstCharAsset=true;
+   for(const a of reportAssets){
+    assetHeading((a.code||'Ativo')+' — '+(a.name||'Sem designação'),{pageBreak:!firstCharAsset});
+    firstCharAsset=false;
+    await renderAssetCharacterizationBody(a);
+   }
   }
   if(component==='visits'){
    newPage();pageTitle('Visitas');
@@ -4254,7 +4291,7 @@ async function buildReportPDF(p){
  const pageCount=doc.internal.getNumberOfPages();
  for(let i=1;i<=pageCount;i++){
   doc.setPage(i);
-  doc.setFont(undefined,'normal');doc.setFontSize(headerSize);doc.setTextColor(...PDF_COLORS.band);
+  doc.setFont(pdfFont,'normal');doc.setFontSize(headerSize);doc.setTextColor(...PDF_COLORS.band);
   if(headerLeftVal)doc.text(headerLeftVal,marginLeft,headerTopY,{align:'left'});
   if(headerCenterVal)doc.text(headerCenterVal,pageW/2,headerTopY,{align:'center'});
   if(headerRightVal)doc.text(headerRightVal,pageW-marginRight,headerTopY,{align:'right'});
@@ -4265,7 +4302,7 @@ async function buildReportPDF(p){
   const footerLeftVal=[p.code||'',outModelName].filter(Boolean).join(' · ');
   const footerRightVal=String(i)+' / '+pageCount;
   doc.line(marginLeft,footerLineY,pageW-marginRight,footerLineY);
-  doc.setFont(undefined,'normal');doc.setFontSize(footerFit.size);doc.setTextColor(...PDF_COLORS.band);
+  doc.setFont(pdfFont,'normal');doc.setFontSize(footerFit.size);doc.setTextColor(...PDF_COLORS.band);
   doc.text(footerLeftVal,marginLeft,footerTextY,{align:'left'});
   if(analystVersion)doc.text(analystVersion,pageW/2,footerTextY,{align:'center'});
   doc.text(footerRightVal,pageW-marginRight,footerTextY,{align:'right'});
