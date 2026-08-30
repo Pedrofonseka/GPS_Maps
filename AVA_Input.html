@@ -457,6 +457,10 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
 .list{display:grid;gap:6px}.item{background:white;border:1px solid var(--line);border-radius:9px;padding:9px;display:flex;justify-content:space-between;gap:8px;align-items:center;transition:background .6s ease}.process-active{background:#e9f7ee!important;border-color:#8fc7a1!important}.cfg-row-flash{background:#fff4bd!important}
 .item-main{min-width:0;max-width:100%;overflow:hidden}.item-title{font-weight:800;font-size:14px}.item-sub{display:inline-block;max-width:100%;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .search{margin-bottom:8px}.muted{color:var(--muted);font-size:12px}.pill{display:inline-block;padding:3px 7px;border-radius:999px;background:#eef0f3;font-size:11px}
+.alerts-bar{display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px}.alert-badge{background:#fff4e5;border:1px solid #f0c36d;color:#7a4a00;border-radius:14px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer}
+.alert-banner{padding:10px;border-radius:8px;font-size:13px;margin:8px 12px}
+.alert-banner-danger{background:#fdecea;border:2px solid #e53935;color:#7a1a1a;font-weight:600}
+.alert-banner-warn{background:#fff4e5;border:1px solid #f0c36d;color:#7a4a00}
 .tabs{display:flex;gap:5px;margin-bottom:8px}.tabs button{flex:1;padding:8px;border:1px solid var(--line);background:white;border-radius:8px}.tabs .on{background:#fff4bd;border-color:#c8a52f}
 #cfgGroupViewBlockTabs{flex-wrap:wrap}#cfgGroupViewBlockTabs button{flex:0 1 auto}
 .group-pills{display:flex;flex-wrap:wrap;gap:3px;max-width:220px}
@@ -666,6 +670,10 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
  </nav>
 </header>
 <div id="photoViewer" class="photo-viewer hidden" role="dialog" aria-modal="true" aria-label="Visualização da fotografia"></div>
+<div id="alertsBar" class="alerts-bar hidden"></div>
+<div id="fileNameWarning" class="alert-banner alert-banner-danger hidden">⚠️ NÃO mude o nome nem o local deste ficheiro. Se o fizer (ou se abrir uma cópia descarregada de novo), o iPhone/iPad/PC trata-o como um ficheiro diferente e perde o acesso à base de dados já guardada aqui (os dados não se apagam, mas ficam presos na cópia anterior).</div>
+<div id="persistenceWarning" class="alert-banner alert-banner-warn hidden"><b>Persistência:</b> use sempre este mesmo ficheiro, no mesmo local/pasta, para continuar um Processo já iniciado. No iPhone, cada ficheiro (mesmo com o mesmo nome, se estiver noutro sítio, ou se for uma cópia nova recebida) é tratado como um armazenamento totalmente separado — abrir uma versão nova sem substituir esta cópia no mesmo local prende o acesso aos dados já gravados aqui. <b>Antes de substituir por uma versão nova, faça sempre Backup_OUT e, a seguir a abrir a nova versão, Backup_IN.</b></div>
+<div id="freshStateWarning" class="alert-banner alert-banner-warn hidden"><b>⚠ Este ficheiro parece não ter Processos guardados</b>, mas há sinais de que já foi usado antes neste aparelho. Se esperava encontrar dados de uma sessão anterior, provavelmente ficaram presos noutra cópia do ficheiro. Use Backup_IN com o ZIP de cópia de segurança dessa cópia anterior, se o tiver guardado.</div>
 
 <main>
 <div id="workflowGuide" class="card workflow-guide"><div><div id="workflowGuideTitle" class="workflow-guide-title">1 · Processos</div><div id="workflowGuideNote" class="workflow-guide-note">Escolha um Processo existente ou crie um novo.</div></div><div class="workflow-guide-actions"><button id="workflowBack" class="btn" type="button">← Voltar</button><button id="workflowNext" class="btn primary" type="button">Continuar →</button></div></div>
@@ -1158,7 +1166,7 @@ const {
 }=Object.fromEntries(Array.from(document.querySelectorAll('[id]'),el=>[el.id,el]));
 const cfgAnalystText=document.getElementById('cfgAnalystText');
 
-const APP_VERSION='2.8.5',DATA_SCHEMA_VERSION=3,KEY='ativa_v2_db';
+const APP_VERSION='2.9.0',DATA_SCHEMA_VERSION=3,KEY='ativa_v2_db';
 const CONSTRUCTION_RULES_KEY='ativa_construction_rules_v2';
 const CONSTRUCTION_RULES_DEFAULT=`Todas as fotografias ficam centradas na respetiva célula.
 As fotografias são numeradas pelo índice do Ativo dentro do núcleo e pelo número sequencial: 005_1_IMG_01.
@@ -1493,6 +1501,40 @@ const SESSION_DIAG_KEY='ativa_session_diagnostic_v1';
 function storageIssueGuidance(){
  if(location.protocol==='file:')return 'Isto costuma acontecer quando o ficheiro é aberto a partir da pré-visualização da app Ficheiros, que restringe a gravação — normalmente NÃO é falta de espaço no aparelho. Toque no ícone de partilha e escolha "Abrir no Safari" (ou: toque sem soltar no ficheiro → Partilhar → Safari); depois, em Safari, use Partilhar → Adicionar ao Ecrã Principal para evitar repetir isto.';
  return 'Verifique o espaço de armazenamento disponível para este site (Definições do navegador → Privacidade/Dados de sites); pode também acontecer em navegação privada.';
+}
+// Avisos permanentes sobre o maior risco de perda aparente de dados nesta app: o
+// ficheiro ser aberto a partir de um local/nome diferente, o que no iPhone cria um
+// armazenamento novo e "prende" os dados antigos na cópia anterior (não os apaga,
+// mas ficam inacessíveis a partir daqui). Mostrados como badges discretos que se
+// expandem ao toque, para não ocupar espaço permanente no ecrã.
+function addAlertBadge(key,label,detailId){
+ const bar=document.getElementById('alertsBar');if(!bar)return;
+ bar.classList.remove('hidden');
+ let btn=document.getElementById('alertBadge_'+key);
+ if(!btn){
+   btn=document.createElement('button');
+   btn.type='button';btn.className='alert-badge';btn.id='alertBadge_'+key;
+   btn.onclick=()=>{const d=document.getElementById(detailId);if(d)d.classList.toggle('hidden')};
+   bar.appendChild(btn);
+ }
+ btn.textContent=label;
+}
+function removeAlertBadge(key){
+ const btn=document.getElementById('alertBadge_'+key);
+ if(btn)btn.remove();
+ const bar=document.getElementById('alertsBar');
+ if(bar&&!bar.children.length)bar.classList.add('hidden');
+}
+async function showPersistenceWarnings(auditLogBeforeThisBoot=0){
+ addAlertBadge('filename','⚠ Nome/local do ficheiro','fileNameWarning');
+ addAlertBadge('persistence','ℹ Persistência','persistenceWarning');
+ try{
+   if(!(db.processes||[]).length){
+     const keys=await photoListAllKeys();
+     const hadPriorSession=(keys&&keys.length>0)||auditLogBeforeThisBoot>0;
+     if(hadPriorSession)addAlertBadge('fresh','⚠ Ficheiro sem Processos','freshStateWarning');
+   }
+ }catch(e){}
 }
 // Como save() nunca espera por saveDBFallback (é sempre "dispara e esquece",
 // para não bloquear a interface), chamadas próximas no tempo — ex.: o ciclo
@@ -5658,6 +5700,10 @@ async function checkDBFallbackRecovery(){
 async function initialiseApp(){
  document.title='AVA_Input '+APP_VERSION;
  if(appVersionLabel)appVersionLabel.textContent=APP_VERSION;
+ // Capturado antes de este arranque registar a sua própria entrada — caso contrário
+ // o aviso de "ficheiro sem Processos" via-se sempre a si próprio como sinal de uma
+ // sessão anterior, mesmo num ficheiro nunca antes usado.
+ const auditLogBeforeThisBoot=loadAuditLog().length;
  auditLog('boot_start','v='+APP_VERSION+' | raw='+auditPhotoSnapshot(db));
  try{
    // A recuperação da cópia mais recente termina antes de qualquer migração,
@@ -5676,6 +5722,7 @@ async function initialiseApp(){
    updateWorkflowGuide('processos');
    updateContext();
    applyPageSettings();
+   void showPersistenceWarnings(auditLogBeforeThisBoot);
    // Arranque leve para iPhone/iPad: tarefas não essenciais ficam fora do primeiro desenho.
    // normaliseDB já protege cada Processo/Ativo individualmente com try/catch, por
    // isso não deve voltar a rebentar aqui — mas se algo mesmo assim falhar, nunca
@@ -5687,7 +5734,7 @@ async function initialiseApp(){
    console.error('Falha ao iniciar AVA_Input:',e);
    db=normaliseDB(db);
    try{seedNUFVariablesOnce();migrateLegacyCharacterizationKeys();migrateCaracterizacaoFields();restoreLastActiveProcess();
-renderProcesses();updateContext()}catch(inner){console.error(inner)}
+renderProcesses();updateContext();void showPersistenceWarnings(auditLogBeforeThisBoot)}catch(inner){console.error(inner)}
  }
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{void initialiseApp()},{once:true});
