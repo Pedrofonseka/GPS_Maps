@@ -4042,21 +4042,26 @@ async function buildReportPDF(p){
  const pageW=doc.internal.pageSize.getWidth(),pageH=doc.internal.pageSize.getHeight();
  const marginTop=Number(pageSettings.top)||15,marginRight=Number(pageSettings.right)||15,marginBottom=Number(pageSettings.bottom)||15,marginLeft=Number(pageSettings.left)||15;
  const contentW=pageW-marginLeft-marginRight;
- // Área reservada ao cabeçalho: replica a mesma regra do CSS de impressão
- // (.print-header fica a 5mm do topo físico da página, dentro da margem) e o
- // conteúdo — incluindo o título da página — só começa depois disso, com uma
- // folga extra, nunca sobreposto ao cabeçalho nem à linha divisória por baixo.
- const headerTopY=5;
+ // Área reservada ao cabeçalho: usa a "Distância do cabeçalho ao topo" já
+ // configurada em Config. Página (pageSettings.headerDistance, em cm) — a
+ // mesma regra que rege a pré-visualização/Word — em vez de uma constante
+ // arbitrária. O conteúdo, incluindo o título da página, só começa depois
+ // do cabeçalho, com uma folga extra, nunca sobreposto a ele.
+ const headerTopY=(Number(pageSettings.headerDistance)||.5)*10;
  const headerSizeCalc=Math.max(9.5,Number(pageSettings.headerSize)||10);
  const headerExtraSizeCalc=Math.max(8,Number(pageSettings.headerExtraSize)||8.5);
  const headerHasExtra=!!String(officeForProcess(p)?.extra||'').trim();
  const headerBlockBottom=headerTopY+headerSizeCalc*0.42+(headerHasExtra?2+headerExtraSizeCalc*0.42:0);
  const contentTop=Math.max(marginTop,headerBlockBottom+6);
- // Área reservada ao rodapé, espelhando a do cabeçalho: a "linha de fundo" e o
- // texto do rodapé são desenhados a uma distância fixa do fundo físico da
- // página: o conteúdo (texto OU grelhas de imagens) nunca pode ultrapassar
- // essa reserva, mesmo que a margem inferior configurada seja mais pequena.
- const footerReserve=11;
+ // Área reservada ao rodapé: usa a "Distância do rodapé à base" já configurada
+ // (pageSettings.footerDistance, em cm), espelhando a mesma regra do
+ // cabeçalho — o texto do rodapé fica a essa distância do fundo físico da
+ // página, com a linha divisória um pouco acima; o conteúdo (texto OU
+ // grelhas de imagens) nunca pode ultrapassar essa reserva.
+ const footerDistanceMM=(Number(pageSettings.footerDistance)||.8)*10;
+ const footerLineY=pageH-footerDistanceMM-3;
+ const footerTextY=pageH-footerDistanceMM;
+ const footerReserve=footerDistanceMM+3;
  const contentBottom=pageH-Math.max(marginBottom,footerReserve);
  let y=contentTop,pageStarted=false,currentComponent='';
  const pageModel={};
@@ -4259,11 +4264,11 @@ async function buildReportPDF(p){
   const outModelName=footerOutModelName(pageModel[i]||'','Relatório',pageCount);
   const footerLeftVal=[p.code||'',outModelName].filter(Boolean).join(' · ');
   const footerRightVal=String(i)+' / '+pageCount;
-  doc.line(marginLeft,pageH-9,pageW-marginRight,pageH-9);
+  doc.line(marginLeft,footerLineY,pageW-marginRight,footerLineY);
   doc.setFont(undefined,'normal');doc.setFontSize(footerFit.size);doc.setTextColor(...PDF_COLORS.band);
-  doc.text(footerLeftVal,marginLeft,pageH-6,{align:'left'});
-  if(analystVersion)doc.text(analystVersion,pageW/2,pageH-6,{align:'center'});
-  doc.text(footerRightVal,pageW-marginRight,pageH-6,{align:'right'});
+  doc.text(footerLeftVal,marginLeft,footerTextY,{align:'left'});
+  if(analystVersion)doc.text(analystVersion,pageW/2,footerTextY,{align:'center'});
+  doc.text(footerRightVal,pageW-marginRight,footerTextY,{align:'right'});
  }
  return {blob:doc.output('blob'),photoFailures};
 }
