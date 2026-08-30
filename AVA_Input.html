@@ -19,6 +19,14 @@ nav button.on{background:#fff;border:2px solid #222}
 main{max-width:820px;margin:auto;padding:10px 10px calc(170px + env(safe-area-inset-bottom))}
 section{display:none}.show{display:block}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin:0 0 10px}
+.config-block{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin:0 0 10px}
+.config-block>summary{cursor:pointer;font-weight:800;font-size:15px;list-style:none;display:flex;align-items:center;gap:7px;-webkit-tap-highlight-color:transparent}
+.config-block>summary::-webkit-details-marker{display:none}
+.config-block>summary::before{content:'▸';font-size:12px;color:#9aa1ab;transition:transform .15s;flex:none}
+.config-block[open]>summary::before{transform:rotate(90deg)}
+.config-block>summary~*:first-of-type{margin-top:10px}
+.config-block h3{margin:14px 0 8px}
+.config-block h3:first-child{margin-top:0}
 h2{font-size:18px;margin:0 0 10px} h3{font-size:15px;margin:0 0 8px}
 label{display:block;font-size:12px;font-weight:700;margin:8px 0 4px}
 input,select,textarea{width:100%;font:inherit;padding:10px;border:1px solid #bfc5cc;border-radius:8px;background:white}
@@ -55,7 +63,7 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
 .history-entry{align-items:flex-start}.history-time{white-space:nowrap;color:var(--muted);font-size:11px;text-align:right}.stage-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
 .label-line{display:flex;align-items:flex-end;justify-content:space-between;gap:8px}.label-line label{flex:1}.config-link{border:0;background:transparent;color:#765d00;text-decoration:underline;font-size:11px;font-weight:800;padding:6px 0;white-space:nowrap}
 .config-shell{height:calc(100dvh - 24px - env(safe-area-inset-top));max-height:850px;display:flex;flex-direction:column;overflow:hidden;margin:auto!important}.config-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin:10px 0}.config-tabs button{border:1px solid var(--line);background:white;border-radius:8px;padding:8px 3px;font-size:12px;font-weight:800}.config-tabs button.on{background:#fff4bd;border-color:#c8a52f}.config-body{min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:2px 2px calc(180px + env(safe-area-inset-bottom))}.config-section{display:none}.config-section.active{display:block}
-.table-editor{background:var(--bg)!important;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)!important}.table-editor .config-shell{width:100%;max-width:none!important;height:100dvh;max-height:none;margin:0!important;border:0;border-radius:0;box-shadow:none}.table-editor .config-tabs{display:none}.table-editor .config-body> :not(#cfgTablesSection){display:none!important}.table-editor #cfgTablesSection{display:block!important}.table-editor #cfgTablesSection>.card{margin-top:0}.table-editor #cfgTable{display:block!important}
+.table-editor{background:var(--bg)!important;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)!important}.table-editor .config-shell{width:100%;max-width:none!important;height:100dvh;max-height:none;margin:0!important;border:0;border-radius:0;box-shadow:none}.table-editor .config-tabs{display:none}.table-editor .config-body> :not(#cfgTablesSection){display:none!important}.table-editor #cfgTablesSection{display:block!important}.table-editor #cfgTablesSection>.config-block{margin-top:0}.table-editor #cfgTable{display:block!important}
 .table-chooser{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:10px}.table-chooser button{text-align:left;min-height:48px}.table-editor .table-chooser,.table-editor #cfgTableChooserLabel{display:none!important}.table-editor #cfgTable{display:block}.process-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;max-width:100%;overflow:hidden}.process-card-main{border:0;background:transparent;text-align:left;padding:0;min-width:0;max-width:100%;overflow:hidden;touch-action:manipulation}.process-card-status{display:flex;gap:3px;align-items:center;flex-wrap:wrap;justify-content:flex-end}.process-card-status .pill{padding:2px 5px;font-size:9px}.asset-visit-people{display:flex;gap:6px;flex-wrap:wrap}.status-auto{padding:6px 8px;min-height:34px;border:1px solid #9dcbd8;border-radius:8px;background:var(--feedback);font-weight:800}
 .address-compact{display:grid;grid-template-columns:.7fr 1fr 1.25fr;gap:8px;align-items:end}.feedback-ruler{background:var(--feedback)!important;border-color:#9dcbd8!important;color:#244b58!important}.id-hint{font-size:10px;font-weight:600;color:var(--muted)}
 #orientationInfo:not(:empty),#photoInfo:not(:empty),#zipInfo:not(:empty),#folderInfo:not(:empty),#cfgPhotoInfo:not(:empty),#cfgPageInfo:not(:empty),#cfgTableInfo:not(:empty),#aGPSInfo:not(:empty){display:block;background:var(--feedback);border:1px solid #9dcbd8;border-radius:8px;padding:6px 8px;color:#244b58}
@@ -470,36 +478,36 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
   <div id="configBody" class="config-body">
   <div id="cfgStructureSection" class="config-section">
 
-<div class="card" id="cfgStructureBlock">
-  <h3>Estrutura de Variáveis</h3>
+<details class="config-block" id="cfgStructureBlock" open>
+  <summary>1 · Estrutura de Variáveis</summary>
   <div class="muted">Estrutura 2.0: Processo → Núcleo agregador → Ativo(s). Cada ficha caracteriza um Ativo. Por defeito, cada núcleo é único e contém apenas o Ativo de índice 1.</div>
   <div class="list" style="margin-top:8px">
     <div class="item"><span class="item-main"><span class="item-title">1 — Processo</span><br><span class="item-sub">Bloco estrutural ativo</span></span></div>
     <div class="item"><span class="item-main"><span class="item-title">2 — Ativo</span><br><span class="item-sub">Bloco estrutural preparado</span></span></div>
     <div class="item"><span class="item-main"><span class="item-title">3 — Parte do Ativo</span><br><span class="item-sub">Índice 1 por defeito; 2, 3… para análise autónoma agregada</span></span></div>
   </div>
-</div>
+</details>
 
-<div class="card"><h3>Estado da reestruturação</h3>
+<details class="config-block"><summary>2 · Estado da reestruturação</summary>
 <div class="list">
 <div class="item"><span class="item-main"><b>Processo</b><br><span class="item-sub">Motor de variáveis ativo</span></span><span class="pill">Estruturado</span></div>
 <div class="item"><span class="item-main"><b>Ativo</b><br><span class="item-sub">Motor + variáveis base + grupos aplicáveis</span></span><span class="pill">Estruturado</span></div>
 <div class="item"><span class="item-main"><b>Parte do Ativo</b><br><span class="item-sub">Caracterização, fotografias e legenda próprias</span></span><span class="pill">Estruturado</span></div>
-</div></div>
-<div class="card"><h3>Estrutura — Transferência</h3><div class="muted">Exporta a definição atual dos blocos e tabelas para revisão e futura importação.</div><div class="actions"><button class="small" type="button" onclick="exportVariableStructure()">Exportar estrutura JSON</button><button class="small" type="button" onclick="exportVariableStructureXLSX()">Exportar estrutura (Excel)</button></div></div>
-<div class="card" id="cfgStructureDiagnostics">
-<h3>Diagnóstico da Estrutura</h3>
+</div></details>
+<details class="config-block"><summary>3 · Estrutura — Transferência</summary><div class="muted">Exporta a definição atual dos blocos e tabelas para revisão e futura importação.</div><div class="actions"><button class="small" type="button" onclick="exportVariableStructure()">Exportar estrutura JSON</button><button class="small" type="button" onclick="exportVariableStructureXLSX()">Exportar estrutura (Excel)</button></div></details>
+<details class="config-block" id="cfgStructureDiagnostics">
+<summary>4 · Diagnóstico da Estrutura</summary>
 <div id="cfgStructureDiagnosticSummary" class="muted">A verificar…</div>
 <div id="cfgStructureDiagnosticList" class="list" style="margin-top:8px"></div>
 <div class="row-actions"><button class="small" type="button" onclick="runStructureDiagnostics(true)">Verificar coerência</button></div>
-</div>
-<div class="card" id="cfgTableCatalogBlock">
-  <h3>Catálogo de Tabelas a carregar</h3>
+</details>
+<details class="config-block" id="cfgTableCatalogBlock">
+  <summary>5 · Catálogo de Tabelas a carregar</summary>
   <div class="muted">Nesta fase define-se apenas que tabelas existem e as relações entre elas. Os valores serão importados posteriormente.</div>
   <div id="cfgTableCatalogList" class="list" style="margin-top:8px"></div>
-</div>
-<div class="card" id="cfgProcessVariablesBlock">
-  <h3>Bloco — Variáveis de Processo</h3>
+</details>
+<details class="config-block" id="cfgProcessVariablesBlock" open>
+  <summary>6 · Bloco — Variáveis de Processo</summary>
   <div class="muted">Variáveis pertencentes diretamente ao nível Processo. Todas integram o formulário; quando não existe sub-tabela disponível, é usada uma caixa de texto genérica.</div>
   <div style="overflow-x:auto;margin-top:8px">
     <table id="cfgProcessVariablesTable" style="width:100%;border-collapse:collapse;font-size:12px">
@@ -507,30 +515,31 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
       <tbody id="cfgProcessVariablesBody"></tbody>
     </table>
   </div>
-</div>
-<div class="card" id="cfgAssetVariablesBlock">
-<h3>Bloco — Variáveis do Ativo</h3><div class="muted">A ordem controla o fluxo de preenchimento.</div>
+</details>
+<details class="config-block" id="cfgAssetVariablesBlock" open>
+<summary>7 · Bloco — Variáveis do Ativo</summary><div class="muted">A ordem controla o fluxo de preenchimento.</div>
 <div style="overflow-x:auto;margin-top:8px"><table class="pv-table"><thead><tr><th>#</th><th>Variável</th><th>Estado / Tipo / Tabela</th><th>Grupos</th><th>Ações</th></tr></thead><tbody id="cfgAssetVariablesBody"></tbody></table></div>
-<button id="cfgAddAssetVariable" class="small" type="button" onclick="addAssetVariable()">+ Acrescentar variável</button></div>
-<div class="card" id="cfgNUFVariablesBlock">
-<h3>Bloco — Variáveis da Parte do Ativo</h3>
+<button id="cfgAddAssetVariable" class="small" type="button" onclick="addAssetVariable()">+ Acrescentar variável</button></details>
+<details class="config-block" id="cfgNUFVariablesBlock" open>
+<summary>8 · Bloco — Variáveis da Parte do Ativo</summary>
 <div class="muted">Campos de observação autónoma. Os resultados permanecem agregados pelo código-base do Ativo.</div>
 <div style="overflow-x:auto;margin-top:8px"><table class="pv-table"><thead><tr><th>#</th><th>Variável</th><th>Estado / Tipo / Tabela</th><th>Grupos</th><th>Ações</th></tr></thead><tbody id="cfgNUFVariablesBody"></tbody></table></div>
 <button class="small" type="button" onclick="addNUFVariable()">+ Acrescentar variável</button>
 <div id="cfgNUFVariablesInfo" class="muted">0 variáveis definidas.</div>
-</div>
+</details>
 
-<div class="card" id="cfgGroupViewBlock">
-<h3>Ver variáveis por grupo</h3>
+<details class="config-block" id="cfgGroupViewBlock">
+<summary>9 · Ver variáveis por grupo</summary>
 <div class="muted">Escolha um bloco e um grupo para ver e marcar, numa lista simples, que variáveis se aplicam a esse grupo — sem procurar pills linha a linha.</div>
 <div class="tabs" id="cfgGroupViewBlockTabs" style="margin-top:10px"></div>
 <div class="group-pills" id="cfgGroupViewGroupTabs" style="max-width:none;margin-top:8px"></div>
 <div id="cfgGroupViewList" class="list" style="margin-top:10px"></div>
-</div>
+</details>
 
 </div>
 <div id="cfgTablesSection" class="config-section">
-   <h3>Tabelas gerais</h3>
+  <details class="config-block" open>
+   <summary>1 · Tabelas gerais</summary>
    <p class="muted">As alterações ficam imediatamente disponíveis nos respetivos formulários.</p>
    <div id="cfgTableChooserLabel" class="muted">Escolha apenas a tabela que pretende manter.</div><div id="cfgTableChooser" class="table-chooser"></div>
    <label>Tabela em edição</label><select id="cfgTable" class="hidden"><option value="requesters">Solicitantes</option><option value="stakeholders">Intervenientes</option><option value="services">Tipos de serviço</option><option value="purposes">Finalidade</option><option value="valueBases">Bases de valor</option><option value="assetTypes">Tipos de Ativo e classificação</option><option value="municipalities">Concelhos</option><option value="parishes">Freguesias</option><option value="postalCodes">Códigos Postais</option><option value="documents">Documentação</option><option value="visitTypes">Tipos de visita</option><option value="weather">Estado do tempo</option><option value="offices">Gabinetes</option><option value="destinations">Destino</option><option value="occupancyStates">Estado ocupação</option><option value="conservationStates">Estado conservação</option><option value="vetustez">Vetustez</option></select>
@@ -538,8 +547,11 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
    <div class="actions"><button class="btn primary" id="cfgTableAdd" type="button">+ Adicionar</button></div>
    <div id="cfgTableInfo" class="muted" style="margin-top:6px"></div>
    <div id="cfgTableValues" class="list" style="margin-top:8px"></div>
+  </details>
   </div>
-  <div id="cfgPhotosSection" class="config-section"><h3>Fotografias</h3>
+  <div id="cfgPhotosSection" class="config-section">
+  <details class="config-block" open>
+  <summary>1 · Fotografias</summary>
   <div class="row">
    <div><label>Resolução máxima — lado maior (px)</label><input id="cfgPhotoMaxSide" type="number" inputmode="numeric" min="480" max="4096" step="64"></div>
    <div><label>Qualidade das novas fotografias (%)</label><input id="cfgPhotoQuality" type="number" inputmode="numeric" min="30" max="95" step="1"></div>
@@ -549,8 +561,12 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
    <div><label>Configuração atual</label><div id="cfgPhotoInfo" class="muted" style="padding:10px 0"></div></div>
   </div>
   <div class="actions"><button class="btn primary" id="cfgSavePhotos">Guardar fotografias</button><button class="btn" id="cfgResetPhotos">Repor recomendado</button></div>
-  <p class="muted">Aplica-se às novas fotografias. As imagens já guardadas não são recomprimidas.</p></div>
-  <div id="cfgPageSection" class="config-section"><h3>Layout de página</h3>
+  <p class="muted">Aplica-se às novas fotografias. As imagens já guardadas não são recomprimidas.</p>
+  </details>
+  </div>
+  <div id="cfgPageSection" class="config-section">
+  <details class="config-block" open>
+  <summary>1 · Layout de página</summary>
   <div class="row"><div><label>Orientação</label><select id="cfgPageOrientation"><option value="portrait">Retrato</option><option value="landscape">Paisagem</option></select></div><div><label>Formato</label><select disabled><option>A4</option></select></div></div><div class="row"><div><label>Fonte dos documentos</label><select id="cfgFontFamily">
 <option value="system">System UI</option>
 <option value="arial">Arial</option>
@@ -569,7 +585,9 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
    <div><label>Margem esquerda (mm)</label><input id="cfgMarginLeft" type="number" min="8" max="40" step="1"></div>
    <div><label>Margem direita (mm)</label><input id="cfgMarginRight" type="number" min="8" max="40" step="1"></div>
   </div>
-  <h3 style="margin-top:14px">Topo da página / Conteúdo transversal</h3>
+  </details>
+  <details class="config-block">
+  <summary>2 · Topo da página / Conteúdo transversal</summary>
   <div class="field-grid">
    <div><label>Linha de contexto</label><select id="cfgTopContext"><option value="process_description">Processo + Descrição do Processo</option><option value="process">Processo</option><option value="none">Não mostrar</option></select></div>
    <div><label>Tamanho da linha de contexto (pt)</label><input id="cfgTopContextSize" type="number" min="6" max="10" step="1" value="7"></div>
@@ -577,7 +595,10 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
    <div><label>Tamanho do título (pt)</label><input id="cfgPageTitleSize" type="number" min="8" max="18" step="1" value="12"></div>
   </div>
   <p class="muted">Configuração transversal a todos os modelos de saída. O título é apresentado em negrito; na capa: “Relatório de ” + Serviço/Finalidade. Nas restantes páginas: Resumo, Caracterização, Cronologia, etc.</p>
-  <h3 style="margin-top:14px">Topo, Cabeçalho e Rodapé — configuração transversal</h3><p class="muted">Esta configuração aplica-se a todos os modelos de saída. O cabeçalho e o rodapé usam três posições independentes: esquerda, centro e direita.</p><h3 style="margin-top:14px">Cabeçalho e topo da página</h3>
+  </details>
+  <details class="config-block" open>
+  <summary>3 · Cabeçalho e topo da página</summary>
+  <p class="muted">Esta configuração aplica-se a todos os modelos de saída. O cabeçalho e o rodapé usam três posições independentes: esquerda, centro e direita.</p>
   <div class="field-grid">
    <div><label>Distância do cabeçalho ao topo (cm)</label><input id="cfgHeaderDistance" type="number" min="0" step="0.1" value="0.5"></div><div><label>Gabinete</label><input id="cfgHeaderGabineteText" value="PTV - Peritava - Peritos Avaliadores"></div>
    <div><label>Linha 1 — Gabinete (pt)</label><input id="cfgHeaderGabineteSize" type="number" min="5" max="18" step="0.5" value="9"></div>
@@ -590,7 +611,10 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
   <label>Texto complementar</label><input id="cfgHeaderExtraText" placeholder="ex.: geral@exemplo.pt">
 
 <div class="muted">O cabeçalho documental usa Gabinete, Título e linha complementar. Os dados do Processo ficam no topo da página para evitar repetição.</div>
-  <h3 style="margin-top:14px">Rodapé</h3><p class="muted">Por defeito, a linha superior do rodapé fica vazia. O conteúdo é apresentado apenas na linha inferior.</p>
+  </details>
+  <details class="config-block" open>
+  <summary>4 · Rodapé</summary>
+  <p class="muted">Por defeito, a linha superior do rodapé fica vazia. O conteúdo é apresentado apenas na linha inferior.</p>
   <div class="field-grid">
    <div><label>Distância do rodapé à base (cm)</label><input id="cfgFooterDistance" type="number" min="0" step="0.1" value="0.8"></div>
    <div><label>Tamanho da fonte (pt)</label><input id="cfgFooterFontSizeLegacy" type="number" min="5" max="14" step="0.5" value="8"></div>
@@ -604,40 +628,57 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
   <div class="muted" style="margin-top:6px">Marcadores: {processo}, {documento}, {ativo}, {pagina}, {paginas}, {analista}, {versao}, {versaoRelatorio}. {ativo} é usado apenas em saídas onde exista esse contexto.</div>
 
 <div class="muted">O rodapé usa os três campos de texto com marcadores acima.</div>
+  </details>
   <div class="actions"><button class="btn primary" id="cfgSavePage">Guardar layout</button><button class="btn" id="cfgResetPage">Repor layout</button></div>
   <div id="cfgPageInfo" class="muted" style="margin-top:6px"></div></div>
-  <div id="cfgFieldsSection" class="config-section"><div class="actions" style="justify-content:space-between;align-items:center"><h3 style="margin:0">Campos de caracterização</h3><button class="btn" id="cfgFieldHelp" type="button" aria-expanded="false">ℹ️ Ajuda</button></div>
+  <div id="cfgFieldsSection" class="config-section">
+  <details class="config-block" open>
+  <summary>1 · Campos de caracterização</summary>
+  <div class="actions" style="justify-content:flex-end;align-items:center"><button class="btn" id="cfgFieldHelp" type="button" aria-expanded="false">ℹ️ Ajuda</button></div>
   <div id="cfgFieldHelpText" class="muted hidden" style="margin-top:8px;padding:10px;border:1px solid #d9b32c;border-radius:10px;background:#fff7cf"><b>Suspender</b> oculta temporariamente o campo no formulário e nos documentos, preservando a configuração e os valores. <b>Reativar</b> recupera-o. O botão vermelho <b>×</b> elimina definitivamente o campo e os valores associados, após confirmação; a recuperação posterior exige Backup_In.</div>
   <p class="muted">Cada Grupo apresenta apenas as variáveis ativas e pela ordem definida aqui.</p>
   <label>Grupo</label>
   <select id="cfgGroup"></select>
   <label>Designação do Grupo</label><input id="cfgGroupName">
   <div class="actions"><button class="btn primary" id="cfgAddField">+ Nova variável</button><button class="btn" id="cfgRestore">Repor grupo</button></div>
-  <div id="cfgFields" class="list" style="margin-top:8px"></div></div>
-  <div id="cfgOutputsSection" class="config-section"><div class="actions" style="justify-content:space-between;align-items:center"><h3 style="margin:0">Modelos de saída</h3><button class="btn" id="cfgOutputHelp" type="button" aria-expanded="false">ℹ️ Ajuda</button></div>
-   <h3 style="margin-top:14px">Regras gerais de construção</h3>
-   <p class="muted">Regras transversais editáveis para os modelos de saída.</p>
-   <textarea id="cfgConstructionRules" rows="8"></textarea>
-   <div class="actions"><button class="btn primary" id="cfgSaveConstructionRules" type="button">Guardar regras</button></div>
+  <div id="cfgFields" class="list" style="margin-top:8px"></div>
+  </details>
+  </div>
+  <div id="cfgOutputsSection" class="config-section">
+  <details class="config-block" open>
+  <summary>1 · Modelos de saída</summary>
+   <div class="actions" style="justify-content:flex-end;align-items:center"><button class="btn" id="cfgOutputHelp" type="button" aria-expanded="false">ℹ️ Ajuda</button></div>
    <div id="cfgOutputHelpText" class="muted hidden" style="margin-top:8px;padding:10px;border:1px solid #d9b32c;border-radius:10px;background:#fff7cf">Escolha as fichas que integram o <b>Resumo geral</b>. As setas definem a sequência no preview/PDF e no Word. Suspender uma ficha não elimina dados.</div>
    <label>Modelo</label><select disabled><option>Resumo geral</option></select>
    <div id="cfgOutputValues" class="list" style="margin-top:8px"></div>
    <div class="actions"><button class="btn" id="cfgResetOutput" type="button">Repor composição recomendada</button></div>
-   <h3 style="margin-top:16px">Conteúdos da Capa</h3>
+  </details>
+  <details class="config-block">
+   <summary>2 · Regras gerais de construção</summary>
+   <p class="muted">Regras transversais editáveis para os modelos de saída.</p>
+   <textarea id="cfgConstructionRules" rows="8"></textarea>
+   <div class="actions"><button class="btn primary" id="cfgSaveConstructionRules" type="button">Guardar regras</button></div>
+  </details>
+  <details class="config-block">
+   <summary>3 · Conteúdos da Capa</summary>
    <p class="muted">A linha de topo e o título da página são transversais e não fazem parte desta lista. Defina aqui apenas os campos adicionais da Capa.</p>
    <div id="cfgCoverContentValues" class="list" style="margin-top:8px"></div>
    <div class="actions"><button class="btn" id="cfgResetCoverContent" type="button">Repor conteúdos recomendados</button></div>
-   <h3 style="margin-top:16px">FXresum — filtros dos Ativos</h3>
+  </details>
+  <details class="config-block">
+   <summary>4 · FXresum — filtros dos Ativos</summary>
    <p class="muted">Escolha os estados e os campos que integram a listagem identada do resumo do Processo.</p>
    <div class="actions"><label class="pill"><input id="cfgSummaryON" type="checkbox" style="width:auto"> Incluir ON</label><label class="pill"><input id="cfgSummaryOFF" type="checkbox" style="width:auto"> Incluir OFF</label></div>
    <div id="cfgSummaryFields" class="list" style="margin-top:8px"></div>
-   <h3 style="margin-top:16px">Estrutura dos Out Models</h3>
+  </details>
+  <details class="config-block">
+   <summary>5 · Estrutura dos Out Models</summary>
    <p class="muted">Vista gráfica da mesma configuração: Cabeçalho, Topo (2 linhas), Centro, Fundo (3 linhas) e Rodapé. As alterações aqui refletem-se nas linhas de conteúdos acima.</p>
    <label>Out Model</label><select id="cfgOutModelSelect"></select>
    <div class="actions"><button class="btn primary" id="cfgOutModelAddField" type="button">+ Acrescentar campo</button></div>
    <div id="cfgOutModelZones" class="list" style="margin-top:8px"></div>
    <div id="cfgOutModelInfo" class="muted" style="margin-top:6px"></div>
-
+  </details>
   </div>
   </div>
  </div>
@@ -659,7 +700,7 @@ const {
 }=Object.fromEntries(Array.from(document.querySelectorAll('[id]'),el=>[el.id,el]));
 const cfgAnalystText=document.getElementById('cfgAnalystText');
 
-const APP_VERSION='2.3.2',DATA_SCHEMA_VERSION=2,KEY='ativa_v2_db';
+const APP_VERSION='2.4.0',DATA_SCHEMA_VERSION=2,KEY='ativa_v2_db';
 const CONSTRUCTION_RULES_KEY='ativa_construction_rules_v2';
 const CONSTRUCTION_RULES_DEFAULT=`Todas as fotografias ficam centradas na respetiva célula.
 As fotografias são numeradas pelo índice do Ativo dentro do núcleo e pelo número sequencial: 005_1_IMG_01.
