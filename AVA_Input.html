@@ -563,6 +563,15 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
   <div class="actions"><button class="btn primary" id="cfgSavePhotos">Guardar fotografias</button><button class="btn" id="cfgResetPhotos">Repor recomendado</button></div>
   <p class="muted">Aplica-se às novas fotografias. As imagens já guardadas não são recomprimidas.</p>
   </details>
+  <details class="config-block">
+  <summary>2 · Limites de tamanho na exportação</summary>
+  <p class="muted">Se o PDF/Word ou o ZIP da Exportação Geral ultrapassar o limite, a app tenta automaticamente uma nova versão com fotografias mais comprimidas antes de entregar o ficheiro. 0 = sem limite.</p>
+  <div class="row">
+   <div><label>Tamanho máximo — PDF e Word (MB)</label><input id="cfgMaxFileMB" type="number" inputmode="decimal" min="0" max="200" step="0.5"></div>
+   <div><label>Tamanho máximo — ZIP da Exportação Geral (MB)</label><input id="cfgMaxZipMB" type="number" inputmode="decimal" min="0" max="500" step="0.5"></div>
+  </div>
+  <div class="actions"><button class="btn primary" id="cfgSaveSizeLimits" type="button">Guardar limites</button></div>
+  </details>
   </div>
   <div id="cfgPageSection" class="config-section">
   <details class="config-block" open>
@@ -700,7 +709,7 @@ const {
 }=Object.fromEntries(Array.from(document.querySelectorAll('[id]'),el=>[el.id,el]));
 const cfgAnalystText=document.getElementById('cfgAnalystText');
 
-const APP_VERSION='2.5.0',DATA_SCHEMA_VERSION=2,KEY='ativa_v2_db';
+const APP_VERSION='2.6.0',DATA_SCHEMA_VERSION=2,KEY='ativa_v2_db';
 const CONSTRUCTION_RULES_KEY='ativa_construction_rules_v2';
 const CONSTRUCTION_RULES_DEFAULT=`Todas as fotografias ficam centradas na respetiva célula.
 As fotografias são numeradas pelo índice do Ativo dentro do núcleo e pelo número sequencial: 005_1_IMG_01.
@@ -2880,23 +2889,52 @@ function moveChar(d){let p=proc(),i=p.assets.findIndex(a=>a.id===charAsset);let 
 prevAsset.onclick=()=>moveChar(-1);nextAsset.onclick=()=>moveChar(1);
 
 const PHOTO_SETTINGS_KEY='ativa_photo_settings_v1';
-const PHOTO_SETTINGS_DEFAULT={maxSide:1024,quality:60,rotateQuality:68};
+const PHOTO_SETTINGS_DEFAULT={maxSide:1024,quality:60,rotateQuality:68,maxFileMB:8,maxZipMB:25};
 function clampPhotoSetting(value,min,max,fallback){const n=Math.round(Number(value));return Number.isFinite(n)?Math.min(max,Math.max(min,n)):fallback}
+function clampPhotoSettingFloat(value,min,max,fallback){const n=Number(value);return Number.isFinite(n)?Math.min(max,Math.max(min,n)):fallback}
+// Quando definido, sobrepõe-se ao que está gravado — usado só durante uma
+// nova tentativa automática de compressão quando um PDF/Word/ZIP exportado
+// ultrapassa o limite de tamanho configurado (ver enforceSizeLimit).
+let photoCompressionOverride=null;
 function loadPhotoSettings(){
+ if(photoCompressionOverride)return photoCompressionOverride;
  try{
    const raw=Object.assign({},PHOTO_SETTINGS_DEFAULT,JSON.parse(localStorage.getItem(PHOTO_SETTINGS_KEY)||'{}'));
-   return {maxSide:clampPhotoSetting(raw.maxSide,480,4096,1024),quality:clampPhotoSetting(raw.quality,30,95,60),rotateQuality:clampPhotoSetting(raw.rotateQuality,30,95,68)};
+   return {maxSide:clampPhotoSetting(raw.maxSide,480,4096,1024),quality:clampPhotoSetting(raw.quality,30,95,60),rotateQuality:clampPhotoSetting(raw.rotateQuality,30,95,68),maxFileMB:clampPhotoSettingFloat(raw.maxFileMB,0,200,8),maxZipMB:clampPhotoSettingFloat(raw.maxZipMB,0,500,25)};
  }catch(e){return Object.assign({},PHOTO_SETTINGS_DEFAULT)}
 }
 let photoSettings=loadPhotoSettings();
-function fillPhotoSettings(){cfgPhotoMaxSide.value=photoSettings.maxSide;cfgPhotoQuality.value=photoSettings.quality;cfgRotateQuality.value=photoSettings.rotateQuality;cfgPhotoInfo.textContent=photoSettings.maxSide+' px · entrada '+photoSettings.quality+'% · rotação '+photoSettings.rotateQuality+'%'}
+function fillPhotoSettings(){cfgPhotoMaxSide.value=photoSettings.maxSide;cfgPhotoQuality.value=photoSettings.quality;cfgRotateQuality.value=photoSettings.rotateQuality;const maxFileEl=document.getElementById('cfgMaxFileMB'),maxZipEl=document.getElementById('cfgMaxZipMB');if(maxFileEl)maxFileEl.value=photoSettings.maxFileMB;if(maxZipEl)maxZipEl.value=photoSettings.maxZipMB;cfgPhotoInfo.textContent=photoSettings.maxSide+' px · entrada '+photoSettings.quality+'% · rotação '+photoSettings.rotateQuality+'%'}
 function savePhotoSettings(){
- photoSettings={maxSide:clampPhotoSetting(cfgPhotoMaxSide.value,480,4096,1024),quality:clampPhotoSetting(cfgPhotoQuality.value,30,95,60),rotateQuality:clampPhotoSetting(cfgRotateQuality.value,30,95,68)};
+ photoSettings={maxSide:clampPhotoSetting(cfgPhotoMaxSide.value,480,4096,1024),quality:clampPhotoSetting(cfgPhotoQuality.value,30,95,60),rotateQuality:clampPhotoSetting(cfgRotateQuality.value,30,95,68),maxFileMB:clampPhotoSettingFloat(document.getElementById('cfgMaxFileMB')?.value,0,200,8),maxZipMB:clampPhotoSettingFloat(document.getElementById('cfgMaxZipMB')?.value,0,500,25)};
  try{localStorage.setItem(PHOTO_SETTINGS_KEY,JSON.stringify(photoSettings))}catch(e){warnStorageFailure()}
  fillPhotoSettings();
 }
 cfgSavePhotos.onclick=()=>{savePhotoSettings();alert('Configuração das fotografias guardada.')};
+document.getElementById('cfgSaveSizeLimits')?.addEventListener('click',()=>{savePhotoSettings();alert('Limites de tamanho guardados.')});
 cfgResetPhotos.onclick=()=>{photoSettings=Object.assign({},PHOTO_SETTINGS_DEFAULT);try{localStorage.setItem(PHOTO_SETTINGS_KEY,JSON.stringify(photoSettings))}catch(e){warnStorageFailure()}fillPhotoSettings()};
+// Se o PDF/Word/ZIP exportado ultrapassar o limite configurado, tenta uma
+// única vez reconstruí-lo com fotografias mais comprimidas (como o FoTopics
+// faz) antes de entregar o ficheiro tal como saiu.
+async function enforceSizeLimit(blob,limitMB,rebuild){
+ const limitBytes=Number(limitMB)>0?Number(limitMB)*1024*1024:0;
+ if(!limitBytes||!blob||blob.size<=limitBytes)return {blob,reduced:false,stillOver:false,limitBytes};
+ const original=loadPhotoSettings();
+ photoCompressionOverride={maxSide:Math.max(480,Math.round(original.maxSide*0.6)),quality:Math.max(30,Math.round(original.quality*0.6)),rotateQuality:original.rotateQuality,maxFileMB:original.maxFileMB,maxZipMB:original.maxZipMB};
+ try{
+   const smaller=await rebuild();
+   if(smaller&&smaller.size<blob.size)return {blob:smaller,reduced:true,stillOver:smaller.size>limitBytes,limitBytes};
+   return {blob,reduced:false,stillOver:true,limitBytes};
+ }catch(e){console.error('Falha na nova tentativa de compressão automática',e);return {blob,reduced:false,stillOver:true,limitBytes}}
+ finally{photoCompressionOverride=null}
+}
+function sizeLimitNote(result){
+ if(!result.reduced&&!result.stillOver)return '';
+ const mb=(result.blob.size/1024/1024).toFixed(1);
+ if(result.reduced&&!result.stillOver)return ' Ficheiro acima do limite configurado — foi reduzido automaticamente para '+mb+' MB.';
+ if(result.stillOver)return ' Aviso: o ficheiro ('+mb+' MB) continua acima do limite configurado mesmo depois de uma nova tentativa com mais compressão.';
+ return '';
+}
 
 const PAGE_SETTINGS_KEY='ativa_page_settings_v2';
 const PAGE_SETTINGS_DEFAULT={orientation:'portrait',top:25,bottom:15,left:20,right:10,
@@ -4137,10 +4175,12 @@ acceptPreview.onclick=async()=>{
  try{
   folderInfo.textContent='A gerar o PDF da versão aceite…';
   const pdfResult=await buildReportPDF(p);
-  await saveBlobToDestination(pdfResult.blob,safeFileName(p.code||'Processo')+'_Ficha.pdf',folderInfo,'PDF pronto.'+(pdfResult.photoFailures?' ('+pdfResult.photoFailures+' fotografia(s) não incluída(s) — ver consola.)':''));
+  const pdfSizeResult=await enforceSizeLimit(pdfResult.blob,loadPhotoSettings().maxFileMB,async()=>(await buildReportPDF(p)).blob);
+  await saveBlobToDestination(pdfSizeResult.blob,safeFileName(p.code||'Processo')+'_Ficha.pdf',folderInfo,'PDF pronto.'+(pdfResult.photoFailures?' ('+pdfResult.photoFailures+' fotografia(s) não incluída(s) — ver consola.)':'')+sizeLimitNote(pdfSizeResult));
   folderInfo.textContent+=' A gerar o documento Word da versão aceite…';
   const wordZip=await buildWordDOCX(p),blob=new Blob([wordZip],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
-  await saveBlobToDestination(blob,safeFileName(p.code||'Processo')+'_Ficha.docx',folderInfo,'Word pronto.',true);
+  const wordSizeResult=await enforceSizeLimit(blob,loadPhotoSettings().maxFileMB,async()=>new Blob([await buildWordDOCX(p)],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}));
+  await saveBlobToDestination(wordSizeResult.blob,safeFileName(p.code||'Processo')+'_Ficha.docx',folderInfo,'Word pronto.'+sizeLimitNote(wordSizeResult),true);
   previewValidation.classList.add('hidden');zipInfo.textContent='Versão aceite. A Exportação Geral pode agora ser gerada separadamente, se necessária.';
  }catch(e){console.error(e);alert('Não foi possível concluir a exportação PDF + Word da versão aceite: '+(e?.message||e))}
  finally{acceptPreview.disabled=false;rejectPreview.disabled=false}
@@ -4158,7 +4198,8 @@ printReport.onclick=async()=>{
  try{
   folderInfo.textContent='A gerar o PDF…';
   const pdfResult=await buildReportPDF(p);
-  await saveBlobToDestination(pdfResult.blob,safeFileName(p.code||'Processo')+'_Ficha.pdf',folderInfo,'PDF pronto.'+(pdfResult.photoFailures?' ('+pdfResult.photoFailures+' fotografia(s) não incluída(s) — ver consola.)':''));
+  const sizeResult=await enforceSizeLimit(pdfResult.blob,loadPhotoSettings().maxFileMB,async()=>(await buildReportPDF(p)).blob);
+  await saveBlobToDestination(sizeResult.blob,safeFileName(p.code||'Processo')+'_Ficha.pdf',folderInfo,'PDF pronto.'+(pdfResult.photoFailures?' ('+pdfResult.photoFailures+' fotografia(s) não incluída(s) — ver consola.)':'')+sizeLimitNote(sizeResult));
  }catch(e){console.error(e);alert('Não foi possível gerar o PDF: '+(e?.message||e))}
  finally{printReport.disabled=false}
 };
@@ -4606,7 +4647,13 @@ async function saveGeneratedFile(blob,suggestedName,mimeType='application/octet-
 exportWord.onclick=async()=>{
  const p=proc();if(!p){alert('Selecione primeiro um Processo.');return}
  exportWord.disabled=true;
- try{if(!await renderReportPreview())return;folderInfo.textContent='A gerar o documento Word…';const zipBlob=await buildWordDOCX(p),blob=new Blob([zipBlob],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});await saveBlobToDestination(blob,safeFileName(p.code||'Processo')+'_Ficha.docx',folderInfo,'Word pronto.')}
+ try{
+  if(!await renderReportPreview())return;
+  folderInfo.textContent='A gerar o documento Word…';
+  const zipBlob=await buildWordDOCX(p),blob=new Blob([zipBlob],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+  const sizeResult=await enforceSizeLimit(blob,loadPhotoSettings().maxFileMB,async()=>new Blob([await buildWordDOCX(p)],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}));
+  await saveBlobToDestination(sizeResult.blob,safeFileName(p.code||'Processo')+'_Ficha.docx',folderInfo,'Word pronto.'+sizeLimitNote(sizeResult));
+ }
  catch(e){console.error(e);alert('Não foi possível gerar o ficheiro Word.')}
  finally{exportWord.disabled=false}
 };
@@ -4742,9 +4789,17 @@ exportZIP.onclick=async()=>{
  const p=syncPendingData();if(!p){alert('Selecione primeiro um Processo.');return}
  exportZIP.disabled=true;zipInfo.textContent='A preparar a exportação…';
  try{
-   zipInfo.textContent='A gerar o PDF para incluir no arquivo…';const pdfResult=await buildReportPDF(p),pdfBlob=pdfResult.blob;
-   zipInfo.textContent='A gerar o Word para incluir no arquivo…';const wordZip=await buildWordDOCX(p),wordBlob=new Blob([wordZip],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
-   const result=await buildProcessZIP(p,wordBlob,pdfBlob),summary='ZIP criado com PDF, Word e '+result.count+' ficheiro(s)'+(pdfResult.photoFailures?' · '+pdfResult.photoFailures+' fotografia(s) não incluída(s) no PDF':'')+(result.missing.length?' · '+result.missing.length+' fotografia(s) indisponível(is)':'')+'.';await saveBlobToDestination(result.blob,safeFileName(p.code||'Processo')+'_Export.zip',zipInfo,summary);
+   const buildZipBundle=async()=>{
+     const pdfR=await buildReportPDF(p);
+     const wordZ=await buildWordDOCX(p),wordB=new Blob([wordZ],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+     return {pdfResult:pdfR,result:await buildProcessZIP(p,wordB,pdfR.blob)};
+   };
+   zipInfo.textContent='A gerar o PDF para incluir no arquivo…';
+   zipInfo.textContent='A gerar o Word para incluir no arquivo…';
+   const {pdfResult,result}=await buildZipBundle();
+   const sizeResult=await enforceSizeLimit(result.blob,loadPhotoSettings().maxZipMB,async()=>(await buildZipBundle()).result.blob);
+   const summary='ZIP criado com PDF, Word e '+result.count+' ficheiro(s)'+(pdfResult.photoFailures?' · '+pdfResult.photoFailures+' fotografia(s) não incluída(s) no PDF':'')+(result.missing.length?' · '+result.missing.length+' fotografia(s) indisponível(is)':'')+'.'+sizeLimitNote(sizeResult);
+   await saveBlobToDestination(sizeResult.blob,safeFileName(p.code||'Processo')+'_Export.zip',zipInfo,summary);
  }catch(e){console.error(e);zipInfo.textContent='Não foi possível criar o ZIP.';alert('Falha ao criar a exportação ZIP deste Processo.')}
  exportZIP.disabled=false;
 };
