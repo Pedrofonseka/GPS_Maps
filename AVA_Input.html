@@ -930,6 +930,20 @@ function normaliseDB(raw){
    migrationErrors.push(msg);
   }
  });
+ // Dedupe global: a mesma fotografia acabou por ficar referenciada por mais
+ // do que um Ativo (ex.: uma gravação que falhou fez o utilizador repetir a
+ // atribuição numa recuperação de fotografias órfãs, em sessões diferentes).
+ // Mantém-se sempre a primeira ocorrência encontrada e remove-se a restante
+ // — nunca apaga o ficheiro em si, só a referência a mais.
+ const seenPhotoIds=new Set();
+ clean.processes.forEach(p=>(p.assets||[]).forEach(a=>{
+   if(!Array.isArray(a.photos))return;
+   a.photos=a.photos.filter(x=>{
+     const id=x&&x.id;if(!id)return true;
+     if(seenPhotoIds.has(id))return false;
+     seenPhotoIds.add(id);return true;
+   });
+ }));
  return clean;
 }
 function load(){
@@ -4415,13 +4429,16 @@ async function checkDBFallbackRecovery(){
    const localEmpty=!Array.isArray(db.processes)||!db.processes.length;
    const fallbackNewer=!localSavedAt||fb.savedAt>localSavedAt;
    if(!fallbackNewer)return;
-   const proceed=localEmpty||confirm('Foi encontrada uma cópia de recurso de dados mais recente, guardada porque a gravação definitiva estava a falhar nesta página. Pretende recuperá-la agora? (substitui os dados atualmente carregados pelos da cópia de recurso)');
-   if(!proceed)return;
+   // A cópia de recurso já só existe porque uma gravação anterior falhou e é,
+   // por definição, mais recente e completa do que o que está em localStorage
+   // — pedir confirmação aqui só cria uma oportunidade de a perder por engano
+   // (um confirm() ignorado ou recusado sem se perceber o que significa).
+   // Aplica-se sempre automaticamente; o aviso é informativo, não uma pergunta.
    db=normaliseDB(fb.data);
    currentProcess=null;rememberCurrentProcess();
    const ok=save();
    renderProcesses();updateContext();
-   if(ok)alert('Cópia de recurso recuperada e gravada com sucesso.');
+   if(!localEmpty)alert('Foi recuperada automaticamente uma cópia de recurso mais recente (gravada porque a gravação definitiva estava a falhar). '+(ok?'Já foi gravada com sucesso.':'Continua sem conseguir gravar de forma permanente nesta página — '+storageIssueGuidance()));
  }catch(e){console.warn('Recuperação da cópia de recurso falhou:',e)}
 }
 function initialiseApp(){
