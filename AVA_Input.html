@@ -416,6 +416,8 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
   <label>Ativos a incluir nesta exportação <small class="note">(desmarque os que não quer incluir agora — a caracterização de cada um continua gravada; isto só afeta o que sai nesta exportação)</small></label>
   <div class="actions"><button class="btn" id="exportSelectAll" type="button">Selecionar todos</button><button class="btn" id="exportSelectNone" type="button">Nenhum</button></div>
   <div id="exportAssetSelector" class="list" style="margin-top:6px"></div>
+  <label style="margin-top:12px">Conteúdo a incluir na saída <small class="note">(as setas definem a sequência no PDF/Word; a Capa de processo e a Capa de cada Ativo são estruturais)</small></label>
+  <div id="exportOutputValues" class="list" style="margin-top:6px"></div>
   <div class="row">
    <div><label>Colunas das fotografias da capa</label><select id="coverCols"><option value="1">1 coluna</option><option value="2" selected>2 colunas</option><option value="3">3 colunas</option><option value="4">4 colunas</option><option value="5">5 colunas</option></select><label style="margin-top:8px">N.º mínimo de fotografias da capa</label><input id="coverMinPhotos" type="number" inputmode="numeric" min="0" max="20" step="1" value="2"></div>
    <div><label>Colunas das fotografias na ficha</label><select id="sheetCols"><option value="1">1 coluna</option><option value="2" selected>2 colunas</option><option value="3">3 colunas</option><option value="4">4 colunas</option><option value="5">5 colunas</option></select></div>
@@ -649,7 +651,7 @@ const {
 }=Object.fromEntries(Array.from(document.querySelectorAll('[id]'),el=>[el.id,el]));
 const cfgAnalystText=document.getElementById('cfgAnalystText');
 
-const APP_VERSION='2.2.3',DATA_SCHEMA_VERSION=2,KEY='ativa_v2_db';
+const APP_VERSION='2.3.0',DATA_SCHEMA_VERSION=2,KEY='ativa_v2_db';
 const CONSTRUCTION_RULES_KEY='ativa_construction_rules_v2';
 const CONSTRUCTION_RULES_DEFAULT=`Todas as fotografias ficam centradas na respetiva célula.
 As fotografias são numeradas pelo índice do Ativo dentro do núcleo e pelo número sequencial: 005_1_IMG_01.
@@ -1688,7 +1690,7 @@ function renderProcessHistory(){
  }).join('')||'<div class="muted">Ainda não existem acontecimentos registados.</div>';
 }
 function updateContext(){let p=proc(),a=asset()||p?.assets?.find(x=>x.id===editingAsset)||(!assetEditor?.classList.contains('hidden')?assetEditor._draft:null);if(!p){document.getElementById('context').textContent='Nenhum processo selecionado';return}if(!a){document.getElementById('context').textContent=p.code||'Processo';return}document.getElementById('context').textContent=[a.code,a.ref].filter(Boolean).join(' ')+' / '+(a.name||'Sem designação')}
-function go(id){if(id!=='processos'&&!proc()){alert('Crie ou selecione primeiro um Processo.');id='processos'}document.querySelectorAll('main section').forEach(s=>s.classList.toggle('show',s.id===id));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.go===id));if(id==='processos')renderProcesses();if(id==='dados')fillData();if(id==='ativos')renderAssets();if(id==='caracterizar')renderCharacterList();if(id==='exportar')renderExportAssetSelector();updateContext();scrollTo(0,0)}
+function go(id){if(id!=='processos'&&!proc()){alert('Crie ou selecione primeiro um Processo.');id='processos'}document.querySelectorAll('main section').forEach(s=>s.classList.toggle('show',s.id===id));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.go===id));if(id==='processos')renderProcesses();if(id==='dados')fillData();if(id==='ativos')renderAssets();if(id==='caracterizar')renderCharacterList();if(id==='exportar'){renderExportAssetSelector();renderOutputComposition()}updateContext();scrollTo(0,0)}
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{syncPendingData();go(b.dataset.go)});
 
 let lightBoot=true;
@@ -3541,13 +3543,18 @@ if(cfgResetCoverContent)cfgResetCoverContent.onclick=()=>{
  saveOutModels();renderCoverContentConfig();renderOutModelZones();refreshOpenOutputs();
 };
 const OUTPUT_COMPOSITION_KEY='ativa_output_composition_v1';
+// Sequência normal do relatório: 1) Capa de processo 2) Cronologia 3) Resumo de
+// processo 4-5) por cada Ativo, a Capa (2 fotos + espaço para localização) seguida
+// imediatamente da respetiva Caracterização (a descarga).
 const OUTPUT_COMPOSITION_DEFAULT=[
- {id:'cover',name:'Capa',enabled:true},
+ {id:'processCover',name:'Capa de processo',enabled:true},
+ {id:'chronology',name:'Cronologia',enabled:true},
  {id:'process',name:'Ficha de resumo do Processo',enabled:true},
+ {id:'cover',name:'Capa',enabled:true},
  {id:'characterization',name:'Fichas de caracterização',enabled:true},
- {id:'visits',name:'Visitas',enabled:false},
- {id:'chronology',name:'Cronologia',enabled:false}
+ {id:'visits',name:'Visitas',enabled:false}
 ];
+const OUTPUT_STRUCTURAL_IDS=['processCover','cover'];
 function loadOutputComposition(){
  try{
    const saved=JSON.parse(localStorage.getItem(OUTPUT_COMPOSITION_KEY)||'[]');
@@ -3558,20 +3565,29 @@ function loadOutputComposition(){
      if(base&&!result.some(x=>x.id===base.id))result.push({id:base.id,name:base.name,enabled:item.enabled!==false});
    });
    OUTPUT_COMPOSITION_DEFAULT.forEach(base=>{if(!result.some(x=>x.id===base.id))result.push({...base})});
-   // Migration rule: the document cover is structural, not optional.
-   // Old saved configurations must never suppress it.
-   let cover=result.find(item=>item.id==='cover');
-   if(!cover){cover={id:'cover',name:'Capa',enabled:true};result.unshift(cover)}
-   cover.name='Capa';cover.enabled=true;
-   return [cover,...result.filter(item=>item.id!=='cover')];
+   // Migration rule: the Capa de processo and the Capa do ativo are structural,
+   // never optional. Old saved configurations must never suppress either one.
+   OUTPUT_STRUCTURAL_IDS.forEach(id=>{
+     let item=result.find(x=>x.id===id);
+     if(!item){item={id,name:OUTPUT_COMPOSITION_DEFAULT.find(b=>b.id===id).name,enabled:true};result.push(item)}
+     item.enabled=true;
+   });
+   const processCover=result.find(item=>item.id==='processCover');
+   return [processCover,...result.filter(item=>item.id!=='processCover')];
  }catch(e){return OUTPUT_COMPOSITION_DEFAULT.map(item=>({...item}))}
 }
 let outputComposition=loadOutputComposition();
 function saveOutputComposition(){try{localStorage.setItem(OUTPUT_COMPOSITION_KEY,JSON.stringify(outputComposition))}catch(e){warnStorageFailure()}}
 function renderOutputComposition(){
- if(!cfgOutputValues)return;cfgOutputValues.innerHTML=outputComposition.map((item,index)=>`<div class="item"><label class="item-main" style="display:flex;align-items:center;gap:8px;margin:0"><input type="checkbox" data-output-enabled="${index}" style="width:auto" ${item.enabled?'checked':''} ${item.id==='cover'?'disabled title="A Capa faz parte estrutural do documento"':''}><span class="item-title">${esc(item.name)}</span></label><span class="photo-actions"><button class="btn" data-output-up="${index}" ${index===0?'disabled':''}>↑</button><button class="btn" data-output-down="${index}" ${index===outputComposition.length-1?'disabled':''}>↓</button></span></div>`).join('');
- cfgOutputValues.querySelectorAll('[data-output-enabled]').forEach(input=>input.onchange=()=>{const item=outputComposition[Number(input.dataset.outputEnabled)];if(item.id==='cover'){input.checked=true;return}item.enabled=input.checked;saveOutputComposition()});
- cfgOutputValues.querySelectorAll('[data-output-up]').forEach(button=>button.onclick=()=>moveOutputComposition(Number(button.dataset.outputUp),-1));cfgOutputValues.querySelectorAll('[data-output-down]').forEach(button=>button.onclick=()=>moveOutputComposition(Number(button.dataset.outputDown),1));
+ const containers=[cfgOutputValues,document.getElementById('exportOutputValues')].filter(Boolean);
+ if(!containers.length)return;
+ const html=outputComposition.map((item,index)=>`<div class="item"><label class="item-main" style="display:flex;align-items:center;gap:8px;margin:0"><input type="checkbox" data-output-enabled="${index}" style="width:auto" ${item.enabled?'checked':''} ${OUTPUT_STRUCTURAL_IDS.includes(item.id)?'disabled title="Esta ficha faz parte estrutural do documento"':''}><span class="item-title">${esc(item.name)}</span></label><span class="photo-actions"><button class="btn" data-output-up="${index}" ${index===0?'disabled':''}>↑</button><button class="btn" data-output-down="${index}" ${index===outputComposition.length-1?'disabled':''}>↓</button></span></div>`).join('');
+ containers.forEach(container=>{
+  container.innerHTML=html;
+  container.querySelectorAll('[data-output-enabled]').forEach(input=>input.onchange=()=>{const item=outputComposition[Number(input.dataset.outputEnabled)];if(OUTPUT_STRUCTURAL_IDS.includes(item.id)){input.checked=true;return}item.enabled=input.checked;saveOutputComposition();renderOutputComposition();refreshOpenOutputs()});
+  container.querySelectorAll('[data-output-up]').forEach(button=>button.onclick=()=>moveOutputComposition(Number(button.dataset.outputUp),-1));
+  container.querySelectorAll('[data-output-down]').forEach(button=>button.onclick=()=>moveOutputComposition(Number(button.dataset.outputDown),1));
+ });
 }
 function moveOutputComposition(index,direction){const next=index+direction;if(next<0||next>=outputComposition.length)return;[outputComposition[index],outputComposition[next]]=[outputComposition[next],outputComposition[index]];saveOutputComposition();renderOutputComposition();refreshOpenOutputs()}
 function activeOutputComponents(){outputComposition=loadOutputComposition();return outputComposition.filter(item=>item.enabled).map(item=>item.id)}
@@ -4062,6 +4078,7 @@ async function buildWordDOCX(p){
  async function appendWordPhotos(a,nufIndex,photoRefs,cols,showCaptions){const cellWidth=Math.floor(5400000/cols),imageHeight=2100000;let cells=[];for(const ref of photoRefs){const photo=ref.photo,index=ref.index;try{let blob=await photoGet(photo.id);if(!blob)continue;let ext=(blob.type||'').includes('png')?'png':'jpeg';if(!/image\/(png|jpeg|jpg)/i.test(blob.type||'')){const activeSettings=loadPhotoSettings(),converted=await compressImage(blob,activeSettings.maxSide,activeSettings.quality/100);blob=converted.blob;ext='jpeg'}imageNo++;const fileExt=ext==='png'?'png':'jpg',rid='rId'+imageNo,w=Number(photo.w)||1200,h=Number(photo.h)||800,scale=Math.min(cellWidth/w,imageHeight/h),cx=Math.max(1,Math.round(w*scale)),cy=Math.max(1,Math.round(h*scale));entries.push({name:'word/media/image'+imageNo+'.'+fileExt,data:new Uint8Array(await blob.arrayBuffer())});rels.push('<Relationship Id="'+rid+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image'+imageNo+'.'+fileExt+'"/>');cells.push({image:wordDrawing(rid,imageNo,cx,cy),caption:showCaptions?wordParagraph(photoCodeForReport(a,nufIndex,index)+(photo.caption?' — '+photo.caption:''),{size:16}):''});if(cells.length===cols){body.push(wordPhotoTable(cells,cols,showCaptions));cells=[]}}catch(e){console.error(e)}}if(cells.length)body.push(wordPhotoTable(cells,cols,showCaptions))}
  const components=activeOutputComponents();
  for(const component of components){
+  if(component==='processCover'){body.push(wordParagraph(p.code||'Processo',{bold:true,size:40,pageBreak:body.length>0}),wordParagraph(p.name||'',{bold:true,size:26}),wordField('ID Institucional',p.ref),wordField('Solicitante',p.requester),wordField('Finalidade',p.purpose),wordField('Descrição do solicitado',p.requestDescription),wordField('Base de valor',p.valueBase),wordField('Estado',p.status),wordField('Data de entrada',p.inputDate),wordField('Prazo',p.deadline))}
   if(component==='process'){body.push(wordParagraph(p.code||'Processo',{bold:true,size:36,pageBreak:body.length>0}),wordField('Designação',p.name),wordField('ID Institucional',p.ref),wordField('Solicitante',p.requester),wordField('Finalidade',p.purpose),wordField('Descrição do solicitado',p.requestDescription),wordField('Base de valor',p.valueBase),wordField('Estado',p.status),wordField('Data de entrada',p.inputDate),wordField('Prazo',p.deadline),wordParagraph('Número de Ativos: '+reportAssets.length,{bold:true,size:22}));for(const status of ['ON','OFF']){if((status==='ON'&&!summaryConfig.on)||(status==='OFF'&&!summaryConfig.off))continue;const rows=reportAssets.filter(a=>(a.status==='OFF'?'OFF':'ON')===status);body.push(wordParagraph('Status '+status+' — '+rows.length,{bold:true,size:20}));rows.forEach(a=>body.push(wordParagraph('    '+summaryConfig.fields.map(field=>SUMMARY_FIELD_DEFS[field]+': '+assetSummaryValue(a,field)).join(' · '),{size:17}))) }body.push(wordField('Observações',p.obs))}
   if(component==='cover')for(const a of reportAssets){const refs=(a.photos||[]).map((photo,index)=>({photo,index})).filter(ref=>ref.photo.cover||ref.photo.mapImage);if(!refs.length)continue;body.push(wordParagraph((a.code||'Ativo')+' — '+(a.name||'Capa'),{bold:true,size:28,pageBreak:true}));const mapRefs=refs.filter(r=>r.photo.mapImage),regularRefs=refs.filter(r=>!r.photo.mapImage);if(regularRefs.length)await appendWordPhotos(a,0,regularRefs,validReportCols(coverCols.value),false);if(mapRefs.length)await appendWordPhotos(a,0,mapRefs.slice(0,1),1,false)}
   if(component==='characterization')for(const a of reportAssets){body.push(wordParagraph((a.code||'Ativo')+' — '+(a.name||'Sem designação'),{bold:true,size:28,pageBreak:true}),wordField('ID_Institucional',a.ref),wordField('Tipo',a.type),wordField('Grupo',a.group),wordField('Destino',a.currentUse),wordField('Endereço / Local',a.local),wordField('Número',a.doorNumber),wordField('Piso / Andar',a.floor),wordField('Código Postal',formatPostalCode(a.postalCode)),wordField('Freguesia',a.freg),wordField('Concelho',a.conc),wordField('ID externo',a.externalId),wordField('Hora da visita',a.visitTime),wordField('GPS',assetGPS(a)),wordField('Observações do Ativo',a.obs));body.push(wordParagraph('Caracterização',{bold:true,size:24}));configuredCharacterValues(a,a).forEach(([key,value])=>body.push(wordField(key,value)));const q=a.qtyAreas||{};[['Documentação de referência',(q.documents||[]).join(', ')],['Quantidade',q.qtd],['Área de terreno (AT)',q.at],['Área de implantação (AI)',q.ai],['Área bruta privativa (ABP)',q.abp],['Área bruta dependente (ABD)',q.abd],['Sup. terreno (ST)',q.st],['Sup. coberta (SC)',q.sc],['Sup. descoberta (SD)',q.sd]].forEach(x=>body.push(wordField(x[0],x[1])));body.push(wordField('Observações',a.char?.__obs));await appendWordPhotos(a,0,(a.photos||[]).map((photo,index)=>({photo,index})),validReportCols(sheetCols.value),true)}
@@ -4258,6 +4275,13 @@ async function buildReportPDF(p){
  let coverCharDone=false;
  for(const component of components){
   currentComponent=component;
+  if(component==='processCover'){
+   if(pageStarted)newPage();
+   pageTitle('Capa de Processo');
+   heading(p.code||'Processo',{pageBreak:false,size:22});
+   if(String(p.name||'').trim())text(p.name,{bold:true,size:14,gap:6});
+   fieldGrid([['ID Institucional',p.ref],['Solicitante',p.requester],['Finalidade',p.purpose],['Descrição do solicitado',p.requestDescription],['Base de valor',p.valueBase],['Estado',p.status],['Data de entrada',p.inputDate],['Prazo',p.deadline]]);
+  }
   if(component==='process'){
    if(pageStarted)newPage();
    pageTitle('Resumo');
