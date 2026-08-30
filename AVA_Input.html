@@ -896,6 +896,13 @@ function normaliseDB(raw){
          a.photos.forEach(x=>{if(x&&!known.has(x.id))first.photos.push(x)});
        }
        a.char=first.char;a.qtyAreas=first.qtyAreas;a.photos=first.photos;
+       // Remove entradas duplicadas (mesmo id de fotografia repetido no mesmo
+       // Ativo) — pode acontecer por uma atribuição repetida na recuperação de
+       // fotografias órfãs; mantém-se sempre a primeira ocorrência.
+       if(a.photos.length>1){
+         const seen=new Set();
+         a.photos=a.photos.filter(x=>{const id=x&&x.id;if(!id)return true;if(seen.has(id))return false;seen.add(id);return true});
+       }
        delete a.items;delete a.nufs;delete a.split;
        rest.forEach(n=>{
          const nid=uid();
@@ -2887,13 +2894,19 @@ document.getElementById('runDiagnostics')?.addEventListener('click',async()=>{
  document.getElementById('openOrphanRecovery').classList.toggle('hidden',!orphanIds||!orphanIds.length);
 });
 document.getElementById('openOrphanRecovery')?.addEventListener('click',async()=>{
- const panel=document.getElementById('orphanRecovery');
+ const panel=document.getElementById('orphanRecovery'),button=document.getElementById('openOrphanRecovery');
  panel.classList.remove('hidden');
  panel.scrollIntoView({behavior:'smooth',block:'start'});
- await renderOrphanRecovery();
+ button.disabled=true;
+ try{await renderOrphanRecovery()}finally{button.disabled=false}
 });
-let orphanObjectURLs=[];
+let orphanObjectURLs=[],orphanRenderGen=0;
+// Com muitas fotografias órfãs, carregar as miniaturas demora — se o utilizador
+// tocar outra vez antes de terminar, duas execuções ficavam a escrever na mesma
+// grelha ao mesmo tempo e as fotografias apareciam duplicadas. Um número de
+// geração garante que só a última chamada em curso escreve na grelha.
 async function renderOrphanRecovery(){
+ const myGen=++orphanRenderGen;
  const grid=document.getElementById('orphanGrid'),targetSelect=document.getElementById('orphanTargetAsset');
  if(!grid||!targetSelect)return;
  orphanObjectURLs.forEach(url=>URL.revokeObjectURL(url));orphanObjectURLs=[];
@@ -2901,11 +2914,14 @@ async function renderOrphanRecovery(){
  const p=proc();
  targetSelect.innerHTML=(p?.assets||[]).map(a=>`<option value="${esc(a.id)}">${esc(a.code||'Ativo')} · ${esc(a.name||'Sem designação')}</option>`).join('')||'<option value="">Selecione primeiro um Processo com Ativos</option>';
  const orphanIds=await findOrphanedPhotoIds();
+ if(myGen!==orphanRenderGen)return;
  if(orphanIds===null){grid.innerHTML='<div class="muted">Não foi possível aceder à base de dados de fotografias.</div>';return}
  if(!orphanIds.length){grid.innerHTML='<div class="muted">Não há (ou já não há) fotografias órfãs.</div>';document.getElementById('openOrphanRecovery').classList.add('hidden');return}
  grid.innerHTML='';
  for(const id of orphanIds){
+   if(myGen!==orphanRenderGen)return;
    let blob=null;try{blob=await photoGet(id)}catch(e){}
+   if(myGen!==orphanRenderGen)return;
    const url=blob?URL.createObjectURL(blob):null;
    if(url)orphanObjectURLs.push(url);
    const card=document.createElement('label');
@@ -2926,7 +2942,9 @@ document.getElementById('orphanAssign')?.addEventListener('click',async()=>{
  if(!selected.length){alert('Selecione pelo menos uma fotografia.');return}
  const assignButton=document.getElementById('orphanAssign');assignButton.disabled=true;
  a.photos=Array.isArray(a.photos)?a.photos:[];
+ const alreadyOnAsset=new Set(a.photos.map(x=>x&&x.id));
  for(const id of selected){
+   if(alreadyOnAsset.has(id))continue;
    let w=1200,h=800;
    try{
      const blob=await photoGet(id);
@@ -2936,6 +2954,7 @@ document.getElementById('orphanAssign')?.addEventListener('click',async()=>{
      }
    }catch(e){}
    a.photos.push({id,w,h,cover:a.photos.length===0,caption:'',createdAt:new Date().toISOString(),recovered:true});
+   alreadyOnAsset.add(id);
  }
  historyAdd(p,'photos_recovered',selected.length+' fotografia(s) órfã(s) atribuída(s) a '+(a.code||'Ativo')+'.',a.id);
  save();
