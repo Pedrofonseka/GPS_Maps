@@ -1158,7 +1158,7 @@ const {
 }=Object.fromEntries(Array.from(document.querySelectorAll('[id]'),el=>[el.id,el]));
 const cfgAnalystText=document.getElementById('cfgAnalystText');
 
-const APP_VERSION='2.8.4',DATA_SCHEMA_VERSION=3,KEY='ativa_v2_db';
+const APP_VERSION='2.8.5',DATA_SCHEMA_VERSION=3,KEY='ativa_v2_db';
 const CONSTRUCTION_RULES_KEY='ativa_construction_rules_v2';
 const CONSTRUCTION_RULES_DEFAULT=`Todas as fotografias ficam centradas na respetiva célula.
 As fotografias são numeradas pelo índice do Ativo dentro do núcleo e pelo número sequencial: 005_1_IMG_01.
@@ -2650,7 +2650,7 @@ saveVisit.onclick=()=>{
  if(current)Object.assign(current,visit);else p.visits.push(visit);historyAdd(p,current?'visit_updated':'visit_created',(visit.type||'Visita')+' de '+(visit.date||'data não definida')+(current?' atualizada.':' registada.'));markProcessStarted(p);save();editingVisit=null;visitEditor.classList.add('hidden');renderVisits();renderProcessHistory();
 };
 
-function fillData(){let p=proc();if(!p)return;refreshConfiguredSelects();renderProcessStakeholders();renderVisits();dCode.value=p.code||'';dRef.value=p.ref||'';dName.value=p.name||'';if(dOffice)fillConfiguredSelect(dOffice,(appTables.offices||[]).map(x=>x.name),typeof p.office==='string'?p.office:String(p.office?.name||''));dRequester.value=p.requester||'';fillConfiguredSelect(dPurpose,appTables.purposes,p.purpose||'');dRequestDescription.value=p.requestDescription||'';fillConfiguredSelect(dValueBase,appTables.valueBases,p.valueBase||'');dStatus.value=p.status||'ON';dInputDate.value=p.inputDate||'';dDeadline.value=p.deadline||'';dObs.value=p.obs||'';
+function fillData(){let p=proc();if(!p)return;refreshConfiguredSelects();renderProcessStakeholders();renderVisits();dCode.value=p.code||'';dRef.value=p.ref||'';dName.value=p.name||'';if(dOffice)fillConfiguredSelect(dOffice,(appTables.offices||[]).map(x=>x.name),typeof p.office==='string'?p.office:String(p.office?.name||''));dRequester.value=p.requester||'';fillConfiguredSelect(dService,appTables.services,p.service||'');fillConfiguredSelect(dPurpose,appTables.purposes,p.purpose||'');dRequestDescription.value=p.requestDescription||'';fillConfiguredSelect(dValueBase,appTables.valueBases,p.valueBase||'');dStatus.value=p.status||'ON';dInputDate.value=p.inputDate||'';dDeadline.value=p.deadline||'';dObs.value=p.obs||'';
  // Os campos visíveis do ecrã "2 Processo" (variáveis configuráveis) só refletem
  // estes valores de recurso depois de o formulário dinâmico ser reconstruído — sem
  // esta chamada, ao reabrir a app o ecrã aparecia em branco mesmo com os dados
