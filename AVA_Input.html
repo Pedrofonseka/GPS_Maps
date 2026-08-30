@@ -92,6 +92,21 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
 .orientation-review-photo{width:150px;height:105px;display:block;object-fit:contain;object-position:center;background:#eef0f3;border:2px solid #d6b438;border-radius:8px}
 .cover-toggle{display:inline-flex;align-items:center;gap:5px;padding:6px 8px!important;margin:0!important;cursor:pointer}
 .cover-toggle input{width:18px!important;height:18px!important;margin:0!important;accent-color:#c89e12}
+/* Calendário próprio: substitui o seletor nativo <input type="date">, que em
+   iOS/WebKit fecha ou perde o valor se o utilizador não ficar parado no campo
+   tempo suficiente — o mesmo motivo por trás dos antigos atrasos de 2.5-3s
+   depois de "blur" só para dar tempo ao picker nativo de assentar. */
+#dateModal{position:fixed;inset:0;z-index:110;background:rgba(0,0,0,.45);padding:12px;display:flex;align-items:center;justify-content:center}
+#dateModal .card{width:100%;max-width:360px;margin:0}
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px}
+.cal-nav button{min-height:40px;padding:6px 14px}
+.cal-title{font-weight:800;font-size:15px}
+.cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:11px;color:#69717c;margin-bottom:4px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:10px}
+.day-btn{min-height:42px;padding:0;background:#eef0f3;color:#202b36;font-weight:600;border-radius:8px;border:1px solid transparent}
+.day-btn.sel{background:#c8a52f;color:#fff}
+.day-btn.today{box-shadow:inset 0 0 0 2px #c8a52f}
+.date-picker-btn{background:#fff;border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-size:14px;min-height:38px;cursor:pointer}
 @media(max-width:520px){
  .photo-row{grid-template-columns:96px minmax(0,1fr)}
  .photo-thumb{width:96px;height:76px}
@@ -319,7 +334,7 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
   <div class="muted">Lista automática por data e hora. Ativos sem data de visita ficam assinalados.</div>
   <div class="actions hidden"><button class="btn primary" id="newVisit" type="button">+ Nova visita</button></div>
   <div id="visitEditor" class="hidden" style="margin-top:10px;border-top:1px solid var(--line);padding-top:10px">
-   <div class="row"><div><div class="label-line"><label>Tipo</label><button class="config-link" type="button" data-config-table="visitTypes" data-config-label="Tipo de visita">Editar tabela</button></div><select id="vType"></select></div><div><label>Data</label><input id="vDate" type="date"></div></div>
+   <div class="row"><div><div class="label-line"><label>Tipo</label><button class="config-link" type="button" data-config-table="visitTypes" data-config-label="Tipo de visita">Editar tabela</button></div><select id="vType"></select></div><div><label>Data</label><button type="button" class="date-picker-btn" id="vDateBtn">Escolher data…</button><input type="hidden" id="vDate"></div></div>
    <div class="row"><div><label>Hora de início</label><input id="vStart" type="time"></div><div><label>Hora de fim</label><input id="vEnd" type="time"></div></div>
    <div class="label-line"><label>Estado do tempo</label><button class="config-link" type="button" data-config-table="weather" data-config-label="Estado do tempo">Editar tabela</button></div><input id="vWeather" list="weatherSuggestions"><datalist id="weatherSuggestions"></datalist>
    <h3 style="margin-top:12px">Intervenientes presentes</h3><div id="visitParticipants" class="actions"></div>
@@ -360,7 +375,7 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
   <div class="address-compact"><div><label>Número</label><input id="aDoorNumber" inputmode="text" autocomplete="address-line2" placeholder="12-A"></div><div><label>Piso / Andar</label><input id="aFloor" autocomplete="address-line3" placeholder="2.º Esq."></div><div><div class="label-line"><label>Código Postal</label><button class="config-link" type="button" data-config-table="postalCodes" data-config-label="Código Postal">Editar</button></div><input id="aPostalCode" list="postalCodeSuggestions" inputmode="numeric" autocomplete="postal-code" placeholder="0000-000"><datalist id="postalCodeSuggestions"></datalist></div></div>
   <div class="row"><div><div class="label-line"><label>Freguesia</label><button class="config-link" type="button" data-config-table="parishes" data-config-label="Freguesia">Editar tabela</button></div><input id="aFreg" list="parishSuggestions"><datalist id="parishSuggestions"></datalist></div><div><div class="label-line"><label>Concelho</label><button class="config-link" type="button" data-config-table="municipalities" data-config-label="Concelho">Editar tabela</button></div><input id="aConc" list="municipalitySuggestions"><datalist id="municipalitySuggestions"></datalist></div></div>
   <h3 style="margin-top:14px">Visita ao Ativo</h3>
-  <div class="row"><div><label>Data da visita</label><input id="aVisitDate" type="date"></div><div><label>Hora de início</label><input id="aVisitTime" type="time"></div></div>
+  <div class="row"><div><label>Data da visita</label><button type="button" class="date-picker-btn" id="aVisitDateBtn">Escolher data…</button><input type="hidden" id="aVisitDate"></div><div><label>Hora de início</label><input id="aVisitTime" type="time"></div></div>
   <div class="row"><div><label>Hora de fim</label><input id="aVisitEnd" type="time"></div><div><label>Estado do Ativo <small>(automático)</small></label><div id="assetStatusAuto" class="status-auto">Por visitar</div></div></div>
   <input id="aInspectionStatus" type="hidden">
   <label>Quem acompanhou neste Ativo</label><div id="assetVisitPeople" class="asset-visit-people"></div>
@@ -466,6 +481,7 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
 </section>
 </main>
 
+<div id="dateModal" class="hidden"></div>
 <div id="configModal" class="hidden" style="position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.35);padding:calc(12px + env(safe-area-inset-top)) 8px 12px;overflow:hidden">
  <div class="card config-shell" style="max-width:760px">
   <div class="actions" style="justify-content:space-between;align-items:center;margin-top:0">
@@ -709,7 +725,7 @@ const {
 }=Object.fromEntries(Array.from(document.querySelectorAll('[id]'),el=>[el.id,el]));
 const cfgAnalystText=document.getElementById('cfgAnalystText');
 
-const APP_VERSION='2.6.1',DATA_SCHEMA_VERSION=2,KEY='ativa_v2_db';
+const APP_VERSION='2.7.0',DATA_SCHEMA_VERSION=2,KEY='ativa_v2_db';
 const CONSTRUCTION_RULES_KEY='ativa_construction_rules_v2';
 const CONSTRUCTION_RULES_DEFAULT=`Todas as fotografias ficam centradas na respetiva célula.
 As fotografias são numeradas pelo índice do Ativo dentro do núcleo e pelo número sequencial: 005_1_IMG_01.
@@ -1338,7 +1354,7 @@ function renderProcessDynamicForm(){
    const options=tableVals.map(x=>`<option value="${esc(x)}" ${String(x)===String(value)?'selected':''}>${esc(x)}</option>`).join('');
    let control='';
    if(v.type==='textarea')control=`<textarea data-process-var="${v.id}">${esc(value)}</textarea>`;
-   else if(v.type==='date')control=`<input type="date" data-process-var="${v.id}" value="${esc(value)}">`;
+   else if(v.type==='date')control=`<button type="button" class="date-picker-btn" data-process-var-date="${v.id}">${value?formatDatePT(value):'Escolher data…'}</button><input type="hidden" data-process-var="${v.id}" value="${esc(value)}">`;
    else if(v.type==='select'){
      control=tableVals.length?`<select data-process-var="${v.id}"><option value=""></option>${options}</select>`:`<input data-process-var="${v.id}" value="${esc(value)}">`;
    }
@@ -1351,11 +1367,17 @@ function renderProcessDynamicForm(){
    const tableLink=v.table?`<button class="config-link process-table-link" type="button" data-process-var-table="${v.table}" data-process-var-label="${esc(v.label)}">Editar tabela</button>`:'';
    return `<div class="process-variable-field" data-process-field="${v.id}"><div class="label-line"><label>${i+1}. ${esc(v.label)}</label>${tableLink}</div>${control}</div>`;
  }).join('');
- box.querySelectorAll('[data-process-var]').forEach(el=>{
-   // Calendários só confirmam após o utilizador sair do campo, evitando fechos prematuros.
-   const evt=el.type==='date'?'blur':(el.tagName==='SELECT'?'change':'input');
-   let calendarTimer=null;
-   el.addEventListener(evt,()=>{const commit=()=>{const back=map[el.dataset.processVar];if(back)back.value=el.value;syncPendingData(true)};if(el.type==='date'){clearTimeout(calendarTimer);calendarTimer=setTimeout(commit,3000)}else commit()});
+ box.querySelectorAll('[data-process-var]:not([type="hidden"])').forEach(el=>{
+   const evt=el.tagName==='SELECT'?'change':'input';
+   el.addEventListener(evt,()=>{const back=map[el.dataset.processVar];if(back)back.value=el.value;syncPendingData(true)});
+ });
+ box.querySelectorAll('[data-process-var-date]').forEach(btn=>{
+   const id=btn.dataset.processVarDate,hidden=box.querySelector(`[data-process-var="${id}"][type="hidden"]`);
+   btn.onclick=()=>openDatePicker(hidden.value,iso=>{
+     hidden.value=iso;btn.textContent=iso?formatDatePT(iso):'Escolher data…';
+     const back=map[id];if(back)back.value=iso;
+     syncPendingData(true);
+   });
  });
  box.querySelectorAll('[data-process-var-table]').forEach(btn=>btn.onclick=()=>{
    openConfigAt('tables',btn.dataset.processVarLabel||'Tabela',btn.dataset.processVarTable);
@@ -1707,6 +1729,39 @@ function assetTypeDefinition(name){return (appTables.assetTypes||[]).find(item=>
 function reconcileUnclassifiedAssets(){let changed=false;db.processes.forEach(p=>(p.assets||[]).forEach(a=>{const definition=assetTypeDefinition(a.type);if(definition&&!a.group){a.group=definition.group;changed=true}}));if(changed)save()}
 
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+// Calendário próprio (como o FoTopics) em vez do <input type="date"> nativo —
+// evita a fragilidade do picker nativo do iOS/WebKit, que fecha ou perde o
+// valor consoante o utilizador interage, e que obrigava a atrasos artificiais
+// de 2.5-3s depois de "blur" só para dar tempo ao picker de assentar.
+const MESES_PT=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+function formatDatePT(iso){if(!iso)return '';const parts=String(iso).split('-');if(parts.length!==3)return '';const [y,m,d]=parts;return d+'/'+m+'/'+y}
+function openDatePicker(initialISO,onPick){
+ const modal=document.getElementById('dateModal');if(!modal)return;
+ let base=initialISO?new Date(initialISO+'T00:00:00'):new Date();
+ if(isNaN(base))base=new Date();
+ let viewY=base.getFullYear(),viewM=base.getMonth();
+ const today=new Date(),todayISO=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+ const render=()=>{
+  const first=new Date(viewY,viewM,1),startDow=(first.getDay()+6)%7,daysInMonth=new Date(viewY,viewM+1,0).getDate();
+  let cells='';
+  for(let i=0;i<startDow;i++)cells+='<div></div>';
+  for(let d=1;d<=daysInMonth;d++){
+   const iso=viewY+'-'+String(viewM+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+   const cls=[iso===initialISO?'sel':'',iso===todayISO?'today':''].filter(Boolean).join(' ');
+   cells+='<button type="button" class="day-btn '+cls+'" data-day="'+iso+'">'+d+'</button>';
+  }
+  modal.innerHTML='<div class="card"><div class="cal-nav"><button type="button" id="calPrev" class="btn">◀</button><div class="cal-title">'+MESES_PT[viewM]+' '+viewY+'</div><button type="button" id="calNext" class="btn">▶</button></div><div class="cal-weekdays"><div>S</div><div>T</div><div>Q</div><div>Q</div><div>S</div><div>S</div><div>D</div></div><div class="cal-grid">'+cells+'</div><div class="actions"><button type="button" id="calToday" class="btn">Hoje</button><button type="button" id="calClear" class="btn">Limpar</button><button type="button" id="calClose" class="btn">Fechar</button></div></div>';
+  modal.querySelector('#calPrev').onclick=()=>{viewM--;if(viewM<0){viewM=11;viewY--}render()};
+  modal.querySelector('#calNext').onclick=()=>{viewM++;if(viewM>11){viewM=0;viewY++}render()};
+  modal.querySelector('#calToday').onclick=()=>{const t=new Date();viewY=t.getFullYear();viewM=t.getMonth();render()};
+  modal.querySelector('#calClear').onclick=()=>{onPick('');closeDatePicker()};
+  modal.querySelector('#calClose').onclick=closeDatePicker;
+  modal.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{onPick(b.dataset.day);closeDatePicker()});
+ };
+ render();
+ modal.classList.remove('hidden');
+}
+function closeDatePicker(){const modal=document.getElementById('dateModal');if(modal){modal.classList.add('hidden');modal.innerHTML=''}}
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function formatPostalCode(value){
  const raw=String(value||'').trim(),match=raw.match(/^(\d{4})\s*-?\s*(\d{3})(.*)$/);
@@ -2029,17 +2084,20 @@ function renderVisits(){
 }
 function openVisit(id=null){
  const p=proc();if(!p)return;editingVisit=id;const visit=id?p.visits.find(x=>x.id===id):{type:'Visita',date:'',start:'',end:'',weather:'',participantIds:[],assets:[],constraints:'',obs:''};
- refreshConfiguredSelects();fillConfiguredSelect(vType,appTables.visitTypes,visit.type||'Visita');vDate.value=visit.date||'';vStart.value=visit.start||'';vEnd.value=visit.end||'';vWeather.value=visit.weather||'';vConstraints.value=visit.constraints||'';vObs.value=visit.obs||'';
+ refreshConfiguredSelects();fillConfiguredSelect(vType,appTables.visitTypes,visit.type||'Visita');vDate.value=visit.date||'';document.getElementById('vDateBtn').textContent=visit.date?formatDatePT(visit.date):'Escolher data…';vStart.value=visit.start||'';vEnd.value=visit.end||'';vWeather.value=visit.weather||'';vConstraints.value=visit.constraints||'';vObs.value=visit.obs||'';
  visitParticipants.innerHTML=(p.participants||[]).map(person=>`<label class="pill"><input type="checkbox" data-visit-person="${person.id}" style="width:auto" ${(visit.participantIds||[]).includes(person.id)?'checked':''}> ${esc(person.name||'Sem nome')}</label>`).join('')||'<span class="muted">Não existem Intervenientes definidos neste Processo.</span>';
  const selected=new Map((visit.assets||[]).map(x=>[x.assetId,x.status||'partial']));
  visitAssets.innerHTML=(p.assets||[]).map(a=>`<div class="item visit-choice"><label><input type="checkbox" data-visit-asset="${a.id}" style="width:auto" ${selected.has(a.id)?'checked':''}> ${esc(a.code||'Ativo')} · ${esc(a.name||'')}</label><select data-visit-status="${a.id}" ${selected.has(a.id)?'':'disabled'}><option value="partial" ${selected.get(a.id)!=='integral'?'selected':''}>Parcial</option><option value="integral" ${selected.get(a.id)==='integral'?'selected':''}>Integral</option></select></div>`).join('')||'<div class="muted">Não existem Ativos definidos neste Processo.</div>';
  visitAssets.querySelectorAll('[data-visit-asset]').forEach(box=>box.onchange=()=>{const select=visitAssets.querySelector('[data-visit-status="'+box.dataset.visitAsset+'"]');select.disabled=!box.checked});
  visitEditor.classList.remove('hidden');visitEditor.scrollIntoView({behavior:'smooth',block:'start'});
 }
+document.getElementById('vDateBtn')?.addEventListener('click',()=>{
+ openDatePicker(vDate.value,iso=>{vDate.value=iso;document.getElementById('vDateBtn').textContent=iso?formatDatePT(iso):'Escolher data…'});
+});
 newVisit.onclick=()=>openVisit();
 cancelVisit.onclick=()=>{editingVisit=null;visitEditor.classList.add('hidden')};
 saveVisit.onclick=()=>{
- const p=proc();if(!p)return;if(!vDate.value){alert('Indique a data da visita ou levantamento.');vDate.focus();return}if(vStart.value&&vEnd.value&&vEnd.value<vStart.value){alert('A hora de fim não pode ser anterior à hora de início.');vEnd.focus();return}const current=editingVisit?p.visits.find(x=>x.id===editingVisit):null,participantIds=[...visitParticipants.querySelectorAll('[data-visit-person]:checked')].map(x=>x.dataset.visitPerson),observed=[...visitAssets.querySelectorAll('[data-visit-asset]:checked')].map(box=>{const a=p.assets.find(x=>x.id===box.dataset.visitAsset),status=visitAssets.querySelector('[data-visit-status="'+box.dataset.visitAsset+'"]').value;return {assetId:a.id,code:a.code,name:a.name,status}});
+ const p=proc();if(!p)return;if(!vDate.value){alert('Indique a data da visita ou levantamento.');document.getElementById('vDateBtn')?.focus();return}if(vStart.value&&vEnd.value&&vEnd.value<vStart.value){alert('A hora de fim não pode ser anterior à hora de início.');vEnd.focus();return}const current=editingVisit?p.visits.find(x=>x.id===editingVisit):null,participantIds=[...visitParticipants.querySelectorAll('[data-visit-person]:checked')].map(x=>x.dataset.visitPerson),observed=[...visitAssets.querySelectorAll('[data-visit-asset]:checked')].map(box=>{const a=p.assets.find(x=>x.id===box.dataset.visitAsset),status=visitAssets.querySelector('[data-visit-status="'+box.dataset.visitAsset+'"]').value;return {assetId:a.id,code:a.code,name:a.name,status}});
  const visit={id:current?.id||uid(),type:vType.value,date:vDate.value,start:vStart.value,end:vEnd.value,weather:vWeather.value.trim(),participantIds,assets:observed,constraints:vConstraints.value.trim(),obs:vObs.value.trim(),createdAt:current?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};
  observed.forEach(item=>{const a=p.assets.find(x=>x.id===item.assetId);if(!a)return;const previous=a.inspectionStatus||'';a.inspectionStatus=item.status;if(previous!==item.status)historyAdd(p,'inspection_changed',(a.code||'Ativo')+' — estado alterado para: '+inspectionLabel(item.status)+' na visita de '+(visit.date||'data não definida')+'.',a.id);markAssetStarted(p,a)});
  if(current)Object.assign(current,visit);else p.visits.push(visit);historyAdd(p,current?'visit_updated':'visit_created',(visit.type||'Visita')+' de '+(visit.date||'data não definida')+(current?' atualizada.':' registada.'));markProcessStarted(p);save();editingVisit=null;visitEditor.classList.add('hidden');renderVisits();renderProcessHistory();
@@ -2134,8 +2192,13 @@ function persistExistingAsset(){
 });
 aPostalCode.addEventListener('input',()=>{const formatted=formatPostalCode(aPostalCode.value);if(formatted!==aPostalCode.value)aPostalCode.value=formatted});
 aFreg.addEventListener('change',()=>{const match=(appTables.parishes||[]).find(x=>x.name.localeCompare(aFreg.value.trim(),'pt',{sensitivity:'base'})===0);if(match?.municipality)aConc.value=match.municipality;persistExistingAsset()});
-let assetDateCommitTimer=null;
-aVisitDate.addEventListener('change',()=>{clearTimeout(assetDateCommitTimer);assetDateCommitTimer=setTimeout(persistExistingAsset,3000)});
+document.getElementById('aVisitDateBtn')?.addEventListener('click',()=>{
+ openDatePicker(aVisitDate.value,iso=>{
+   aVisitDate.value=iso;
+   document.getElementById('aVisitDateBtn').textContent=iso?formatDatePT(iso):'Escolher data…';
+   persistExistingAsset();
+ });
+});
 newAsset.onclick=()=>openAsset(null);
 function renderGroupControl(p,a){
  if(!aGroupWith)return;
@@ -2200,7 +2263,7 @@ function openAsset(id){
  let p=proc();editingAsset=id;let a=id?p.assets.find(x=>x.id===id):{clusterNo:nextClusterNo(p),ref:'',name:'',status:'ON',type:'',group:'',currentUse:'',local:'',doorNumber:'',floor:'',postalCode:'',freg:'',conc:'',visitDate:'',visitTime:'',visitEnd:'',visitParticipantIds:[],visitOtherPeople:'',inspectionStatus:'',gps:'',obs:'',char:{},qtyAreas:{},photos:[],origin:'manual'};
  if(!id)a.code=clusterCode(a.clusterNo,1,1);
  if(aGPSInfo){aGPSInfo.textContent='';aGPSInfo.classList.remove('gps-weak')}
- refreshConfiguredSelects();assetEditor.classList.remove('hidden');assetEditorTitle.textContent=id?'Editar Ativo':'Novo Ativo';aCode.value=a.code;aRef.value=a.ref||'';aName.value=a.name||'';aStatus.value=a.status||'ON';aLocal.value=a.local||'';aDoorNumber.value=a.doorNumber||'';aFloor.value=a.floor||'';aPostalCode.value=formatPostalCode(a.postalCode||'');aFreg.value=a.freg||'';aConc.value=a.conc||'';aVisitDate.value=a.visitDate||'';aVisitTime.value=a.visitTime||'';aVisitEnd.value=a.visitEnd||'';a.visitParticipantIds=Array.isArray(a.visitParticipantIds)?a.visitParticipantIds:[];aVisitOther.value=a.visitOtherPeople||'';assetVisitPeople.innerHTML=(p.participants||[]).map(person=>`<label class="pill"><input type="checkbox" data-asset-visit-person="${person.id}" style="width:auto" ${a.visitParticipantIds.includes(person.id)?'checked':''}> ${esc([person.name,person.role].filter(Boolean).join(' — '))}</label>`).join('')||'<span class="muted">Não existem Intervenientes definidos no Processo; use o campo seguinte.</span>';assetVisitPeople.querySelectorAll('[data-asset-visit-person]').forEach(x=>x.onchange=persistExistingAsset);a.inspectionStatus=automaticInspectionStatus(a);aInspectionStatus.value=a.inspectionStatus;assetStatusAuto.textContent=assetOperationalStatus(a);aGPS.value=assetGPS(a);aObs.value=a.obs||'';
+ refreshConfiguredSelects();assetEditor.classList.remove('hidden');assetEditorTitle.textContent=id?'Editar Ativo':'Novo Ativo';aCode.value=a.code;aRef.value=a.ref||'';aName.value=a.name||'';aStatus.value=a.status||'ON';aLocal.value=a.local||'';aDoorNumber.value=a.doorNumber||'';aFloor.value=a.floor||'';aPostalCode.value=formatPostalCode(a.postalCode||'');aFreg.value=a.freg||'';aConc.value=a.conc||'';aVisitDate.value=a.visitDate||'';if(document.getElementById('aVisitDateBtn'))document.getElementById('aVisitDateBtn').textContent=a.visitDate?formatDatePT(a.visitDate):'Escolher data…';aVisitTime.value=a.visitTime||'';aVisitEnd.value=a.visitEnd||'';a.visitParticipantIds=Array.isArray(a.visitParticipantIds)?a.visitParticipantIds:[];aVisitOther.value=a.visitOtherPeople||'';assetVisitPeople.innerHTML=(p.participants||[]).map(person=>`<label class="pill"><input type="checkbox" data-asset-visit-person="${person.id}" style="width:auto" ${a.visitParticipantIds.includes(person.id)?'checked':''}> ${esc([person.name,person.role].filter(Boolean).join(' — '))}</label>`).join('')||'<span class="muted">Não existem Intervenientes definidos no Processo; use o campo seguinte.</span>';assetVisitPeople.querySelectorAll('[data-asset-visit-person]').forEach(x=>x.onchange=persistExistingAsset);a.inspectionStatus=automaticInspectionStatus(a);aInspectionStatus.value=a.inspectionStatus;assetStatusAuto.textContent=assetOperationalStatus(a);aGPS.value=assetGPS(a);aObs.value=a.obs||'';
  renderGroupControl(p,a);
  deleteAsset.classList.toggle('hidden',!id);assetEditor._draft=a;updateContext()
 }
