@@ -222,7 +222,7 @@ button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlig
    <div class="row">
     <div><label>Atribuir selecionadas a</label><select id="orphanTargetAsset"></select></div>
    </div>
-   <div class="actions"><button class="btn" id="orphanSelectAll" type="button">Selecionar todas</button><button class="btn" id="orphanSelectNone" type="button">Nenhuma</button><button class="btn primary" id="orphanAssign" type="button">Atribuir selecionadas</button></div>
+   <div class="actions"><button class="btn" id="orphanSelectAll" type="button">Selecionar todas</button><button class="btn" id="orphanSelectNone" type="button">Nenhuma</button><button class="btn primary" id="orphanAssign" type="button">Atribuir selecionadas</button><button class="btn danger" id="orphanDelete" type="button">Eliminar selecionadas</button></div>
    <div id="orphanGrid" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;max-height:480px;overflow:auto"></div>
   </div>
   <div id="dashboardStats" class="dashboard-grid"></div>
@@ -2982,6 +2982,22 @@ document.getElementById('orphanAssign')?.addEventListener('click',async()=>{
  save();
  assignButton.disabled=false;
  alert(selected.length+' fotografia(s) atribuída(s) a '+(a.code||'Ativo')+'.');
+ await renderOrphanRecovery();
+});
+// Elimina definitivamente ficheiros órfãos escolhidos pelo utilizador — útil
+// quando duas entradas órfãs são, ao olhar para elas, a mesma fotografia
+// gravada duas vezes sob ids diferentes (o dedup automático só apanha o
+// mesmo id repetido, nunca dois ficheiros diferentes com o mesmo conteúdo).
+// Irreversível, por isso pede confirmação explícita antes de eliminar.
+document.getElementById('orphanDelete')?.addEventListener('click',async()=>{
+ const selected=[...document.querySelectorAll('#orphanGrid [data-orphan]:checked')].map(cb=>cb.dataset.orphan);
+ if(!selected.length){alert('Selecione pelo menos uma fotografia.');return}
+ if(!confirm('Eliminar definitivamente '+selected.length+' fotografia(s) órfã(s)? Esta ação não pode ser desfeita.'))return;
+ const deleteButton=document.getElementById('orphanDelete');deleteButton.disabled=true;
+ let deleted=0;
+ for(const id of selected){try{await photoDeleteBlob(id);deleted++}catch(e){console.error('Falha ao eliminar fotografia órfã',id,e)}}
+ deleteButton.disabled=false;
+ alert(deleted+' fotografia(s) eliminada(s) definitivamente.'+(deleted<selected.length?' ('+(selected.length-deleted)+' falharam.)':''));
  await renderOrphanRecovery();
 });
 
