@@ -725,7 +725,7 @@ const {
 }=Object.fromEntries(Array.from(document.querySelectorAll('[id]'),el=>[el.id,el]));
 const cfgAnalystText=document.getElementById('cfgAnalystText');
 
-const APP_VERSION='2.7.0',DATA_SCHEMA_VERSION=2,KEY='ativa_v2_db';
+const APP_VERSION='2.7.1',DATA_SCHEMA_VERSION=2,KEY='ativa_v2_db';
 const CONSTRUCTION_RULES_KEY='ativa_construction_rules_v2';
 const CONSTRUCTION_RULES_DEFAULT=`Todas as fotografias ficam centradas na respetiva célula.
 As fotografias são numeradas pelo índice do Ativo dentro do núcleo e pelo número sequencial: 005_1_IMG_01.
@@ -880,6 +880,28 @@ function renderLastBackupInfo(){
 }
 let db=load(), currentProcess=null, editingAsset=null, editingVisit=null, charAsset=null;
 const migrationErrors=[];
+// Registo forense leve, para apanhar em flagrante uma futura perda de
+// referências a fotografias (ex.: ATV_001.1/001.2) sem depender de
+// adivinhar — grava-se um resumo compacto (código + nº de fotos por Ativo)
+// em cada momento-chave, com poucas entradas guardadas, para nunca agravar
+// o risco de falha de gravação que já sabemos existir neste aparelho.
+const AUDIT_LOG_KEY='ativa_audit_log_v1';
+function auditPhotoSnapshot(sourceDb){
+ try{
+   const parts=[];
+   (sourceDb?.processes||[]).forEach(p=>(p.assets||[]).forEach(a=>{parts.push((a.code||a.id||'?')+':'+(Array.isArray(a.photos)?a.photos.length:'-'))}));
+   return parts.join(',');
+ }catch(e){return '(falha ao gerar resumo)'}
+}
+function auditLog(event,detail){
+ try{
+   const log=JSON.parse(localStorage.getItem(AUDIT_LOG_KEY)||'[]');
+   log.push({at:new Date().toISOString(),event,detail:detail||''});
+   if(log.length>60)log.splice(0,log.length-60);
+   localStorage.setItem(AUDIT_LOG_KEY,JSON.stringify(log));
+ }catch(e){}
+}
+function loadAuditLog(){try{return JSON.parse(localStorage.getItem(AUDIT_LOG_KEY)||'[]')}catch(e){return[]}}
 function rememberCurrentProcess(){
  try{if(currentProcess)localStorage.setItem(LAST_PROCESS_KEY,currentProcess);else localStorage.removeItem(LAST_PROCESS_KEY)}catch(e){}
 }
@@ -977,7 +999,7 @@ function normaliseDB(raw){
        // fotografias órfãs; mantém-se sempre a primeira ocorrência.
        if(a.photos.length>1){
          const seen=new Set();
-         a.photos=a.photos.filter(x=>{const id=x&&x.id;if(!id)return true;if(seen.has(id))return false;seen.add(id);return true});
+         a.photos=a.photos.filter(x=>{const id=x&&x.id;if(!id)return true;if(seen.has(id)){auditLog('per_asset_dedup_strip',(a.code||a.id)+' id='+id);return false}seen.add(id);return true});
        }
        delete a.items;delete a.nufs;delete a.split;
        rest.forEach(n=>{
@@ -1011,13 +1033,13 @@ function normaliseDB(raw){
  // atribuição numa recuperação de fotografias órfãs, em sessões diferentes).
  // Mantém-se sempre a primeira ocorrência encontrada e remove-se a restante
  // — nunca apaga o ficheiro em si, só a referência a mais.
- const seenPhotoIds=new Set();
+ const seenPhotoIds=new Map();
  clean.processes.forEach(p=>(p.assets||[]).forEach(a=>{
    if(!Array.isArray(a.photos))return;
    a.photos=a.photos.filter(x=>{
      const id=x&&x.id;if(!id)return true;
-     if(seenPhotoIds.has(id))return false;
-     seenPhotoIds.add(id);return true;
+     if(seenPhotoIds.has(id)){auditLog('global_dedup_strip',(a.code||a.id)+' id='+id+' já em '+seenPhotoIds.get(id));return false}
+     seenPhotoIds.set(id,a.code||a.id);return true;
    });
  }));
  return clean;
@@ -1037,15 +1059,34 @@ function storageIssueGuidance(){
  if(location.protocol==='file:')return 'Isto costuma acontecer quando o ficheiro é aberto a partir da pré-visualização da app Ficheiros, que restringe a gravação — normalmente NÃO é falta de espaço no aparelho. Toque no ícone de partilha e escolha "Abrir no Safari" (ou: toque sem soltar no ficheiro → Partilhar → Safari); depois, em Safari, use Partilhar → Adicionar ao Ecrã Principal para evitar repetir isto.';
  return 'Verifique o espaço de armazenamento disponível para este site (Definições do navegador → Privacidade/Dados de sites); pode também acontecer em navegação privada.';
 }
-async function saveDBFallback(savedAt){
- try{
-   const store=await settingsStore('readwrite');
-   await new Promise((resolve,reject)=>{
-     const request=store.put({data:db,savedAt:savedAt||new Date().toISOString()},DB_FALLBACK_KEY);
-     request.onsuccess=()=>resolve();request.onerror=()=>reject(request.error);
-   });
-   return true;
- }catch(e){return false}
+// Como save() nunca espera por saveDBFallback (é sempre "dispara e esquece",
+// para não bloquear a interface), chamadas próximas no tempo — ex.: o ciclo
+// que grava a seguir a cada fotografia de um lote — ficavam a competir pela
+// mesma ligação sem qualquer ordem garantida: se a escrita mais recente
+// terminasse antes da mais antiga, a cópia de recurso ficava com dados mais
+// velhos do que os que já lá estavam, com um "savedAt" que não correspondia
+// ao conteúdo realmente gravado. Uma fila serializa as escritas pela ordem
+// de chamada, e cada chamada tira uma fotografia (clone) do estado de "db"
+// nesse preciso instante, para nunca gravar um estado mais novo do que o
+// timestamp que o acompanha.
+let fallbackWriteQueue=Promise.resolve();
+function saveDBFallback(savedAt){
+ let snapshot;
+ try{snapshot=JSON.parse(JSON.stringify(db))}catch(e){snapshot=db}
+ const at=savedAt||new Date().toISOString();
+ const run=async()=>{
+   try{
+     const store=await settingsStore('readwrite');
+     await new Promise((resolve,reject)=>{
+       const request=store.put({data:snapshot,savedAt:at},DB_FALLBACK_KEY);
+       request.onsuccess=()=>resolve();request.onerror=()=>reject(request.error);
+     });
+     return true;
+   }catch(e){return false}
+ };
+ const result=fallbackWriteQueue.then(run,run);
+ fallbackWriteQueue=result.then(()=>{},()=>{});
+ return result;
 }
 async function loadDBFallback(){
  try{
@@ -2555,6 +2596,11 @@ async function runDataDiagnostics(){
    lines.push('Referenciados por algum Ativo (visível ou ainda por migrar): '+referenced.size);
    lines.push('Órfãos (o ficheiro existe mas nenhum Ativo aponta para ele): '+orphaned.length);
  }
+ lines.push('');
+ lines.push('=== Registo forense (últimos eventos) ===');
+ const audit=loadAuditLog();
+ if(!audit.length)lines.push('(sem registos ainda)');
+ else audit.slice(-30).forEach(entry=>lines.push('['+entry.at+'] '+entry.event+': '+entry.detail));
  return lines.join('\n');
 }
 function readFileAsDataURL(file){
@@ -4923,6 +4969,7 @@ async function checkDBFallbackRecovery(){
    const localEmpty=!Array.isArray(db.processes)||!db.processes.length;
    const fallbackNewer=!localSavedAt||fb.savedAt>localSavedAt;
    if(!fallbackNewer)return;
+   auditLog('fallback_recovery_fired','localSavedAt='+localSavedAt+' fbSavedAt='+fb.savedAt+' | antes(local)='+auditPhotoSnapshot(db)+' | fallback='+auditPhotoSnapshot(fb.data));
    // A cópia de recurso já só existe porque uma gravação anterior falhou e é,
    // por definição, mais recente e completa do que o que está em localStorage
    // — pedir confirmação aqui só cria uma oportunidade de a perder por engano
@@ -4938,6 +4985,7 @@ async function checkDBFallbackRecovery(){
 function initialiseApp(){
  document.title='AVA_Input '+APP_VERSION;
  if(appVersionLabel)appVersionLabel.textContent=APP_VERSION;
+ auditLog('boot_start','v='+APP_VERSION+' | raw='+auditPhotoSnapshot(db));
  try{
   if(localStorage.getItem(STRUCTURAL_RESET_KEY)==='1'&&!localStorage.getItem('ativa_structural_db_cleared_1_18_78')){
    db=normaliseDB({processes:[]});currentProcess=null;save();
@@ -4959,7 +5007,7 @@ function initialiseApp(){
    // isso não deve voltar a rebentar aqui — mas se algo mesmo assim falhar, nunca
    // mais esconder isso num simples aviso de consola: os dados ficariam presos no
    // estado não migrado (ex.: fotografias invisíveis) sem o utilizador saber porquê.
-   const finishLightBoot=()=>{try{db=normaliseDB(db);reconcileUnclassifiedAssets();lightBoot=false;renderProcesses()}catch(e){console.error('Falha ao concluir a migração dos dados',e);alert('Ocorreu um problema ao preparar os dados guardados. Os dados não foram apagados, mas alguma informação pode não aparecer corretamente até isto ser corrigido. Por favor avise o suporte.')}};
+   const finishLightBoot=()=>{try{db=normaliseDB(db);auditLog('boot_migrated',auditPhotoSnapshot(db));reconcileUnclassifiedAssets();lightBoot=false;renderProcesses()}catch(e){console.error('Falha ao concluir a migração dos dados',e);alert('Ocorreu um problema ao preparar os dados guardados. Os dados não foram apagados, mas alguma informação pode não aparecer corretamente até isto ser corrigido. Por favor avise o suporte.')}};
    if(typeof requestIdleCallback==='function')requestIdleCallback(finishLightBoot,{timeout:3000});else setTimeout(finishLightBoot,1800);
  }catch(e){
    console.error('Falha ao iniciar AVA_Input:',e);
