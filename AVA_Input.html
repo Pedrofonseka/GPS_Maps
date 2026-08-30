@@ -649,7 +649,7 @@ const {
 }=Object.fromEntries(Array.from(document.querySelectorAll('[id]'),el=>[el.id,el]));
 const cfgAnalystText=document.getElementById('cfgAnalystText');
 
-const APP_VERSION='2.2.0',DATA_SCHEMA_VERSION=2,KEY='ativa_v2_db';
+const APP_VERSION='2.2.1',DATA_SCHEMA_VERSION=2,KEY='ativa_v2_db';
 const CONSTRUCTION_RULES_KEY='ativa_construction_rules_v2';
 const CONSTRUCTION_RULES_DEFAULT=`Todas as fotografias ficam centradas na respetiva célula.
 As fotografias são numeradas pelo índice do Ativo dentro do núcleo e pelo número sequencial: 005_1_IMG_01.
@@ -4428,12 +4428,13 @@ function processDataRows(p){
  });
  return rows;
 }
-async function buildProcessZIP(p,wordBlob=null){
+async function buildProcessZIP(p,wordBlob=null,pdfBlob=null){
  const encoder=new TextEncoder(),root=safeFileName(p.code||'Processo')+'_Export/',entries=[],missing=[];
  entries.push({name:root+safeFileName(p.code||'Processo')+'_Dados.json',data:encoder.encode(JSON.stringify({app:'AVA_Input',version:APP_VERSION,schemaVersion:DATA_SCHEMA_VERSION,exportedAt:new Date().toISOString(),process:p},null,2))});
  entries.push({name:root+safeFileName(p.code||'Processo')+'_Resumo.txt',data:encoder.encode(processSummaryText(p))});
  entries.push({name:root+safeFileName(p.code||'Processo')+'_Cronologia.txt',data:encoder.encode(processHistoryText(p))});
  entries.push({name:root+safeFileName(p.code||'Processo')+'_Dados.xlsx',data:new Uint8Array(await buildXLSX('Ativos',processDataRows(p)).arrayBuffer())});
+ if(pdfBlob)entries.push({name:root+safeFileName(p.code||'Processo')+'_Ficha.pdf',data:new Uint8Array(await pdfBlob.arrayBuffer())});
  if(wordBlob)entries.push({name:root+safeFileName(p.code||'Processo')+'_Ficha.docx',data:new Uint8Array(await wordBlob.arrayBuffer())});
  const reportAssets=selectedExportAssets(p);
  let done=0,total=reportAssets.reduce((n,a)=>n+(a.photos?.length||0),0);
@@ -4460,7 +4461,9 @@ exportZIP.onclick=async()=>{
  const p=syncPendingData();if(!p){alert('Selecione primeiro um Processo.');return}
  exportZIP.disabled=true;zipInfo.textContent='A preparar a exportação…';
  try{
-   zipInfo.textContent='A gerar o Word para incluir no arquivo…';const wordZip=await buildWordDOCX(p),wordBlob=new Blob([wordZip],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});const result=await buildProcessZIP(p,wordBlob),summary='ZIP criado com Word e '+result.count+' ficheiro(s)'+(result.missing.length?' · '+result.missing.length+' fotografia(s) indisponível(is)':'')+'.';await saveBlobToDestination(result.blob,safeFileName(p.code||'Processo')+'_Export.zip',zipInfo,summary);
+   zipInfo.textContent='A gerar o PDF para incluir no arquivo…';const pdfResult=await buildReportPDF(p),pdfBlob=pdfResult.blob;
+   zipInfo.textContent='A gerar o Word para incluir no arquivo…';const wordZip=await buildWordDOCX(p),wordBlob=new Blob([wordZip],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+   const result=await buildProcessZIP(p,wordBlob,pdfBlob),summary='ZIP criado com PDF, Word e '+result.count+' ficheiro(s)'+(pdfResult.photoFailures?' · '+pdfResult.photoFailures+' fotografia(s) não incluída(s) no PDF':'')+(result.missing.length?' · '+result.missing.length+' fotografia(s) indisponível(is)':'')+'.';await saveBlobToDestination(result.blob,safeFileName(p.code||'Processo')+'_Export.zip',zipInfo,summary);
  }catch(e){console.error(e);zipInfo.textContent='Não foi possível criar o ZIP.';alert('Falha ao criar a exportação ZIP deste Processo.')}
  exportZIP.disabled=false;
 };
