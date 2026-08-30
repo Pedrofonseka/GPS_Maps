@@ -1167,7 +1167,7 @@ const {
 }=Object.fromEntries(Array.from(document.querySelectorAll('[id]'),el=>[el.id,el]));
 const cfgAnalystText=document.getElementById('cfgAnalystText');
 
-const APP_VERSION='2.9.9',DATA_SCHEMA_VERSION=4,KEY='ativa_v2_db';
+const APP_VERSION='2.9.10',DATA_SCHEMA_VERSION=4,KEY='ativa_v2_db';
 const CONSTRUCTION_RULES_KEY='ativa_construction_rules_v2';
 const CONSTRUCTION_RULES_DEFAULT=`Todas as fotografias ficam centradas na respetiva célula.
 As fotografias são numeradas pelo número do Ativo, eventual posição no agrupamento e número sequencial: 005_1_IMG_01.
@@ -4754,7 +4754,7 @@ function saveOutputComposition(){try{localStorage.setItem(OUTPUT_COMPOSITION_KEY
 function renderOutputComposition(){
  const containers=[cfgOutputValues,document.getElementById('exportOutputValues')].filter(Boolean);
  if(!containers.length)return;
- const html=outputComposition.map((item,index)=>`<div class="item"><label class="item-main" style="display:flex;align-items:center;gap:8px;margin:0"><input type="checkbox" data-output-enabled="${index}" style="width:auto" ${item.enabled?'checked':''}><span class="item-title">${esc(item.name)}</span></label><span class="photo-actions"><button class="btn" data-output-up="${index}" ${index===0?'disabled':''}>↑</button><button class="btn" data-output-down="${index}" ${index===outputComposition.length-1?'disabled':''}>↓</button></span></div>`).join('');
+ const html=outputComposition.map((item,index)=>`<div class="item" data-output-row="${esc(item.id)}"><label class="item-main" style="display:flex;align-items:center;gap:8px;margin:0"><input type="checkbox" data-output-enabled="${index}" style="width:auto" ${item.enabled?'checked':''}><span class="item-title">${esc(item.name)}</span></label><span class="photo-actions"><button class="btn" data-output-up="${index}" ${index===0?'disabled':''}>↑</button><button class="btn" data-output-down="${index}" ${index===outputComposition.length-1?'disabled':''}>↓</button></span></div>`).join('');
  containers.forEach(container=>{
   container.innerHTML=html;
   container.querySelectorAll('[data-output-enabled]').forEach(input=>input.onchange=()=>{const item=outputComposition[Number(input.dataset.outputEnabled)];item.enabled=input.checked;saveOutputComposition();renderOutputComposition();refreshOpenOutputs()});
@@ -4762,7 +4762,24 @@ function renderOutputComposition(){
   container.querySelectorAll('[data-output-down]').forEach(button=>button.onclick=()=>moveOutputComposition(Number(button.dataset.outputDown),1));
  });
 }
-function moveOutputComposition(index,direction){const next=index+direction;if(next<0||next>=outputComposition.length)return;[outputComposition[index],outputComposition[next]]=[outputComposition[next],outputComposition[index]];saveOutputComposition();renderOutputComposition();refreshOpenOutputs()}
+let outputMoveCooldownUntil=0;
+function moveOutputComposition(index,direction){
+ // Ao trocar de posição, a linha movida muda de sítio no ecrã e a linha vizinha
+ // ocupa o lugar antigo — um segundo toque rápido no mesmo sítio (comportamento
+ // normal de um dedo a repetir o toque) acerta afinal na seta dessa vizinha, o
+ // que desfaz o movimento anterior em vez de o continuar. Este pequeno intervalo
+ // obriga a um segundo toque deliberado, já com a lista reorganizada à vista.
+ const now=Date.now();if(now<outputMoveCooldownUntil)return;outputMoveCooldownUntil=now+400;
+ const next=index+direction;if(next<0||next>=outputComposition.length)return;
+ const movedId=outputComposition[index].id;
+ [outputComposition[index],outputComposition[next]]=[outputComposition[next],outputComposition[index]];
+ saveOutputComposition();renderOutputComposition();refreshOpenOutputs();
+ document.querySelectorAll('[data-output-row="'+CSS.escape(movedId)+'"]').forEach(row=>{
+   row.scrollIntoView({block:'nearest'});
+   row.classList.add('cfg-row-flash');
+   setTimeout(()=>row.classList.remove('cfg-row-flash'),700);
+ });
+}
 function activeOutputComponents(){outputComposition=loadOutputComposition();return outputComposition.filter(item=>item.enabled).map(item=>item.id)}
 
 // Seleção de Ativos a incluir na próxima exportação. É estado só desta sessão
