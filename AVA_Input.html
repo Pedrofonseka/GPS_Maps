@@ -1167,7 +1167,7 @@ const {
 }=Object.fromEntries(Array.from(document.querySelectorAll('[id]'),el=>[el.id,el]));
 const cfgAnalystText=document.getElementById('cfgAnalystText');
 
-const APP_VERSION='2.9.16',DATA_SCHEMA_VERSION=4,KEY='ativa_v2_db';
+const APP_VERSION='2.9.17',DATA_SCHEMA_VERSION=4,KEY='ativa_v2_db';
 const CONSTRUCTION_RULES_KEY='ativa_construction_rules_v2';
 const CONSTRUCTION_RULES_DEFAULT=`Todas as fotografias ficam centradas na respetiva célula.
 As fotografias são numeradas pelo número do Ativo, eventual posição no agrupamento e número sequencial: 005_1_IMG_01.
@@ -3354,45 +3354,66 @@ async function photoReplaceAll(records){
 // parece ter desaparecido: mostra se a migração falhou, se ainda há dados presos
 // na estrutura antiga do NUF, e se os ficheiros das fotografias continuam
 // fisicamente na base de dados do aparelho mesmo que a app não os mostre.
+// Timeout defensivo: numa instalação real (muitos Processos/fotos, ou um
+// IndexedDB lento/bloqueado num aparelho concreto), um await preso aqui
+// deixava o botão "Diagnóstico de dados" sem qualquer reação visível — não
+// mostrava sequer o erro, parecia simplesmente "não fazer nada". Cada secção
+// arriscada corre isolada, com timeout e try/catch próprios, para que uma
+// falha numa secção não impeça as restantes de aparecer.
+function withTimeout(promise,ms,label){
+ return Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error(label+' excedeu '+ms+'ms')),ms))]);
+}
 async function runDataDiagnostics(){
  const lines=['=== Diagnóstico AVA_Input '+APP_VERSION+' ==='];
- const session=await readSettingRecord(SESSION_DIAG_KEY);
- lines.push('Sessão atual: '+(session?.open?'aberta':'fechada/sem registo')+(session?.lastView?' · último ecrã: '+session.lastView:''));
- lines.push('lightBoot ainda ativo (migração por concluir): '+(lightBoot?'SIM':'não'));
- lines.push('Erros de migração registados: '+(migrationErrors.length?migrationErrors.length:'nenhum'));
- migrationErrors.forEach(m=>lines.push('  - '+m));
+ try{
+   const session=await withTimeout(readSettingRecord(SESSION_DIAG_KEY),4000,'Leitura da sessão');
+   lines.push('Sessão atual: '+(session?.open?'aberta':'fechada/sem registo')+(session?.lastView?' · último ecrã: '+session.lastView:''));
+ }catch(e){lines.push('Sessão atual: falha ao ler ('+(e?.message||e)+')')}
+ try{
+   lines.push('lightBoot ainda ativo (migração por concluir): '+(lightBoot?'SIM':'não'));
+   lines.push('Erros de migração registados: '+(migrationErrors.length?migrationErrors.length:'nenhum'));
+   migrationErrors.forEach(m=>lines.push('  - '+m));
+ }catch(e){lines.push('Estado de migração: falha ao ler ('+(e?.message||e)+')')}
  lines.push('');
- lines.push('Processos: '+(db.processes||[]).length);
- (db.processes||[]).forEach(p=>{
-   lines.push('--- Processo '+(p.code||p.id||'?')+' — '+(p.name||'')+' ('+(p.assets||[]).length+' Ativo(s)) ---');
-   (p.assets||[]).forEach(a=>{
-     const hasNufs=Array.isArray(a.nufs);
-     const nufCount=hasNufs?a.nufs.length:0;
-     const nufPhotoCount=hasNufs?a.nufs.reduce((s,n)=>s+((n&&Array.isArray(n.photos))?n.photos.length:0),0):0;
-     const topPhotoCount=Array.isArray(a.photos)?a.photos.length:0;
-     lines.push('  '+(a.code||a.id||'?')+' — '+(a.name||'Sem designação')+': fotos visíveis='+topPhotoCount+(hasNufs?'  [AINDA POR MIGRAR: '+nufCount+' nuf(s) com '+nufPhotoCount+' foto(s) presas]':''));
+ try{
+   lines.push('Processos: '+(db.processes||[]).length);
+   (db.processes||[]).forEach(p=>{
+     lines.push('--- Processo '+(p.code||p.id||'?')+' — '+(p.name||'')+' ('+(p.assets||[]).length+' Ativo(s)) ---');
+     (p.assets||[]).forEach(a=>{
+       const hasNufs=Array.isArray(a.nufs);
+       const nufCount=hasNufs?a.nufs.length:0;
+       const nufPhotoCount=hasNufs?a.nufs.reduce((s,n)=>s+((n&&Array.isArray(n.photos))?n.photos.length:0),0):0;
+       const topPhotoCount=Array.isArray(a.photos)?a.photos.length:0;
+       lines.push('  '+(a.code||a.id||'?')+' — '+(a.name||'Sem designação')+' [clusterNo='+(a.clusterNo??'?')+']: fotos visíveis='+topPhotoCount+(hasNufs?'  [AINDA POR MIGRAR: '+nufCount+' nuf(s) com '+nufPhotoCount+' foto(s) presas]':''));
+     });
    });
- });
+ }catch(e){lines.push('Falha ao percorrer Processos/Ativos: '+(e?.message||e))}
  lines.push('');
- const keys=await photoListAllKeys();
- if(keys===null){
-   lines.push('Base de dados de fotografias (IndexedDB): não foi possível ler (modo temporário ou erro de acesso).');
- }else{
-   const referenced=new Set();
-   (db.processes||[]).forEach(p=>(p.assets||[]).forEach(a=>{
-     (a.photos||[]).forEach(ph=>{if(ph&&ph.id)referenced.add(ph.id)});
-     (a.nufs||[]).forEach(n=>{(n&&n.photos||[]).forEach(ph=>{if(ph&&ph.id)referenced.add(ph.id)})});
-   }));
-   const orphaned=keys.filter(k=>!referenced.has(k));
-   lines.push('Base de dados de fotografias (IndexedDB): '+keys.length+' ficheiro(s) guardado(s) fisicamente no aparelho.');
-   lines.push('Referenciados por algum Ativo (visível ou ainda por migrar): '+referenced.size);
-   lines.push('Órfãos (o ficheiro existe mas nenhum Ativo aponta para ele): '+orphaned.length);
- }
+ try{
+   const keys=await withTimeout(photoListAllKeys(),8000,'Leitura do IndexedDB de fotografias');
+   if(keys===null){
+     lines.push('Base de dados de fotografias (IndexedDB): não foi possível ler (modo temporário ou erro de acesso).');
+   }else{
+     const referenced=new Set();
+     (db.processes||[]).forEach(p=>(p.assets||[]).forEach(a=>{
+       (a.photos||[]).forEach(ph=>{if(ph&&ph.id)referenced.add(ph.id)});
+       (a.nufs||[]).forEach(n=>{(n&&n.photos||[]).forEach(ph=>{if(ph&&ph.id)referenced.add(ph.id)})});
+     }));
+     const orphaned=keys.filter(k=>!referenced.has(k));
+     lines.push('Base de dados de fotografias (IndexedDB): '+keys.length+' ficheiro(s) guardado(s) fisicamente no aparelho.');
+     lines.push('Referenciados por algum Ativo (visível ou ainda por migrar): '+referenced.size);
+     lines.push('Órfãos (o ficheiro existe mas nenhum Ativo aponta para ele): '+orphaned.length);
+   }
+ }catch(e){lines.push('Base de dados de fotografias (IndexedDB): falha ao ler — '+(e?.message||e))}
  lines.push('');
  lines.push('=== Registo forense (últimos eventos) ===');
- const audit=loadAuditLog();
- if(!audit.length)lines.push('(sem registos ainda)');
- else audit.slice(-30).forEach(entry=>lines.push('['+entry.at+'] '+entry.event+': '+entry.detail));
+ try{
+   const audit=loadAuditLog();
+   if(!audit.length)lines.push('(sem registos ainda)');
+   // Alargado de 30 para 150 eventos: 30 era muitas vezes curto demais para
+   // ainda conter o evento relevante numa sessão real com várias operações.
+   else audit.slice(-150).forEach(entry=>lines.push('['+entry.at+'] '+entry.event+': '+entry.detail));
+ }catch(e){lines.push('Falha ao ler o registo forense: '+(e?.message||e))}
  return lines.join('\n');
 }
 function readFileAsDataURL(file){
@@ -4133,12 +4154,22 @@ async function findOrphanedPhotoIds(){
 document.getElementById('runDiagnostics')?.addEventListener('click',async()=>{
  const box=document.getElementById('diagnosticsOutput');
  box.style.display='block';box.textContent='A calcular…';
- box.textContent=await runDataDiagnostics();
- const orphanIds=await findOrphanedPhotoIds();
- document.getElementById('openOrphanRecovery').classList.toggle('hidden',!orphanIds||!orphanIds.length);
+ try{
+   box.textContent=await runDataDiagnostics();
+ }catch(e){box.textContent='Não foi possível calcular o diagnóstico: '+(e?.message||e);console.error(e);return}
+ try{
+   const orphanIds=await findOrphanedPhotoIds();
+   document.getElementById('openOrphanRecovery').classList.toggle('hidden',!orphanIds||!orphanIds.length);
+ }catch(e){console.error(e)}
 });
 document.getElementById('copyDiagnostics')?.addEventListener('click',async()=>{
- const box=document.getElementById('diagnosticsOutput'),text=await runDataDiagnostics();box.style.display='block';box.textContent=text;
+ const box=document.getElementById('diagnosticsOutput');
+ box.style.display='block';box.textContent='A calcular…';
+ let text;
+ try{
+   text=await runDataDiagnostics();
+ }catch(e){box.textContent='Não foi possível calcular o diagnóstico: '+(e?.message||e);console.error(e);return}
+ box.textContent=text;
  try{await navigator.clipboard.writeText(text);alert('Diagnóstico copiado.')}catch(e){const range=document.createRange(),selection=getSelection();range.selectNodeContents(box);selection.removeAllRanges();selection.addRange(range);alert('O texto ficou selecionado. Use Copiar no menu do iPhone/iPad.')}
 });
 document.getElementById('clearDiagnostics')?.addEventListener('click',async()=>{
