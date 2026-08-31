@@ -4295,9 +4295,9 @@ function printBandHTML(kind,p,doc='Relatório',pageNo='',totalPages='',modelId='
   const left=String(pageFieldValue(pageSettings.headerLeft||'office',p)||'');
   const center=String(pageFieldValue(pageSettings.headerCenter||'',p)||'');
   const right=String(pageFieldValue(pageSettings.headerRight||'',p)||'');
-  const line2=String(office?.extra||'');
+  const line2=pageSettings.headerExtraEnabled!==false?String(office?.extra||pageSettings.headerExtraText||''):'';
   return `<div class="document-header-shell">
-    <div class="document-band document-header" style="font-size:${Math.max(9.5,Number(pageSettings.headerSize)||10)}pt">
+    <div class="document-band document-header" style="font-size:${Math.max(9.5,Number(pageSettings.headerGabineteSize)||10)}pt;font-weight:${pageSettings.headerGabineteBold?'bold':'normal'}">
       <span>${esc(String(left||''))}</span><span>${esc(String(center||''))}</span><span>${esc(String(right||''))}</span>
     </div>
     <div class="document-header-extra" style="font-size:${Math.max(8,Number(pageSettings.headerExtraSize)||8.5)}pt">${esc(line2)}</div>
@@ -5649,15 +5649,15 @@ function wordFieldCode(name,size){return '<w:r><w:rPr><w:sz w:val="'+size+'"/></
 // em todas as páginas (o cabeçalho/rodapé "default" do OOXML aplica-se a todas
 // as páginas por omissão, sem exceção da primeira).
 function wordBandXML(kind,p,totalWidthTwips=9000){
- const size=(kind==='header'?pageSettings.headerSize:pageSettings.footerSize)*2||20,tag=kind==='header'?'hdr':'ftr';
+ const size=(kind==='header'?pageSettings.headerGabineteSize:pageSettings.footerSize)*2||20,tag=kind==='header'?'hdr':'ftr';
  const half=Math.floor(totalWidthTwips/2);
  const tabs='<w:pPr><w:tabs><w:tab w:val="center" w:pos="'+half+'"/><w:tab w:val="right" w:pos="'+totalWidthTwips+'"/></w:tabs><w:spacing w:after="0"/></w:pPr>';
  let content='';
  if(kind==='header'){
-  const office=officeForProcess(p),left=String(office?.name||pageSettings.headerGabineteText||''),extra=String(office?.extra||pageSettings.headerExtraText||'');
+  const office=officeForProcess(p),left=String(office?.name||pageSettings.headerGabineteText||''),extra=pageSettings.headerExtraEnabled!==false?String(office?.extra||pageSettings.headerExtraText||''):'';
   content='<w:p>'+tabs+wordBandTextRun(left,size,!!pageSettings.headerGabineteBold)+'</w:p>'+(extra?'<w:p><w:pPr><w:spacing w:after="0"/></w:pPr>'+wordBandTextRun(extra,Math.max(16,Number(pageSettings.headerExtraSize||8)*2))+'</w:p>':'');
  }else{
-  const left=[p?.code||'','Resumo geral'].filter(Boolean).join(' · '),center=['AVA_Input '+APP_VERSION,pageSettings.analystText||''].filter(Boolean).join(' * ');
+  const left=[p?.code||'','Resumo geral'].filter(Boolean).join(' · '),center=['AVA_Input '+APP_VERSION,pageSettings.footerAnalystVersion!==false?(pageSettings.analystText||''):''].filter(Boolean).join(' * ');
   content='<w:p>'+tabs+wordBandTextRun(left,size)+'<w:r><w:tab/></w:r>'+wordBandTextRun(center,size)+'<w:r><w:tab/></w:r>'+wordFieldCode('PAGE',size)+wordBandTextRun('/',size)+wordFieldCode('NUMPAGES',size)+'</w:p>';
  }
  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:'+tag+' xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'+content+'</w:'+tag+'>';
@@ -5827,9 +5827,9 @@ async function buildReportPDF(p){
  // arbitrária. O conteúdo, incluindo o título da página, só começa depois
  // do cabeçalho, com uma folga extra, nunca sobreposto a ele.
  const headerTopY=(Number(pageSettings.headerDistance)||.5)*10;
- const headerSizeCalc=Math.max(9.5,Number(pageSettings.headerSize)||10);
+ const headerSizeCalc=Math.max(9.5,Number(pageSettings.headerGabineteSize)||10);
  const headerExtraSizeCalc=Math.max(8,Number(pageSettings.headerExtraSize)||8.5);
- const headerHasExtra=!!String(officeForProcess(p)?.extra||'').trim();
+ const headerHasExtra=pageSettings.headerExtraEnabled!==false&&!!String(officeForProcess(p)?.extra||pageSettings.headerExtraText||'').trim();
  const headerBlockBottom=headerTopY+headerSizeCalc*0.42+(headerHasExtra?2+headerExtraSizeCalc*0.42:0);
  const contentTop=Math.max(marginTop,headerBlockBottom+6);
  // Área reservada ao rodapé: usa a "Distância do rodapé à base" já configurada
@@ -6097,19 +6097,19 @@ async function buildReportPDF(p){
  const headerLeftVal=String(pageFieldValue(pageSettings.headerLeft||'office',p)||'');
  const headerCenterVal=String(pageFieldValue(pageSettings.headerCenter||'',p)||'');
  const headerRightVal=String(pageFieldValue(pageSettings.headerRight||'',p)||'');
- const headerExtraVal=String(office?.extra||'');
- const headerSize=Math.max(9.5,Number(pageSettings.headerSize)||10);
+ const headerExtraVal=pageSettings.headerExtraEnabled!==false?String(office?.extra||pageSettings.headerExtraText||''):'';
+ const headerSize=Math.max(9.5,Number(pageSettings.headerGabineteSize)||10);
  const headerExtraSize=Math.max(8,Number(pageSettings.headerExtraSize)||8.5);
  const footerFit=footerSizeAdjusted();
  const analystVersion=['AVA_Input '+APP_VERSION,pageSettings.footerAnalystVersion!==false?(pageSettings.analystText||''):''].filter(Boolean).join(' * ');
  const pageCount=doc.internal.getNumberOfPages();
  for(let i=1;i<=pageCount;i++){
   doc.setPage(i);
-  doc.setFont(pdfFont,'normal');doc.setFontSize(headerSize);doc.setTextColor(...PDF_COLORS.band);
+  doc.setFont(pdfFont,pageSettings.headerGabineteBold?'bold':'normal');doc.setFontSize(headerSize);doc.setTextColor(...PDF_COLORS.band);
   if(headerLeftVal)doc.text(headerLeftVal,marginLeft,headerTopY,{align:'left'});
   if(headerCenterVal)doc.text(headerCenterVal,pageW/2,headerTopY,{align:'center'});
   if(headerRightVal)doc.text(headerRightVal,pageW-marginRight,headerTopY,{align:'right'});
-  if(headerExtraVal){doc.setFontSize(headerExtraSize);doc.text(headerExtraVal,marginLeft,headerTopY+headerSize*0.42+2);}
+  if(headerExtraVal){doc.setFont(pdfFont,'normal');doc.setFontSize(headerExtraSize);doc.text(headerExtraVal,marginLeft,headerTopY+headerSize*0.42+2);}
   doc.setDrawColor(...PDF_COLORS.bandLine);doc.setLineWidth(0.2);
   doc.line(marginLeft,headerBlockBottom+2,pageW-marginRight,headerBlockBottom+2);
   const outModelName=footerOutModelName(pageModel[i]||'','Relatório',pageCount);
