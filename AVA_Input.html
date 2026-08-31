@@ -1167,7 +1167,7 @@ const {
 }=Object.fromEntries(Array.from(document.querySelectorAll('[id]'),el=>[el.id,el]));
 const cfgAnalystText=document.getElementById('cfgAnalystText');
 
-const APP_VERSION='2.9.14',DATA_SCHEMA_VERSION=4,KEY='ativa_v2_db';
+const APP_VERSION='2.9.15',DATA_SCHEMA_VERSION=4,KEY='ativa_v2_db';
 const CONSTRUCTION_RULES_KEY='ativa_construction_rules_v2';
 const CONSTRUCTION_RULES_DEFAULT=`Todas as fotografias ficam centradas na respetiva célula.
 As fotografias são numeradas pelo número do Ativo, eventual posição no agrupamento e número sequencial: 005_1_IMG_01.
@@ -1291,6 +1291,15 @@ const NUF_VARIABLE_DEFAULTS=[
  {id:'anomalias_limitacoes',label:'Anomalias / limitações',type:'textarea',wide:1,groups:['TAC','EDC']},
  {id:'tipo_edificio',label:'Tipo de edifício',type:'text',groups:['EDC']},
  {id:'acessibilidades',label:'Acesso Urbano',type:'text',groups:['EDC']},
+ {id:'solucao_construtiva',label:'Solução construtiva',type:'text',groups:['TAC','EDC']},
+ {id:'qualidade_materiais',label:'Qualidade de materiais e acabamentos',type:'text',groups:['TAC','EDC']},
+ {id:'qualidade_caixilharia',label:'Qualidade de caixilharia',type:'text',groups:['TAC','EDC']},
+ {id:'estado_conservacao_uso_previsto',label:'Estado de conservação para o uso previsto',type:'select',o:CONSERVATION_OPTIONS,groups:['TAC','EDC']},
+ {id:'proximidades',label:'Proximidades',type:'text',groups:['TAC','EDC']},
+ {id:'implantacao_acessibilidades',label:'Acessibilidades',type:'text',groups:['TAC','EDC']},
+ {id:'insolacao',label:'Insolação',type:'text',groups:['TAC','EDC']},
+ {id:'relacoes_vizinhanca',label:'Relações de vizinhança',type:'text',groups:['TAC','EDC']},
+ {id:'apreciacao_sumaria',label:'Apreciação sumária',type:'textarea',wide:1,groups:['TOF','TRN','TAC','EDC','VEI','MOB','MEQ','OTS','NID','SEP']},
  {id:'marca_modelo',label:'Marca / modelo',type:'text',groups:['VEI','MEQ']},
  {id:'matricula',label:'Matrícula',type:'text',groups:['VEI']},
  {id:'ano',label:'Ano',type:'number',groups:['VEI','MEQ']},
@@ -1879,6 +1888,29 @@ function migrateCaracterizacaoFields(){
    nufVariables.splice(afterIndex>=0?afterIndex+1:nufVariables.length,0,composicao);
    changed=true;
  }
+ // Campos da ficha de caracterização do modelo Word fornecido (Solução construtiva,
+ // Qualidade de materiais/caixilharia, Estado de conservação para o uso previsto,
+ // Proximidades, Acessibilidades de implantação, Insolação, Relações de vizinhança,
+ // Apreciação sumária) — inseridos a seguir aos campos já existentes com que se
+ // relacionam, para quem já tinha nufVariables gravadas antes destes existirem.
+ const NEW_CHAR_FIELDS=[
+  ['anomalias_limitacoes',{id:'solucao_construtiva',label:'Solução construtiva',type:'text',groups:['TAC','EDC']}],
+  ['solucao_construtiva',{id:'qualidade_materiais',label:'Qualidade de materiais e acabamentos',type:'text',groups:['TAC','EDC']}],
+  ['qualidade_materiais',{id:'qualidade_caixilharia',label:'Qualidade de caixilharia',type:'text',groups:['TAC','EDC']}],
+  ['qualidade_caixilharia',{id:'estado_conservacao_uso_previsto',label:'Estado de conservação para o uso previsto',type:'select',o:CONSERVATION_OPTIONS,groups:['TAC','EDC']}],
+  ['acessibilidades',{id:'proximidades',label:'Proximidades',type:'text',groups:['TAC','EDC']}],
+  ['proximidades',{id:'implantacao_acessibilidades',label:'Acessibilidades',type:'text',groups:['TAC','EDC']}],
+  ['implantacao_acessibilidades',{id:'insolacao',label:'Insolação',type:'text',groups:['TAC','EDC']}],
+  ['insolacao',{id:'relacoes_vizinhanca',label:'Relações de vizinhança',type:'text',groups:['TAC','EDC']}],
+  ['composicao',{id:'apreciacao_sumaria',label:'Apreciação sumária',type:'textarea',wide:1,groups:['TOF','TRN','TAC','EDC','VEI','MOB','MEQ','OTS','NID','SEP']}],
+ ];
+ NEW_CHAR_FIELDS.forEach(([afterId,def])=>{
+  if(nufVariables.some(v=>v.id===def.id))return;
+  const afterIndex=nufVariables.findIndex(v=>v.id===afterId);
+  const insertAt=afterIndex>=0?afterIndex+1:nufVariables.length;
+  nufVariables.splice(insertAt,0,normalizeVariable({...def,state:'active'},insertAt));
+  changed=true;
+ });
  if(changed)saveNUFVariables();
 }
 const PROCESS_VARIABLE_TYPES={text:'Texto',textarea:'Texto longo',date:'Data',select:'Lista',textlist:'Texto + sugestões'};
@@ -5376,20 +5408,43 @@ function wordFieldParagraph(label,value,opts={}){
  return '<w:p><w:pPr><w:jc w:val="'+alignment+'"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="'+labelSize+'"/></w:rPr><w:t xml:space="preserve">'+escXML(label+': ')+'</w:t></w:r><w:r><w:rPr><w:sz w:val="'+valueSize+'"/></w:rPr><w:t xml:space="preserve">'+escXML(value)+'</w:t></w:r></w:p>';
 }
 function wordField(label,value){if(!String(value??'').trim())return '';const narrative=/observ|descri|solicitado|condicion|anomalia|limita|benfeitoria|aprecia/i.test(String(label));return wordFieldParagraph(label,value,{adaptive:narrative,adaptiveValue:value})}
+// Várias etiquetas relacionadas na mesma linha, separadas por tabulação (ex.:
+// ID_Institucional / Freguesia / Concelho, AT / AI) — como na ficha de
+// caracterização em Word fornecida pelo utilizador, em vez de uma etiqueta por
+// linha. Pares com valor vazio são omitidos; a linha inteira desaparece se todos
+// os pares estiverem vazios. Sem posições de tabulação fixas — tal como no
+// modelo original, usa as tabulações por omissão do Word.
+function wordFieldLine(pairs,opts={}){
+ const parts=(pairs||[]).filter(([,value])=>String(value??'').trim());
+ if(!parts.length)return '';
+ const valueSize=opts.size||20,labelSize=Math.max(12,valueSize-2);
+ const runs=parts.map(([label,value],i)=>(i?'<w:r><w:tab/></w:r>':'')+'<w:r><w:rPr><w:b/><w:sz w:val="'+labelSize+'"/></w:rPr><w:t xml:space="preserve">'+escXML(label+': ')+'</w:t></w:r><w:r><w:rPr><w:sz w:val="'+valueSize+'"/></w:rPr><w:t xml:space="preserve">'+escXML(String(value))+'</w:t></w:r>').join('');
+ return '<w:p><w:pPr/>'+runs+'</w:p>';
+}
 function wordDrawing(rId,id,cx,cy){return '<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="'+cx+'" cy="'+cy+'"/><wp:docPr id="'+id+'" name="Fotografia '+id+'"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="'+id+'" name="Fotografia '+id+'"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="'+rId+'"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+cx+'" cy="'+cy+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>'}
-function wordPhotoTable(cells,cols,showCaptions=true,totalWidthTwips=9000){
+// Devolve só as linhas <w:tr> de um grupo de fotos (sem o <w:tbl> à volta), para
+// que várias chamadas seguidas (uma por grupo de `cols` fotos) se combinem numa
+// ÚNICA tabela contínua — como no modelo de ficha em Word fornecido pelo
+// utilizador — em vez de uma tabela separada por grupo (o que deixava um espaço
+// visível entre cada bloco de fotos).
+function wordPhotoTableRows(cells,cols,totalWidthTwips,showCaptions=true){
  while(cells.length<cols)cells.push(null);
- const width=Math.floor(totalWidthTwips/cols),grid=Array(cols).fill('<w:gridCol w:w="'+width+'"/>').join('');
+ const width=Math.floor(totalWidthTwips/cols);
  // A linha ajusta-se à foto mais alta que realmente está nela (como o FoTopics já
  // fazia) em vez de reservar sempre a mesma altura fixa — uma linha só com fotos
  // largas/baixas deixava de outra forma um vazio grande por baixo de cada uma.
  const rowCyValues=cells.filter(Boolean).map(cell=>cell.cy||0).filter(Boolean);
  const rowTwips=rowCyValues.length?Math.round(Math.max(...rowCyValues)/635)+40:3515;
  const images=cells.map(cell=>'<w:tc><w:tcPr><w:tcW w:w="'+width+'" w:type="dxa"/><w:vAlign w:val="center"/></w:tcPr>'+(cell?cell.image:'<w:p/>')+'</w:tc>').join(''),captions=cells.map(cell=>'<w:tc><w:tcPr><w:tcW w:w="'+width+'" w:type="dxa"/><w:vAlign w:val="top"/></w:tcPr>'+(cell?cell.caption:'<w:p/>')+'</w:tc>').join('');
- // w:tblW com o total real (não "auto") + w:jc center: garante que a grelha fica
- // sempre centrada entre as margens Esquerda/Direita, mesmo que o arredondamento
- // por coluna deixe um pequeno resto por distribuir.
- return '<w:tbl><w:tblPr><w:tblW w:w="'+(width*cols)+'" w:type="dxa"/><w:jc w:val="center"/><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>'+grid+'</w:tblGrid><w:tr><w:trPr><w:trHeight w:val="'+rowTwips+'" w:hRule="atLeast"/></w:trPr>'+images+'</w:tr>'+(showCaptions?'<w:tr>'+captions+'</w:tr>':'')+'</w:tbl>';
+ return '<w:tr><w:trPr><w:trHeight w:val="'+rowTwips+'" w:hRule="atLeast"/></w:trPr>'+images+'</w:tr>'+(showCaptions?'<w:tr>'+captions+'</w:tr>':'');
+}
+// Envolve todas as linhas já acumuladas (de um ou mais grupos) numa única tabela.
+// w:tblW com o total real (não "auto") + w:jc center: garante que a grelha fica
+// sempre centrada entre as margens Esquerda/Direita, mesmo que o arredondamento
+// por coluna deixe um pequeno resto por distribuir.
+function wordPhotoTableWrap(rowsXml,cols,totalWidthTwips=9000){
+ const width=Math.floor(totalWidthTwips/cols),grid=Array(cols).fill('<w:gridCol w:w="'+width+'"/>').join('');
+ return '<w:tbl><w:tblPr><w:tblW w:w="'+(width*cols)+'" w:type="dxa"/><w:jc w:val="center"/><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>'+grid+'</w:tblGrid>'+rowsXml+'</w:tbl>';
 }
 // Cabeçalho/rodapé em parágrafo único com tabulações (esquerda/centro/direita),
 // como o FoTopics já fazia — em vez de uma tabela. Uma tabela dentro de um header
@@ -5424,7 +5479,7 @@ async function buildWordDOCX(p){
  const landscape=pageSettings.orientation==='landscape',twips=value=>Math.round(value*56.6929);
  const usableWidthTwips=(landscape?16838:11906)-twips(pageSettings.left)-twips(pageSettings.right);
  const reportAssets=selectedExportAssets(p);
- async function appendWordPhotos(a,nufIndex,photoRefs,cols,showCaptions,maxHeight=2100000){const cellWidth=Math.floor(usableWidthTwips*635/cols),imageHeight=maxHeight;let cells=[];for(const ref of photoRefs){const photo=ref.photo,index=ref.index;try{let blob=await photoGet(photo.id);if(!blob)continue;let ext=(blob.type||'').includes('png')?'png':'jpeg',w=Number(photo.w)||1200,h=Number(photo.h)||800;if(photoCompressionOverride||!/image\/(png|jpeg|jpg)/i.test(blob.type||'')){const activeSettings=loadPhotoSettings(),converted=await compressImage(blob,activeSettings.maxSide,activeSettings.quality/100,activeSettings.targetKB);blob=converted.blob;ext='jpeg';w=converted.w||w;h=converted.h||h}imageNo++;const fileExt=ext==='png'?'png':'jpg',rid='rId'+imageNo,scale=Math.min(cellWidth/w,imageHeight/h),cx=Math.max(1,Math.round(w*scale)),cy=Math.max(1,Math.round(h*scale));entries.push({name:'word/media/image'+imageNo+'.'+fileExt,data:new Uint8Array(await blob.arrayBuffer())});rels.push('<Relationship Id="'+rid+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image'+imageNo+'.'+fileExt+'"/>');cells.push({image:wordDrawing(rid,imageNo,cx,cy),caption:showCaptions?wordParagraph(photoCaptionLine(a,nufIndex,index,photo),{size:16}):'',cy});if(cells.length===cols){body.push(wordPhotoTable(cells,cols,showCaptions,usableWidthTwips));cells=[]}}catch(e){console.error(e)}}if(cells.length)body.push(wordPhotoTable(cells,cols,showCaptions,usableWidthTwips))}
+ async function appendWordPhotos(a,nufIndex,photoRefs,cols,showCaptions,maxHeight=2100000){const cellWidth=Math.floor(usableWidthTwips*635/cols),imageHeight=maxHeight;let cells=[],rowsXml='';for(const ref of photoRefs){const photo=ref.photo,index=ref.index;try{let blob=await photoGet(photo.id);if(!blob)continue;let ext=(blob.type||'').includes('png')?'png':'jpeg',w=Number(photo.w)||1200,h=Number(photo.h)||800;if(photoCompressionOverride||!/image\/(png|jpeg|jpg)/i.test(blob.type||'')){const activeSettings=loadPhotoSettings(),converted=await compressImage(blob,activeSettings.maxSide,activeSettings.quality/100,activeSettings.targetKB);blob=converted.blob;ext='jpeg';w=converted.w||w;h=converted.h||h}imageNo++;const fileExt=ext==='png'?'png':'jpg',rid='rId'+imageNo,scale=Math.min(cellWidth/w,imageHeight/h),cx=Math.max(1,Math.round(w*scale)),cy=Math.max(1,Math.round(h*scale));entries.push({name:'word/media/image'+imageNo+'.'+fileExt,data:new Uint8Array(await blob.arrayBuffer())});rels.push('<Relationship Id="'+rid+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image'+imageNo+'.'+fileExt+'"/>');cells.push({image:wordDrawing(rid,imageNo,cx,cy),caption:showCaptions?wordParagraph(photoCaptionLine(a,nufIndex,index,photo),{size:16}):'',cy});if(cells.length===cols){rowsXml+=wordPhotoTableRows(cells,cols,usableWidthTwips,showCaptions);cells=[]}}catch(e){console.error(e)}}if(cells.length)rowsXml+=wordPhotoTableRows(cells,cols,usableWidthTwips,showCaptions);if(rowsXml)body.push(wordPhotoTableWrap(rowsXml,cols,usableWidthTwips))}
  const components=activeOutputComponents();
  const wordHasCover=components.includes('cover'),wordHasCharacterization=components.includes('characterization');
  for(const component of components){
@@ -5438,7 +5493,56 @@ async function buildWordDOCX(p){
   }
   if(component==='process'){body.push(wordParagraph(p.code||'Processo',{bold:true,size:36,pageBreak:body.length>0}),wordField('Designação',p.name),wordField('ID Institucional',p.ref),wordField('Solicitante',p.requester),wordField('Finalidade',p.purpose),wordField('Descrição do solicitado',p.requestDescription),wordField('Base de valor',p.valueBase),wordField('Estado',p.status),wordField('Data de entrada',p.inputDate),wordField('Prazo',p.deadline),wordParagraph('Número de Ativos: '+reportAssets.length,{bold:true,size:22}));for(const stage of ASSET_STAGES){if(summaryConfig.stages[stage]===false)continue;const rows=reportAssets.filter(a=>assetOperationalStatus(a)===stage);body.push(wordParagraph(stage+' — '+rows.length,{bold:true,size:20}));rows.forEach(a=>body.push(wordParagraph('    '+summaryConfig.fields.map(field=>SUMMARY_FIELD_DEFS[field]+': '+assetSummaryValue(a,field)).join(' · '),{size:17}))) }body.push(wordField('Observações',p.obs))}
   if(component==='cover'&&!wordHasCharacterization)for(const a of reportAssets){const mapRefs=(a.photos||[]).map((photo,index)=>({photo,index})).filter(ref=>ref.photo.mapImage).slice(0,1);if(!mapRefs.length)continue;body.push(wordParagraph((a.code||'Ativo')+' — '+(a.name||'Sem designação'),{bold:true,size:28,pageBreak:true}));await appendWordPhotos(a,0,mapRefs,1,false,1800000)}
-  if(component==='characterization')for(const a of reportAssets){if(wordHasCover){const mapRefs=(a.photos||[]).map((photo,index)=>({photo,index})).filter(ref=>ref.photo.mapImage).slice(0,1);if(mapRefs.length){body.push(wordParagraph((a.code||'Ativo')+' — '+(a.name||'Sem designação'),{bold:true,size:28,pageBreak:true}));await appendWordPhotos(a,0,mapRefs,1,false,1800000)}}body.push(wordParagraph((a.code||'Ativo')+' — '+(a.name||'Sem designação'),{bold:true,size:28,pageBreak:true}),wordField('ID_Institucional',a.ref),wordField('Tipo',a.type),wordField('Grupo',a.group),wordField('Destino',a.currentUse),wordField('Endereço / Local',a.local),wordField('Número',a.doorNumber),wordField('Piso / Andar',a.floor),wordField('Código Postal',formatPostalCode(a.postalCode)),wordField('Freguesia',a.freg),wordField('Concelho',a.conc),wordField('ID externo',a.externalId),wordField('Hora da visita',a.visitTime),wordField('GPS',assetGPS(a)),wordField('Observações do Ativo',a.obs));body.push(wordParagraph('Caracterização',{bold:true,size:24}));configuredCharacterValues(a,a).forEach(([key,value])=>body.push(wordField(key,value)));const q=a.qtyAreas||{};[['Documentação de referência',(q.documents||[]).join(', ')],['Quantidade',q.qtd],['Área de terreno (AT)',q.at],['Área de implantação (AI)',q.ai],['Área bruta privativa (ABP)',q.abp],['Área bruta dependente (ABD)',q.abd],['Sup. terreno (ST)',q.st],['Sup. coberta (SC)',q.sc],['Sup. descoberta (SD)',q.sd]].forEach(x=>body.push(wordField(x[0],x[1])));body.push(wordField('Observações',a.char?.__obs));await appendWordPhotos(a,0,(a.photos||[]).map((photo,index)=>({photo,index})),validReportCols(sheetCols.value),true)}
+  // Estrutura da ficha de caracterização do Ativo alinhada com o modelo Word
+  // fornecido pelo utilizador (AVA_FichaAtivo.docx): campos relacionados
+  // partilham a mesma linha (tabulados), agrupados sob os mesmos títulos de
+  // secção a negrito, com uma única tabela contínua de fotos no fim. Os
+  // KNOWN_CHAR_FIELD_IDS têm posição fixa nesta estrutura; qualquer outro campo
+  // de caracterização (de outros grupos de Ativo — Terrenos, Veículos, etc.,
+  // que não têm equivalente no modelo) continua a sair, sem ficar perdido.
+  if(component==='characterization')for(const a of reportAssets){
+   if(wordHasCover){const mapRefs=(a.photos||[]).map((photo,index)=>({photo,index})).filter(ref=>ref.photo.mapImage).slice(0,1);if(mapRefs.length){body.push(wordParagraph((a.code||'Ativo')+' — '+(a.name||'Sem designação'),{bold:true,size:24,pageBreak:true}));await appendWordPhotos(a,0,mapRefs,1,false,1800000)}}
+   body.push(wordParagraph((a.code||'Ativo')+' — '+(a.name||'Sem designação'),{bold:true,size:24,pageBreak:true}));
+   body.push(
+    wordFieldLine([['ID_Institucional',a.ref],['Freguesia',a.freg],['Concelho',a.conc]]),
+    wordFieldLine([['Endereço / Local',a.local],['Número',a.doorNumber],['Piso / Andar',a.floor],['Código Postal',formatPostalCode(a.postalCode)]]),
+    wordField('GPS',assetGPS(a)),
+    wordFieldLine([['Tipo de Ativo',a.type],['Grupo',a.group],['Destino',a.currentUse]]),
+    wordFieldLine([['ID externo',a.externalId],['Hora da visita',a.visitTime]]),
+    wordField('Observações do Ativo',a.obs)
+   );
+   const q=a.qtyAreas||{};
+   body.push(wordParagraph('Documentação',{bold:true,size:24}),
+    wordField('Documentação de referência',(q.documents||[]).join(', ')),
+    wordField('Quantidade',q.qtd),
+    wordFieldLine([['Área de terreno (AT)',q.at],['Área de implantação (AI)',q.ai]]),
+    wordFieldLine([['Área bruta privativa (ABP)',q.abp],['Área bruta dependente (ABD)',q.abd]]),
+    wordFieldLine([['Sup. terreno (ST)',q.st],['Sup. coberta (SC)',q.sc],['Sup. descoberta (SD)',q.sd]]),
+    wordField('Observações',a.char?.__obs)
+   );
+   const char=a.char||{};
+   body.push(wordParagraph('Descrição sumária',{bold:true,size:24}),
+    wordField('Descrição do conjunto',char.descricao_sumaria),
+    wordField('N.º de pisos',char.numero_pisos),
+    wordField('Composição',char.composicao),
+    wordField('Solução construtiva',char.solucao_construtiva),
+    wordField('Qualidade de materiais e acabamentos',char.qualidade_materiais),
+    wordField('Qualidade de caixilharia',char.qualidade_caixilharia),
+    wordField('Uso atual',char.uso_atual),
+    wordField('Uso potencial',char.uso_potencial),
+    wordField('Estado de conservação para o uso previsto',char.estado_conservacao_uso_previsto),
+    wordField('Anomalias / limitações / constrangimentos',char.anomalias_limitacoes)
+   );
+   const KNOWN_CHAR_FIELD_IDS=new Set(['descricao_sumaria','numero_pisos','composicao','solucao_construtiva','qualidade_materiais','qualidade_caixilharia','uso_atual','uso_potencial','estado_conservacao_uso_previsto','anomalias_limitacoes','acessibilidades','proximidades','implantacao_acessibilidades','insolacao','relacoes_vizinhanca','apreciacao_sumaria']);
+   fieldSchema(a).filter(f=>!KNOWN_CHAR_FIELD_IDS.has(f.k)&&String(char[f.k]??'').trim()).forEach(f=>body.push(wordField(f.label,char[f.k])));
+   const contextoLocalizacao=[['Acesso Urbano',char.acessibilidades],['Proximidades',char.proximidades]];
+   if(contextoLocalizacao.some(([,v])=>String(v??'').trim()))body.push(wordParagraph('Contexto de localização',{bold:true,size:24}),...contextoLocalizacao.map(([l,v])=>wordField(l,v)));
+   const contextoImplantacao=[['Acessibilidades',char.implantacao_acessibilidades],['Insolação',char.insolacao],['Relações de vizinhança',char.relacoes_vizinhanca]];
+   if(contextoImplantacao.some(([,v])=>String(v??'').trim()))body.push(wordParagraph('Contexto de Implantação',{bold:true,size:24}),...contextoImplantacao.map(([l,v])=>wordField(l,v)));
+   if(String(char.apreciacao_sumaria??'').trim())body.push(wordParagraph('Apreciação sumária',{bold:true,size:24}),wordParagraph(char.apreciacao_sumaria,{align:'both'}));
+   body.push(wordParagraph('Reportagem fotográfica sucinta',{bold:true,size:24}));
+   await appendWordPhotos(a,0,(a.photos||[]).map((photo,index)=>({photo,index})),validReportCols(sheetCols.value),true);
+  }
   if(component==='visits'){body.push(wordParagraph('Mapa de visitas do Processo',{bold:true,size:28,pageBreak:true}));for(const visit of (p.visits||[])){const people=(visit.participantIds||[]).map(id=>(p.participants||[]).find(person=>person.id===id)?.name).filter(Boolean).join(', '),assets=(visit.assets||[]).map(item=>item.code||p.assets.find(a=>a.id===item.assetId)?.code).filter(Boolean).join(', ');body.push(wordParagraph([visit.date,[visit.start,visit.end].filter(Boolean).join('–'),assets,people].filter(Boolean).join(' | '),{size:18}))}body.push(wordParagraph('Detalhe das visitas',{bold:true,size:24}));for(const visit of (p.visits||[])){body.push(wordParagraph((visit.type||'Visita')+' · '+(visit.date||'Sem data'),{bold:true,size:22}),wordField('Hora',[visit.start,visit.end].filter(Boolean).join('–')),wordField('Estado do tempo',visit.weather),wordField('Intervenientes',(visit.participantIds||[]).map(id=>(p.participants||[]).find(person=>person.id===id)?.name).filter(Boolean).join(', ')),wordField('Ativos observados',(visit.assets||[]).map(item=>item.code||p.assets.find(a=>a.id===item.assetId)?.code).filter(Boolean).join(', ')),wordField('Condicionamentos',visit.constraints),wordField('Observações',visit.obs))}}
   if(component==='chronology'){body.push(wordParagraph('Cronologia',{bold:true,size:28,pageBreak:true}));for(const entry of (p.history||[]).slice().reverse()){const date=new Date(entry.at),when=Number.isFinite(date.getTime())?date.toLocaleString('pt-PT'):'';body.push(wordField(when||'Registo',entry.text||entry.type))}}
  }
