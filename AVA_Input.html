@@ -1167,7 +1167,7 @@ const {
 }=Object.fromEntries(Array.from(document.querySelectorAll('[id]'),el=>[el.id,el]));
 const cfgAnalystText=document.getElementById('cfgAnalystText');
 
-const APP_VERSION='2.9.13',DATA_SCHEMA_VERSION=4,KEY='ativa_v2_db';
+const APP_VERSION='2.9.14',DATA_SCHEMA_VERSION=4,KEY='ativa_v2_db';
 const CONSTRUCTION_RULES_KEY='ativa_construction_rules_v2';
 const CONSTRUCTION_RULES_DEFAULT=`Todas as fotografias ficam centradas na respetiva célula.
 As fotografias são numeradas pelo número do Ativo, eventual posição no agrupamento e número sequencial: 005_1_IMG_01.
@@ -5391,13 +5391,29 @@ function wordPhotoTable(cells,cols,showCaptions=true,totalWidthTwips=9000){
  // por coluna deixe um pequeno resto por distribuir.
  return '<w:tbl><w:tblPr><w:tblW w:w="'+(width*cols)+'" w:type="dxa"/><w:jc w:val="center"/><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>'+grid+'</w:tblGrid><w:tr><w:trPr><w:trHeight w:val="'+rowTwips+'" w:hRule="atLeast"/></w:trPr>'+images+'</w:tr>'+(showCaptions?'<w:tr>'+captions+'</w:tr>':'')+'</w:tbl>';
 }
-function wordBandCell(field,p,size,align,colWidth){const value=pageFieldValue(field,p),content=value==='__PAGE__'?'<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> PAGE </w:instrText></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>':'<w:r><w:rPr><w:sz w:val="'+(size*2)+'"/></w:rPr><w:t>'+escXML(value)+'</w:t></w:r>';return '<w:tc><w:tcPr><w:tcW w:w="'+colWidth+'" w:type="dxa"/></w:tcPr><w:p><w:pPr><w:jc w:val="'+align+'"/></w:pPr>'+content+'</w:p></w:tc>'}
-// A tabela do cabeçalho/rodapé usa a mesma largura útil real da página (entre as
+// Cabeçalho/rodapé em parágrafo único com tabulações (esquerda/centro/direita),
+// como o FoTopics já fazia — em vez de uma tabela. Uma tabela dentro de um header
+// part é o cenário onde o Word real é mais sensível a pequenas incompatibilidades
+// (já tínhamos sido apanhados uma vez pelo <w:tblGrid> em falta); tabulações são
+// o mecanismo nativo do Word para texto esquerda/centro/direita numa só linha e
+// evitam por completo essa categoria de problema.
+function wordBandRun(field,p,size){
+ const value=pageFieldValue(field,p);
+ if(value==='__PAGE__')return '<w:r><w:rPr><w:sz w:val="'+size+'"/></w:rPr><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:rPr><w:sz w:val="'+size+'"/></w:rPr><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r><w:r><w:rPr><w:sz w:val="'+size+'"/></w:rPr><w:fldChar w:fldCharType="end"/></w:r>';
+ if(!value)return '';
+ return '<w:r><w:rPr><w:sz w:val="'+size+'"/></w:rPr><w:t xml:space="preserve">'+escXML(value)+'</w:t></w:r>';
+}
+// A posição das tabulações usa a mesma largura útil real da página (entre as
 // margens Esquerda/Direita estipuladas em Config. Página) que a grelha de fotos,
-// em vez de uma largura fixa — assim a coluna da direita fica sempre alinhada
-// com a margem direita real, em todas as páginas (o cabeçalho/rodapé "default"
-// do OOXML aplica-se a todas as páginas por omissão, sem exceção da primeira).
-function wordBandXML(kind,p,totalWidthTwips=9000){const fields=kind==='header'?[pageSettings.headerLeft,pageSettings.headerCenter,pageSettings.headerRight]:[pageSettings.footerLeft,pageSettings.footerCenter,pageSettings.footerRight],size=kind==='header'?pageSettings.headerSize:pageSettings.footerSize,tag=kind==='header'?'hdr':'ftr';const colWidth=Math.floor(totalWidthTwips/3);return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:'+tag+' xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:tbl><w:tblPr><w:tblW w:w="'+(colWidth*3)+'" w:type="dxa"/><w:jc w:val="center"/></w:tblPr><w:tblGrid><w:gridCol w:w="'+colWidth+'"/><w:gridCol w:w="'+colWidth+'"/><w:gridCol w:w="'+colWidth+'"/></w:tblGrid><w:tr>'+wordBandCell(fields[0],p,size,'left',colWidth)+wordBandCell(fields[1],p,size,'center',colWidth)+wordBandCell(fields[2],p,size,'right',colWidth)+'</w:tr></w:tbl></w:'+tag+'>'}
+// para que o texto da direita fique sempre alinhado com a margem direita real,
+// em todas as páginas (o cabeçalho/rodapé "default" do OOXML aplica-se a todas
+// as páginas por omissão, sem exceção da primeira).
+function wordBandXML(kind,p,totalWidthTwips=9000){
+ const fields=kind==='header'?[pageSettings.headerLeft,pageSettings.headerCenter,pageSettings.headerRight]:[pageSettings.footerLeft,pageSettings.footerCenter,pageSettings.footerRight];
+ const size=(kind==='header'?pageSettings.headerSize:pageSettings.footerSize)*2||20,tag=kind==='header'?'hdr':'ftr';
+ const half=Math.floor(totalWidthTwips/2);
+ return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:'+tag+' xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:pPr><w:tabs><w:tab w:val="center" w:pos="'+half+'"/><w:tab w:val="right" w:pos="'+totalWidthTwips+'"/></w:tabs></w:pPr>'+wordBandRun(fields[0],p,size)+'<w:r><w:tab/></w:r>'+wordBandRun(fields[1],p,size)+'<w:r><w:tab/></w:r>'+wordBandRun(fields[2],p,size)+'</w:p></w:'+tag+'>';
+}
 async function buildWordDOCX(p){
  currentSummaryConfig();
  pageSettings=loadPageSettings();const encoder=new TextEncoder(),entries=[],rels=[],body=[];let imageNo=0;
