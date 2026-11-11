@@ -332,9 +332,9 @@ function buildDocx({proc,settings,anoms,onePerPage,withResumo,withVistoria,bodyO
     let rows='';
     const zona=[a.zona,a.local].filter(Boolean).filter((v,i,arr)=>arr.indexOf(v)===i).join(' – ');
     const hd={b:true,color:'FFFFFF',sz:9};
-    const nn=a._n??(ix+1);const code='AN_'+String(nn).padStart(3,'0');
+    const code=a._code||('AN_'+String(a._n??(ix+1)).padStart(3,'0'));
     const sm={color:'D9D9D9',sz:8};
-    rows+=row(cell(para(run(code,hd),{keep:1}),{w:sum(0,1),fill:'404040'})+
+    rows+=row(cell(para(run(code,hd),{keep:1})+(a._parte?para(run(a._parte.replace(/\s*\(.*\)$/,''),{color:'D9D9D9',sz:7}),{keep:1}):''),{w:sum(0,1),fill:'404040'})+
              cell(para(run('Item ',sm)+run(a.ref||'—',hd),{keep:1}),{w:sum(1,1),fill:'404040'})+
              cell(para(run('Zona: ',sm)+run(zona||'—',hd),{keep:1}),{w:sum(2,2),span:2,fill:'404040'})+
              cell(para(run('Elemento: ',sm)+run(a.elemento||'—',hd),{keep:1}),{w:sum(4,2),span:2,fill:'404040'}),{h:400});
@@ -364,7 +364,7 @@ function buildDocx({proc,settings,anoms,onePerPage,withResumo,withVistoria,bodyO
     for(let i=0;i<fotos.length;i+=cols){
       const grp=PCELLS.map((_,k)=>fotos[i+k]);const last=i+cols>=fotos.length;
       rows+=row(grp.map((f,k)=>cell(f?para(img(f),{jc:'center',keep:1}):'',{w:sum(...PCELLS[k]),span:PCELLS[k][1]})).join(''),{h:Math.round(MAX[1]/635)+120});
-      rows+=row(grp.map((f,k)=>cell(f?para(run(`IMG ${String(nn).padStart(3,'0')}.${i+k+1}`+(f.legenda?` – ${f.legenda}`:''),{i:true,sz:8}),{jc:'left',keep:last?0:1}):'',{w:sum(...PCELLS[k]),span:PCELLS[k][1],v:'top'})).join(''));
+      rows+=row(grp.map((f,k)=>cell(f?para(run(`IMG ${code}.${i+k+1}`+(f.legenda?` – ${f.legenda}`:''),{i:true,sz:8}),{jc:'left',keep:last?0:1}):'',{w:sum(...PCELLS[k]),span:PCELLS[k][1],v:'top'})).join(''));
     }
     body+=`<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/><w:jc w:val="center"/><w:tblBorders>${['top','left','bottom','right','insideH','insideV'].map(s=>`<w:${s} w:val="nil"/>`).join('')}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="40" w:type="dxa"/><w:left w:w="85" w:type="dxa"/><w:bottom w:w="40" w:type="dxa"/><w:right w:w="85" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${G.map(w=>`<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>${rows}</w:tbl>`;
   });
@@ -437,8 +437,8 @@ function buildXlsx(sheetName,rows,widths){
 function analysisLines(proc,settings,anoms){
   const pf=printFields(proc,settings);const out=[];
   anoms.forEach((a,ix)=>{
-    const code='AN_'+String(a._n??(ix+1)).padStart(3,'0');const zona=[a.zona,a.local].filter(Boolean).filter((v,i,r)=>r.indexOf(v)===i).join(' – ');
-    const it={title:`${code}${a.ref?` · Item ${a.ref}`:''} — ${[zona,a.elemento].filter(Boolean).join(' — ')}${a.origem==='local'?' [acrescentada no local]':''}`,lines:[]};
+    const code=a._code||('AN_'+String(a._n??(ix+1)).padStart(3,'0'));const zona=[a.zona,a.local].filter(Boolean).filter((v,i,r)=>r.indexOf(v)===i).join(' – ');
+    const it={title:`${code}${a._parte?` (${a._parte}${a.ref?' · Item '+a.ref:''})`:(a.ref?` · Item ${a.ref}`:'')} — ${[zona,a.elemento].filter(Boolean).join(' — ')}${a.origem==='local'?' [acrescentada no local]':''}`,lines:[]};
     if(a.descricao)it.lines.push([lblD(proc),a.descricao]);
     if(a.comentario)it.lines.push([(settings.dateCom!==false&&proc.visita?.data?proc.visita.data+' - ':'')+lblC(proc),a.comentario]);
     const car=[];for(const f of pf){if(f.id==='conf'&&a.origem==='local')continue;const t=fieldValueText(f,a.vals?.[f.id],settings,a.vals);if(!t)continue;if(f.type==='long')it.lines.push([f.label,t]);else car.push(`${f.label}: ${t}`)}
@@ -462,9 +462,12 @@ function buildDocxText({proc,settings,anoms,withResumo}){
 }
 
 // ===== App: Regi Anomalias =====
-const VERSION='0.9.4';
-const imgCode=(p,a,i)=>`IMG ${String(numOf(p,a)).padStart(3,'0')}.${i+1}`;
-const anCode=(p,a)=>'AN_'+String(numOf(p,a)).padStart(3,'0');
+const VERSION='0.9.5';
+const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'}];
+const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
+const parteNome=(p,n)=>(p.partes||[]).find(x=>x.n==n)?.nome||'';
+const anCode=(p,a)=>`${parteOf(p,a)}.${String(numOf(p,a)).padStart(3,'0')}`;
+const imgCode=(p,a,i)=>`IMG ${anCode(p,a)}.${i+1}`;
 const DB_NAME='RegiAnomalias_DB';
 const DEF_CATALOG=['Fissuração','Humidade','Isolamento','Impermeabilização','Desgaste de uso','Vetustez','Outros'];
 const DEF_FIELDS=[
@@ -535,8 +538,8 @@ const fotoGet=id=>tx('foto','readonly',s=>s.get(id));
 const fd=f=>fotoCache.get(f.id)||f.data||'';
 async function loadFotos(p){if(!p)return;const m=p.visita?.map;if(m&&!fotoCache.has(m.id)){try{const r=await fotoGet(m.id);if(r)fotoCache.set(m.id,r.data)}catch(e){}}for(const a of p.anomalias)for(const f of a.fotos)if(!fotoCache.has(f.id)&&!f.data){try{const r=await fotoGet(f.id);if(r)fotoCache.set(f.id,r.data)}catch(e){}}}
 async function migrateFotos(p){let ch=false;const m=p.visita?.map;if(m&&m.data){await fotoPut(m.id,m.data);delete m.data;ch=true}for(const a of p.anomalias||[])for(const f of a.fotos||[]){if(!f.id)f.id=uid();if(f.data){await fotoPut(f.id,f.data);delete f.data;ch=true}}if(ch)await dbPut(p);return p}
-const numOf=(p,a)=>p.lockNum&&a.num?a.num:p.anomalias.indexOf(a)+1;
-function hydrate(p){return p.anomalias.map(a=>({...a,_n:numOf(p,a),fotos:a.fotos.map(f=>({...f,data:fd(f)}))}))}
+const numOf=(p,a)=>{if(p.lockNum&&a.num)return a.num;const pt=parteOf(p,a);let k=0;for(const x of p.anomalias){if(parteOf(p,x)==pt)k++;if(x===a)return k}return k};
+function hydrate(p){return p.anomalias.map(a=>({...a,_n:numOf(p,a),_code:anCode(p,a),_parte:parteNome(p,parteOf(p,a)),fotos:a.fotos.map(f=>({...f,data:fd(f)}))}))}
 
 function migrateSettings(s){
   s=Object.assign(clone(DEF_SETTINGS),s||{});
@@ -655,6 +658,10 @@ function vProc(){
   ${sec('p2','2 · Vistoria',`<label>Data da vistoria</label><div class="inrow"><input data-bind="vis.data" value="${esc(v.data)}" placeholder="dd/mm/aaaa"><button class="secondary" data-act="visCal">📅</button></div>
     ${txt('vis.presencas','Presenças (nome – qualidade)',v.presencas,3)}${gpsBlock(p)}`,{cnt:falta(f2)})}
   ${blk('B · Pronúncia','O que vai ser apreciado em cada anomalia')}
+  ${sec('p6','Partes — prefixo da numeração',`<p class="muted">Cada pergunta ou situação é numerada pela parte que a coloca: <b>1.001, 1.002…</b> (parte 1), <b>2.001…</b> (parte 2), etc.</p>
+    <div class="rows">${p.partes.map((x,i)=>`<div class="rw"><input data-pn="${i}" value="${x.n}" inputmode="numeric" style="max-width:56px;text-align:center;font-weight:700"><input data-pnome="${i}" value="${esc(x.nome)}" placeholder="Nome da parte"><span class="muted" style="white-space:nowrap">${p.anomalias.filter(a=>parteOf(p,a)==x.n).length}</span><button class="del" data-act="delParte" data-i="${i}">✕</button></div>`).join('')}</div>
+    <div class="btns"><button class="secondary mini" data-act="addParte">+ Acrescentar parte</button></div>
+    <label>Situações acrescentadas no local (pelo perito) ficam na parte</label><select data-act="parteLocal">${p.partes.map(x=>`<option value="${x.n}" ${x.n==(p.parteLocal??4)?'selected':''}>${x.n} – ${esc(x.nome)}</option>`).join('')}</select>`,{cnt:pill(p.partes.map(x=>x.n).join(' · ')),def:false})}
   ${sec('p5','Lógica da ficha',`<p class="muted">Escolha o par de títulos que sai em cada ficha do Word.</p>
     <div class="seg">${[['Situação','Análise'],['Questão','Resposta']].map(([d,c])=>`<button class="${lblD(p)===d&&lblC(p)===c?'on':''}" data-act="setPair" data-d="${d}" data-c="${c}">${d} / ${c}</button>`).join('')}</div>
     <p class="muted">Personalizar (opcional):</p><div class="grid2"><div><label>1.º título</label><input data-bind="p.lblDesc" value="${esc(p.lblDesc||'')}" placeholder="${esc(lblD(p))}"></div><div><label>2.º título</label><input data-bind="p.lblCom" value="${esc(p.lblCom||'')}" placeholder="${esc(lblC(p))}"></div></div>`,{cnt:pill(lblD(p)+' / '+lblC(p)),def:false})}
@@ -669,7 +676,7 @@ function vProc(){
 function anomCard(a,i,n,mode){
   const p=cur();const st=isDone(a)?pill('✓ analisada','ok'):pill('por analisar','warn');
   const vals=[];if(a.vals?.conf)vals.push(esc(a.vals.conf));if(a.vals?.cons?.length)vals.push(esc(a.vals.cons.filter(x=>x!=='OUT').join(', ')));if(a.vals?.tipo?.length)vals.push(esc(a.vals.tipo.join(', ')));
-  return `<div class="card ${a.id===S.aid?'active':''}"><div class="cardrow"><div class="grow" data-act="openAnom" data-id="${a.id}"><b>${anCode(p,a)}</b>${a.ref?` <span class="muted">Item ${esc(a.ref)}</span>`:''} · ${esc([a.zona,a.local].filter(Boolean).filter((v,i,r)=>r.indexOf(v)===i).join(' – '))} · <i>${esc(a.elemento||'')}</i>
+  return `<div class="card ${a.id===S.aid?'active':''}"><div class="cardrow"><div class="grow" data-act="openAnom" data-id="${a.id}"><b>${anCode(p,a)}</b> <span class="muted">${esc((parteNome(p,parteOf(p,a))||'').replace(/\s*\(.*\)$/,''))}${a.ref?' · Item '+esc(a.ref):''}</span> · ${esc([a.zona,a.local].filter(Boolean).filter((v,i,r)=>r.indexOf(v)===i).join(' – '))} · <i>${esc(a.elemento||'')}</i>
   <div class="muted clamp">${esc(a.descricao||'')}</div><div style="margin-top:4px">${mode==='analise'?st:''}${a.origem==='local'?pill('acrescentada no local','bad'):''}${vals.length?pill(vals.join(' · ')):''}${pill('📷 '+a.fotos.length)}</div></div>
   ${S.view==='anom'?`<div class="mv"><button class="secondary mini" data-act="mvA" data-id="${a.id}" data-d="-1" ${i?'':'disabled'}>▲</button><button class="secondary mini" data-act="mvA" data-id="${a.id}" data-d="1" ${i<n-1?'':'disabled'}>▼</button><button class="del" data-act="delA" data-id="${a.id}">🗑</button></div>`:''}</div></div>`;
 }
@@ -677,13 +684,15 @@ function anomCard(a,i,n,mode){
 function vAnoms(){
   const p=cur(),an=p.anomalias,done=an.filter(isDone).length;const nl=an.filter(a=>a.origem!=='local').length,nc=an.length-nl;
   const F=S.filt||(S.filt={st:'all',zona:''});const zonas=[...new Set(an.map(a=>a.zona).filter(Boolean))];
-  const vis=an.filter(a=>(F.st==='all'||(F.st==='done'?isDone(a):!isDone(a)))&&(!F.zona||a.zona===F.zona));
+  const usedP=[...new Set(an.map(a=>parteOf(p,a)))].sort();const vis=an.filter(a=>(F.st==='all'||(F.st==='done'?isDone(a):!isDone(a)))&&(!F.zona||a.zona===F.zona)&&(!F.parte||parteOf(p,a)==F.parte));
   return `<h2>Anomalias</h2>
   <div class="card"><div class="steps3"><span><b>1</b> Criar a lista</span><span><b>2</b> Tocar numa anomalia</span><span><b>3</b> Pronunciar-se e fotografar</span></div>
   <div class="btns"><button class="secondary" data-act="goImport">⬆ Importar lista (Excel)</button><button class="green" data-act="newAnom">+ Acrescentar anomalia</button></div>
   ${an.length?`<div class="muted">${nl} da lista · ${nc} acrescentada${nc===1?'':'s'} no local</div><div class="bar"><i style="width:${Math.round(100*done/an.length)}%"></i></div><b>${done}/${an.length}</b> analisadas
   <div class="lockrow">${p.lockNum?`<span>🔒 <b>Numeração fixa</b> — os códigos AN não mudam ao reordenar ou eliminar</span><button class="secondary mini" data-act="lockNum" data-v="0">Desbloquear</button>`:`<span class="muted">Numeração pela ordem da lista (muda ao reordenar ou eliminar)</span><button class="secondary mini" data-act="lockNum" data-v="1">🔒 Fixar numeração</button>`}</div>`:''}</div>
   ${an.length?`<div class="seg">${[['all','Todas',an.length],['todo','Por analisar',an.length-done],['done','Analisadas',done]].map(([k,t,n])=>`<button class="${F.st===k?'on':''}" data-act="filt" data-v="${k}">${t} (${n})</button>`).join('')}</div>
+  ${usedP.length>1?`<select data-act="filtParte"><option value="">Todas as partes</option>${usedP.map(n=>`<option value="${n}" ${F.parte==n?'selected':''}>${n} – ${esc(parteNome(p,n))}</option>`).join('')}</select>`:''}
+  ${usedP.length>1&&an.some((a,i)=>i&&parteOf(p,an[i-1])>parteOf(p,a))?'<div class="btns"><button class="secondary mini" data-act="sortParte">⇅ Ordenar a lista por código</button></div>':''}
   ${zonas.length>1?`<select data-act="filtZona"><option value="">Todas as zonas</option>${zonas.map(z=>`<option ${F.zona===z?'selected':''}>${esc(z)}</option>`).join('')}</select>`:''}`:''}
   <div class="list">${vis.map(a=>anomCard(a,an.indexOf(a),an.length,'analise')).join('')||(an.length?'<p class="muted">Nenhuma anomalia com este filtro.</p>':'<p class="muted">Sem anomalias. Importe a lista fornecida ou acrescente-as uma a uma.</p>')}</div>
   ${an.length>3?'<div class="btns"><button class="green" data-act="newAnom">+ Acrescentar anomalia</button></div>':''}
@@ -697,7 +706,7 @@ function vFicha(){
   const idMiss=[a.zona,a.local,a.elemento,a.descricao].filter(x=>!String(x||'').trim()).length;
   const fsC=fs.filter(f=>!(f.id==='conf'&&a.origem==='local'));const nFilled=fsC.filter(f=>{const v=a.vals?.[f.id];return Array.isArray(v)?v.length:v}).length;
   const idBody=`<div class="ancode">${anCode(p,a)} <span class="muted">— código pela ordem da lista</span></div>
-    <label>Origem</label><div class="tks">${[['lista','Alegada (lista fornecida)'],['local','Acrescentada no local']].map(([v,t])=>tickBox('',a.origem===v,t,`data-act="tkOrig" data-v="${v}"`)).join('')}</div>
+    <label>Parte que coloca a questão / situação</label><div class="tks">${p.partes.map(x=>tickBox('',parteOf(p,a)==x.n,`<b>${x.n}</b> – ${esc(x.nome)}`,`data-act="tkParte" data-v="${x.n}"`)).join('')}</div>
     ${inp('a.ref','Item (n.º na lista fornecida)',a.ref,'ex.: 1a)')}${idPick(a,'zona','Zona','catZona')}${idPick(a,'local','Local (compartimento)','catLocal')}${idPick(a,'elemento','Elemento','catElem')}
     ${txt('a.descricao',`${lblD(p)} (sai com o título «${lblD(p)}:»)`,a.descricao,3)}`;
   S.subNav=`<div class="fnav"><button class="secondary" data-act="backList">◀ Lista</button><b class="grow center">${anCode(p,a)} · ${idx+1}/${n}</b><button class="secondary" data-act="stepA" data-d="-1" ${idx?'':'disabled'}>◀</button><button class="secondary" data-act="stepA" data-d="1" ${idx<n-1?'':'disabled'}>▶</button></div>${a.descricao?`<div class="subdesc ${S.descFull?'full':''}" data-act="descFull"><b>${esc(lblD(p))}:</b> ${esc(a.descricao)}<span class="dmore">${S.descFull?'▲':'▼'}</span></div>`:''}`;
@@ -735,6 +744,7 @@ function computeStats(p){
   const f2=fo('tipo');if(f2){const m=new Map();for(const a of an)for(const v of (a.vals?.tipo||[]))cnt(m,v);if(m.size)T.push({title:f2.label,rows:[...m].sort((x,y)=>y[1]-x[1])})}
   const f3=fo('cons');if(f3){const m=new Map();for(const o of f3.opts)m.set(o[0],0);for(const a of an)for(const v of (a.vals?.cons||[]))cnt(m,v);const rows=[...m].filter(r=>r[1]).map(([k,n])=>[optText(f3.opts.find(o=>o[0]===k)||[k,k],settings.printStyle),n]);if(rows.length)T.push({title:f3.label,rows})}
   for(const [id] of [['estado'],['tend'],['urg'],['rep']]){const f=fo(id);if(!f)continue;const m=new Map();for(const a of an){const v=a.vals?.[id];if(v){const o=f.opts.find(o=>o[0]===v);cnt(m,o?optText(o,settings.printStyle):v)}}if(m.size)T.push({title:f.label,rows:[...m]})}
+  const mp=new Map();for(const a of an){const n=parteOf(p,a);cnt(mp,`${n} – ${parteNome(p,n)||'?'}`)}if(mp.size)T.push({title:'Parte',rows:[...mp].sort()});
   const mz=new Map();for(const a of an)cnt(mz,a.zona||'(sem zona)');if(mz.size)T.push({title:'Zona',rows:[...mz]});
   return T;
 }
@@ -797,6 +807,7 @@ function vImport(){
     ${I.sheets&&I.sheets.length>1?`<label class="fld"><span>Folha</span><select data-act="impSheet">${I.sheets.map((s,i)=>`<option value="${i}" ${i===I.si?'selected':''}>${esc(s.name)}</option>`).join('')}</select></label>`:''}
     <label class="fld"><span>Linha de cabeçalho (os dados começam na seguinte)</span><select data-act="impHdr"><option value="-1" ${I.hdr<0?'selected':''}>Sem cabeçalho</option>${I.rows.slice(0,30).map((r,i)=>`<option value="${i}" ${I.hdr===i?'selected':''}>${i+1}: ${esc(r.filter(Boolean).join(' | ').slice(0,60))}</option>`).join('')}</select></label>
     <div class="grid2">${IMPORT_TARGETS.map(([k,l])=>`<label class="fld"><span>${l}</span>${opt(k)}</label>`).join('')}</div>
+    <label>Esta lista é da parte</label><select data-act="impParte">${p.partes.map(x=>`<option value="${x.n}" ${x.n==(S.impParte??1)?'selected':''}>${x.n} – ${esc(x.nome)} (numeração ${x.n}.001…)</option>`).join('')}</select>
     <p><b>${items.length}</b> anomalia(s) encontradas. Primeiras:</p>
     <div class="scroll"><table class="prev"><tr>${IMPORT_TARGETS.map(t=>`<th>${t[1]}</th>`).join('')}</tr>${items.slice(0,5).map(o=>`<tr>${IMPORT_TARGETS.map(([k])=>`<td>${esc(o[k].slice(0,80))}</td>`).join('')}</tr>`).join('')}</table></div>
     <div class="row"><button class="pri" data-act="impDo" data-m="add" ${items.length?'':'disabled'}>Acrescentar ${items.length}</button>${p.anomalias.some(a=>a.origem!=='local')?`<button data-act="impDo" data-m="replace" ${items.length?'':'disabled'}>Substituir as da lista</button>`:''}</div></section>`;
@@ -947,12 +958,14 @@ function migrateProc(p){
   const MAPG={PER:'3-ERV',PEI:'1-ENR',PFR:'8-FRV',PFI:'6-FNR','4-FNR':'6-FNR','5-FPR':'7-FPR','6-FRV':'8-FRV'};
   for(const a of p.anomalias||[])if(Array.isArray(a.vals?.cons))a.vals.cons=a.vals.cons.map(x=>MAPG[x]||x);
   if(p.use)delete p.use.grav;if(p.print)delete p.print.grav;for(const a of p.anomalias||[])if(a.vals)delete a.vals.grav;
+  if(!p.partes){p.partes=clone(DEF_PARTES);p.parteLocal=4;const lock=p.lockNum;for(const a of p.anomalias||[]){a.parte=a.origem==='local'?4:1}
+    if(lock){const c={};for(const a of p.anomalias||[]){c[a.parte]=(c[a.parte]||0)+1;a.num=c[a.parte]}}}
   p.visita=p.visita||{data:p.data||'',presencas:'',gps:null};if(p.printVistoria===undefined)p.printVistoria=false;return p}
-function newProc(){const p={id:uid(),codigo:'',designacao:'',local:'',visita:{data:'',presencas:'',gps:null},printVistoria:false,use:{},print:{},resumo:'',printResumo:false,anomalias:[],createdAt:Date.now(),updatedAt:Date.now()};
+function newProc(){const p={id:uid(),partes:clone(DEF_PARTES),parteLocal:4,codigo:'',designacao:'',local:'',visita:{data:'',presencas:'',gps:null},printVistoria:false,use:{},print:{},resumo:'',printResumo:false,anomalias:[],createdAt:Date.now(),updatedAt:Date.now()};
   for(const f of settings.fields){p.use[f.id]=!!f.on;p.print[f.id]=!!f.print}return p}
-const nextNum=p=>Math.max(0,...p.anomalias.map(a=>a.num||0))+1;
-function newAnom(origem){const p=cur();
-  return {id:uid(),num:p&&p.lockNum?nextNum(p):undefined,ref:'',zona:'',local:'',elemento:'',descricao:'',origem,vals:{},fotos:[],createdAt:Date.now()}}
+const nextNum=(p,pt)=>Math.max(0,...p.anomalias.filter(a=>parteOf(p,a)==pt).map(a=>a.num||0))+1;
+function newAnom(origem,parte){const p=cur();const pt=parte??(origem==='local'?(p.parteLocal??4):1);
+  return {id:uid(),parte:pt,num:p&&p.lockNum?nextNum(p,pt):undefined,ref:'',zona:'',local:'',elemento:'',descricao:'',origem,vals:{},fotos:[],createdAt:Date.now()}}
 
 document.addEventListener('click',async e=>{
   const el=e.target.closest('[data-act]');if(!el||el.tagName==='INPUT'&&el.type!=='button'||el.tagName==='SELECT')return;
@@ -963,9 +976,12 @@ document.addEventListener('click',async e=>{
     case 'setCols':settings.photoCols=+el.dataset.v;await saveSettings();S.scrollTop=window.scrollY;break;
     case 'setNum':settings[el.dataset.k]=+el.dataset.v;await saveSettings();S.scrollTop=window.scrollY;break;
     case 'setPair':p.lblDesc=el.dataset.d;p.lblCom=el.dataset.c;await saveProc();S.scrollTop=window.scrollY;break;
-    case 'lockNum':{if(el.dataset.v==='1'){p.anomalias.forEach((x,i)=>x.num=i+1);p.lockNum=true;toast('Numeração fixada.')}else{if(!await ask('Desbloquear a numeração? Os códigos AN e IMG voltam a seguir a ordem da lista (podem mudar).',['Cancelar','Desbloquear']))return;p.anomalias.forEach(x=>delete x.num);p.lockNum=false}await saveProc();S.scrollTop=window.scrollY;break}
+    case 'lockNum':{if(el.dataset.v==='1'){p.anomalias.forEach(x=>{x.num=undefined;x.num=numOf({...p,lockNum:false},x)});p.lockNum=true;toast('Numeração fixada.')}else{if(!await ask('Desbloquear a numeração? Os códigos AN e IMG voltam a seguir a ordem da lista (podem mudar).',['Cancelar','Desbloquear']))return;p.anomalias.forEach(x=>delete x.num);p.lockNum=false}await saveProc();S.scrollTop=window.scrollY;break}
     case 'filt':S.filt.st=el.dataset.v;S.scrollTop=window.scrollY;break;
-    case 'dupA':{const c=JSON.parse(JSON.stringify(a));c.id=uid();c.ref='';c.fotos=[];c.num=p.lockNum?nextNum(p):undefined;c.createdAt=Date.now();p.anomalias.splice(p.anomalias.indexOf(a)+1,0,c);S.aid=c.id;S.openId=true;S.open.f1=true;S.scrollTop=0;await saveProc();toast(`Duplicada como ${anCode(p,c)} (sem fotografias).`);break}
+    case 'dupA':{const c=JSON.parse(JSON.stringify(a));c.id=uid();c.ref='';c.fotos=[];c.num=p.lockNum?nextNum(p,parteOf(p,a)):undefined;c.parte=parteOf(p,a);c.createdAt=Date.now();p.anomalias.splice(p.anomalias.indexOf(a)+1,0,c);S.aid=c.id;S.openId=true;S.open.f1=true;S.scrollTop=0;await saveProc();toast(`Duplicada como ${anCode(p,c)} (sem fotografias).`);break}
+    case 'addParte':{const n=Math.max(0,...p.partes.map(x=>+x.n))+1;p.partes.push({n,nome:'Parte '+n});await saveProc();S.scrollTop=window.scrollY;break}
+    case 'delParte':{const x=p.partes[+el.dataset.i];const k=p.anomalias.filter(a=>parteOf(p,a)==x.n).length;if(k)return toast(`A parte ${x.n} tem ${k} anomalia(s) — mude-as primeiro de parte.`,1);if(p.partes.length<2)return;p.partes.splice(+el.dataset.i,1);await saveProc();S.scrollTop=window.scrollY;break}
+    case 'sortParte':{const order=new Map(p.anomalias.map((a,i)=>[a,i]));p.anomalias.sort((x,y)=>parteOf(p,x)-parteOf(p,y)||(p.lockNum?(x.num||0)-(y.num||0):order.get(x)-order.get(y)));await saveProc();toast('Lista ordenada por parte e número.');break}
     case 'useAll':{for(const f of settings.fields){p.use[f.id]=el.dataset.v==='1'}await saveProc();S.scrollTop=window.scrollY;break}
     case 'newProc':{const np=newProc();procs.push(np);await dbPut(np);S.pid=np.id;S.aid=null;S.view='proc';S.sub=null;S.open.p1=true;S.scrollTop=0;break}
     case 'openProc':if(dirty)await saveProc();S.pid=el.dataset.id;S.aid=null;S.prevNode=null;await loadFotos(cur());S.view='proc';S.sub=null;S.scrollTop=0;break;
@@ -1016,10 +1032,10 @@ document.addEventListener('click',async e=>{
     case 'pmFull':{const m=document.createElement('div');m.className='modal zoom';m.style.zIndex=70;m.innerHTML=`<img src="${fd(a.fotos[+el.dataset.i])}">`;m.onclick=()=>m.remove();document.body.appendChild(m);return}
     case 'tplDel':{if(!await ask(`Retirar o modelo "${settings.tplName}"? O Word volta a ser gerado com o formato próprio da app.`,['Cancelar','Retirar'],1))return;tplBytes=null;settings.tplName='';settings.useTpl=false;await kvSet('tpl',null);await saveSettings();break}
     case 'saveCam':{const files=S.camShots;S.camShots=[];try{await navigator.share({files})}catch(e){}S.scrollTop=window.scrollY;break}
-    case 'goImport':S.imp=null;S.view='anom';S.sub='imp';S.scrollTop=0;break;
+    case 'goImport':S.imp=null;{const fr=p.partes.filter(x=>x.n!=(p.parteLocal??4)).find(x=>!p.anomalias.some(a=>parteOf(p,a)==x.n));S.impParte=fr?fr.n:(p.partes[0]?.n??1)}S.view='anom';S.sub='imp';S.scrollTop=0;break;
     case 'impPaste':{const t=$('#pasteBox').value;if(!t.trim())return toast('Cole primeiro o texto.',1);const rows=parseTSV(t);setImport(rows,null,0);break}
     case 'impDo':{const I=S.imp;const items=rowsToItems(I.rows,I.hdr+1,I.map);if(el.dataset.m==='replace'){if(!await ask('Substituir todas as anomalias "da lista" (as fichas, classificações e fotos dessas anomalias perdem-se)? As constatadas no local mantêm-se.',['Cancelar','Substituir'],1))return;p.anomalias.filter(x=>x.origem!=='local').forEach(x=>x.fotos.forEach(f=>fotoDel(f.id)));p.anomalias=p.anomalias.filter(x=>x.origem==='local')}
-      let nx=p.lockNum?nextNum(p):0;const ins=items.map(o=>({id:uid(),...o,num:p.lockNum?nx++:undefined,origem:'lista',vals:{},fotos:[],createdAt:Date.now()}));const firstLocal=p.anomalias.findIndex(x=>x.origem==='local');
+      const ipt=+(S.impParte??1);let nx=p.lockNum?nextNum(p,ipt):0;const ins=items.map(o=>({id:uid(),...o,parte:ipt,num:p.lockNum?nx++:undefined,origem:ipt==(p.parteLocal??4)?'local':'lista',vals:{},fotos:[],createdAt:Date.now()}));const firstLocal=p.anomalias.findIndex(x=>x.origem==='local');
       if(firstLocal>=0)p.anomalias.splice(firstLocal,0,...ins.filter(()=>1));else p.anomalias.push(...ins);
       await saveProc();toast(`${ins.length} anomalia(s) importadas.`);S.view='anom';S.sub=null;S.imp=null;S.scrollTop=0;break}
     case 'exportWord':{if(dirty)await saveProc();if(!p.anomalias.length)return toast('Não há fichas para exportar.',1);
@@ -1051,6 +1067,12 @@ document.addEventListener('change',async e=>{
   if(act==='tickVis'){p.printVistoria=el.checked;await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='tkMap'){p.printMap=el.checked;await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='tkStats'){p.printStats=el.checked;await saveProc();S.scrollTop=window.scrollY;render();return}
+  if(act==='tkParte'){const n=+el.dataset.v;if(parteOf(p,a)!=n){a.parte=n;a.origem=n==(p.parteLocal??4)?'local':'lista';if(p.lockNum)a.num=nextNum(p,n)}await saveProc();S.scrollTop=window.scrollY;render();return}
+  if(act==='impParte'){S.impParte=+el.value;return}
+  if(act==='filtParte'){S.filt.parte=el.value?+el.value:0;S.scrollTop=window.scrollY;render();return}
+  if(act==='parteLocal'){p.parteLocal=+el.value;for(const x of p.anomalias)x.origem=parteOf(p,x)==p.parteLocal?'local':'lista';await saveProc();return}
+  if(el.dataset.pn!==undefined){const i=+el.dataset.pn,old=p.partes[i].n,n=parseInt(el.value,10);if(!(n>0)||p.partes.some((x,j)=>j!==i&&x.n==n)){el.value=old;return toast('Número de parte inválido ou repetido.',1)}for(const x of p.anomalias)if(parteOf(p,x)==old)x.parte=n;if(p.parteLocal==old)p.parteLocal=n;p.partes[i].n=n;await saveProc();S.scrollTop=window.scrollY;render();return}
+  if(el.dataset.pnome!==undefined){p.partes[+el.dataset.pnome].nome=el.value;await saveProc();return}
   if(act==='filtZona'){S.filt.zona=el.value;S.scrollTop=window.scrollY;render();return}
   if(act==='pmMoveTo'){const t=p.anomalias.find(x=>x.id===el.value);if(!t)return;if(t.fotos.length>=settings.maxFotos){toast(`${anCode(p,t)} já tem ${settings.maxFotos} fotos.`,1);return}const [f]=a.fotos.splice(+el.dataset.i,1);t.fotos.push(f);$('#pm')?.remove();await saveProc();toast(`Foto movida para ${anCode(p,t)} (${imgCode(p,t,t.fotos.length-1)}).`);S.scrollTop=window.scrollY;render();return}
   if(act==='tkExp'){settings[el.dataset.k]=el.checked;await saveSettings();S.scrollTop=window.scrollY;render();return}
