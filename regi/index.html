@@ -77,6 +77,10 @@ table.tb .c{text-align:center;width:70px}table.tb input{width:22px;height:22px;a
 table.st{border-collapse:collapse;margin:6px 0 12px;min-width:260px;font-size:13.5px}table.st th{background:var(--pri);color:#fff;text-align:left;padding:5px 8px;font-weight:600}table.st td{padding:4px 8px;border-bottom:1px solid var(--line)}table.st .n{text-align:right;width:60px}
 .mapsaved{display:flex;gap:10px;align-items:center;margin:8px 0;font-size:13px;color:var(--ok)}.mapsaved img{width:120px;height:90px;object-fit:cover;border-radius:6px;border:1px solid var(--line)}
 .tip{background:#eef3fb;border-color:#c9d8ef;font-size:14px}
+.toast.undo{display:flex;gap:12px;align-items:center;background:#263238}.toast.undo button{min-height:34px;background:#fff;color:#263238;border-color:#fff;font-size:14px;padding:4px 12px}
+.search{display:flex;gap:6px;margin:6px 0}.search input{flex:1}
+.card.chk{background:#fff8e1;border-color:#e6cf7a}.card.chk.ok{background:var(--okbg);border-color:#cfe3d1;color:var(--ok);font-weight:600}.chkrow{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:6px 0;border-top:1px solid #efe3b0;font-size:14px}.chkrow:first-of-type{border-top:0}.chkrow small{color:var(--mute)}
+.helpbox{max-width:620px!important;max-height:88vh;overflow:auto}.helpbox details{border-top:1px solid var(--line);padding:8px 0}.helpbox summary{font-weight:700;cursor:pointer}.helpbox p{font-size:14px;line-height:1.5;margin:6px 0 0}
 .lockrow{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:13px}
 .steps3{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;color:var(--mute)}.steps3 b{display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;background:var(--pri);color:#fff;font-size:11px;margin-right:4px}
 .bar{height:8px;background:#e6e8eb;border-radius:4px;overflow:hidden;margin:6px 0}.bar i{display:block;height:100%;background:var(--ok)}
@@ -462,7 +466,7 @@ function buildDocxText({proc,settings,anoms,withResumo}){
 }
 
 // ===== App: Regi Anomalias =====
-const VERSION='0.9.5';
+const VERSION='0.10.0';
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'}];
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
 const parteNome=(p,n)=>(p.partes||[]).find(x=>x.n==n)?.nome||'';
@@ -575,6 +579,17 @@ const cur=()=>procs.find(p=>p.id===S.pid);
 const curA=()=>cur()?.anomalias.find(a=>a.id===S.aid);
 
 // ---------- UI helpers ----------
+// Eliminar com «Desfazer»: a remoção definitiva das fotos só acontece passados 10 s
+let undoT=null,undoCommit=null;
+function undoToast(msg,onUndo,onCommit){if(undoCommit){clearTimeout(undoT);undoCommit()}document.querySelector('.toast.undo')?.remove();
+  const t=document.createElement('div');t.className='toast undo';t.innerHTML=`<span>${esc(msg)}</span><button type="button">↶ Desfazer</button>`;
+  undoCommit=()=>{undoCommit=null;t.remove();onCommit&&onCommit()};
+  t.querySelector('button').onclick=async()=>{clearTimeout(undoT);undoCommit=null;t.remove();await onUndo()};
+  document.body.appendChild(t);undoT=setTimeout(()=>undoCommit&&undoCommit(),10000)}
+function removeAnomUndo(p,x){const idx=p.anomalias.indexOf(x);const code=anCode(p,x);p.anomalias.splice(idx,1);if(S.aid===x.id)S.aid=null;
+  undoToast(`${code} eliminada.`,async()=>{p.anomalias.splice(Math.min(idx,p.anomalias.length),0,x);await saveProc();S.scrollTop=window.scrollY;render();toast(`${code} reposta.`)},()=>x.fotos.forEach(f=>fotoDel(f.id)))}
+function removeFotoUndo(p,a,i){const [g]=a.fotos.splice(i,1);if(!g)return;
+  undoToast('Foto eliminada.',async()=>{a.fotos.splice(Math.min(i,a.fotos.length),0,g);await saveProc();S.scrollTop=window.scrollY;render()},()=>fotoDel(g.id))}
 function toast(msg,err){const t=document.createElement('div');t.className='toast'+(err?' err':'');t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),err?6000:2600)}
 function ask(msg,btns=['Cancelar','Confirmar'],danger){return new Promise(res=>{const m=document.createElement('div');m.className='modal';
   m.innerHTML=`<div class="box"><p>${esc(msg).replace(/\n/g,'<br>')}</p><div class="btns">${btns.map((b,i)=>`<button data-i="${i}" class="${i===btns.length-1?(danger?'danger':'pri'):''}">${esc(b)}</button>`).join('')}</div></div>`;
@@ -613,7 +628,7 @@ function render(){
   document.title=`Regi Anomalias · ${VERSION}`;
   const p=cur();if(!p&&['proc','anom','rel'].includes(S.view))S.view='home';
   const crumbs=p&&S.view!=='home'&&S.view!=='defs'?`${esc(p.codigo||'(sem código)')}${S.sub==='ficha'&&curA()?' › '+anCode(p,curA()):''}`:'';
-  $('#hdr').innerHTML=`<h1 data-act="go" data-v="home">Regi Anomalias</h1><span class="ver">v${VERSION}</span><div class="crumbs">${crumbs}</div><button class="mini ${S.view==='home'?'on':''}" data-act="go" data-v="home">Processos</button><button class="mini ${S.view==='defs'?'on':''}" data-act="go" data-v="defs">Definições</button>`;
+  $('#hdr').innerHTML=`<h1 data-act="go" data-v="home">Regi Anomalias</h1><span class="ver">v${VERSION}</span><div class="crumbs">${crumbs}</div><button class="mini ${S.view==='home'?'on':''}" data-act="go" data-v="home">Processos</button><button class="mini ${S.view==='defs'?'on':''}" data-act="go" data-v="defs">Definições</button><button class="mini" data-act="help" aria-label="Ajuda">?</button>`;
   $('#steps').innerHTML=p&&['proc','anom','rel'].includes(S.view)?[['proc','Processo'],['anom','Anomalias'],['rel','Relatório']].map(([v,t])=>`<button class="${S.view===v?'on':''}" data-act="go" data-v="${v}">${t}</button>`).join(''):'';
   $('#steps').style.display=$('#steps').innerHTML?'':'none';
   let html;
@@ -641,10 +656,17 @@ function installTip(){
   if(isStandalone()||settings.hideInstallTip)return '';
   if(location.protocol==='file:')return `<div class="card tip">⚠︎ <b>Está a usar a app aberta como ficheiro</b> (por ex. pela app Ficheiros). Assim o iPhone pode não guardar os dados e não dá o GPS. Use a versão instalada (endereço do GitHub Pages › Partilhar › <b>Adicionar ao ecrã principal</b>).</div>`;
   return `<div class="card tip">📲 <b>Instalar no iPhone:</b> no Safari, toque em <b>≡</b> (à esquerda do endereço) ou <b>···</b> › <b>Partilhar</b> › deslize para cima › <b>Adicionar ao ecrã principal</b>. A app passa a abrir em ecrã inteiro e funciona sem rede.<div class="btns"><button class="secondary mini" data-act="hideTip">Já instalei / não mostrar</button></div></div>`}
+const HELP_HTML=`
+<details open><summary>O percurso</summary><p><b>Processo</b> (preparar) → <b>Anomalias</b> (lista e pronúncia) → <b>Relatório</b> (verificar e exportar). Tudo se grava sozinho.</p></details>
+<details><summary>1 · Processo</summary><p><b>A</b> — dados do processo e da vistoria: data (📅), presenças e localização GPS («📍 Obter GPS», ou colar coordenadas / link do Google Maps). O mapa de satélite fica guardado para o Word.<br><b>B</b> — <b>Partes</b>: cada parte tem um prefixo (1 Autor, 2 Réu, 3 Tribunal, 4 Perito). Os <b>Campos a atender</b> escolhem o que se aprecia em cada anomalia. A <b>Lógica da ficha</b> escolhe os títulos: Situação/Análise ou Questão/Resposta.</p></details>
+<details><summary>2 · Anomalias</summary><p><b>Importar lista</b> de Excel ou Word (tabela, lista numerada ou parágrafos numerados) e escolher de que parte é — os códigos ficam 1.001, 1.002… / 2.001… Também se acrescentam à mão («+ Acrescentar anomalia»; as constatadas no local vão para a parte do Perito).<br>Toque numa anomalia para se pronunciar: a situação fica fixa no topo; ◀ ▶ passa à anterior/seguinte. <b>⧉ Copiar a pronúncia</b> repete a classificação da anomalia anterior. Até 9 fotos (câmara ou fototeca); toque na foto para legendar, rodar, mover para outra anomalia ou eliminar.<br><b>🔍 Pesquisa</b> e filtros (por analisar, parte, zona). <b>🔒 Fixar numeração</b> congela os códigos. Ao eliminar, há 10 s para <b>↶ Desfazer</b>.</p></details>
+<details><summary>3 · Relatório</summary><p>O quadro <b>«Antes de exportar»</b> mostra o que falta (por analisar, sem fotos, fotos sem legenda…). Pré-visualização do Word real; Word com fichas (uma por página, fotos em 1/2/3 colunas) e/ou análise em texto corrido; Excel; pasta completa (.zip) com fotos IMG 1.001.1…</p></details>
+<details><summary>Cópias e passagem entre aparelhos</summary><p><b>Backup OUT/IN</b> — todos os processos. <b>📤 Enviar</b> (em cada processo) cria um ficheiro só com esse processo, para passar ao iPad/PC por AirDrop ou iCloud; no outro aparelho, <b>📥 Receber processo</b> compara as datas e pergunta se substitui ou mantém os dois. Trabalhe cada processo num aparelho de cada vez.</p></details>
+<details><summary>Instalação e atualizações</summary><p>Abra pelo ícone do ecrã principal (não pela app Ficheiros). As versões novas instalam-se sozinhas quando abre a app com rede. Os dados ficam só neste aparelho.</p></details>`;
 function vHome(){
   const list=[...procs].sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
   return `${installTip()}${bkBarHTML()}<h2>Processos (${procs.length})</h2><div class="btns"><button class="green" data-act="newProc">+ Novo processo</button></div>
-  <div class="list">${list.map(x=>{const n=x.anomalias.length,ok=x.anomalias.filter(isDone).length;return `<div class="card ${x.id===S.pid?'active':''}" data-act="openProc" data-id="${x.id}"><b>${esc(x.codigo||'(sem código)')}</b> ${esc(x.designacao||'')}<div class="muted">${esc(x.local||'')}${x.visita?.data?' · vistoria '+esc(x.visita.data):''}</div><div style="margin-top:4px">${pill(n+' anomalia'+(n===1?'':'s'))}${n?pill(ok+' analisada'+(ok===1?'':'s'),ok===n?'ok':'warn'):''}</div></div>`}).join('')||'<p class="muted">Ainda não há processos.</p>'}</div>`;
+  <div class="list">${list.map(x=>{const n=x.anomalias.length,ok=x.anomalias.filter(isDone).length;return `<div class="card ${x.id===S.pid?'active':''}" data-act="openProc" data-id="${x.id}"><b>${esc(x.codigo||'(sem código)')}</b> ${esc(x.designacao||'')}<div class="muted">${esc(x.local||'')}${x.visita?.data?' · vistoria '+esc(x.visita.data):''}</div><div style="margin-top:4px"><button class="secondary mini" style="float:right" data-act="sendProc" data-id="${x.id}">📤 Enviar</button>${pill(n+' anomalia'+(n===1?'':'s'))}${n?pill(ok+' analisada'+(ok===1?'':'s'),ok===n?'ok':'warn'):''}</div></div>`}).join('')||'<p class="muted">Ainda não há processos.</p>'}</div>`;
 }
 // ----- Processo -----
 function vProc(){
@@ -684,12 +706,13 @@ function anomCard(a,i,n,mode){
 function vAnoms(){
   const p=cur(),an=p.anomalias,done=an.filter(isDone).length;const nl=an.filter(a=>a.origem!=='local').length,nc=an.length-nl;
   const F=S.filt||(S.filt={st:'all',zona:''});const zonas=[...new Set(an.map(a=>a.zona).filter(Boolean))];
-  const usedP=[...new Set(an.map(a=>parteOf(p,a)))].sort();const vis=an.filter(a=>(F.st==='all'||(F.st==='done'?isDone(a):!isDone(a)))&&(!F.zona||a.zona===F.zona)&&(!F.parte||parteOf(p,a)==F.parte));
+  const usedP=[...new Set(an.map(a=>parteOf(p,a)))].sort();const q=(F.q||'').trim().toLowerCase();const vis=an.filter(a=>(!q||[anCode(p,a),a.ref,a.zona,a.local,a.elemento,a.descricao,a.comentario].join(' ').toLowerCase().includes(q))&&(F.st==='all'||(F.st==='done'?isDone(a):!isDone(a)))&&(!F.zona||a.zona===F.zona)&&(!F.parte||parteOf(p,a)==F.parte));
   return `<h2>Anomalias</h2>
   <div class="card"><div class="steps3"><span><b>1</b> Criar a lista</span><span><b>2</b> Tocar numa anomalia</span><span><b>3</b> Pronunciar-se e fotografar</span></div>
   <div class="btns"><button class="secondary" data-act="goImport">⬆ Importar lista (Excel)</button><button class="green" data-act="newAnom">+ Acrescentar anomalia</button></div>
   ${an.length?`<div class="muted">${nl} da lista · ${nc} acrescentada${nc===1?'':'s'} no local</div><div class="bar"><i style="width:${Math.round(100*done/an.length)}%"></i></div><b>${done}/${an.length}</b> analisadas
   <div class="lockrow">${p.lockNum?`<span>🔒 <b>Numeração fixa</b> — os códigos AN não mudam ao reordenar ou eliminar</span><button class="secondary mini" data-act="lockNum" data-v="0">Desbloquear</button>`:`<span class="muted">Numeração pela ordem da lista (muda ao reordenar ou eliminar)</span><button class="secondary mini" data-act="lockNum" data-v="1">🔒 Fixar numeração</button>`}</div>`:''}</div>
+  ${an.length>4?`<div class="search"><input id="fq" data-act="filtQ" value="${esc(F.q||'')}" placeholder="🔍 Pesquisar código, item, local ou texto…">${F.q?'<button class="secondary mini" data-act="filtQClear">✕</button>':''}</div>`:''}
   ${an.length?`<div class="seg">${[['all','Todas',an.length],['todo','Por analisar',an.length-done],['done','Analisadas',done]].map(([k,t,n])=>`<button class="${F.st===k?'on':''}" data-act="filt" data-v="${k}">${t} (${n})</button>`).join('')}</div>
   ${usedP.length>1?`<select data-act="filtParte"><option value="">Todas as partes</option>${usedP.map(n=>`<option value="${n}" ${F.parte==n?'selected':''}>${n} – ${esc(parteNome(p,n))}</option>`).join('')}</select>`:''}
   ${usedP.length>1&&an.some((a,i)=>i&&parteOf(p,an[i-1])>parteOf(p,a))?'<div class="btns"><button class="secondary mini" data-act="sortParte">⇅ Ordenar a lista por código</button></div>':''}
@@ -713,7 +736,8 @@ function vFicha(){
   let h='';
   h+=sec('f1','1 · Identificação'+(fromList?'':` <span class="muted" style="font-weight:400">· ${esc(a.elemento||'')}</span>`),idBody,{cnt:falta(idMiss),def:fromList||!!idMiss});
   if(!fromList){
-    h+=sec('f2','2 · Pronúncia',txt('a.comentario',`${lblC(p)} (sai por baixo, com o título «${lblC(p)}:»)`,a.comentario,2)+(fs.length?fs.map(f=>fieldUI(f,a)).join(''):'<p class="muted">Nenhum campo a atender — escolha-os no separador Processo › 3.</p>'),{cnt:pill(`${nFilled}/${fsC.length}`,nFilled===fsC.length&&fsC.length?'ok':'warn')});
+    const prev=p.anomalias[idx-1];const prevHas=prev&&Object.values(prev.vals||{}).some(v=>Array.isArray(v)?v.length:v);
+    h+=sec('f2','2 · Pronúncia',(prevHas?`<div class="btns" style="margin-top:0"><button class="secondary mini" data-act="copyPrev">⧉ Copiar a pronúncia de ${anCode(p,prev)}</button></div>`:'')+txt('a.comentario',`${lblC(p)} (sai por baixo, com o título «${lblC(p)}:»)`,a.comentario,2)+(fs.length?fs.map(f=>fieldUI(f,a)).join(''):'<p class="muted">Nenhum campo a atender — escolha-os no separador Processo › 3.</p>'),{cnt:pill(`${nFilled}/${fsC.length}`,nFilled===fsC.length&&fsC.length?'ok':'warn')});
     h+=sec('f3','3 · Fotografias',`<div class="photos">${a.fotos.map((f,i)=>`<div class="ph"><img src="${fd(f)}" data-act="zoom" data-i="${i}"><div class="cap" data-act="zoom" data-i="${i}"><b>${imgCode(cur(),a,i)}</b> ${esc(f.legenda||'— sem legenda (toque para editar)')}</div></div>`).join('')}</div>
       ${a.fotos.length<max?`<div class="btns"><label class="btn green">📷 Tirar fotografia<input type="file" accept="image/*" capture="environment" data-act="addCam" hidden></label><label class="btn green">🖼 Escolher da fototeca<input type="file" accept="image/*" multiple data-act="addLib" hidden></label></div>`:'<p class="muted">Limite de fotos atingido.</p>'}
       ${S.camShots.length?`<div class="btns"><button class="secondary" data-act="saveCam">💾 Guardar ${S.camShots.length} foto(s) tirada(s) na fototeca</button></div>`:''}`,{cnt:pill(`${a.fotos.length}/${max}`,a.fotos.length?'ok':'')});
@@ -750,7 +774,15 @@ function computeStats(p){
 }
 function statsHTML(T){return T.map(t=>`<table class="st"><tr><th>${esc(t.title)}</th><th class="n">N.º</th></tr>${t.rows.map(([l,n])=>`<tr><td>${esc(l)}</td><td class="n">${esc(n)}</td></tr>`).join('')}</table>`).join('')}
 function vRel(){const p=cur();const nf=p.anomalias.reduce((s,a)=>s+a.fotos.length,0),done=p.anomalias.filter(isDone).length;
-  return `<h2>Relatório</h2>${blk('Resultado da análise',`${p.anomalias.length} anomalia(s) · ${done} analisada(s) · ${nf} foto(s)`)}
+  const an=p.anomalias,W=[];const todo=an.filter(a=>!isDone(a)),semF=an.filter(a=>!a.fotos.length),semL=an.reduce((s,a)=>s+a.fotos.filter(f=>!String(f.legenda||'').trim()).length,0),semD=an.filter(a=>!String(a.descricao||'').trim());
+  if(todo.length)W.push([`${todo.length} anomalia(s) por analisar`,'chkTodo',todo.slice(0,6).map(a=>anCode(p,a)).join(', ')+(todo.length>6?'…':'')]);
+  if(semD.length)W.push([`${semD.length} anomalia(s) sem «${lblD(p)}»`,'chkGo:'+semD[0].id,semD.slice(0,6).map(a=>anCode(p,a)).join(', ')]);
+  if(semF.length)W.push([`${semF.length} anomalia(s) sem fotografias`,'chkGo:'+semF[0].id,semF.slice(0,6).map(a=>anCode(p,a)).join(', ')+(semF.length>6?'…':'')]);
+  if(semL)W.push([`${semL} fotografia(s) sem legenda`,'chkGo:'+(an.find(a=>a.fotos.some(f=>!String(f.legenda||'').trim()))||{}).id,'']);
+  if(settings.dateCom!==false&&!p.visita?.data)W.push(['Sem data da vistoria (sai antes de «'+lblC(p)+'»)','chkProc','']);
+  if(!p.codigo)W.push(['Processo sem código (vai no nome dos ficheiros)','chkProc','']);
+  const chk=W.length?`<div class="card chk"><b>Antes de exportar, confirme:</b>${W.map(([t,act,sub])=>{const [ac,id]=act.split(':');return `<div class="chkrow"><span>⚠︎ ${esc(t)}${sub?`<br><small>${esc(sub)}</small>`:''}</span><button class="secondary mini" data-act="${ac}" ${id?`data-id="${id}"`:''}>Ver ›</button></div>`}).join('')}</div>`:'<div class="card chk ok">✓ Tudo analisado e completo.</div>';
+  return `<h2>Relatório</h2>${blk('Resultado da análise',`${p.anomalias.length} anomalia(s) · ${done} analisada(s) · ${nf} foto(s)`)}${chk}
   ${sec('r1','1 · Resumo de apreciação geral',txt('p.resumo','',p.resumo,5),{cnt:p.resumo?pill('✓','ok'):pill('vazio')})}
   ${sec('r5','Resumo estatístico',`${statsHTML(computeStats(p))}${tickBox('',!!p.printStats,'Incluir este resumo no Word (no fim das fichas)','data-act="tkStats"')}`,{cnt:pill(p.printStats?'no Word':'só no ecrã',p.printStats?'ok':''),def:false})}
   ${sec('r2','2 · O que entra no Word',`<div class="tks col">${printOpts(p)}</div>`)}
@@ -817,7 +849,7 @@ function vImport(){
 function bkBarHTML(){const t=settings.lastBackup;const alt=procs.filter(x=>(x.updatedAt||0)>(t||0)).length;
   const txt=!t?(procs.length?'Ainda não foi feito nenhum backup neste aparelho.':'Sem dados para guardar.'):`Último backup: ${new Date(t).toLocaleString('pt-PT')}${alt?` · ${alt} processo(s) alterado(s) desde então`:' · sem alterações desde então'}`;
   const warn=procs.length&&(!t||alt);
-  return `<div class="bkbar ${warn?'warn':''}"><div class="bktxt"><b>Cópia de segurança</b><span>${esc(txt)}</span></div><div class="btns"><button class="green" data-act="backupOut">⬇ Backup OUT</button><label class="btn secondary">⬆ Backup IN<input type="file" accept=".json,application/json" data-act="backupIn" hidden></label></div></div>`}
+  return `<div class="bkbar ${warn?'warn':''}"><div class="bktxt"><b>Cópia de segurança</b><span>${esc(txt)}</span></div><div class="btns"><button class="green" data-act="backupOut">⬇ Backup OUT</button><label class="btn secondary">⬆ Backup IN<input type="file" accept=".json,application/json" data-act="backupIn" hidden></label><label class="btn secondary">📥 Receber processo<input type="file" accept=".json,application/json" data-act="backupIn" hidden></label></div></div>`}
 function vDefs(){
   const TY={choice:'Escolha única',multi:'Escolha múltipla',catalog:'Catálogo',text:'Texto curto',long:'Texto longo'};
   const catSec=([ck,lab],n)=>sec('dc_'+ck,`${n} · ${esc(lab)}`,`<div class="rows">${settings[ck].map((c,i)=>`<div class="rw"><input data-catedit="${ck}" data-i="${i}" value="${esc(c)}"><button class="del" data-act="delCat" data-k="${ck}" data-i="${i}" aria-label="Retirar">✕</button></div>`).join('')}</div>
@@ -979,6 +1011,18 @@ document.addEventListener('click',async e=>{
     case 'lockNum':{if(el.dataset.v==='1'){p.anomalias.forEach(x=>{x.num=undefined;x.num=numOf({...p,lockNum:false},x)});p.lockNum=true;toast('Numeração fixada.')}else{if(!await ask('Desbloquear a numeração? Os códigos AN e IMG voltam a seguir a ordem da lista (podem mudar).',['Cancelar','Desbloquear']))return;p.anomalias.forEach(x=>delete x.num);p.lockNum=false}await saveProc();S.scrollTop=window.scrollY;break}
     case 'filt':S.filt.st=el.dataset.v;S.scrollTop=window.scrollY;break;
     case 'dupA':{const c=JSON.parse(JSON.stringify(a));c.id=uid();c.ref='';c.fotos=[];c.num=p.lockNum?nextNum(p,parteOf(p,a)):undefined;c.parte=parteOf(p,a);c.createdAt=Date.now();p.anomalias.splice(p.anomalias.indexOf(a)+1,0,c);S.aid=c.id;S.openId=true;S.open.f1=true;S.scrollTop=0;await saveProc();toast(`Duplicada como ${anCode(p,c)} (sem fotografias).`);break}
+    case 'copyPrev':{const i=p.anomalias.indexOf(a),pv=p.anomalias[i-1];if(!pv)return;const has=Object.values(a.vals||{}).some(v=>Array.isArray(v)?v.length:v);
+      if(has&&!await ask(`Substituir a pronúncia de ${anCode(p,a)} pela de ${anCode(p,pv)}? (o texto «${lblC(p)}» e as fotos não são copiados)`,['Cancelar','Substituir']))return;
+      const keep=a.vals?.conf;a.vals=JSON.parse(JSON.stringify(pv.vals||{}));if(a.origem==='local'||pv.origem==='local'){if(keep)a.vals.conf=keep;else delete a.vals.conf}
+      await saveProc();toast(`Pronúncia copiada de ${anCode(p,pv)}.`);S.scrollTop=window.scrollY;break}
+    case 'chkTodo':S.view='anom';S.sub=null;S.filt={st:'todo',zona:'',q:''};S.scrollTop=0;break;
+    case 'chkGo':S.view='anom';S.aid=el.dataset.id;S.sub='ficha';S.openId=false;S.scrollTop=0;break;
+    case 'chkProc':S.view='proc';S.sub=null;S.open.p1=true;S.open.p2=true;S.scrollTop=0;break;
+    case 'sendProc':{if(dirty)await saveProc();const pp=procs.find(x=>x.id===el.dataset.id);if(!pp)return;toast('A preparar o processo…');await loadFotos(pp);
+      const one={...pp,visita:pp.visita?.map?{...pp.visita,map:{...pp.visita.map,data:fotoCache.get(pp.visita.map.id)||''}}:pp.visita,anomalias:pp.anomalias.map(a=>({...a,fotos:a.fotos.map(f=>({...f,data:fd(f)}))}))};
+      await saveBlob(new Blob([JSON.stringify({app:'RegiAnomalias',kind:'processo',version:VERSION,date:new Date().toISOString(),procs:[one]})],{type:'application/json'}),`${safeName(pp.codigo)}_Processo_Regi.json`);return}
+    case 'help':{const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="box helpbox"><div class="btns" style="margin-top:0;justify-content:space-between"><b style="font-size:17px">Como funciona a Regi Anomalias</b><button class="secondary mini" data-x>✕</button></div>${HELP_HTML}</div>`;m.addEventListener('click',e=>{if(e.target===m||e.target.closest('[data-x]'))m.remove()});document.body.appendChild(m);return}
+    case 'filtQClear':S.filt.q='';S.scrollTop=window.scrollY;break;
     case 'addParte':{const n=Math.max(0,...p.partes.map(x=>+x.n))+1;p.partes.push({n,nome:'Parte '+n});await saveProc();S.scrollTop=window.scrollY;break}
     case 'delParte':{const x=p.partes[+el.dataset.i];const k=p.anomalias.filter(a=>parteOf(p,a)==x.n).length;if(k)return toast(`A parte ${x.n} tem ${k} anomalia(s) — mude-as primeiro de parte.`,1);if(p.partes.length<2)return;p.partes.splice(+el.dataset.i,1);await saveProc();S.scrollTop=window.scrollY;break}
     case 'sortParte':{const order=new Map(p.anomalias.map((a,i)=>[a,i]));p.anomalias.sort((x,y)=>parteOf(p,x)-parteOf(p,y)||(p.lockNum?(x.num||0)-(y.num||0):order.get(x)-order.get(y)));await saveProc();toast('Lista ordenada por parte e número.');break}
@@ -1008,7 +1052,7 @@ document.addEventListener('click',async e=>{
         const used={};for(const a of p.anomalias)a.fotos.forEach((f,i)=>{let n=imgCode(p,a,i).replace(' ','_');while(used[n])n+='b';used[n]=1;files.push({name:`${base}/Fotos/${n}.jpg`,data:b64ToU8(fd(f))})});
         await saveBlob(new Blob([zipStore(files)],{type:'application/zip'}),`${base}_Relatorio.zip`)}catch(err){toast('Erro ao gerar a pasta: '+err.message,1)}return}
     case 'toggleCfg':S.openCfg=!S.openCfg;break;
-    case 'delA':{const x=p.anomalias.find(y=>y.id===el.dataset.id);if(!await ask(`Eliminar a anomalia ${anCode(p,x)}${x.ref?' (Item '+x.ref+')':''}${x.fotos.length?` e as suas ${x.fotos.length} foto(s)`:''}?`,['Cancelar','Eliminar'],1))return;x.fotos.forEach(f=>fotoDel(f.id));p.anomalias=p.anomalias.filter(y=>y!==x);if(S.aid===x.id)S.aid=null;S.scrollTop=window.scrollY;await saveProc();break}
+    case 'delA':{const x=p.anomalias.find(y=>y.id===el.dataset.id);if(!await ask(`Eliminar a anomalia ${anCode(p,x)}${x.ref?' (Item '+x.ref+')':''}${x.fotos.length?` e as suas ${x.fotos.length} foto(s)`:''}?`,['Cancelar','Eliminar'],1))return;removeAnomUndo(p,x);S.scrollTop=window.scrollY;await saveProc();break}
     case 'pickId':{const k=el.dataset.k,v=el.dataset.v;a[k]=a[k]===v?'':v;S.scrollTop=window.scrollY;await saveProc();break}
     case 'idToCat':{const k=el.dataset.k,ck=el.dataset.c,v=(a[k]||'').trim();if(!v)return toast('Escreva primeiro o valor.',1);if(!settings[ck].includes(v)){settings[ck].push(v);await saveSettings();toast(`"${v}" acrescentado ao catálogo.`)}S.scrollTop=window.scrollY;break}
     case 'newAnom':{const na=newAnom(el.dataset.o||'local');p.anomalias.push(na);S.aid=na.id;S.view='anom';S.sub='ficha';S.openId=true;S.scrollTop=0;await saveProc();break}
@@ -1019,16 +1063,16 @@ document.addEventListener('click',async e=>{
     case 'pick':{a.vals=a.vals||{};const f=el.dataset.f,v=el.dataset.v;a.vals[f]=a.vals[f]===v?'':v;S.scrollTop=window.scrollY;await saveProc();break}
     case 'pickCat':{a.vals=a.vals||{};const f=el.dataset.f,v=el.dataset.v;const arr=Array.isArray(a.vals[f])?a.vals[f]:[];a.vals[f]=arr.includes(v)?arr.filter(x=>x!==v):[...arr,v];S.scrollTop=window.scrollY;await saveProc();break}
     case 'addCat':{const t=$('#newCat').value.trim();if(!t)return;if(!settings.catalog.includes(t)){const k=settings.catalog.indexOf('Outros');k>=0?settings.catalog.splice(k,0,t):settings.catalog.push(t);await saveSettings()}a.vals=a.vals||{};const f=el.dataset.f;const arr=Array.isArray(a.vals[f])?a.vals[f]:[];if(!arr.includes(t))a.vals[f]=[...arr,t];S.scrollTop=window.scrollY;await saveProc();break}
-    case 'delAnom':if(await ask(`Eliminar a ficha ${anCode(p,a)}? (inclui as fotos)\nAs seguintes são renumeradas.`,['Cancelar','Eliminar'],1)){a.fotos.forEach(f=>fotoDel(f.id));p.anomalias=p.anomalias.filter(x=>x!==a);S.aid=null;S.sub=null;await saveProc()}else return;break;
+    case 'delAnom':if(await ask(`Eliminar a ficha ${anCode(p,a)}? (inclui as fotos)${p.lockNum?'':'\nAs seguintes da mesma parte são renumeradas.'}`,['Cancelar','Eliminar'],1)){removeAnomUndo(p,a);S.sub=null;await saveProc()}else return;break;
     case 'delProc':if(await ask(`Eliminar o processo ${p.codigo||''} e todas as fichas e fotos?\nSugestão: faça antes uma cópia de segurança.`,['Cancelar','Eliminar'],1)){p.anomalias.forEach(x=>x.fotos.forEach(f=>fotoDel(f.id)));procs=procs.filter(x=>x!==p);await dbDel(p.id);S.pid=null;S.view='home'}else return;break;
     case 'rotF':{await rotateFoto(a.fotos[+el.dataset.i]);S.scrollTop=window.scrollY;await saveProc();break}
     case 'mvF':{const i=+el.dataset.i,j=i+ +el.dataset.d;[a.fotos[i],a.fotos[j]]=[a.fotos[j],a.fotos[i]];S.scrollTop=window.scrollY;await saveProc();break}
-    case 'delF':if(await ask('Eliminar esta foto?',['Cancelar','Eliminar'],1)){{const [g]=a.fotos.splice(+el.dataset.i,1);if(g)fotoDel(g.id)}S.scrollTop=window.scrollY;await saveProc()}else return;break;
+    case 'delF':{removeFotoUndo(p,a,+el.dataset.i);S.scrollTop=window.scrollY;await saveProc();break}
     case 'zoom':openPhotoModal(+el.dataset.i);return;
     case 'pmClose':{$('#pm')?.remove();await saveProc();S.scrollTop=window.scrollY;break}
     case 'pmRot':{const i=+el.dataset.i;await rotateFoto(a.fotos[i]);await saveProc();openPhotoModal(i);return}
     case 'pmMv':{const i=+el.dataset.i,j=i+ +el.dataset.d;if(!a.fotos[j])return;[a.fotos[i],a.fotos[j]]=[a.fotos[j],a.fotos[i]];await saveProc();openPhotoModal(j);return}
-    case 'pmDel':{const i=+el.dataset.i;if(!await ask('Eliminar esta foto?',['Cancelar','Eliminar'],1))return;{const [g]=a.fotos.splice(i,1);if(g)fotoDel(g.id)}$('#pm')?.remove();await saveProc();S.scrollTop=window.scrollY;break}
+    case 'pmDel':{const i=+el.dataset.i;removeFotoUndo(p,a,i);$('#pm')?.remove();await saveProc();S.scrollTop=window.scrollY;break}
     case 'pmFull':{const m=document.createElement('div');m.className='modal zoom';m.style.zIndex=70;m.innerHTML=`<img src="${fd(a.fotos[+el.dataset.i])}">`;m.onclick=()=>m.remove();document.body.appendChild(m);return}
     case 'tplDel':{if(!await ask(`Retirar o modelo "${settings.tplName}"? O Word volta a ser gerado com o formato próprio da app.`,['Cancelar','Retirar'],1))return;tplBytes=null;settings.tplName='';settings.useTpl=false;await kvSet('tpl',null);await saveSettings();break}
     case 'saveCam':{const files=S.camShots;S.camShots=[];try{await navigator.share({files})}catch(e){}S.scrollTop=window.scrollY;break}
@@ -1099,6 +1143,12 @@ document.addEventListener('change',async e=>{
   if(act==='impHdr'){S.imp.hdr=+el.value;render();return}
   if(act==='impMap'){S.imp.map[el.dataset.k]=el.value===''?undefined:+el.value;render();return}
   if(act==='backupIn'){const f=el.files[0];el.value='';if(!f)return;try{const d=JSON.parse(await f.text());if(d.app!=='RegiAnomalias'||!Array.isArray(d.procs))throw new Error('Ficheiro não é uma cópia desta app');
+    if(d.kind==='processo'){const pp=d.procs[0];const ex=procs.find(x=>x.id===pp.id);let mode=2;
+      if(ex){const dn=x=>new Date(x.updatedAt||0).toLocaleString('pt-PT');mode=await ask(`O processo ${pp.codigo||''} já existe neste aparelho.\n• Neste aparelho: alterado em ${dn(ex)}\n• No ficheiro recebido: alterado em ${dn(pp)}${(pp.updatedAt||0)>(ex.updatedAt||0)?' (mais recente)':' (mais antigo)'}\nO que fazer?`,['Cancelar','Manter os dois','Substituir']);if(!mode)return}
+      if(ex&&mode===1){pp.id=uid();pp.codigo=(pp.codigo||'')+' (recebido)';for(const a of pp.anomalias)for(const f of a.fotos)f.id=uid();if(pp.visita?.map)pp.visita.map.id='map_'+pp.id}
+      if(ex&&mode===2){for(const a of ex.anomalias)for(const f of a.fotos)await fotoDel(f.id)}
+      migrateProc(pp);await migrateFotos(pp);await dbPut(pp);const k=procs.findIndex(x=>x.id===pp.id);k>=0?procs[k]=pp:procs.push(pp);S.prevNode=null;
+      toast(`Processo ${pp.codigo||''} recebido (${pp.anomalias.length} anomalias).`);render();return}
     const ch=await ask(`Cópia de ${String(d.date||'').slice(0,10)} com ${d.procs.length} processo(s).\nAcrescentar aos atuais (processos com o mesmo identificador são atualizados) ou substituir tudo?`,['Cancelar','Substituir tudo','Acrescentar']);if(!ch)return;
     if(ch===1){for(const p0 of procs){for(const a of p0.anomalias)for(const f of a.fotos)await fotoDel(f.id);await dbDel(p0.id)}procs=[];settings=migrateSettings(d.settings);await saveSettings()}
     for(const pp of d.procs){migrateProc(pp);await migrateFotos(pp);await dbPut(pp);const k=procs.findIndex(x=>x.id===pp.id);k>=0?procs[k]=pp:procs.push(pp)}
@@ -1110,7 +1160,7 @@ document.addEventListener('change',async e=>{
 function autosize(t){if(!t||t.tagName!=='TEXTAREA')return;t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px'}
 document.addEventListener('toggle',e=>{if(e.target.open)e.target.querySelectorAll?.('textarea').forEach(autosize)},true);
 document.addEventListener('input',e=>{
-  autosize(e.target);const el=e.target,b=el.dataset.bind;if(!b)return;const p=cur(),a=curA();
+  autosize(e.target);if(e.target.id==='fq'){S.filt.q=e.target.value;const pos=e.target.selectionStart;S.scrollTop=window.scrollY;render();const f=$('#fq');if(f){f.focus();try{f.setSelectionRange(pos,pos)}catch(_){}}return}const el=e.target,b=el.dataset.bind;if(!b)return;const p=cur(),a=curA();
   const [scope,k,k2]=b.split('.');
   if(scope==='p')p[k]=el.value;else if(scope==='vis')p.visita[k]=el.value;else if(scope==='a')a[k]=el.value;else if(scope==='v'){a.vals=a.vals||{};a.vals[k]=el.value}else if(scope==='f')a.fotos[+k][k2]=el.value;
   saveProcSoon();
