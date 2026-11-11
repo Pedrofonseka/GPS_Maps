@@ -484,7 +484,7 @@ function buildDocxText({proc,settings,anoms,withResumo}){
 }
 
 // ===== App: Regi Anomalias =====
-const VERSION='0.11.0';
+const VERSION='0.11.1';
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'}];
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
 const parteNome=(p,n)=>(p.partes||[]).find(x=>x.n==n)?.nome||'';
@@ -661,7 +661,8 @@ function render(){
   if(S.scrollTop!==undefined){window.scrollTo(0,S.scrollTop);S.scrollTop=undefined}
   if(S.view==='rel'&&!S.sub&&!S.prevSimple&&S.open['r3']!==false){const box=$('#docxPrev');if(S.prevNode&&S.prevPid===S.pid&&box){box.innerHTML='';box.appendChild(S.prevNode);fitDocxPreview()}else renderDocxPreview()}
 }
-const isDone=a=>Object.values(a.vals||{}).some(v=>Array.isArray(v)?v.length:v)||a.fotos.length>0;
+const useK=(p,k)=>!p?.use||!!p.use[String(k).split('__')[0]];
+const isDone=a=>{const p=cur();return Object.entries(a.vals||{}).some(([k,v])=>useK(p,k)&&(Array.isArray(v)?v.length:v))||a.fotos.length>0};
 function fieldOn(p,f){return !!p.use?.[f.id]}
 function inp(bind,label,val,ph=''){return `<label>${esc(label)}</label><input data-bind="${bind}" value="${esc(val)}" placeholder="${esc(ph)}">`}
 function txt(bind,label,val,rows=3){return `${label?`<label>${esc(label)}</label>`:''}<textarea data-bind="${bind}" rows="${rows}">${esc(val)}</textarea>`}
@@ -718,7 +719,7 @@ function vProc(){
 }
 function anomCard(a,i,n,mode){
   const p=cur();const st=isDone(a)?pill('✓ analisada','ok'):pill('por analisar','warn');
-  const vals=[];if(a.vals?.conf)vals.push(esc(a.vals.conf));if(a.vals?.cons?.length)vals.push(esc(a.vals.cons.filter(x=>x!=='OUT').join(', ')));if(a.vals?.tipo?.length)vals.push(esc(a.vals.tipo.join(', ')));
+  const vals=[];if(useK(p,'conf')&&a.vals?.conf)vals.push(esc(a.vals.conf));if(useK(p,'cons')&&a.vals?.cons?.length)vals.push(esc(a.vals.cons.filter(x=>x!=='OUT').join(', ')));if(useK(p,'tipo')&&a.vals?.tipo?.length)vals.push(esc(a.vals.tipo.join(', ')));
   return `<div class="card ${a.id===S.aid?'active':''}"><div class="cardrow"><div class="grow" data-act="openAnom" data-id="${a.id}"><b>${anCode(p,a)}</b> <span class="muted">${esc((parteNome(p,parteOf(p,a))||'').replace(/\s*\(.*\)$/,''))}${a.ref?' · Item '+esc(a.ref):''}</span> · ${esc(zonaTxt(a))} · <i>${esc(a.elemento||'')}</i>
   <div class="muted clamp">${esc(a.descricao||'')}</div><div style="margin-top:4px">${mode==='analise'?st:''}${a.origem==='local'?pill('acrescentada no local','bad'):''}${vals.length?pill(vals.join(' · ')):''}${pill('📷 '+a.fotos.length)}</div></div>
   ${S.view==='anom'?`<div class="mv"><button class="secondary mini" data-act="mvA" data-id="${a.id}" data-d="-1" ${i?'':'disabled'}>▲</button><button class="secondary mini" data-act="mvA" data-id="${a.id}" data-d="1" ${i<n-1?'':'disabled'}>▼</button><button class="del" data-act="delA" data-id="${a.id}">🗑</button></div>`:''}</div></div>`;
@@ -757,7 +758,7 @@ function vFicha(){
   let h='';
   h+=sec('f1','1 · Identificação'+(fromList?'':` <span class="muted" style="font-weight:400">· ${esc(a.elemento||'')}</span>`),idBody,{cnt:falta(idMiss),def:fromList||!!idMiss});
   if(!fromList){
-    const prev=p.anomalias[idx-1];const prevHas=prev&&Object.values(prev.vals||{}).some(v=>Array.isArray(v)?v.length:v);
+    const prev=p.anomalias[idx-1];const prevHas=prev&&Object.entries(prev.vals||{}).some(([k,v])=>useK(p,k)&&(Array.isArray(v)?v.length:v));
     h+=sec('f2','2 · Pronúncia',(prevHas?`<div class="btns" style="margin-top:0"><button class="secondary mini" data-act="copyPrev">⧉ Copiar a pronúncia de ${anCode(p,prev)}</button></div>`:'')+txt('a.comentario',`${lblC(p)} (sai por baixo, com o título «${lblC(p)}:»)`,a.comentario,2)+(fs.length?fs.map(f=>fieldUI(f,a)).join(''):'<p class="muted">Nenhum campo a atender — escolha-os no separador Processo › 3.</p>'),{cnt:pill(`${nFilled}/${fsC.length}`,nFilled===fsC.length&&fsC.length?'ok':'warn')});
     h+=sec('f3','3 · Fotografias',`<div class="photos">${a.fotos.map((f,i)=>`<div class="ph"><img src="${fd(f)}" data-act="zoom" data-i="${i}"><div class="cap" data-act="zoom" data-i="${i}"><b>${imgCode(cur(),a,i)}</b> ${esc(f.legenda||'— sem legenda (toque para editar)')}</div></div>`).join('')}</div>
       ${a.fotos.length<max?`<div class="btns"><label class="btn green">📷 Tirar fotografia<input type="file" accept="image/*" capture="environment" data-act="addCam" hidden></label><label class="btn green">🖼 Escolher da fototeca<input type="file" accept="image/*" multiple data-act="addLib" hidden></label></div>`:'<p class="muted">Limite de fotos atingido.</p>'}
@@ -1039,7 +1040,7 @@ document.addEventListener('click',async e=>{
     case 'lockNum':{if(el.dataset.v==='1'){p.anomalias.forEach(x=>{x.num=undefined;x.num=numOf({...p,lockNum:false},x)});p.lockNum=true;toast('Numeração fixada.')}else{if(!await ask('Desbloquear a numeração? Os códigos AN e IMG voltam a seguir a ordem da lista (podem mudar).',['Cancelar','Desbloquear']))return;p.anomalias.forEach(x=>delete x.num);p.lockNum=false}await saveProc();S.scrollTop=window.scrollY;break}
     case 'filt':S.filt.st=el.dataset.v;S.scrollTop=window.scrollY;break;
     case 'dupA':{const c=JSON.parse(JSON.stringify(a));c.id=uid();c.ref='';c.fotos=[];c.num=p.lockNum?nextNum(p,parteOf(p,a)):undefined;c.parte=parteOf(p,a);c.createdAt=Date.now();p.anomalias.splice(p.anomalias.indexOf(a)+1,0,c);S.aid=c.id;S.openId=true;S.open.f1=true;S.scrollTop=0;await saveProc();toast(`Duplicada como ${anCode(p,c)} (sem fotografias).`);break}
-    case 'copyPrev':{const i=p.anomalias.indexOf(a),pv=p.anomalias[i-1];if(!pv)return;const has=Object.values(a.vals||{}).some(v=>Array.isArray(v)?v.length:v);
+    case 'copyPrev':{const i=p.anomalias.indexOf(a),pv=p.anomalias[i-1];if(!pv)return;const has=Object.entries(a.vals||{}).some(([k,v])=>useK(p,k)&&(Array.isArray(v)?v.length:v));
       if(has&&!await ask(`Substituir a pronúncia de ${anCode(p,a)} pela de ${anCode(p,pv)}? (o texto «${lblC(p)}» e as fotos não são copiados)`,['Cancelar','Substituir']))return;
       const keep=a.vals?.conf;a.vals=JSON.parse(JSON.stringify(pv.vals||{}));if(a.origem==='local'||pv.origem==='local'){if(keep)a.vals.conf=keep;else delete a.vals.conf}
       await saveProc();toast(`Pronúncia copiada de ${anCode(p,pv)}.`);S.scrollTop=window.scrollY;break}
