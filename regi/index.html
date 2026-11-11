@@ -226,7 +226,7 @@ function parseTSV(t){
   if(cell!==''||row.length){row.push(cell);rows.push(row)}
   return rows.filter(r=>r.some(c=>String(c).trim()));
 }
-const IMPORT_TARGETS=[['ref','Item',/^(ref|item|n\.?\s*[ºo°]|nº|num|art)/i],['zona','Zona',/zona/i],['local','Local',/local|compart|divis/i],['elemento','Elemento',/elem/i],['descricao','Descrição da anomalia',/anomal|descri/i]];
+const IMPORT_TARGETS=[['ref','Item',/^(ref|item|n\.?\s*[ºo°]|nº|num|art|quesito\s*n)/i],['zona','Zona',/zona/i],['local','Local',/local|compart|divis/i],['elemento','Elemento',/elem/i],['descricao','Situação / questão',/anomal|descri|quesit|pergunt|quest|situa|alega/i]];
 function detectHeader(rows){
   for(let i=0;i<Math.min(rows.length,40);i++){
     const r=(rows[i]||[]).map(c=>String(c).trim());const m={};const used=new Set();
@@ -255,6 +255,32 @@ function rowsToItems(rows,start,map){
   return out;
 }
 
+// ---------- Importar lista a partir de Word (.docx) ----------
+// Tabelas → linhas/colunas (como no Excel). Sem tabelas → um item por parágrafo, com a numeração (automática ou escrita) separada para «Item».
+const NUM_RE=/^\s*((?:\d+(?:\.\d+)*[a-z]?[.)º°]?|[a-z][.)]|\(?[ivxlcdm]+[.)]|\(?[a-z]\)))\s+(.+)$/i;
+function splitNum(t){const m=NUM_RE.exec(t);return m?[m[1].replace(/^\(/,'').replace(/\.$/,''),m[2].trim()]:['',t.trim()]}
+function docxText(x){return xdec(x.replace(/<w:tab\/>/g,'\t').replace(/<w:br\/>/g,' ').replace(/<w:delText[^>]*>[\s\S]*?<\/w:delText>/g,'').replace(/<(?!w:t[ >])[^>]+>/g,'').replace(/<w:t[^>]*>/g,'')).replace(/[ \t]+/g,' ').trim()}
+function topTables(xml){const out=[];let i=0,depth=0,start=-1;const re=/<w:tbl>|<w:tbl\s|<\/w:tbl>/g;let m;while((m=re.exec(xml))){if(m[0]==='</w:tbl>'){depth--;if(depth===0)out.push([start,re.lastIndex])}else{if(depth===0)start=m.index;depth++}}return out}
+async function readDocx(u8){
+  const z=await unzip(u8);const xml=await z.text('word/document.xml');if(!xml)throw new Error('não é um documento Word (.docx)');
+  const tbls=topTables(xml);
+  if(tbls.length){let best=null;for(const [a,b] of tbls){const t=xml.slice(a,b);const rows=[...t.matchAll(/<w:tr[\s>][\s\S]*?<\/w:tr>/g)].map(r=>[...r[0].matchAll(/<w:tc[\s>][\s\S]*?<\/w:tc>/g)].map(cl=>docxText(cl[0])));
+      if(!best||rows.length>best.length)best=rows}
+    if(best&&best.length>1&&Math.max(...best.map(r=>r.length))>1)return {kind:'tabela',rows:best.filter(r=>r.some(Boolean))}}
+  let body=xml;for(const [a,b] of tbls.reverse())body=body.slice(0,a)+body.slice(b);
+  // numeração definida no estilo do parágrafo (ex.: «Lista numerada»)
+  const styNum={};const sty=await z.text('word/styles.xml');
+  if(sty)for(const m of sty.matchAll(/<w:style\b[^>]*w:styleId="([^"]+)"[^>]*>([\s\S]*?)<\/w:style>/g)){const n=/<w:numPr>([\s\S]*?)<\/w:numPr>/.exec(m[2]);if(n){const id=/<w:numId w:val="(\d+)"/.exec(n[1]),lv=/<w:ilvl w:val="(\d+)"/.exec(n[1]);if(id&&id[1]!=='0')styNum[m[1]]={id:id[1],lvl:lv?+lv[1]:0}}}
+  const cnt={};const rows=[];
+  for(const p of body.matchAll(/<w:p[\s>][\s\S]*?<\/w:p>/g)){const t=docxText(p[0]);if(!t)continue;
+    let num=null;const pn=/<w:numPr>([\s\S]*?)<\/w:numPr>/.exec(p[0]);
+    if(pn){const id=/<w:numId w:val="(\d+)"/.exec(pn[1]),lv=/<w:ilvl w:val="(\d+)"/.exec(pn[1]);if(id&&id[1]!=='0')num={id:id[1],lvl:lv?+lv[1]:0}}
+    else{const ps=/<w:pStyle w:val="([^"]+)"/.exec(p[0]);if(ps&&styNum[ps[1]])num=styNum[ps[1]]}
+    if(num){const c=cnt[num.id]=cnt[num.id]||[];c[num.lvl]=(c[num.lvl]||0)+1;c.length=num.lvl+1;rows.push({n:true,r:[c.map(x=>x||1).join('.'),t]})}
+    else{const r=splitNum(t);rows.push({n:!!r[0],r})}}
+  const numbered=rows.filter(x=>x.n);
+  return {kind:'paragrafos',rows:(numbered.length>=2?numbered:rows).map(x=>x.r)};
+}
 // ---------- DOCX ----------
 const JMIN=170; // texto com menos caracteres (≈ 2 linhas) fica alinhado à esquerda
 const jcFor=t=>String(t||'').length>=JMIN?'both':'left';
@@ -436,7 +462,7 @@ function buildDocxText({proc,settings,anoms,withResumo}){
 }
 
 // ===== App: Regi Anomalias =====
-const VERSION='0.9.3';
+const VERSION='0.9.4';
 const imgCode=(p,a,i)=>`IMG ${String(numOf(p,a)).padStart(3,'0')}.${i+1}`;
 const anCode=(p,a)=>'AN_'+String(numOf(p,a)).padStart(3,'0');
 const DB_NAME='RegiAnomalias_DB';
@@ -611,7 +637,7 @@ const isStandalone=()=>window.matchMedia?.('(display-mode: standalone)').matches
 function installTip(){
   if(isStandalone()||settings.hideInstallTip)return '';
   if(location.protocol==='file:')return `<div class="card tip">⚠︎ <b>Está a usar a app aberta como ficheiro</b> (por ex. pela app Ficheiros). Assim o iPhone pode não guardar os dados e não dá o GPS. Use a versão instalada (endereço do GitHub Pages › Partilhar › <b>Adicionar ao ecrã principal</b>).</div>`;
-  return `<div class="card tip">📲 <b>Instalar no iPhone:</b> no Safari, toque em <b>Partilhar</b> <span style="font-size:17px">⎋</span> › <b>Adicionar ao ecrã principal</b>. A app passa a abrir em ecrã inteiro e funciona sem rede.<div class="btns"><button class="secondary mini" data-act="hideTip">Já instalei / não mostrar</button></div></div>`}
+  return `<div class="card tip">📲 <b>Instalar no iPhone:</b> no Safari, toque em <b>≡</b> (à esquerda do endereço) ou <b>···</b> › <b>Partilhar</b> › deslize para cima › <b>Adicionar ao ecrã principal</b>. A app passa a abrir em ecrã inteiro e funciona sem rede.<div class="btns"><button class="secondary mini" data-act="hideTip">Já instalei / não mostrar</button></div></div>`}
 function vHome(){
   const list=[...procs].sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
   return `${installTip()}${bkBarHTML()}<h2>Processos (${procs.length})</h2><div class="btns"><button class="green" data-act="newProc">+ Novo processo</button></div>
@@ -759,8 +785,8 @@ function vImport(){
   const p=cur();const I=S.imp;
   let h=`<div class="fnav"><button class="secondary" data-act="backList">◀ Lista</button></div>
   <section><h3>Importar lista de anomalias</h3>
-  <p class="muted">Excel (.xlsx) com colunas tipo Ref. / Zona / Local / Elemento / Anomalia, ou copie as células no Excel e cole abaixo.</p>
-  <div class="row"><label class="btn pri">📂 Escolher Excel (.xlsx)<input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" data-act="impFile" hidden></label></div>
+  <p class="muted"><b>Excel (.xlsx)</b> com colunas tipo Item / Zona / Local / Elemento / Situação, ou <b>Word (.docx)</b> com a lista de situações ou quesitos — em tabela, lista numerada ou parágrafos numerados. Também pode copiar e colar abaixo.</p>
+  <div class="row"><label class="btn pri">📂 Escolher Excel ou Word<input type="file" accept=".xlsx,.docx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.wordprocessingml.document" data-act="impFile" hidden></label></div>
   <textarea id="pasteBox" rows="4" placeholder="…ou cole aqui as células copiadas do Excel"></textarea><div class="row"><button data-act="impPaste">Ler texto colado</button></div></section>`;
   if(I){
     const cols=Math.max(0,...I.rows.map(r=>r.length));
@@ -1012,7 +1038,7 @@ document.addEventListener('click',async e=>{
   render();
 });
 function parseOpts(t){return t.split('\n').map(s=>s.trim()).filter(Boolean).map(s=>{const k=s.indexOf('=');return k>0?[s.slice(0,k).trim(),s.slice(k+1).trim()]:[s,s]})}
-function setImport(rows,sheets,si){const det=detectHeader(rows);S.imp={rows,sheets,si,hdr:det?det.row:-1,map:det?det.map:defaultMap(rows)}}
+function setImport(rows,sheets,si){if(rows.length&&rows.every(r=>r.length===1)&&rows.filter(r=>NUM_RE.test(r[0])).length>=Math.max(1,rows.length/2)){S.imp={rows:rows.map(r=>splitNum(r[0])),sheets,si,hdr:-1,map:{ref:0,descricao:1}};return}const det=detectHeader(rows);S.imp={rows,sheets,si,hdr:det?det.row:-1,map:det?det.map:defaultMap(rows)}}
 
 document.addEventListener('change',async e=>{
   const el=e.target,act=el.dataset.act,p=cur(),a=curA();
@@ -1040,7 +1066,13 @@ document.addEventListener('change',async e=>{
     if(files.length>room)toast(`Só cabem mais ${room} foto(s); as restantes foram ignoradas.`,1);
     for(const f of files.slice(0,room)){try{const r=await compressImage(f,settings.photoKB);const fid=uid();await fotoPut(fid,r.data);a.fotos.push({id:fid,w:r.w,h:r.h,legenda:''});S.prevStale=true;if(act==='addCam'){S.camShots.push(f);gpsAutoFromCamera(p)}}catch(err){toast(err.message,1)}}
     await saveProc();S.scrollTop=window.scrollY;render();return}
-  if(act==='impFile'){const f=el.files[0];el.value='';if(!f)return;try{const sheets=await readXlsx(new Uint8Array(await f.arrayBuffer()));if(!sheets.length)throw new Error('Sem folhas legíveis');setImport(sheets[0].rows,sheets,0);render()}catch(err){toast('Não foi possível ler o Excel: '+err.message,1)}return}
+  if(act==='impFile'){const f=el.files[0];el.value='';if(!f)return;const u=new Uint8Array(await f.arrayBuffer());
+    try{const isDocx=/\.docx$/i.test(f.name)||!!(await (await unzip(u)).get('word/document.xml'));
+      if(isDocx){const d=await readDocx(u);if(!d.rows.length)throw new Error('o documento não tem texto');
+        if(d.kind==='tabela')setImport(d.rows,null,0);else{S.imp={rows:d.rows,sheets:null,si:0,hdr:-1,map:{ref:0,descricao:1}}}
+        toast(d.kind==='tabela'?'Word: lida a tabela do documento.':`Word: ${d.rows.length} parágrafo(s) lido(s).`)}
+      else{const sheets=await readXlsx(u);if(!sheets.length)throw new Error('Sem folhas legíveis');setImport(sheets[0].rows,sheets,0)}
+      render()}catch(err){toast('Não foi possível ler o ficheiro: '+err.message,1)}return}
   if(act==='impSheet'){const i=+el.value;setImport(S.imp.sheets[i].rows,S.imp.sheets,i);render();return}
   if(act==='impHdr'){S.imp.hdr=+el.value;render();return}
   if(act==='impMap'){S.imp.map[el.dataset.k]=el.value===''?undefined:+el.value;render();return}
