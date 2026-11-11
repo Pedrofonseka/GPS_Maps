@@ -300,7 +300,7 @@ function fieldValueText(f,v,settings,vals){
 }
 function printFields(proc,settings){return settings.fields.filter(f=>proc.use?.[f.id]&&proc.print?.[f.id])}
 
-function buildDocx({proc,settings,anoms,onePerPage,withResumo,withVistoria,bodyOnly,photoCols,fitPage,dateCom,stats,mapImg,layout,withPhotos}){
+function buildDocx({proc,settings,anoms,onePerPage,withResumo,withVistoria,bodyOnly,photoCols,fitPage,dateCom,stats,mapImg,layout,withPhotos,withIndex}){
   const TXT=layout==='texto';const PH=!TXT||withPhotos!==false;
   const FONT='Calibri';
   const media=[];let imgN=0;
@@ -312,7 +312,7 @@ function buildDocx({proc,settings,anoms,onePerPage,withResumo,withVistoria,bodyO
   const PCELLS={1:[[0,6]],2:[[0,4],[4,2]],3:[[0,3],[3,2],[5,1]]}[cols];
   const rPr=o=>{let s='';if(o.b)s+='<w:b/>';if(o.i)s+='<w:i/>';if(o.color)s+=`<w:color w:val="${o.color}"/>`;if(o.sz)s+=`<w:sz w:val="${o.sz*2}"/><w:szCs w:val="${o.sz*2}"/>`;return s?`<w:rPr>${s}</w:rPr>`:''};
   const run=(text,o={})=>String(text??'').split('\n').map((ln,i)=>`<w:r>${rPr(o)}${i?'<w:br/>':''}<w:t xml:space="preserve">${xesc(ln)}</w:t></w:r>`).join('');
-  const para=(runs,o={})=>`<w:p><w:pPr>${o.keep?'<w:keepNext/>':''}<w:spacing w:before="${o.before||0}" w:after="${o.after||0}"${o.line?` w:line="${o.line}" w:lineRule="auto"`:''}/>${o.jc?`<w:jc w:val="${o.jc}"/>`:''}</w:pPr>${runs}</w:p>`;
+  const para=(runs,o={})=>`<w:p><w:pPr>${o.keep?'<w:keepNext/>':''}${o.tabs||''}<w:spacing w:before="${o.before||0}" w:after="${o.after||0}"${o.line?` w:line="${o.line}" w:lineRule="auto"`:''}/>${o.ind?`<w:ind w:left="${o.ind}"/>`:''}${o.jc?`<w:jc w:val="${o.jc}"/>`:''}${o.ol!=null?`<w:outlineLvl w:val="${o.ol}"/>`:''}</w:pPr>${runs}</w:p>`;
   const cell=(content,o={})=>`<w:tc><w:tcPr><w:tcW w:w="${o.w}" w:type="dxa"/>${o.span>1?`<w:gridSpan w:val="${o.span}"/>`:''}${o.fill?`<w:shd w:val="clear" w:color="auto" w:fill="${o.fill}"/>`:''}<w:vAlign w:val="${o.v||'center'}"/></w:tcPr>${content||'<w:p/>'}</w:tc>`;
   const tpara=(text,ro,po={})=>{const ls=String(text??'').split('\n');return ls.map((ln,i)=>para(run(ln,ro),{...po,jc:jcFor(ln),after:i<ls.length-1?20:(po.after||0)})).join('')};
   const full=(content,o={})=>cell(content,{...o,w:TW,span:6});
@@ -332,14 +332,39 @@ function buildDocx({proc,settings,anoms,onePerPage,withResumo,withVistoria,bodyO
   if(mapImg&&mapImg.data){const g=proc.visita?.gps;
     if(!withVistoria&&g)body+=para(run('Localização GPS: ',{b:true,sz:9,color:'404040'})+run(`${g.lat.toFixed(6)}, ${g.lon.toFixed(6)}`,{sz:10}),{after:60,keep:1});
     body+=para(img({...mapImg,_max:[9*360000,6.75*360000]}),{jc:'left',after:20,keep:1})+para(run(mapImg.caption||'',{i:true,sz:7,color:'606060'}),{after:200})}
+  // ---- índice + título da secção ----
+  const IDX=withIndex!==false&&anoms.length>0;const BR='<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
+  const bm=(nm,inner)=>{const id=++bmId;return `<w:bookmarkStart w:id="${id}" w:name="${nm}"/>${inner}<w:bookmarkEnd w:id="${id}"/>`};let bmId=0;
+  const secT=/^quest/i.test(lblD(proc))?'Questões a responder':'Situações a analisar';
+  const zonaOf=a=>[a.zona,a.piso,a.local].filter(Boolean).filter((v,i,arr)=>arr.indexOf(v)===i).join(' · ');
+  const codeOf=(a,ix)=>a._code||('AN_'+String(a._n??(ix+1)).padStart(3,'0'));
+  let hN=0;const H1=(t,nm)=>para(bm(nm,run(`${++hN}.  ${t}`,{b:true,sz:13,color:'000000'})),{keep:1,after:200,ol:0});
+  if(IDX){
+    const nSt=stats&&stats.length?stats.reduce((n,t)=>n+t.rows.length+2,0):0;const hasR=withResumo&&proc.resumo;
+    const P=onePerPage&&fitPage!==false&&nSt<45;
+    const cov=body?1:0;const ents=[[1,`1.  ${secT}`,'_RA_h1']];anoms.forEach((a,ix)=>{const z=zonaOf(a);ents.push([2,`${codeOf(a,ix)}  –  ${[a.ref?'Item '+a.ref:'',a.elemento,z].filter(Boolean).join(' · ')}`.slice(0,95),'_RA_'+ix])});
+    let k=1;if(nSt)ents.push([1,`${++k}.  Resumo estatístico`,'_RA_h'+k]);if(hasR)ents.push([1,`${++k}.  Resumo de apreciação geral`,'_RA_h'+k]);
+    const idxP=Math.max(1,Math.ceil((ents.length+3)/38));const p0=cov+idxP+1;
+    const pg=ents.map((e,i)=>{if(!P)return '';if(i===0)return p0;if(e[0]===2)return p0+i-1;const after=p0+anoms.length;return /estat/.test(e[1])?after:after+(nSt?1:0)});
+    if(body)body+=BR;
+    body+=para(run('Índice',{b:true,sz:14,color:'000000'}),{after:240});
+    const TABS='<w:tabs><w:tab w:val="right" w:leader="dot" w:pos="8494"/></w:tabs>';
+    const F0=`<w:r><w:fldChar w:fldCharType="begin"${P?'':' w:dirty="true"'}/></w:r><w:r><w:instrText xml:space="preserve"> TOC \\o "1-1" \\u \\f \\l "2-2" \\h \\z </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r>`;
+    ents.forEach((e,i)=>{const o=e[0]===1?{b:true,sz:10.5,color:'000000'}:{sz:9.5,color:'202020'};
+      body+=para((i===0?F0:'')+`<w:hyperlink w:anchor="${e[2]}" w:history="1">${run(e[1],o)}${pg[i]?run('\t',o).replace('<w:t xml:space="preserve">\t</w:t>','<w:tab/>')+run(String(pg[i]),o):''}</w:hyperlink>`,{tabs:TABS,ind:e[0]===2?340:0,before:e[0]===1&&i?120:0,after:e[0]===1?60:20})});
+    body+=para('<w:r><w:fldChar w:fldCharType="end"/></w:r>');
+    body+=BR+H1(secT,'_RA_h1');
+  }
   anoms.forEach((a,ix)=>{
-    if(ix>0||(ix===0&&body&&onePerPage))body+=onePerPage?'<w:p><w:r><w:br w:type="page"/></w:r></w:p>':para('',{after:200});
+    if(IDX&&ix===0){}else if(ix>0||(ix===0&&body&&onePerPage))body+=onePerPage?'<w:p><w:r><w:br w:type="page"/></w:r></w:p>':para('',{after:200});
     let rows='';
     const zona=[a.zona,a.piso,a.local].filter(Boolean).filter((v,i,arr)=>arr.indexOf(v)===i).join(' · ');
     const hd={b:true,color:'FFFFFF',sz:9};
-    const code=a._code||('AN_'+String(a._n??(ix+1)).padStart(3,'0'));
+    const code=codeOf(a,ix);
+    const tcTxt=`${code}  –  ${[a.ref?'Item '+a.ref:'',a.elemento,zona].filter(Boolean).join(' · ')}`.slice(0,95).replace(/"/g,"'");
+    const mark=r=>IDX?bm('_RA_'+ix,r)+`<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> TC "${xesc(tcTxt)}" \\l 2 </w:instrText></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>`:r;
     const sm={color:'D9D9D9',sz:8};
-    rows+=row(cell(para(run(code,hd),{keep:1})+(a._parte?para(run(a._parte.replace(/\s*\(.*\)$/,''),{color:'D9D9D9',sz:7}),{keep:1}):''),{w:sum(0,1),fill:'404040'})+
+    rows+=row(cell(para(mark(run(code,hd)),{keep:1})+(a._parte?para(run(a._parte.replace(/\s*\(.*\)$/,''),{color:'D9D9D9',sz:7}),{keep:1}):''),{w:sum(0,1),fill:'404040'})+
              cell(para(run('Item ',sm)+run(a.ref||'—',hd),{keep:1}),{w:sum(1,1),fill:'404040'})+
              cell(para(run('Zona: ',sm)+run(zona||'—',hd),{keep:1}),{w:sum(2,2),span:2,fill:'404040'})+
              cell(para(run('Elemento: ',sm)+run(a.elemento||'—',hd),{keep:1}),{w:sum(4,2),span:2,fill:'404040'}),{h:400});
@@ -364,7 +389,7 @@ function buildDocx({proc,settings,anoms,onePerPage,withResumo,withVistoria,bodyO
         const cv=items.map(x=>x[1]);for(let i=0;i<cv.length;i+=3)tx+=0.45+Math.max(...cv.slice(i,i+3).map(t=>ln(t,28,0.42)))+0.1;if(cv.length)tx+=0.3;if(a.origem==='local')tx+=0.5}
       for(const f of longF){const t=fieldValueText(f,a.vals?.[f.id],settings,a.vals);if(t)tx+=0.4+ln(t)+0.25}
       const nr=Math.ceil(fotos.length/cols);const capH=fotos.some(f=>f.legenda&&f.legenda.length>(cols===3?30:cols===2?50:100))?0.75:0.45;
-      const per=(24.1-tx-nr*(capH+0.22))/nr;const hcm=Math.max(0.8,Math.min(MAX0[1]/360000,per));
+      const per=(24.1-(IDX&&ix===0?1.1:0)-tx-nr*(capH+0.22))/nr;const hcm=Math.max(0.8,Math.min(MAX0[1]/360000,per));
       MAX=[MAX0[0],hcm*360000];
     }
     let prow='';
@@ -376,7 +401,7 @@ function buildDocx({proc,settings,anoms,onePerPage,withResumo,withVistoria,bodyO
     const tblWrap=r=>`<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/><w:jc w:val="center"/><w:tblBorders>${['top','left','bottom','right','insideH','insideV'].map(s=>`<w:${s} w:val="nil"/>`).join('')}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="40" w:type="dxa"/><w:left w:w="85" w:type="dxa"/><w:bottom w:w="40" w:type="dxa"/><w:right w:w="85" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${G.map(w=>`<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>${r}</w:tbl>`;
     if(TXT){ // ---- layout em texto corrido: sem grelha nem sombreados ----
       const parteTxt=(a._parte||'').replace(/\s*\(.*\)$/,'');
-      let tb=para(run(code,{b:true,sz:12,color:'000000'})+run(`    ${[parteTxt,a.ref?'Item '+a.ref:''].filter(Boolean).join(' · ')}`,{sz:9,color:'606060'}),{keep:1,after:20});
+      let tb=para(mark(run(code,{b:true,sz:12,color:'000000'}))+run(`    ${[parteTxt,a.ref?'Item '+a.ref:''].filter(Boolean).join(' · ')}`,{sz:9,color:'606060'}),{keep:1,after:20});
       const loc=[zona,a.elemento].filter(Boolean).join(' — ');if(loc)tb+=para(run(loc,{i:true,sz:10,color:'404040'}),{keep:1,after:160});
       const TT=t=>run(t,{b:true,sz:10,color:'000000'});
       tb+=para(TT(lblD(proc)+':'),{keep:1,after:40})+tpara(a.descricao||'',{sz:10.5},{keep:1,after:180});
@@ -392,7 +417,7 @@ function buildDocx({proc,settings,anoms,onePerPage,withResumo,withVistoria,bodyO
   });
   if(stats&&stats.length){
     body+=onePerPage?'<w:p><w:r><w:br w:type="page"/></w:r></w:p>':para('',{after:240});
-    body+=para(run('Resumo estatístico',{b:true,sz:12,color:'000000'}),{after:120,keep:1});
+    body+=IDX?H1('Resumo estatístico','_RA_h'+(hN+1)):para(run('Resumo estatístico',{b:true,sz:12,color:'000000'}),{after:120,keep:1});
     const SW=[3685,1134];
     for(const t of stats){
       let rs=row(cell(para(run(t.title,{b:true,color:'FFFFFF',sz:9}),{keep:1}),{w:SW[0],fill:'404040'})+cell(para(run('N.º',{b:true,color:'FFFFFF',sz:9}),{jc:'right',keep:1}),{w:SW[1],fill:'404040'}));
@@ -400,7 +425,7 @@ function buildDocx({proc,settings,anoms,onePerPage,withResumo,withVistoria,bodyO
       body+=`<w:tbl><w:tblPr><w:tblW w:w="${SW[0]+SW[1]}" w:type="dxa"/><w:tblBorders>${['top','left','bottom','right','insideH','insideV'].map(s=>`<w:${s} w:val="nil"/>`).join('')}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="30" w:type="dxa"/><w:left w:w="85" w:type="dxa"/><w:bottom w:w="30" w:type="dxa"/><w:right w:w="85" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${SW[0]}"/><w:gridCol w:w="${SW[1]}"/></w:tblGrid>${rs}</w:tbl>`+para('',{after:160});
     }
   }
-  if(withResumo&&proc.resumo){body+=para('',{after:200})+para(run('Resumo de apreciação geral',{b:true,sz:11,color:'404040'}),{after:120,keep:1})+tpara(proc.resumo,{sz:10},{})}
+  if(withResumo&&proc.resumo){body+=IDX?(onePerPage?BR:para('',{after:200}))+H1('Resumo de apreciação geral','_RA_h'+(hN+1))+tpara(proc.resumo,{sz:10},{}):para('',{after:200})+para(run('Resumo de apreciação geral',{b:true,sz:11,color:'404040'}),{after:120,keep:1})+tpara(proc.resumo,{sz:10},{})}
   body+=para('');
   if(bodyOnly)return {body,media};
   const doc=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:body>${body}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1418" w:right="1701" w:bottom="1418" w:left="1701" w:header="709" w:footer="709" w:gutter="0"/></w:sectPr></w:body></w:document>`;
@@ -484,7 +509,7 @@ function buildDocxText({proc,settings,anoms,withResumo}){
 }
 
 // ===== App: Regi Anomalias =====
-const VERSION='0.11.1';
+const VERSION='0.12.0';
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'}];
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
 const parteNome=(p,n)=>(p.partes||[]).find(x=>x.n==n)?.nome||'';
@@ -782,7 +807,7 @@ function fieldUI(f,a){
   return inp('v.'+f.id,f.label,v,f.ph||'');
 }
 // ----- Relatório -----
-const printOpts=p=>`${tplBytes?tickBox('',settings.useTpl,`Usar o meu modelo Word (${esc(settings.tplName)})`,'data-act="tickTpl"'):''}${tickBox('',p.printVistoria,'Dados da vistoria no início','data-act="tickVis"')}${p.visita?.gps?tickBox('',p.printMap!==false,`Mapa de localização no início (${p.visita.mapMode==='street'?'mapa':'satélite'})${mapOk(p)?'':' — será obtido ao gerar (precisa de rede)'}`,'data-act="tkMap"'):''}${tickBox('',p.printResumo,'Resumo de apreciação no fim','data-act="tickResumo"')}${tickBox('',settings.dateCom!==false,`Data da vistoria antes de «${esc(lblC(p))}» (ex.: ${esc(p.visita?.data||'26/05/2026')} - ${esc(lblC(p))}:)`,'data-act="tkExp" data-k="dateCom"')}${tickBox('',settings.fitPage!==false,'Ajustar cada ficha a uma página (reduz a altura das fotos)','data-act="tkExp" data-k="fitPage"')}${tickBox('',settings.onePerPage,'Começar cada ficha numa página nova','data-act="tickPage"')}<label>Formato das fichas</label><div class="seg">${[['grelha','Grelha'],['texto','Texto corrido']].map(([k,t])=>`<button class="${(settings.layout||'grelha')===k?'on':''}" data-act="setLay" data-v="${k}">${t}</button>`).join('')}</div>${settings.layout==='texto'?`<div class="tks col">${tickBox('',settings.txtPhotos!==false,'Incluir grelha de fotografias','data-act="tkExp" data-k="txtPhotos"')}</div>`:''}<label>Grelha de fotografias</label><div class="seg">${[1,2,3].map(n=>`<button class="${settings.photoCols==n?'on':''}" data-act="setCols" data-v="${n}">${n} coluna${n>1?'s':''}</button>`).join('')}</div>`;
+const printOpts=p=>`${tplBytes?tickBox('',settings.useTpl,`Usar o meu modelo Word (${esc(settings.tplName)})`,'data-act="tickTpl"'):''}${tickBox('',p.printVistoria,'Dados da vistoria no início','data-act="tickVis"')}${p.visita?.gps?tickBox('',p.printMap!==false,`Mapa de localização no início (${p.visita.mapMode==='street'?'mapa':'satélite'})${mapOk(p)?'':' — será obtido ao gerar (precisa de rede)'}`,'data-act="tkMap"'):''}${tickBox('',settings.withIndex!==false,`Índice depois da capa, e título «1. ${/^quest/i.test(lblD(p))?'Questões a responder':'Situações a analisar'}»`,'data-act="tkExp" data-k="withIndex"')}${tickBox('',p.printResumo,'Resumo de apreciação no fim','data-act="tickResumo"')}${tickBox('',settings.dateCom!==false,`Data da vistoria antes de «${esc(lblC(p))}» (ex.: ${esc(p.visita?.data||'26/05/2026')} - ${esc(lblC(p))}:)`,'data-act="tkExp" data-k="dateCom"')}${tickBox('',settings.fitPage!==false,'Ajustar cada ficha a uma página (reduz a altura das fotos)','data-act="tkExp" data-k="fitPage"')}${tickBox('',settings.onePerPage,'Começar cada ficha numa página nova','data-act="tickPage"')}<label>Formato das fichas</label><div class="seg">${[['grelha','Grelha'],['texto','Texto corrido']].map(([k,t])=>`<button class="${(settings.layout||'grelha')===k?'on':''}" data-act="setLay" data-v="${k}">${t}</button>`).join('')}</div>${settings.layout==='texto'?`<div class="tks col">${tickBox('',settings.txtPhotos!==false,'Incluir grelha de fotografias','data-act="tkExp" data-k="txtPhotos"')}</div>`:''}<label>Grelha de fotografias</label><div class="seg">${[1,2,3].map(n=>`<button class="${settings.photoCols==n?'on':''}" data-act="setCols" data-v="${n}">${n} coluna${n>1?'s':''}</button>`).join('')}</div>`;
 function computeStats(p){
   const an=p.anomalias,T=[];const fo=id=>settings.fields.find(f=>f.id===id&&p.use?.[id]);const cnt=(m,k)=>m.set(k,(m.get(k)||0)+1);
   const done=an.filter(isDone).length;T.push({title:'Síntese',rows:[['Anomalias analisadas',`${done} de ${an.length}`],['Da lista fornecida',an.filter(a=>a.origem!=='local').length],['Acrescentadas no local',an.filter(a=>a.origem==='local').length]]});
@@ -1005,7 +1030,7 @@ let tplBytes=null;
 const textDocxFor=p=>buildDocxText({proc:p,settings,anoms:hydrate(p),withResumo:p.printResumo});
 async function docxFor(p){await loadFotos(p);let mapImg=null;
   if(p.printMap!==false&&p.visita?.gps&&await ensureMap(p,true)){const m=p.visita.map;mapImg={data:fotoCache.get(m.id),w:m.w,h:m.h,caption:mapAttr(m.mode)}}
-  const o={mapImg,proc:p,settings,anoms:hydrate(p),stats:p.printStats?computeStats(p):null,onePerPage:settings.onePerPage,photoCols:settings.photoCols,fitPage:settings.fitPage!==false,dateCom:settings.dateCom!==false,withResumo:p.printResumo,withVistoria:p.printVistoria,layout:settings.layout||'grelha',withPhotos:settings.txtPhotos!==false};
+  const o={mapImg,proc:p,settings,anoms:hydrate(p),stats:p.printStats?computeStats(p):null,onePerPage:settings.onePerPage,photoCols:settings.photoCols,fitPage:settings.fitPage!==false,dateCom:settings.dateCom!==false,withResumo:p.printResumo,withVistoria:p.printVistoria,layout:settings.layout||'grelha',withPhotos:settings.txtPhotos!==false,withIndex:settings.withIndex!==false};
   if(settings.useTpl&&tplBytes)return await buildDocxTpl(o,tplBytes);return buildDocx(o)}
 function xlsxFor(p){const fs=settings.fields.filter(f=>p.use?.[f.id]);
   const rows=[['Código','Item','Parte','Origem','Zona','Piso','Local','Elemento','Descrição','Comentário',...fs.map(f=>f.label),'N.º fotos','Legendas']];
