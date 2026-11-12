@@ -300,6 +300,9 @@ function fieldValueText(f,v,settings,vals){
 }
 function printFields(proc,settings){return settings.fields.filter(f=>proc.use?.[f.id]&&proc.print?.[f.id])}
 
+const CAL_W={"r":[226,326,401,498,507,715,682,221,303,303,498,498,250,306,252,386,507,507,507,507,507,507,507,507,507,507,268,268,498,498,498,463,894,579,544,533,615,488,459,631,623,252,319,520,420,855,646,662,517,673,543,459,487,642,567,890,519,487,468,307,386,307,498,498,291,479,525,423,525,498,305,471,525,229,239,455,229,799,525,527,525,525,349,391,335,525,452,715,433,453,395,314,460,314,498,500,507,500,250,498,418,690,498,498,395,1038,459,339,867,500,468,500,500,250,250,418,418,498,498,905,450,705,391,339,850,500,395,487,226,326,498,507,498,507,498,498,393,834,402,512,498,500,507,394,339,498,336,334,292,550,586,252,307,246,422,512,636,671,675,463,579,579,579,579,579,579,763,533,488,488,488,488,252,252,252,252,625,646,662,662,662,662,662,498,664,642,642,642,642,487,517,527,479,479,479,479,479,479,773,423,498,498,498,498,229,229,229,229,525,525,527,527,527,527,527,498,529,525,525,525,525,453,525,453],"b":[226,326,438,498,507,729,705,233,312,312,498,498,258,306,267,430,507,507,507,507,507,507,507,507,507,507,276,276,498,498,498,463,898,606,561,529,630,488,459,637,631,267,331,547,423,874,659,676,532,686,563,473,495,653,591,906,551,520,478,325,430,325,498,498,300,494,537,418,537,503,316,474,537,246,255,480,246,813,537,538,537,537,355,399,347,537,473,745,459,474,397,344,475,344,498,500,507,500,258,498,435,711,498,498,401,1062,473,344,874,500,478,500,500,258,258,435,435,498,498,905,444,720,399,344,843,500,397,520,226,326,498,507,498,507,498,498,415,834,416,539,498,500,507,390,342,498,338,336,301,563,598,268,303,252,435,539,658,691,702,463,606,606,606,606,606,606,775,529,488,488,488,488,267,267,267,267,639,659,676,676,676,676,676,498,681,653,653,653,653,520,532,555,494,494,494,494,494,494,775,418,503,503,503,503,246,246,246,246,537,537,538,538,538,538,538,498,544,537,537,537,537,474,537,474],"i":[226,326,401,498,507,715,682,221,303,303,498,498,250,306,252,388,507,507,507,507,507,507,507,507,507,507,268,268,498,498,498,463,894,579,544,522,615,488,459,631,623,252,319,520,420,855,645,654,517,664,543,452,487,642,567,890,519,487,468,307,384,307,498,498,291,514,514,416,514,478,305,514,514,229,239,455,229,791,514,513,514,514,343,389,335,514,446,715,433,447,395,314,460,314,498,500,507,500,250,498,418,690,498,498,395,1038,452,339,867,500,468,500,500,250,250,418,418,498,498,905,450,705,389,339,814,500,395,487,226,326,498,507,498,507,498,498,393,834,431,512,498,500,507,394,339,498,336,334,292,538,586,252,307,246,422,512,636,671,675,463,579,579,579,579,579,579,763,522,488,488,488,488,252,252,252,252,625,645,654,654,654,654,654,498,658,642,642,642,642,487,517,527,514,514,514,514,514,514,754,416,478,478,478,478,229,229,229,229,525,514,513,513,513,513,513,498,529,514,514,514,514,447,514,447]};
+function cwW(t,f,sz){let w=0;for(const ch of String(t)){const c=ch.codePointAt(0);const k=c<256?c:(typeof PDF_CP!=='undefined'&&PDF_CP[c])||0x41;w+=k>=32?CAL_W[f][k-32]||500:500}return w*sz/1000}
+function cwLines(t,f,sz,w){t=String(t??'');if(!t.trim())return 1;let n=1,l='';for(const wd of t.split(/ +/)){const c=l?l+' '+wd:wd;if(cwW(c,f,sz)<=w||!l)l=c;else{n++;l=wd}}return n}
 function buildDocx({proc,settings,anoms,onePerPage,withResumo,withVistoria,bodyOnly,photoCols,fitPage,dateCom,stats,mapImg,layout,withPhotos,withIndex,fileName}){
   const TXT=layout==='texto';const PH=withPhotos!==false;
   const FONT='Calibri';
@@ -341,7 +344,7 @@ function buildDocx({proc,settings,anoms,onePerPage,withResumo,withVistoria,bodyO
       body+=para(run(mapImg.caption||'',{i:true,sz:7,color:'606060'}),{ind,after:0})}
   }
   // ---- índice + título da secção ----
-  const IDX=withIndex!==false&&anoms.length>0;const BR='<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
+  const IDX=withIndex!==false&&anoms.length>0;const BR='<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/></w:pPr><w:r><w:rPr><w:sz w:val="2"/></w:rPr><w:br w:type="page"/></w:r></w:p>';
   const bm=(nm,inner)=>{const id=++bmId;return `<w:bookmarkStart w:id="${id}" w:name="${nm}"/>${inner}<w:bookmarkEnd w:id="${id}"/>`};let bmId=0;
   const secT=/^quest/i.test(lblD(proc))?'Questões a responder':'Situações a analisar';
   const zonaOf=a=>[a.zona,a.piso,a.local].filter(Boolean).filter((v,i,arr)=>arr.indexOf(v)===i).join(' · ');
@@ -364,7 +367,7 @@ function buildDocx({proc,settings,anoms,onePerPage,withResumo,withVistoria,bodyO
     body+=BR+H1(secT,'_RA_h1');
   }
   anoms.forEach((a,ix)=>{
-    if(IDX&&ix===0){}else if(ix>0||(ix===0&&body&&onePerPage))body+=onePerPage?'<w:p><w:r><w:br w:type="page"/></w:r></w:p>':para('',{after:200});
+    if(IDX&&ix===0){}else if(ix>0||(ix===0&&body&&onePerPage))body+=onePerPage?'<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/></w:pPr><w:r><w:rPr><w:sz w:val="2"/></w:rPr><w:br w:type="page"/></w:r></w:p>':para('',{after:200});
     let rows='';
     const zona=[a.zona,a.piso,a.local].filter(Boolean).filter((v,i,arr)=>arr.indexOf(v)===i).join(' · ');
     const hd={b:true,color:'FFFFFF',sz:9};
@@ -389,20 +392,37 @@ function buildDocx({proc,settings,anoms,onePerPage,withResumo,withVistoria,bodyO
       rows+=row(full(para(L(f.label),{keep:1})+tpara(t,{sz:9},{keep:1})))}
     const fotos=PH?(a.fotos||[]):[];
     MAX=MAX0;
-    if(fitPage&&fotos.length){ // estimativa da altura do texto (cm) para a ficha caber numa página A4 (área útil ≈ 24,4 cm)
-      const ln=(t,cpl=104,lh=0.4)=>String(t||'').split('\n').reduce((n,p)=>n+Math.max(1,Math.ceil(p.length/cpl)),0)*lh;
-      let tx;
-      if(TXT){tx=1.0+0.75+0.55+ln(a.descricao,95,0.45)+0.32+Math.ceil(items.length/3)*0.5+0.3+0.55+Math.max(0.5,ln(a.comentario,95,0.45))+0.32+(a.origem==='local'?0.5:0)+0.8}
-      else{tx=0.75+0.8+ln(a.descricao,98,0.41)+0.8+Math.max(0.45,ln(a.comentario,98,0.41))+0.2+0.6;
-        const cv=items.map(x=>x[1]);for(let i=0;i<cv.length;i+=3)tx+=0.45+Math.max(...cv.slice(i,i+3).map(t=>ln(t,28,0.42)))+0.1;if(cv.length)tx+=0.3;if(a.origem==='local')tx+=0.5}
-      for(const f of longF){const t=fieldValueText(f,a.vals?.[f.id],settings,a.vals);if(t)tx+=0.4+ln(t)+0.25}
-      const nr=Math.ceil(fotos.length/cols);const capH=fotos.some(f=>f.legenda&&f.legenda.length>(cols===3?30:cols===2?50:100))?0.75:0.45;
-      const per=(AVH-(IDX&&ix===0?1.1:0)-tx-nr*(capH+0.22))/nr;const hcm=Math.max(0.8,Math.min(MAX0[1]/360000,per));
-      MAX=[MAX0[0],hcm*360000];
+    if(fotos.length){ // medição da ficha (métricas de Calibri) para a grelha de fotos caber na página: largura fixa, só a altura das linhas encolhe
+      const LH=sz=>sz*1.2207,BW=473.35;
+      const nl=(t,f,sz,w)=>String(t??'').split('\n').reduce((n,p)=>n+cwLines(p,f,sz,w),0);
+      const pars=(t,sz,w,f='r')=>{const ps=String(t??'').split('\n');return ps.reduce((h,p)=>h+cwLines(p,f,sz,w)*LH(sz),0)+(ps.length-1)*1};
+      let tx=0;const z=zona;
+      if(!TXT){
+        tx+=Math.max(20,Math.max(LH(9)+(a._parte?LH(7):0),cwLines('Zona: '+(z||'—'),'b',9,120)*LH(9),cwLines('Elemento: '+(a.elemento||'—'),'b',9,232)*LH(9))+4);
+        tx+=4+LH(9)+pars(a.descricao||' ',9,BW)+3+4;
+        if(a.origem==='local')tx+=LH(9)+8;
+        const CWs=[ (G[0]+G[1]+G[2])/20-8.5,(G[3]+G[4])/20-8.5,G[5]/20-8.5];
+        for(let i=0;i<items.length;i+=3){const g=items.slice(i,i+3);tx+=(i?2:5)+LH(8)+Math.max(...g.map((it,k)=>nl(it[1],'r',9.5,CWs[k])))*LH(9.5)+(i+3>=items.length?5:2)+4}
+        tx+=Math.max(28,4+LH(9)+pars(a.comentario||' ',9,BW)+3+4);
+        for(const f of longF){const t=fieldValueText(f,a.vals?.[f.id],settings,a.vals);if(t)tx+=LH(8)+pars(t,9,BW)+4}
+      }else{const W2=481.85;
+        tx+=LH(12)+1;if([z,a.elemento].some(Boolean))tx+=nl([z,a.elemento].filter(Boolean).join(' — '),'i',10,W2)*LH(10)+8;
+        tx+=LH(10)+2+pars(a.descricao||' ',10,W2)+9;if(a.origem==='local')tx+=LH(9)+3;
+        for(let i=0;i<items.length;i+=3){const t=items.slice(i,i+3).map(([l,v])=>l+': '+v).join('    ·    ');tx+=nl(t,'r',9.5,W2)*LH(9.5)+(i+3>=items.length?8:1.5)}
+        tx+=LH(10)+2+(String(a.comentario||'').trim()?pars(a.comentario,10,W2)+9:15);
+        for(const f of longF){const t=fieldValueText(f,a.vals?.[f.id],settings,a.vals);if(t)tx+=LH(10)+2+pars(t,10,W2)+8}
+      }
+      const pagePt=(16838-2268-1100)/20-(IDX&&ix===0?LH(13)+10:0);
+      const avail=(fitPage?pagePt-tx:pagePt)-9; // margem de segurança mínima (9 pt)
+      const nr=Math.ceil(fotos.length/cols);const capW=(PCELLS[0]?sum(...PCELLS[0]):TW)/20-8.5;
+      const rowsNat=[],rowsOv=[];for(let r=0;r<nr;r++){const g=fotos.slice(r*cols,r*cols+cols);
+        rowsNat.push(Math.max(...g.map(f=>{const w=f.w||4,h=f.h||3;return Math.min(MAX0[0]/w,MAX0[1]/h)*h/12700})));
+        rowsOv.push(1.5+Math.max(...g.map((f,k)=>cwLines(`IMG ${code}.${r*cols+k+1}`+(f.legenda?` – ${f.legenda}`:''),'i',8,capW)))*LH(8)+(r<nr-1?5:0)+4)}
+      const totFor=H=>rowsNat.reduce((s,h,r)=>s+Math.min(h,H)+rowsOv[r],0);
+      let H=Math.max(...rowsNat);
+      if(totFor(H)>avail){let lo=0.8*28.35,hi=H;for(let k=0;k<40;k++){const m=(lo+hi)/2;if(totFor(m)<=avail)lo=m;else hi=m}H=lo}
+      MAX=[MAX0[0],H*12700];
     }
-    if(fotos.length){ // a grelha de fotos (com as legendas) nunca se parte: limita a altura para caber inteira numa página
-      const nr=Math.ceil(fotos.length/cols);const capH=fotos.some(f=>f.legenda&&f.legenda.length>(cols===3?30:cols===2?50:100))?0.75:0.45;
-      const capRow=(AVH-1.2)/nr-capH-0.22;if(MAX[1]/360000>capRow)MAX=[MAX[0],Math.max(0.8,capRow)*360000]}
     let prow='';
     for(let i=0;i<fotos.length;i+=cols){
       const grp=PCELLS.map((_,k)=>fotos[i+k]);const last=i+cols>=fotos.length;
@@ -427,7 +447,7 @@ function buildDocx({proc,settings,anoms,onePerPage,withResumo,withVistoria,bodyO
     body+=tblWrap(rows);
   });
   if(stats&&stats.length){
-    body+=onePerPage?'<w:p><w:r><w:br w:type="page"/></w:r></w:p>':para('',{after:240});
+    body+=onePerPage?'<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/></w:pPr><w:r><w:rPr><w:sz w:val="2"/></w:rPr><w:br w:type="page"/></w:r></w:p>':para('',{after:240});
     body+=IDX?H1('Resumo estatístico','_RA_h'+(hN+1)):para(run('Resumo estatístico',{b:true,sz:12,color:'000000'}),{after:120,keep:1});
     const SW=[3685,1134];
     for(const t of stats){
@@ -661,7 +681,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Regi Anomalias =====
-const VERSION='0.14.0';
+const VERSION='0.14.1';
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'}];
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
 const parteNome=(p,n)=>(p.partes||[]).find(x=>x.n==n)?.nome||'';
