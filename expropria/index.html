@@ -2607,6 +2607,9 @@ async function restoreBackup(j){const ps=j.processos||[];const conf=ps.filter(p=
  if(!modo)return;if(modo==='rep'&&!await uiConfirm('Apagar todos os dados deste aparelho e repor o backup?'))return;
  busy(true,'A restaurar…');try{
   if(modo==='rep'){await withTx(['processos','fotos'],'readwrite',tx=>{tx.objectStore('processos').clear();tx.objectStore('fotos').clear();return txDone(tx)});processos=[];settings=normSettings(j.settings);settings.lastBackup=j.date||'';await saveSettings()}
+  if(modo!=='rep'&&j.settings){/* acrescentar: junta as bibliotecas do backup (peritos por nome; questões e legislação por id) sem apagar nada do aparelho */const B=j.settings;
+   (B.peritos||[]).forEach(b=>{if(!b||!String(b.nome||'').trim())return;const x=settings.peritos.find(p=>p&&norm(p.nome)===norm(b.nome));if(!x)settings.peritos.push(Object.assign({nome:'',esp:'',tel:'',email:'',res:''},b));else ['esp','tel','email','res'].forEach(k=>{if(!String(x[k]||'').trim()&&b[k])x[k]=b[k]})});
+   for(const k of ['questoes','legis'])(B[k]||[]).forEach(q=>{if(q&&q.id&&!settings[k].some(x=>x.id===q.id))settings[k].push(q)})}
   for(const m of j.modelos||[]){const c=tplCfg(m.fase);if(modo!=='rep'&&c.lista.some(x=>x.id===m.id))continue;await put('config',{blob:await dataURLToBlob(m.data),name:m.name,date:m.date,fase:m.fase},'tpl:'+m.id);if(!c.lista.some(x=>x.id===m.id))c.lista.push({id:m.id,name:m.name,date:m.date})}await saveSettings();
   let nP=0,nF=0;const usar=new Set();
   for(const p of ps){const ex=processos.find(x=>x.id===p.id);if(ex&&modo==='add'&&(ex.updatedAt||'')>=(p.updatedAt||''))continue;usar.add(p.id);normProc(p);delete p._dirty;await put('processos',p);nP++}
