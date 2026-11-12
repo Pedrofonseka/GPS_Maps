@@ -1,5 +1,11 @@
 <!doctype html>
 <!--
+ExPropria v0.12.9 — resumo
+- Base de peritos guardada e mostrada sempre por ordem alfabética (também ao acrescentar ou mudar o nome).
+- Parcelas por relatório, em todas as fases: «um relatório autónomo por parcela» ou «um relatório com várias parcelas». Por defeito: VAPRM e Arbitragem – um por parcela; Peritagem e Bases de Avaliação – um com todas. Na VAPRM, por agora, só «um por parcela». No modo «um por parcela» pode escolher «Todas» e saem os relatórios de todas as parcelas de uma vez (um ficheiro cada).
+- Peritagem / Bases com várias parcelas: um só relatório – texto comum (capítulos gerais, critérios, posições discordantes, quesitos, anexos e termo de encerramento uma só vez) e, para cada parcela, a sua análise específica (caracterização, classificação, justa indemnização) e o seu grupo de fotografias. A capa indica todas as parcelas analisadas.
+- Relatório conjunto (qualquer fase): «Posições discordantes» e «Quesitos» passam a sair uma só vez, depois das parcelas; se outra parcela tiver texto próprio diferente, a app avisa.
+
 ExPropria v0.12.7 — resumo
 - Fase 1 com um só nome: «Bases de Avaliação» (cabeçalho, capa e documentação recebida).
 
@@ -653,7 +659,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
 <script>
 'use strict';
-const VERSION='0.12.7';
+const VERSION='0.12.9';
 function growFit(t){if(!t||!t.classList?.contains('grow')||!t.offsetParent)return;t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px'}
 function growAll(root){(root||document).querySelectorAll('textarea.grow').forEach(growFit)}
 document.addEventListener('input',e=>growFit(e.target),true);
@@ -1315,6 +1321,14 @@ async function buildWordARBMulti(pars,ask=false,opt={}){const P=cur.v,ev=EVENTOS
    setParaText(pV,txt(pV).replace(/à parcela expropriada caracterizada/i,'às parcelas expropriadas caracterizadas').replace(/à parcela expropriada caraterizada/i,'às parcelas expropriadas caraterizadas').replace(/valor de justa indemnização de:?\s*.*$/i,`valor global de justa indemnização de: ${fmt(T)} € (${lc(T?extenso(T):'—')}), relativo às parcelas ${pars.map(p=>p.rel.v.nPar||p.nome).join(', ')}, montante que é alcançado por ${mod}`))}}
   const pAc=findPara(doc,t=>norm(t).includes('no montante de'));if(pAc){const keep=/alcançado por\s*$/i.test(txt(pAc).trim());setParaText(pAc,txt(pAc).replace(/no montante de:?\s*.*$/,`no montante de: ${fmt(T)} € (${lc(T?extenso(T):'—')}), relativo às parcelas ${pars.map(p=>p.rel.v.nPar||p.nome).join(', ')}${keep?', alcançado por':''}`))}
   const pEx=findPara(doc,t=>t.trim()===`(${e0})`,pAc||undefined);if(pEx)setParaText(pEx,`(${lc(T?extenso(T):'—')})`);
+  // 5) texto comum a todo o processo: posições discordantes e quesitos saem uma só vez, depois das análises específicas das parcelas
+  {const anc=findHeading(doc,END);const isH1=e=>e.localName==='p'&&styleOf(e)==='Cabealho1'&&txt(e).trim();
+   for(const tit of ['Posições discordantes','Quesitos']){const blocos=[];for(const h of bodyEls(doc).filter(e=>isH1(e)&&norm(txt(e)).startsWith(norm(tit)))){const b=[h];let x=h.nextSibling;while(x&&!(x.nodeType===1&&isH1(x))){if(x.nodeType===1)b.push(x);x=x.nextSibling}blocos.push(b)}
+    if(blocos.length<2)continue;const corpo=b=>b.slice(1).map(e=>norm(txt(e))).join('|');
+    const dflt=c=>!c.replace(/\|/g,'').replace(/nada a (considerar|registar)|não foram apresentados quesitos|sem quesitos|pelo (expropriante|expropriado|tribunal)|[-–—.\s]/g,'');
+    let k=blocos.findIndex(b=>!dflt(corpo(b)));if(k<0)k=0;const fica=blocos[k];
+    blocos.forEach((b,i)=>{if(i!==k){if(!dflt(corpo(b))&&corpo(b)!==corpo(fica))warns.push(`${tit}: ${txt(b[0]).split('–').pop().trim()} tem texto próprio, diferente do que ficou no relatório (o de ${txt(fica[0]).split('–').pop().trim()}) – confirme e junte-o à mão, se necessário.`);b.forEach(remove)}});
+    setParaText(fica[0],txt(fica[0]).replace(/\s*–\s*Parcela\s.*$/i,'').replace(/\s*–\s*[^–]*$/,m=>pars.some(p=>m.includes(p.nome))?'':m).trim());fica.forEach(e=>anc.parentNode.insertBefore(e,anc))}}
   const outName=`${relBase(pars,cur.v,cur.fase,opt.draft?'Draft_00':'')}.docx`;
   await fillHeaders(M.zip,P,pars.map(x=>x.nome).filter(Boolean).join(', '));
   const blob=await finishDocx(M.zip,doc,M.rels,M.ctDoc,outName);busy(false);return {nome:outName,blob,warns}}
@@ -1351,15 +1365,20 @@ function pendLista(p){const v=p.rel.v,out=[];PAR_SECTION.f.filter(f=>f.r&&isEmpt
  if(cur.fase!=='VAPRM')out.push(...regrasCE(v));
  if(EVENTOS[cur.fase].modelo)SECS().forEach(s=>s.f.filter(f=>f.r&&(!f.show||f.show(v))&&isEmpty(v[f.id])).forEach(f=>out.push(`${s.t} › ${f.l}`)));return out}
 function pendProc(){const ev=EVENTOS[cur.fase],out=PROC_FIELDS.filter(f=>f.r&&(!f.show||f.show(cur.v))&&isEmpty(cur.v[f.id])).map(f=>f.l);ev.equipa.forEach((x,i)=>{if(!cur.equipa?.[i]?.nome)out.push(`Equipa › ${x}`)});if(FASE_REL(cur.fase)&&!cur.relacao)out.push('Tribunal da Relação');return out}
-function renderRelatorio(M){curParcela=curParcela||null;const ev=EVENTOS[cur.fase],L=cur.layout=cur.layout||{},multi=cur.fase!=='VAPRM'&&L.ambito==='varias';
- const pars=cur.parcelas.slice().sort((a,b)=>parSortKey(a)-parSortKey(b));const sel1=(curParcela&&pars.includes(curParcela))?curParcela:pars[0];
- const incl=multi?grupoPars():(sel1?[sel1]:[]);const pp=pendProc();const pl=incl.map(p=>({p,l:pendLista(p)}));const nP=pp.length+pl.reduce((n,x)=>n+x.l.length,0);
+/* parcelas por relatório – a mesma lógica em todas as fases: uma capa que pode desdobrar várias análises específicas.
+   Por defeito: VAPRM e Arbitragem → um relatório autónomo por parcela (podem ter proprietários diferentes);
+   Peritagem e Bases de Avaliação → um relatório com todas as parcelas (texto comum + análise e fotos de cada parcela). Altera-se no ecrã Relatório. */
+const AMBITO_DEF={VAPRM:'uma',ARB:'uma',PER:'varias',BV:'varias'};
+function ambitoOf(){if(!cur)return 'uma';if(cur.fase==='VAPRM')return 'uma';/* VAPRM conjunta ainda sem modelo (o modelo VAPRM é todo da parcela) */return (cur.layout&&cur.layout.ambito)||AMBITO_DEF[cur.fase]||'uma'}
+function renderRelatorio(M){curParcela=curParcela||null;const ev=EVENTOS[cur.fase],L=cur.layout=cur.layout||{},multi=ambitoOf()==='varias';
+ const pars=cur.parcelas.slice().sort((a,b)=>parSortKey(a)-parSortKey(b));const todas=!multi&&L.parSel==='*'&&pars.length>1;const sel1=(curParcela&&pars.includes(curParcela))?curParcela:pars[0];
+ const incl=multi?grupoPars():todas?pars:(sel1?[sel1]:[]);const pp=pendProc();const pl=incl.map(p=>({p,l:pendLista(p)}));const nP=pp.length+pl.reduce((n,x)=>n+x.l.length,0);
  const chk=nP?`<div class="warnbox"><b>Verificação: ${nP} ponto(s) por preencher ou a confirmar.</b> Pode gerar na mesma; o documento sai com esses campos vazios.${pp.length?`<div style="margin-top:6px"><b>Processo</b> <a href="#" data-goto="proc">abrir</a><br>${pp.map(esc).join('<br>')}</div>`:''}${pl.filter(x=>x.l.length).map(x=>`<div style="margin-top:6px"><b>${esc(x.p.nome)}</b> <a href="#" data-gopar="${x.p.id}">abrir</a><br>${x.l.map(esc).join('<br>')}</div>`).join('')}</div>`:`<div class="okbox">Verificação: está tudo preenchido.</div>`;
  M.innerHTML=`<h2>Relatório – ${esc(ev.nome)}</h2>${!ev.modelo?`<div class="warnbox">O modelo de <b>${esc(ev.nome)}</b> está em estabilização. A geração de documentos fica disponível quando o modelo estiver ligado.</div>`:''}
  ${!pars.length?`<div class="warnbox">Crie primeiro uma parcela no processo.</div>`:`
  <div class="step">1 · Parcelas a incluir</div>
- ${cur.fase==='VAPRM'?'<div class="muted" style="margin:4px 0 8px">Na VAPRM sai um relatório por parcela, como no modelo.</div>':''}<div class="row" ${cur.fase==='VAPRM'?'hidden':''}><div style="flex-basis:100%"><label>Parcelas por relatório</label><select id="rlAmb"><option value="uma" ${!multi?'selected':''}>Uma parcela por relatório (por defeito)</option><option value="varias" ${multi?'selected':''}>Várias parcelas num relatório</option></select></div>
- ${multi?`<div style="flex-basis:100%"><div class="mgrid">${pars.map(p=>`<label class="chk"><input type="checkbox" data-grp="${p.id}" ${incl.includes(p)?'checked':''}> ${esc(p.nome)}${parExpd(p).length?` <span class="muted">– ${esc(parExpd(p).map(x=>x.nome).join('; '))}</span>`:''}</label>`).join('')}</div></div>`:`<div style="flex-basis:100%"><label>Parcela</label><select id="rlPar">${pars.map(p=>`<option value="${p.id}" ${p===sel1?'selected':''}>${esc(p.nome)}${parExpd(p).length?' – '+esc(parExpd(p).map(x=>x.nome).join('; ')):''}</option>`).join('')}</select></div>`}</div>
+ <div class="row"><div style="flex-basis:100%"><label>Parcelas por relatório</label><select id="rlAmb"><option value="uma" ${!multi?'selected':''}>Um relatório autónomo por parcela${AMBITO_DEF[cur.fase]==='uma'?' (por defeito)':''}</option>${cur.fase==='VAPRM'?'':`<option value="varias" ${multi?'selected':''}>Um relatório com várias parcelas (texto comum + análise de cada parcela)${AMBITO_DEF[cur.fase]==='varias'?' (por defeito)':''}</option>`}</select></div>
+ ${multi?`<div style="flex-basis:100%"><div class="mgrid">${pars.map(p=>`<label class="chk"><input type="checkbox" data-grp="${p.id}" ${incl.includes(p)?'checked':''}> ${esc(p.nome)}${parExpd(p).length?` <span class="muted">– ${esc(parExpd(p).map(x=>x.nome).join('; '))}</span>`:''}</label>`).join('')}</div></div>`:`<div style="flex-basis:100%"><label>Parcela</label><select id="rlPar">${pars.length>1?`<option value="*" ${todas?'selected':''}>Todas – um relatório para cada parcela (${pars.length})</option>`:''}${pars.map(p=>`<option value="${p.id}" ${!todas&&p===sel1?'selected':''}>${esc(p.nome)}${parExpd(p).length?' – '+esc(parExpd(p).map(x=>x.nome).join('; ')):''}</option>`).join('')}</select></div>`}</div>
  <div class="step">2 · Verificação</div>${chk}
  <div class="step">3 · Opções de geração</div>
   ${ev.modelo?tplSelectHTML(cur.fase):''}
@@ -1368,7 +1387,7 @@ function renderRelatorio(M){curParcela=curParcela||null;const ev=EVENTOS[cur.fas
  ${ev.modelo?`<div class="fluxo">
  <div class="seg" role="tablist"><button data-fx="draft" class="${(L.fx||'draft')==='draft'?'on':''}">A · Draft para debate</button><button data-fx="final" class="${L.fx==='final'?'on':''}">B · Versão final</button></div>
  ${(L.fx||'draft')==='draft'?`<div class="muted">O Word é feito a partir do formulário, com as fotografias da fototeca, e o nome termina em «_Draft_00». Envie-o aos colegas para debate.</div>
- <div class="relbtns ev-${cur.fase}"><button id="rlPrev" class="secondary">👁 Pré-visualizar</button><button id="rlWord">📄 Gerar Word (Draft 00)</button>${!multi?`<button id="rlPasta" class="secondary">🗂 Pasta (Draft)</button>`:''}<button id="rlPdf" class="secondary">🖨 PDF de consulta</button></div>`
+ <div class="relbtns ev-${cur.fase}"><button id="rlPrev" class="secondary">👁 Pré-visualizar</button><button id="rlWord">📄 Gerar Word (Draft 00)</button>${!multi&&!todas?`<button id="rlPasta" class="secondary">🗂 Pasta (Draft)</button>`:''}<button id="rlPdf" class="secondary">🖨 PDF de consulta</button></div>`
  :multi?`<div class="muted">A versão final trata uma parcela de cada vez: em «Parcelas por relatório», escolha uma parcela.</div>`
  :`<ol class="fx-ol"><li><b>Importe o relatório já debatido</b> (Word, com qualquer nome). A app põe-lhe as fotografias da fototeca e dá-lhe o nome <b>${esc(relBase(incl[0]||curParcela))}.docx</b>. O texto não é alterado.
   <div class="relbtns ev-${cur.fase}"><button id="rlFinal">📥 Importar relatório</button></div><input type="file" id="rlFinalF" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
@@ -1377,13 +1396,18 @@ function renderRelatorio(M){curParcela=curParcela||null;const ev=EVENTOS[cur.fas
  <li><b>Junte tudo na Pasta final</b>: escolha o Word final e o PDF.<div class="relbtns ev-${cur.fase}"><button id="rlPastaF">🗂 Pasta final</button></div><input type="file" id="rlPastaFF" accept=".pdf,.docx,application/pdf" multiple hidden></li></ol>`}</div>
  <details class="sec bruto"><summary>Modelo em bruto – para trabalhar diretamente no Word</summary><div class="muted" style="margin:6px 0 10px">O modelo Word ativo, completo e sem dados do formulário: todos os capítulos, alíneas e quadros ficam como no modelo, para cada perito adaptar o texto e o layout à sua medida no computador. O nome do ficheiro e o rodapé seguem a regra do processo.</div><div class="relbtns"><button class="secondary" id="rlBrutoW">📝 Modelo em bruto (Word)</button><button class="secondary" id="rlBrutoP">🖨 Modelo em bruto (PDF)</button></div></details><div class="muted">${multi?`Relatório conjunto com ${incl.length} parcela(s): capítulos gerais uma vez e a análise de cada parcela em sequência.`:'A Pasta da parcela inclui Word, PDF, KML, lista de fotografias e fotografias organizadas por aspeto.'}</div>`:''}`}`;
  $('#rlAmb')&&($('#rlAmb').onchange=e=>{L.ambito=e.target.value;saveSoon();render()});
- $('#rlPar')&&($('#rlPar').onchange=e=>{curParcela=cur.parcelas.find(p=>p.id===e.target.value);render()});
+ $('#rlPar')&&($('#rlPar').onchange=e=>{if(e.target.value==='*'){L.parSel='*'}else{L.parSel='';curParcela=cur.parcelas.find(p=>p.id===e.target.value)}saveSoon();render()});
  $$('[data-grp]').forEach(el=>el.onchange=()=>{const S=new Set(Array.isArray(L.grupo)?L.grupo:cur.parcelas.map(p=>p.id));el.checked?S.add(el.dataset.grp):S.delete(el.dataset.grp);L.grupo=cur.parcelas.map(p=>p.id).filter(id=>S.has(id));saveSoon();render()});
  $$('[data-lay]').forEach(el=>el.onchange=()=>{L[el.dataset.lay]=el.value;saveSoon()});bindTpl();
  $$('[data-goto]').forEach(a=>a.onclick=e=>{e.preventDefault();view='proc';render()});
  $$('[data-gopar]').forEach(a=>a.onclick=e=>{e.preventDefault();curParcela=cur.parcelas.find(p=>p.id===a.dataset.gopar);view='parcela';tab='rel';render()});
  const go=async kind=>{clearTimeout(saveT);await saveCur();if(!incl.length){alert('Assinale pelo menos uma parcela.');return}
-  const opt={draft:true};if(!multi){const p=incl[0];if(kind==='word')return exportWordARB(p,opt);if(kind==='pdf')return exportPdfARB(p,opt);return exportPastaARB(p,opt)}
+  const opt={draft:true};
+  if(!multi&&incl.length>1){/* vários relatórios autónomos de uma vez: um ficheiro por parcela, entregues juntos */const files=[],avisos=[];
+   try{for(const [k,p] of incl.entries()){busy(true,`A preparar ${p.nome} (${k+1}/${incl.length})…`);const r=await buildWordARB(false,p,opt);if(!r)continue;r.warns.forEach(w=>avisos.push(`${p.nome}: ${w}`));
+     if(kind==='pdf'){const x=await avaFxPdfBlob({pronto:{nome:r.nome,blob:r.blob}});files.push(new File([x.blob],x.nome,{type:'application/pdf'}))}else files.push(new File([r.blob],r.nome,{type:r.blob.type}))}
+    busy(false);if(avisos.length)alert('Gerado com avisos:\n\n- '+avisos.join('\n- '));await deliverFiles(files)}catch(e){busy(false);alert('Não foi possível preparar os ficheiros: '+(e.message||e))}return}
+  if(!multi){const p=incl[0];if(kind==='word')return exportWordARB(p,opt);if(kind==='pdf')return exportPdfARB(p,opt);return exportPastaARB(p,opt)}
   const r=await buildWordARBMulti(incl,false,opt);if(!r)return;
   try{if(kind==='pdf'){busy(true,'A preparar o PDF…');const x=await avaFxPdfBlob({pronto:{nome:r.nome,blob:r.blob}});busy(false);if(r.warns.length)alert('PDF gerado com avisos:\n\n- '+r.warns.join('\n- '));await deliverFile(new File([x.blob],x.nome,{type:'application/pdf'}))}
    else{if(r.warns.length)alert('Word gerado com avisos:\n\n- '+r.warns.join('\n- '));await deliverFile(new File([r.blob],r.nome,{type:r.blob.type}))}}catch(e){busy(false);alert('Não foi possível preparar o ficheiro: '+(e.message||e))}};
@@ -1416,6 +1440,8 @@ function rebuildToc(doc){const body=doc.getElementsByTagNameNS(WNS,'body')[0];co
   q.appendChild(fld('begin'));q.appendChild(ins(` PAGEREF ${en.name} \\h `));q.appendChild(fld('separate'));q.appendChild(mkRun(doc,null,cache[norm(en.title)]||''));q.appendChild(fld('end'));
   if(i===entries.length-1)q.appendChild(fld('end'));body.insertBefore(q,anchor);made.push(q)});
  if(made.length)old.forEach(q=>q.parentNode.removeChild(q))}
+async function deliverFiles(files){if(!files.length)return;if(files.length===1)return deliverFile(files[0]);if(navigator.canShare&&navigator.canShare({files})){try{await navigator.share({files,title:`${files.length} relatórios`});return}catch(e){if(e.name==='AbortError')return}}
+ const zip=new JSZip();files.forEach(f=>zip.file(f.name,f));const b=await zip.generateAsync({type:'blob'});await deliverFile(new File([b],`Relatorios_${files.length}.zip`,{type:'application/zip'}))}
 async function deliverFile(file){if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:file.name});return}catch(e){if(e.name==='AbortError')return}}
  const a=document.createElement('a'),u=URL.createObjectURL(file);a.href=u;a.download=file.name;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(u);a.remove()},8000)}
 
@@ -1695,7 +1721,9 @@ const LEGIS_BASE=[
 const legisSel=P=>{const S=Array.isArray(P&&P.legisC)?P.legisC:[];return settings.legis.filter(x=>x&&S.includes(x.id)&&String(x.t||'').trim()).map(x=>String(x.t).trim())};
 const DEFAULT_SETTINGS={peritoNome:'Pedro Fonseca',peritoTitulo:'',gabinetes:[{id:'proficis',nome:'Proficis'}],photoKB:150,aspetos:ASPETOS_BASE.slice(),peritos:structuredClone(PERITOS_BASE),finalidades:[],questoes:structuredClone(QUESTOES_BASE),legis:structuredClone(LEGIS_BASE)};
 let settings=structuredClone(DEFAULT_SETTINGS);
-function normSettings(s){s=Object.assign(structuredClone(DEFAULT_SETTINGS),s||{});if(!Array.isArray(s.aspetos))s.aspetos=ASPETOS_BASE.slice();s.aspetos=s.aspetos.filter(a=>a&&a!=='Geral');s.aspetos.unshift('Geral');s.aspetos=[...new Set(s.aspetos)];if(!Array.isArray(s.gabinetes))s.gabinetes=[];if(!s.gabinetes.length)s.gabinetes.push({id:'proficis',nome:'Proficis'});if(!String(s.peritoNome||'').trim())s.peritoNome='Pedro Fonseca';if(!Array.isArray(s.peritos))s.peritos=structuredClone(PERITOS_BASE);if(!Array.isArray(s.finalidades))s.finalidades=[];if(!Array.isArray(s.questoes))s.questoes=structuredClone(QUESTOES_BASE);if(!Array.isArray(s.legis))s.legis=structuredClone(LEGIS_BASE);if(!s._per120){mergePeritos(s);s._per120=1}return s}
+function normSettings(s){s=Object.assign(structuredClone(DEFAULT_SETTINGS),s||{});if(!Array.isArray(s.aspetos))s.aspetos=ASPETOS_BASE.slice();s.aspetos=s.aspetos.filter(a=>a&&a!=='Geral');s.aspetos.unshift('Geral');s.aspetos=[...new Set(s.aspetos)];if(!Array.isArray(s.gabinetes))s.gabinetes=[];if(!s.gabinetes.length)s.gabinetes.push({id:'proficis',nome:'Proficis'});if(!String(s.peritoNome||'').trim())s.peritoNome='Pedro Fonseca';if(!Array.isArray(s.peritos))s.peritos=structuredClone(PERITOS_BASE);if(!Array.isArray(s.finalidades))s.finalidades=[];if(!Array.isArray(s.questoes))s.questoes=structuredClone(QUESTOES_BASE);if(!Array.isArray(s.legis))s.legis=structuredClone(LEGIS_BASE);if(!s._per120){mergePeritos(s);s._per120=1}sortPeritos(s.peritos);return s}
+/* base de peritos sempre por ordem alfabética do nome */
+function sortPeritos(L){return L.sort((a,b)=>String(a&&a.nome||'').localeCompare(String(b&&b.nome||''),'pt',{sensitivity:'base'}))}
 const ordPT=(a,b)=>String(a).localeCompare(String(b),'pt',{sensitivity:'base'});
 const peritosOrd=()=>settings.peritos.filter(p=>p&&String(p.nome||'').trim()).sort((a,b)=>ordPT(a.nome,b.nome));
 /* biblioteca de questões de análise e reflexão (cresce caso a caso; comum a todos os processos) */
@@ -2301,7 +2329,7 @@ function renderProc(M){curParcela=null;crumbs();const v=cur.v;const req=PROC_FIE
  <details class="sec" open><summary>2 · Dados do processo<span class="pill ${req?'warn':'ok'} cnt">${req?req+' por preencher':'✓'}</span></summary><div class="body"><div class="row">${PROC_FIELDS.map(f=>fieldHTML(f,v,'proc')).join('')}</div></div></details>
  <details class="sec" open><summary>3 · ${cur.fase==='ARB'?'Árbitros (3)':cur.fase==='PER'?'Peritos (5)':'Perito (único)'}<span class="pill ${teamReq?'warn':'ok'} cnt">${teamReq?'por preencher':'✓'}</span></summary><div class="body">${teamHTML()}</div></details>
  ${cur.fase==='PER'?`<details class="sec" open><summary>4 · Mandatários<span class="pill ${(cur.mandatarios||[]).length?'ok':'warn'} cnt">${(cur.mandatarios||[]).length||'nenhum'}</span></summary><div class="body">${mandHTML()}</div></details>`:''}
- <details class="sec" ${cur.layout?.ambito==='varias'?'open':''}><summary>Layout do relatório<span class="pill cnt">${cur.layout?.ambito==='varias'?'várias parcelas · ':''}${(cur.layout?.fotoCols||2)} col. · capa: ${({nada:'nada',loc:'localização',loc2:'localização + 2 fotos'})[cur.layout?.capaImg||'nada']}</span></summary><div class="body"><div class="row"><div style="flex-basis:100%"><label>Parcelas por relatório</label><select data-lay="ambito"><option value="uma" ${cur.layout?.ambito!=='varias'?'selected':''}>Uma parcela por relatório (por defeito)</option><option value="varias" ${cur.layout?.ambito==='varias'?'selected':''}>Várias parcelas num relatório</option></select></div><div><label>Fotografias por linha</label><select data-lay="fotoCols">${[[1,'1 coluna'],[2,'2 colunas'],[3,'3 colunas']].map(([k,l])=>`<option value="${k}" ${+(cur.layout?.fotoCols||2)===k?'selected':''}>${l}</option>`).join('')}</select></div><div><label>Imagem da capa</label><select data-lay="capaImg">${[['nada','Nada'],['loc','Localização (mapa)'],['loc2','Localização + 2 fotografias aleatórias da parcela']].map(([k,l])=>`<option value="${k}" ${(cur.layout?.capaImg||'nada')===k?'selected':''}>${l}</option>`).join('')}</select></div></div><div class="muted">Aplica-se a todas as parcelas deste processo. As fotografias da reportagem saem agrupadas por aspeto, na grelha escolhida.</div></div></details>
+ <details class="sec" ${ambitoOf()==='varias'?'open':''}><summary>Layout do relatório<span class="pill cnt">${ambitoOf()==='varias'?'várias parcelas · ':''}${(cur.layout?.fotoCols||2)} col. · capa: ${({nada:'nada',loc:'localização',loc2:'localização + 2 fotos'})[cur.layout?.capaImg||'nada']}</span></summary><div class="body"><div class="row"><div style="flex-basis:100%"><label>Parcelas por relatório</label><select data-lay="ambito"><option value="uma" ${ambitoOf()!=='varias'?'selected':''}>Um relatório autónomo por parcela${AMBITO_DEF[cur.fase]==='uma'?' (por defeito)':''}</option>${cur.fase==='VAPRM'?'':`<option value="varias" ${ambitoOf()==='varias'?'selected':''}>Um relatório com várias parcelas${AMBITO_DEF[cur.fase]==='varias'?' (por defeito)':''}</option>`}</select></div><div><label>Fotografias por linha</label><select data-lay="fotoCols">${[[1,'1 coluna'],[2,'2 colunas'],[3,'3 colunas']].map(([k,l])=>`<option value="${k}" ${+(cur.layout?.fotoCols||2)===k?'selected':''}>${l}</option>`).join('')}</select></div><div><label>Imagem da capa</label><select data-lay="capaImg">${[['nada','Nada'],['loc','Localização (mapa)'],['loc2','Localização + 2 fotografias aleatórias da parcela']].map(([k,l])=>`<option value="${k}" ${(cur.layout?.capaImg||'nada')===k?'selected':''}>${l}</option>`).join('')}</select></div></div><div class="muted">Aplica-se a todas as parcelas deste processo. As fotografias da reportagem saem agrupadas por aspeto, na grelha escolhida.</div></div></details>
  <div class="blk">B · Análise de cada parcela expropriada<small>Concelho e freguesia, expropriados, artigos, visita, presenças, caracterização, classificação e avaliação</small></div><h2>${cur.fase==='PER'?5:4} · Parcelas (${cur.parcelas.length})</h2><div class="muted">${cur.layout?.ambito==='varias'?`Relatório conjunto: os capítulos gerais saem uma vez e a análise de cada parcela segue em sequência.`:`Cada parcela dá origem a um relatório de ${esc(ev.nome)} (pode mudar em «Layout do relatório»).`} Expropriados, artigos, visita, presenças, conteúdos e avaliação são registados em cada parcela.</div><div class="btns"><button class="green" id="newPar">+ Nova parcela</button></div>
  ${cur.parcelas.length&&ev.modelo?`<div class="btns"><button id="goRelP">Gerar relatório ▶</button></div>`:''}
  <div class="list">${cur.parcelas.slice().sort((a,b)=>parSortKey(a)-parSortKey(b)).map((p,i)=>`<div class="card" data-par="${p.id}"><b>${esc(p.nome)}</b>${parExpd(p).length?` <span class="muted">${esc(parExpd(p).map(x=>x.nome).filter(Boolean).join('; '))}</span>`:''} <span class="pill">${(p.fotos||[]).length} fotos</span> <span class="pill ${visOf(p)?.data?'ok':'warn'}">${visOf(p)?.data?'V'+visOf(p).n+' · '+esc(visTxt(p)):'sem visita'}</span></div>`).join('')}</div>
@@ -2547,9 +2575,9 @@ function renderSettings(M){crumbs();const s=settings;
  const sv=()=>saveSettings();
  $('#sNome').oninput=e=>{s.peritoNome=e.target.value;sv()};$('#sTit').oninput=e=>{s.peritoTitulo=e.target.value;sv()};
  $$('[data-gab]').forEach(el=>el.oninput=()=>{s.gabinetes[+el.dataset.gab].nome=el.value;sv()});
- $$('[data-per]').forEach(el=>{el.oninput=()=>{s.peritos[+el.dataset.per][el.dataset.pk]=el.value;sv()};if(el.dataset.pk==='nome')el.onchange=()=>render()});
+ $$('[data-per]').forEach(el=>{el.oninput=()=>{s.peritos[+el.dataset.per][el.dataset.pk]=el.value;sv()};if(el.dataset.pk==='nome')el.onchange=async()=>{sortPeritos(s.peritos);await sv();render()}});
  $$('[data-perdel]').forEach(b=>b.onclick=async()=>{if(!await uiConfirm('Eliminar este perito da base?'))return;s.peritos.splice(+b.dataset.perdel,1);await sv();render()});
- $('#perAdd')&&($('#perAdd').onclick=async()=>{const n=((await uiPrompt('Nome do perito:',''))||'').trim();if(!n)return;if(!s.peritos.some(p=>norm(p.nome)===norm(n)))s.peritos.push({nome:n,esp:'',tel:'',email:'',res:''});await sv();render()});
+ $('#perAdd')&&($('#perAdd').onclick=async()=>{const n=((await uiPrompt('Nome do perito:',''))||'').trim();if(!n)return;if(!s.peritos.some(p=>norm(p.nome)===norm(n)))s.peritos.push({nome:n,esp:'',tel:'',email:'',res:''});sortPeritos(s.peritos);await sv();render()});
  $('#qAdd')&&($('#qAdd').onclick=async()=>{const t=((await uiPrompt('Nova questão de análise e reflexão:',''))||'').trim();if(!t)return;s.questoes.push({id:'q'+Date.now().toString(36),t:/[?.]$/.test(t)?t:t+'?',on:true});await sv();render()});
  $('#lgAdd')&&($('#lgAdd').onclick=async()=>{const t=((await uiPrompt('Nova legislação (ex.: Decreto-Lei n.º …/…, de … – assunto):',''))||'').trim();if(!t)return;if(!s.legis.some(q=>norm(q.t)===norm(t)))s.legis.push({id:'lg'+Date.now().toString(36),t,on:true});await sv();render()});
  $$('[data-lgedit]').forEach(e=>e.onchange=async()=>{const t=e.value.trim();if(t){s.legis[+e.dataset.lgedit].t=t;await sv()}});
@@ -2600,7 +2628,7 @@ function pickPerito(){return new Promise(ok=>{const L=peritosOrd();
   $('#ppL').innerHTML=F.map(p=>`<button class="secondary ppitem" data-pp="${esc(p.nome)}" style="display:block;width:100%;text-align:left;margin:0 0 8px;min-height:52px"><b>${esc(p.nome)}</b>${p.esp||p.tel||p.email||p.res?`<br><span class="muted">${esc([p.esp,p.res,p.tel,p.email].filter(Boolean).join(' · '))}</span>`:''}</button>`).join('')||'<div class="muted">Nenhum perito encontrado.</div>';
   $$('#ppL [data-pp]').forEach(b=>b.onclick=()=>{closeModal();ok(L.find(p=>p.nome===b.dataset.pp)||null)})};
  $('#ppQ').oninput=draw;draw();$('#ppX').onclick=()=>{closeModal();ok(null)};
- $('#ppNew').onclick=async()=>{closeModal();const n=((await uiPrompt('Nome do novo perito:',''))||'').trim();if(!n){ok(null);return}let p=settings.peritos.find(x=>norm(x.nome)===norm(n));if(!p){p={nome:n,esp:'',tel:'',email:''};settings.peritos.push(p);await saveSettings()}ok(p)}})}
+ $('#ppNew').onclick=async()=>{closeModal();const n=((await uiPrompt('Nome do novo perito:',''))||'').trim();if(!n){ok(null);return}let p=settings.peritos.find(x=>norm(x.nome)===norm(n));if(!p){p={nome:n,esp:'',tel:'',email:''};settings.peritos.push(p);sortPeritos(settings.peritos);await saveSettings()}ok(p)}})}
 function askChoice(title,html,opts){return new Promise(ok=>{openModal(`<h3>${esc(title)}</h3><div style="margin:8px 0 14px">${html}</div><div class="btns" style="flex-direction:column;align-items:stretch">${opts.map(([k,l,c])=>`<button class="${c||'secondary'}" data-ch="${esc(k)}">${esc(l)}</button>`).join('')}<button class="secondary" data-ch="">Cancelar</button></div>`);
  $$('#modalBox [data-ch]').forEach(b=>b.onclick=()=>{closeModal();ok(b.dataset.ch||null)})})}
 /* grava a parcela importada (com fotografias novas) no processo P; ids novos salvo keepId */
@@ -2666,7 +2694,7 @@ async function restoreBackup(j){const ps=j.processos||[];const conf=ps.filter(p=
   if(modo==='rep'){await withTx(['processos','fotos'],'readwrite',tx=>{tx.objectStore('processos').clear();tx.objectStore('fotos').clear();return txDone(tx)});processos=[];settings=normSettings(j.settings);settings.lastBackup=j.date||'';await saveSettings()}
   if(modo!=='rep'&&j.settings){/* acrescentar: junta as bibliotecas do backup (peritos por nome; questões e legislação por id) sem apagar nada do aparelho */const B=j.settings;
    (B.peritos||[]).forEach(b=>{if(!b||!String(b.nome||'').trim())return;const x=settings.peritos.find(p=>p&&norm(p.nome)===norm(b.nome));if(!x)settings.peritos.push(Object.assign({nome:'',esp:'',tel:'',email:'',res:''},b));else ['esp','tel','email','res'].forEach(k=>{if(!String(x[k]||'').trim()&&b[k])x[k]=b[k]})});
-   for(const k of ['questoes','legis'])(B[k]||[]).forEach(q=>{if(q&&q.id&&!settings[k].some(x=>x.id===q.id))settings[k].push(q)})}
+   sortPeritos(settings.peritos);for(const k of ['questoes','legis'])(B[k]||[]).forEach(q=>{if(q&&q.id&&!settings[k].some(x=>x.id===q.id))settings[k].push(q)})}
   for(const m of j.modelos||[]){const c=tplCfg(m.fase);if(modo!=='rep'&&c.lista.some(x=>x.id===m.id))continue;await put('config',{blob:await dataURLToBlob(m.data),name:m.name,date:m.date,fase:m.fase},'tpl:'+m.id);if(!c.lista.some(x=>x.id===m.id))c.lista.push({id:m.id,name:m.name,date:m.date})}await saveSettings();
   let nP=0,nF=0;const usar=new Set();
   for(const p of ps){const ex=processos.find(x=>x.id===p.id);if(ex&&modo==='add'&&(ex.updatedAt||'')>=(p.updatedAt||''))continue;usar.add(p.id);normProc(p);delete p._dirty;await put('processos',p);nP++}
