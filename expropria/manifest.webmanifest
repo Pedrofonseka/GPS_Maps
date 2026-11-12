@@ -1,0 +1,16 @@
+{
+  "name": "ExPropria",
+  "short_name": "ExPropria",
+  "description": "Avaliações em expropriação (Código das Expropriações): Bases, VAPRM, Arbitragem e Peritagem",
+  "lang": "pt-PT",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f5f0",
+  "theme_color": "#2f5d3a",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
