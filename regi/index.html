@@ -320,8 +320,10 @@ function buildDocx({proc,settings,anoms,onePerPage,withResumo,withVistoria,bodyO
   const row=(cells,o={})=>`<w:tr><w:trPr><w:cantSplit/>${o.h?`<w:trHeight w:val="${o.h}" w:hRule="${o.rule||'atLeast'}"/>`:''}</w:trPr>${cells}</w:tr>`;
   const img=(f)=>{
     imgN++;const id=imgN;const bytes=b64ToU8(f.data);media.push({name:`word/media/regi_img${id}.jpeg`,data:bytes,rid:`rRegi${id}`});
-    let w=f.w||4,h=f.h||3;const lim=f._max||MAX;const sc=Math.min(lim[0]/w,lim[1]/h);const cx=Math.round(w*sc),cy=Math.round(h*sc);
-    return `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${id}" name="Foto ${id}"/><wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${id}" name="img${id}.jpeg"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rRegi${id}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`;
+    let w=f.w||4,h=f.h||3;const lim=f._max||MAX0;const sc=Math.min(lim[0]/w,lim[1]/h);const cx=Math.round(w*sc);let cy=Math.round(h*sc);
+    // ajuste à página: mantém a largura e encolhe só a altura da linha de imagens (corte centrado em cima/em baixo; o Word guarda a foto inteira — «Recortar» › repor)
+    let crop=0;if(!f._max&&cy>MAX[1]+1){crop=1-MAX[1]/cy;cy=Math.round(MAX[1])}
+    return `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${id}" name="Foto ${id}"/><wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${id}" name="img${id}.jpeg"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rRegi${id}"/>${crop?`<a:srcRect t="${Math.round(crop*50000)}" b="${Math.round(crop*50000)}"/>`:''}<a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`;
   };
   const pf=printFields(proc,settings);
   const shortF=pf.filter(f=>f.type!=='long'),longF=pf.filter(f=>f.type==='long');
@@ -527,7 +529,7 @@ function buildDocxText({proc,settings,anoms,withResumo}){
 }
 
 // ===== App: Regi Anomalias =====
-const VERSION='0.13.0';
+const VERSION='0.13.1';
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'}];
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
 const parteNome=(p,n)=>(p.partes||[]).find(x=>x.n==n)?.nome||'';
