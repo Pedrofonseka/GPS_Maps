@@ -61,6 +61,9 @@ details.sec .body{padding:0 12px 12px}
 .blk{margin:18px 0 6px;padding:9px 12px;border-radius:9px;background:var(--pri);color:#fff;font-weight:700;letter-spacing:.2px}
 .blk small{display:block;font-weight:400;opacity:.85;font-size:12.5px}
 .tks{display:flex;flex-wrap:wrap;gap:6px 8px;margin:2px 0 4px}.tks.col{flex-direction:column}
+.ddh{display:flex;align-items:center;gap:8px;width:100%;margin:6px 0 0;padding:10px 12px;background:#f2f2f2;border:1px solid #d9d9d9;border-radius:10px;color:#222;font-size:15px;text-align:left;min-height:44px}
+.ddh.on{background:#e6e6e6;border-color:#bdbdbd;border-bottom-left-radius:0;border-bottom-right-radius:0}.ddl{color:#555;font-size:13px;min-width:74px}.ddv{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ddv.muted{font-weight:400}.dda{color:#777}
+.ddb{border:1px solid #bdbdbd;border-top:0;border-radius:0 0 10px 10px;padding:8px 10px 6px;margin-bottom:4px}
 .tk{display:inline-flex;align-items:center;gap:7px;margin:0;padding:7px 10px 7px 8px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:14.5px;color:var(--ink);cursor:pointer}
 .tk input{width:20px;height:20px;margin:0;accent-color:var(--pri)}
 .tk.on{border-color:var(--pri);background:#eceef1;font-weight:600}
@@ -681,7 +684,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Regi Anomalias =====
-const VERSION='0.14.3';
+const VERSION='0.14.4';
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'}];
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
 const parteNome=(p,n)=>(p.partes||[]).find(x=>x.n==n)?.nome||'';
@@ -975,9 +978,12 @@ function vFicha(){
   h+=`<div class="btns"><button class="green" data-act="stepA" data-d="1" ${idx<n-1?'':'disabled'}>Anomalia seguinte ▶</button><span class="grow"></span><button class="secondary mini" data-act="dupA">⧉ Duplicar</button><button class="del" data-act="delAnom">Eliminar</button></div>`;
   return h;
 }
+// tópico desdobrável: por defeito fechado, mostra o valor escolhido; toca para abrir as caixas
+function dd(key,label,val,inner){S.dd=S.dd||{};const o=!!S.dd[key];
+  return `<button type="button" class="ddh ${o?'on':''}" data-act="ddTog" data-k="${key}"><span class="ddl">${esc(label)}</span><span class="ddv ${val?'':'muted'}">${val?esc(val):'— escolher —'}</span><span class="dda">${o?'▾':'▸'}</span></button>${o?`<div class="ddb">${inner}</div>`:''}`}
 function idPick(a,k,label,ck){const v=a[k]||'';const cat=settings[ck]||[];
-  return `<label>${esc(label)}</label><div class="tks">${cat.map(c=>tickBox('',v===c,esc(c),`data-act="tkId" data-k="${k}" data-v="${esc(c)}"`)).join('')}</div>
-  <div class="inrow"><input data-bind="a.${k}" value="${esc(v)}" placeholder="…ou escreva (ex.: Sala do 1.º andar)">${v&&!cat.includes(v)?`<button class="secondary mini" data-act="idToCat" data-k="${k}" data-c="${ck}">+ catálogo</button>`:''}</div>`}
+  return dd(k,label,v,`<div class="tks">${cat.map(c=>tickBox('',v===c,esc(c),`data-act="tkId" data-k="${k}" data-v="${esc(c)}"`)).join('')}</div>
+  <div class="inrow"><input data-bind="a.${k}" value="${esc(v)}" placeholder="…ou escreva (ex.: Sala do 1.º andar)">${v&&!cat.includes(v)?`<button class="secondary mini" data-act="idToCat" data-k="${k}" data-c="${ck}">+ catálogo</button>`:''}</div>`)}
 function fieldUI(f,a){
   const v=a.vals?.[f.id];
   if(f.id==='conf'&&a.origem==='local')return `<label>${esc(f.label)}</label><p class="muted">Sem status — anomalia acrescentada no local (não invocada na lista).</p>`;
@@ -985,7 +991,7 @@ function fieldUI(f,a){
   if(f.type==='multi'){const arr=Array.isArray(v)?v:[];
     return `<label>${esc(f.label)} <span class="muted">(${f.excl?'uma estética e/ou uma funcional':'pode marcar várias'})</span></label><div class="tks">${(f.opts||[]).map(([c,t])=>tickBox('',arr.includes(c),esc(c&&c!==t?c+' – '+t:t),`data-act="tkMulti" data-f="${f.id}" data-v="${esc(c)}"`)).join('')}</div>${f.free&&arr.includes(f.free)?`<input data-bind="v.${f.id}__txt" value="${esc(a.vals?.[f.id+'__txt']||'')}" placeholder="Rótulo de «${esc((f.opts.find(o=>o[0]===f.free)||[])[1]||'Outras')}» (ex.: Segurança, Salubridade…)">`:''}`}
   if(f.type==='catalog'){const arr=Array.isArray(v)?v:[];const all=[...settings.catalog,...arr.filter(c=>!settings.catalog.includes(c))];
-    return `<label>${esc(f.label)} <span class="muted">(pode marcar vários)</span></label><div class="tks">${all.map(c=>tickBox('',arr.includes(c),esc(c),`data-act="tkCat" data-f="${f.id}" data-v="${esc(c)}"`)).join('')}</div><div class="inrow"><input id="newCat" placeholder="Outro tipo… (fica no catálogo)"><button class="secondary mini" data-act="addCat" data-f="${f.id}">+</button></div>`}
+    return dd('f_'+f.id,f.label,arr.join(', '),`<span class="muted" style="font-size:12px">(pode marcar vários)</span><div class="tks">${all.map(c=>tickBox('',arr.includes(c),esc(c),`data-act="tkCat" data-f="${f.id}" data-v="${esc(c)}"`)).join('')}</div><div class="inrow"><input id="newCat" placeholder="Outro tipo… (fica no catálogo)"><button class="secondary mini" data-act="addCat" data-f="${f.id}">+</button></div>`)}
   if(f.type==='long')return txt('v.'+f.id,f.label,v,3);
   return inp('v.'+f.id,f.label,v,f.ph||'');
 }
@@ -1254,6 +1260,7 @@ document.addEventListener('click',async e=>{
   switch(act){
     case 'go':{e.preventDefault();if(dirty)await saveProc();const v=el.dataset.v;if(['proc','anom','rel'].includes(v)&&!p)return toast('Escolha ou crie primeiro um processo.',1);S.view=v;S.sub=null;S.gpsMsg='';S.scrollTop=0;break}
     case 'backList':if(dirty)await saveProc();S.sub=null;if(S.view!=='anom'){S.view='anom'}S.scrollTop=S.listScroll||0;break;
+    case 'ddTog':{S.dd=S.dd||{};const k=el.dataset.k;S.dd[k]=!S.dd[k];S.scrollTop=window.scrollY;break}
     case 'setLay':settings.layout=el.dataset.v;await saveSettings();S.scrollTop=window.scrollY;break;
     case 'setCols':settings.photoCols=+el.dataset.v;await saveSettings();S.scrollTop=window.scrollY;break;
     case 'setNum':settings[el.dataset.k]=+el.dataset.v;await saveSettings();S.scrollTop=window.scrollY;break;
@@ -1379,7 +1386,7 @@ document.addEventListener('change',async e=>{
   if(act==='tkExp'){settings[el.dataset.k]=el.checked;await saveSettings();S.scrollTop=window.scrollY;render();return}
   if(act==='tkCols'){settings.photoCols=+el.dataset.v;await saveSettings();S.scrollTop=window.scrollY;render();return}
   if(act==='tkOrig'){a.origem=el.dataset.v;await saveProc();S.scrollTop=window.scrollY;render();return}
-  if(act==='tkId'){const k=el.dataset.k;a[k]=el.checked?el.dataset.v:'';await saveProc();S.scrollTop=window.scrollY;render();return}
+  if(act==='tkId'){const k=el.dataset.k;a[k]=el.checked?el.dataset.v:'';if(el.checked&&S.dd)S.dd[k]=false;await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='tkPick'){a.vals=a.vals||{};a.vals[el.dataset.f]=el.checked?el.dataset.v:'';await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='tkMulti'){a.vals=a.vals||{};const f=el.dataset.f,v=el.dataset.v;const fd=settings.fields.find(x=>x.id===f);const grp=c=>(/^\d+-([A-Z])/.exec(c)||[])[1];let arr=Array.isArray(a.vals[f])?a.vals[f]:[];if(el.checked&&fd?.excl&&grp(v))arr=arr.filter(x=>grp(x)!==grp(v));a.vals[f]=el.checked?[...arr.filter(x=>x!==v),v].sort((x,y)=>(fd.opts.findIndex(o=>o[0]===x))-(fd.opts.findIndex(o=>o[0]===y))):arr.filter(x=>x!==v);await saveProc();S.scrollTop=window.scrollY;render();if(el.checked&&v===settings.fields.find(x=>x.id===f)?.free)setTimeout(()=>$(`[data-bind="v.${f}__txt"]`)?.focus(),50);return}
   if(act==='tkCat'){a.vals=a.vals||{};const f=el.dataset.f,v=el.dataset.v;const arr=Array.isArray(a.vals[f])?a.vals[f]:[];a.vals[f]=el.checked?[...arr.filter(x=>x!==v),v]:arr.filter(x=>x!==v);await saveProc();S.scrollTop=window.scrollY;render();return}
