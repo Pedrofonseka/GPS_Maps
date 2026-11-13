@@ -681,7 +681,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Regi Anomalias =====
-const VERSION='0.14.2';
+const VERSION='0.14.3';
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'}];
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
 const parteNome=(p,n)=>(p.partes||[]).find(x=>x.n==n)?.nome||'';
@@ -838,6 +838,17 @@ async function compressImage(file,kb){
   }
   return last;
 }
+// ---------- fotos repetidas: assinatura visual (dHash 64 bits) — apanha a mesma imagem mesmo que reimportada noutra qualidade ----------
+async function phash(src){const i=await loadImg(src);const c=document.createElement('canvas');c.width=9;c.height=8;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(i,0,0,9,8);
+  const d=x.getImageData(0,0,9,8).data;const g=k=>d[k*4]*0.299+d[k*4+1]*0.587+d[k*4+2]*0.114;let h='';
+  for(let r=0;r<8;r++){let n=0;for(let cc=0;cc<8;cc++)n=(n<<1)|(g(r*9+cc)>g(r*9+cc+1)?1:0);h+=n.toString(16).padStart(2,'0')}return h}
+const hamm=(a,b)=>{let n=0;for(let i=0;i<a.length;i+=2){let v=parseInt(a.substr(i,2),16)^parseInt(b.substr(i,2),16);while(v){n+=v&1;v>>=1}}return n};
+const SAME=5;
+async function ensureHashes(p){let ch=false;for(const a of p.anomalias)for(const f of a.fotos)if(!f.ph){try{const src=fd(f)||(await fotoGet(f.id))?.data;if(src){f.ph=await phash(src);ch=true}}catch(e){}}return ch}
+function dupGroups(p){const L=[];p.anomalias.forEach(a=>a.fotos.forEach((f,i)=>{if(f.ph)L.push({a,f,i,code:imgCode(p,a,i)})}));const G=[],used=new Set();
+  for(let x=0;x<L.length;x++){if(used.has(x))continue;const g=[L[x]];for(let y=x+1;y<L.length;y++)if(!used.has(y)&&hamm(L[x].f.ph,L[y].f.ph)<=SAME){g.push(L[y]);used.add(y)}if(g.length>1)G.push(g)}return G}
+function dupOf(p,f){const out=[];p.anomalias.forEach(a=>a.fotos.forEach((g,i)=>{if(g!==f&&g.id!==f.id&&g.ph&&f.ph&&hamm(g.ph,f.ph)<=SAME)out.push(imgCode(p,a,i))}));return out}
+function warnDup(p,a,i){const c=dupOf(p,a.fotos[i]);if(c.length)toast(`⚠︎ ${imgCode(p,a,i)} parece repetida: igual a ${c.join(', ')}.`,1);return c.length>0}
 async function rotateFoto(f){const i=await loadImg(fd(f));const c=document.createElement('canvas');c.width=i.naturalHeight;c.height=i.naturalWidth;const x=c.getContext('2d');x.translate(c.width,0);x.rotate(Math.PI/2);x.drawImage(i,0,0);await fotoPut(f.id,c.toDataURL('image/jpeg',.8));delete f.data;f.w=c.width;f.h=c.height}
 
 // ---------- Render ----------
@@ -997,6 +1008,8 @@ function vRel(){const p=cur();const nf=p.anomalias.reduce((s,a)=>s+a.fotos.lengt
   if(todo.length)W.push([`${todo.length} anomalia(s) por analisar`,'chkTodo',todo.slice(0,6).map(a=>anCode(p,a)).join(', ')+(todo.length>6?'…':'')]);
   if(semD.length)W.push([`${semD.length} anomalia(s) sem «${lblD(p)}»`,'chkGo:'+semD[0].id,semD.slice(0,6).map(a=>anCode(p,a)).join(', ')]);
   if(semF.length)W.push([`${semF.length} anomalia(s) sem fotografias`,'chkGo:'+semF[0].id,semF.slice(0,6).map(a=>anCode(p,a)).join(', ')+(semF.length>6?'…':'')]);
+  if(an.some(a=>a.fotos.some(f=>!f.ph))&&!S.hashing&&S.hashDone!==p.id){S.hashing=true;S.hashDone=p.id;(async()=>{await loadFotos(p);if(await ensureHashes(p))await saveProc();S.hashing=false;S.scrollTop=window.scrollY;render()})()}
+  const DG=dupGroups(p);if(DG.length)W.push([`${DG.length} fotografia(s) repetida(s)`,'chkGo:'+DG[0][1].a.id,DG.slice(0,4).map(g=>g.map(x=>x.code).join(' = ')).join(' · ')+(DG.length>4?'…':'')]);
   if(semL)W.push([`${semL} fotografia(s) sem legenda`,'chkGo:'+(an.find(a=>a.fotos.some(f=>!String(f.legenda||'').trim()))||{}).id,'']);
   if(settings.dateCom!==false&&!p.visita?.data)W.push(['Sem data da vistoria (sai antes de «'+lblC(p)+'»)','chkProc','']);
   if(!p.codigo)W.push(['Processo sem código (vai no nome dos ficheiros)','chkProc','']);
@@ -1192,6 +1205,7 @@ function openPhotoModal(i){const a=curA();const f=a?.fotos[i];if(!f)return;$('#p
   const m=document.createElement('div');m.className='modal';m.id='pm';
   m.innerHTML=`<div class="box pmbox"><div class="row" style="margin-top:0"><b class="grow">${imgCode(cur(),a,i)} <span class="muted">(${i+1}/${a.fotos.length})</span></b><button class="sm" data-act="pmClose">✕ Fechar</button></div>
   <img src="${fd(f)}" class="pmimg" data-act="pmFull" data-i="${i}">
+  ${(()=>{const c=dupOf(cur(),f);return c.length?`<div class="red" style="font-size:13px;margin:6px 0">⚠︎ Esta foto parece repetida — igual a ${esc(c.join(', '))}. Pode eliminá-la ou substituí-la.</div>`:''})()}
   <label class="fld"><span>Legenda</span><textarea rows="5" data-bind="f.${i}.legenda" placeholder="Legenda da fotografia">${esc(f.legenda)}</textarea></label>
   <label>Mover para outra anomalia</label><select data-act="pmMoveTo" data-i="${i}"><option value="">— escolher —</option>${cur().anomalias.filter(x=>x!==a).map(x=>`<option value="${x.id}" ${x.fotos.length>=settings.maxFotos?'disabled':''}>${anCode(cur(),x)} · ${esc([x.local||x.zona,x.elemento].filter(Boolean).join(' · ')||'—')} (${x.fotos.length}/${settings.maxFotos})</option>`).join('')}</select>
   <div class="row"><button class="sm" data-act="pmRot" data-i="${i}">⟳ Rodar</button><button class="sm" data-act="pmMv" data-i="${i}" data-d="-1" ${i?'':'disabled'}>◀ Mover</button><button class="sm" data-act="pmMv" data-i="${i}" data-d="1" ${i<a.fotos.length-1?'':'disabled'}>Mover ▶</button><span class="grow"></span><button class="danger xs" data-act="pmDel" data-i="${i}">🗑 Eliminar</button></div>
@@ -1371,14 +1385,15 @@ document.addEventListener('change',async e=>{
   if(act==='tkCat'){a.vals=a.vals||{};const f=el.dataset.f,v=el.dataset.v;const arr=Array.isArray(a.vals[f])?a.vals[f]:[];a.vals[f]=el.checked?[...arr.filter(x=>x!==v),v]:arr.filter(x=>x!==v);await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='tickPage'){settings.onePerPage=el.checked;await saveSettings();S.scrollTop=window.scrollY;render();return}
   if(act==='pmRepCam'||act==='pmRepLib'){const i=+el.dataset.i;const file=el.files[0];el.value='';const old=a.fotos[i];if(!file||!old)return;
-    try{const r=await compressImage(file,settings.photoKB);const fid=uid();await fotoPut(fid,r.data);const nf={...old,id:fid,w:r.w,h:r.h};a.fotos[i]=nf;S.prevStale=true;
+    try{const r=await compressImage(file,settings.photoKB);const fid=uid();await fotoPut(fid,r.data);let ph='';try{ph=await phash(r.data)}catch(e){}const nf={...old,id:fid,w:r.w,h:r.h,ph};a.fotos[i]=nf;S.prevStale=true;
       if(act==='pmRepCam'){S.camShots.push(file);gpsAutoFromCamera(p)}await saveProc();S.scrollTop=window.scrollY;render();openPhotoModal(i);
-      undoToast(`${imgCode(p,a,i)} substituída.`,async()=>{const k=a.fotos.findIndex(x=>x.id===fid);if(k<0)return;a.fotos[k]=old;await fotoDel(fid);await saveProc();if($('#pm'))openPhotoModal(k);S.scrollTop=window.scrollY;render()},()=>fotoDel(old.id))}
+      await loadFotos(p);await ensureHashes(p);const dc=dupOf(p,nf);
+      undoToast(`${imgCode(p,a,i)} substituída.${dc.length?` ⚠︎ Parece igual a ${dc.join(', ')}.`:''}`,async()=>{const k=a.fotos.findIndex(x=>x.id===fid);if(k<0)return;a.fotos[k]=old;await fotoDel(fid);await saveProc();if($('#pm'))openPhotoModal(k);S.scrollTop=window.scrollY;render()},()=>fotoDel(old.id))}
     catch(err){toast(err.message,1)}return}
   if(act==='addCam'||act==='addLib'){
     const files=[...el.files];el.value='';const room=settings.maxFotos-a.fotos.length;
     if(files.length>room)toast(`Só cabem mais ${room} foto(s); as restantes foram ignoradas.`,1);
-    for(const f of files.slice(0,room)){try{const r=await compressImage(f,settings.photoKB);const fid=uid();await fotoPut(fid,r.data);a.fotos.push({id:fid,w:r.w,h:r.h,legenda:''});S.prevStale=true;if(act==='addCam'){S.camShots.push(f);gpsAutoFromCamera(p)}}catch(err){toast(err.message,1)}}
+    for(const f of files.slice(0,room)){try{const r=await compressImage(f,settings.photoKB);const fid=uid();await fotoPut(fid,r.data);let ph='';try{ph=await phash(r.data)}catch(e){}a.fotos.push({id:fid,w:r.w,h:r.h,legenda:'',ph});S.prevStale=true;await loadFotos(p);await ensureHashes(p);warnDup(p,a,a.fotos.length-1);if(act==='addCam'){S.camShots.push(f);gpsAutoFromCamera(p)}}catch(err){toast(err.message,1)}}
     await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='impFile'){const f=el.files[0];el.value='';if(!f)return;const u=new Uint8Array(await f.arrayBuffer());
     try{const isDocx=/\.docx$/i.test(f.name)||!!(await (await unzip(u)).get('word/document.xml'));
