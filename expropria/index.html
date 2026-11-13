@@ -1,5 +1,8 @@
 <!doctype html>
 <!--
+ExPropria v0.13.1 — resumo
+- Parcela: «⧉ Copiar dados de outra parcela» – escolhe a parcela de origem e as secções a copiar (por defeito as que costumam repetir-se: prédio, PDM, envolvente, classificação, transações, valores unitários…; ficam de fora a identificação, as áreas, o montante, os quesitos e os anexos). Fotografias e visita não se copiam.
+
 ExPropria v0.13.0 — resumo
 - Art. 23.º, n.º 2, c): data da notificação da resolução de expropriar (processo) e, em cada construção / arvoredo / benfeitoria, a indicação «posterior à notificação – voluptuária ou útil», que a retira do valor e o diz no relatório.
 - Art. 26.º, n.º 12: zona verde / lazer / equipamentos – IUS médio da envolvente de 300 m, com fundamentação nas Notas do 8.2; aviso quando a categoria de espaço o sugere.
@@ -679,7 +682,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
 <script>
 'use strict';
-const VERSION='0.13.0';
+const VERSION='0.13.1';
 function growFit(t){if(!t||!t.classList?.contains('grow')||!t.offsetParent)return;t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px'}
 function growAll(root){(root||document).querySelectorAll('textarea.grow').forEach(growFit)}
 document.addEventListener('input',e=>growFit(e.target),true);
@@ -1410,6 +1413,19 @@ function coerencia(p){const v=p.rel.v,out=[];const P=cur.v;const D=k=>{const x=p
  const F=p.fotos||[];if(!F.length)out.push('Parcela sem fotografias');else{const sl=F.filter(f=>!String(f.caption||'').trim()).length;if(sl)out.push(`${sl} fotografia(s) sem legenda`)}
  for(const [k,l] of [['qExp','Expropriante'],['qExpd','Expropriado'],['qTrib','Tribunal']]){const n=(Array.isArray(v[k])?v[k]:[]).filter(r=>r&&String(r.q||'').trim()&&!String(r.r||'').trim()).length;if(n)out.push(`Quesitos (${l}): ${n} sem resposta`)}
  return [...new Set(out)]}
+/* copiar dados de outra parcela do mesmo processo, por secções (o que se repete: prédio, PDM, envolvente, classificação, valores…) */
+const COPIA_OFF=['parcela','areas','valor','quesitos','anexos','acordao','capa','encerra'];
+const campoChaves=f=>f.t==='iftable'?['ifAtr']:['calc','head','info','warn','acomp'].includes(f.t)||!f.id||f.id.startsWith('_')?[]:[f.id];
+function copiarDeParcela(dst){const outras=cur.parcelas.filter(x=>x!==dst);if(!outras.length)return;const secs=[PAR_SECTION,...SECS()];
+ openModal(`<h3>Copiar dados para ${esc(dst.nome)}</h3><label>Copiar de</label><select id="cpSrc">${outras.map(x=>`<option value="${x.id}">${esc(x.nome)}</option>`).join('')}</select>
+  <label style="margin-top:10px">Secções a copiar <span class="muted">(substituem os dados desta parcela nessas secções; as fotografias e a visita não se copiam)</span></label><div class="warnbox" style="margin:6px 0">Os passos 3 e 7 levam também as áreas e quantidades da outra parcela – ajuste-as depois a esta parcela.</div>
+  <div style="max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:6px 8px">${secs.map(sc=>`<label class="chk"><input type="checkbox" data-cps="${sc.id}" ${COPIA_OFF.includes(sc.id)?'':'checked'}> ${esc(sc.t)}</label>`).join('')}</div>
+  <div class="btns"><button class="green" id="cpGo">⧉ Copiar</button><button class="secondary" id="cpX">Cancelar</button></div>`);
+ $('#cpX').onclick=closeModal;
+ $('#cpGo').onclick=async()=>{const src=cur.parcelas.find(x=>x.id===$('#cpSrc').value);const sel=$$('[data-cps]').filter(e=>e.checked).map(e=>e.dataset.cps);if(!src||!sel.length){alert('Escolha pelo menos uma secção.');return}
+  if(!await uiConfirm(`Substituir, em ${dst.nome}, os dados de ${sel.length} secção(ões) pelos de ${src.nome}?`))return;
+  const sv=src.rel.v,dv=dst.rel.v;let n=0;for(const sc of secs.filter(x=>sel.includes(x.id)))for(const f of sc.f)for(const k of campoChaves(f)){if(sv[k]===undefined)delete dv[k];else dv[k]=structuredClone(sv[k]);n++}
+  closeModal();clearTimeout(saveT);await saveCur();alert(`Copiados ${n} campo(s) de ${src.nome}. Reveja os valores próprios desta parcela.`);render()}}
 function pendLista(p){const v=p.rel.v,out=[];PAR_SECTION.f.filter(f=>f.r&&isEmpty(v[f.id])).forEach(f=>out.push(f.l));if(!visOf(p)?.data)out.push('Visita ao local (data)');if(sacOn(v)&&ABS_TB.some(tb=>(v[tb]||[]).some(r=>r&&r.on&&num(r[tb==='edifTipos'?'area':'qtd'])>0&&!r.abs)))out.push('8.4–8.6: com solo apto para construção, decidir em cada situação se é elegível ou absorvida pelo uso principal');{const CL=calcLines(v);if(Object.values(CL).some(L=>L.some(x=>!x.vun)))out.push('Cap. 8: V_Un em falta numa situação elegível do 8.3–8.9')}{const ri=refInfo(p);if(!ri.d)out.push('Data de referência (sem DUP: definir no processo a data, o motivo e a evidência)');else if(!ri.dup&&!ri.par&&!ri.txt)out.push('Data de referência sem DUP: indicar a evidência / documento que a suporta')}{const c=compute(v);if(sobLinhas(v).length&&Math.abs(c.sobDif)>=0.005)out.push(`Zonas da área sobrante: a soma não confere com a área sobrante (diferença ${fmt(c.sobDif,2)} m²)`)}
  if(cur.fase!=='VAPRM')out.push(...regrasCE(v));
  if(EVENTOS[cur.fase].modelo)SECS().forEach(s=>s.f.filter(f=>f.r&&(!f.show||f.show(v))&&isEmpty(v[f.id])).forEach(f=>out.push(`${s.t} › ${f.l}`)));return out}
@@ -2430,8 +2446,9 @@ function renderParcela(M){const p=curParcela,r=p.rel;crumbs();r.tipo=cur.fase;co
  M.innerHTML=`<h2 id="parH">${esc(p.nome)}</h2><div class="blk" style="margin-top:6px">B · Análise da parcela<small>Processo ${esc(cur.v.proc||cur.v.nref||'')} — os dados abaixo são próprios desta parcela; os gerais estão no processo (bloco A)</small></div>
  <div style="margin:8px 0"><span class="fasepill ev-${cur.fase}" style="background:var(--evc)">Fase: ${esc(ev.nome)}</span> <span class="muted">(definida no processo)</span></div>
 ${ev.modelo&&cur.fase!=='VAPRM'?'<div id="totBar"></div>':''}<div class="tabs"><button data-tab="rel" class="${tab==='rel'?'on':''}">Dados</button><button data-tab="fotos" class="${tab==='fotos'?'on':''}">Fotografias (${(p.fotos||[]).length})</button></div>${body}
- <div class="btns" style="margin-top:24px"><button class="secondary" id="backProc">◀ Processo</button>${ev.modelo?`<button id="goRel">Gerar relatório ▶</button>`:''}<button class="secondary" id="expPar">⬇ Exportar parcela</button><button class="del" id="delPar">Eliminar parcela</button></div>`;
+ <div class="btns" style="margin-top:24px"><button class="secondary" id="backProc">◀ Processo</button>${ev.modelo?`<button id="goRel">Gerar relatório ▶</button>`:''}${cur.parcelas.length>1?'<button class="secondary" id="copyPar">⧉ Copiar dados de outra parcela</button>':''}<button class="secondary" id="expPar">⬇ Exportar parcela</button><button class="del" id="delPar">Eliminar parcela</button></div>`;
  $$('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;render()});
+ $('#copyPar')&&($('#copyPar').onclick=()=>copiarDeParcela(p));
  {const tb=$('#totBar');if(tb){paintTot(compute(r.v));tb.onclick=()=>{totOpen=!totOpen;paintTot(compute(r.v))}}}
  $('#btnWord')&&($('#btnWord').onclick=async()=>{clearTimeout(saveT);await saveCur();exportWordARB()});
  $('#btnPdf')&&($('#btnPdf').onclick=async()=>{clearTimeout(saveT);await saveCur();exportPdfARB()});
