@@ -1,5 +1,20 @@
 <!doctype html>
 <!--
+ExPropria v0.13.0 — resumo
+- Art. 23.º, n.º 2, c): data da notificação da resolução de expropriar (processo) e, em cada construção / arvoredo / benfeitoria, a indicação «posterior à notificação – voluptuária ou útil», que a retira do valor e o diz no relatório.
+- Art. 26.º, n.º 12: zona verde / lazer / equipamentos – IUS médio da envolvente de 300 m, com fundamentação nas Notas do 8.2; aviso quando a categoria de espaço o sugere.
+- Art. 3.º, n.º 2: expropriação total requerida – alíneas a) e b) e fundamentação, no 6.5.
+- IUS num só sítio (Edificabilidade a considerar); o quadro do PDM e o cálculo usam esse valor.
+- Fundamentação do V_Un em cada linha do quadro de preços unitários; sai no relatório por baixo da situação.
+- Relatório › 2 · Verificação: nova lista de verificação de coerência (ordem das datas, valor nulo, situações sem V_Un, regras do CE, fotografias sem legenda, quesitos sem resposta).
+- «Todas – um relatório para cada parcela»: o botão Pasta passa a gerar um ZIP com a pasta de cada parcela.
+- Designação curta (opcional) para o cabeçalho das páginas.
+- Capa: as 2 fotografias podem ser escolhidas à mão (visto «Capa» em cada fotografia); sem escolha, saem ao acaso.
+- Backup: aviso no cabeçalho «⚠ Backup há N dias» (sem backup, ou 7 dias com processos alterados); toque para fazer o Backup OUT.
+- Cópias automáticas: ao eliminar um processo, ou ao substituir tudo por um backup, o processo (com fotografias) fica guardado 30 dias em Definições › 7 e pode ser reposto.
+- Peritagem (opcional): valor fixado no acórdão arbitral por parcela, com a diferença à vista no formulário; se escolher «Sim», sai uma frase de comparação a seguir ao montante de justa indemnização.
+- Relatório conjunto: os quesitos são de cada parcela e ficam na análise de cada uma (só saem num bloco comum se forem iguais em todas).
+
 ExPropria v0.12.10 — resumo
 - Peritagem: nas assinaturas, todos os subscritores são «Perito» (nem todos são da lista oficial).
 - Peritagem e Bases: o termo de encerramento deixa de repetir a epígrafe (Processo, Finalidade, Expropriante, Expropriado, Parcela), porque vem na sequência do relatório; a epígrafe fica só no acórdão arbitral, que é um documento autónomo. No relatório com várias parcelas: «… das parcelas identificadas»; com uma só parcela assinalada, sai o relatório normal de uma parcela.
@@ -8,7 +23,7 @@ ExPropria v0.12.9 — resumo
 - Base de peritos guardada e mostrada sempre por ordem alfabética (também ao acrescentar ou mudar o nome).
 - Parcelas por relatório, em todas as fases: «um relatório autónomo por parcela» ou «um relatório com várias parcelas». Por defeito: VAPRM e Arbitragem – um por parcela; Peritagem e Bases de Avaliação – um com todas. Na VAPRM, por agora, só «um por parcela». No modo «um por parcela» pode escolher «Todas» e saem os relatórios de todas as parcelas de uma vez (um ficheiro cada).
 - Peritagem / Bases com várias parcelas: um só relatório – texto comum (capítulos gerais, critérios, posições discordantes, quesitos, anexos e termo de encerramento uma só vez) e, para cada parcela, a sua análise específica (caracterização, classificação, justa indemnização) e o seu grupo de fotografias. A capa indica todas as parcelas analisadas.
-- Relatório conjunto (qualquer fase): «Posições discordantes» e «Quesitos» passam a sair uma só vez, depois das parcelas; se outra parcela tiver texto próprio diferente, a app avisa.
+- Relatório conjunto: «Posições discordantes» sai uma só vez, depois das parcelas. Os quesitos são de cada parcela e ficam na análise de cada uma; só saem num bloco comum se forem iguais em todas.
 
 ExPropria v0.12.7 — resumo
 - Fase 1 com um só nome: «Bases de Avaliação» (cabeçalho, capa e documentação recebida).
@@ -627,13 +642,14 @@ button:not(.tiny):not([data-tldel]):not([data-del]){min-height:44px!important}
 #prevOv .pvzoom{transform-origin:top left}
 #prevOv .docx-wrapper{background:transparent!important;padding:0!important}
 #prevOv .docx-wrapper>section.docx{margin:0 auto 12px!important;box-shadow:0 2px 10px #0006!important}
+#bkPill{background:#a8452c!important;border-color:#a8452c!important;color:#fff!important;font-weight:700}
 #updToast{position:fixed;left:10px;right:10px;top:calc(10px + env(safe-area-inset-top));z-index:9500;background:#2f5d3a;color:#fff;border-radius:12px;padding:10px 12px;display:flex;gap:10px;align-items:center;justify-content:space-between;box-shadow:0 6px 20px #0005;font-size:14px}
 #updToast button{background:#a8452c;border-color:#a8452c;color:#fff}
 </style>
 </head>
 <body>
 <header>
-  <h1 id="appTitle">ExPropria</h1><span class="ver" id="appVer"></span>
+  <h1 id="appTitle">ExPropria</h1><span class="ver" id="appVer"></span><button type="button" id="bkPill" class="mini hidden" title="Fazer Backup OUT">⚠ Backup</button>
   <span class="crumbs" id="crumbs"></span>
   <button class="mini" id="btnHome">Processos</button>
   <button class="mini" id="btnModelos">Modelos</button>
@@ -663,7 +679,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
 <script>
 'use strict';
-const VERSION='0.12.10';
+const VERSION='0.13.0';
 function growFit(t){if(!t||!t.classList?.contains('grow')||!t.offsetParent)return;t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px'}
 function growAll(root){(root||document).querySelectorAll('textarea.grow').forEach(growFit)}
 document.addEventListener('input',e=>growFit(e.target),true);
@@ -731,7 +747,7 @@ function setFilenameField(xml,name){const d=new DOMParser().parseFromString(xml,
 /* 7.3 – cada sub-tópico: os parágrafos-modelo a seguir ao título são substituídos pelas linhas do formulário */
 function fill73(doc,v,c){const body=h=>{const ps=[];let e=h.nextSibling;while(e){if(e.nodeType===1){if(e.localName!=='p')break;const st=e.getElementsByTagNameNS(WNS,'pStyle')[0];if(st&&/Cabealho/.test(st.getAttributeNS(WNS,'val'))&&txt(e).trim())break;if(txt(e).trim())ps.push(e)}e=e.nextSibling}return ps};
  const put=(head,lines)=>{const h=findHeading(doc,head);if(!h)return;const ps=body(h);if(!ps.length)return;setParaText(ps[0],lines.length?lines.join('\n'):'- Nada a considerar');ps.slice(1).forEach(remove)};
- const m2t=x=>`${fmt(num(x))} m²`;const T=k=>(Array.isArray(v[k])?v[k]:[]).filter(r=>r&&String(r.tipo||'').trim()&&r.on!==false);const ab=(k,r)=>ABS_TB.includes(k)&&sacOn(v)&&r.abs===ABS_OPT?' – absorvida pelo uso principal (solo apto para construção)':'';
+ const m2t=x=>`${fmt(num(x))} m²`;const T=k=>(Array.isArray(v[k])?v[k]:[]).filter(r=>r&&String(r.tipo||'').trim()&&r.on!==false);const ab=(k,r)=>(r.a23===A23C?' – benfeitoria voluptuária ou útil feita após a notificação da resolução de expropriar: não se considera (art. 23.º, n.º 2, al. c) do CE)':'')+(ABS_TB.includes(k)&&sacOn(v)&&r.abs===ABS_OPT?' – absorvida pelo uso principal (solo apto para construção)':'')+(r.fund&&r.a23!==A23C&&!(ABS_TB.includes(k)&&sacOn(v)&&r.abs===ABS_OPT)?`\n   Fundamentação do V_Un: ${String(r.fund).trim().replace(/[.\s]+$/,'')}.`:'');
  /* 7.3.1: cada alínea mantém o texto do modelo e leva a resposta (Nada a considerar / área) */
  {const h=findHeading(doc,'Critérios de aptidão do solo');if(h){const ps=body(h);const al=ps.filter(q=>/^-?\s*art\.?º?\s*25/i.test(txt(q).trim()));
     {const pI=ps.find(q=>/^(não )?preenchendo/i.test(txt(q).trim()));if(pI)setParaText(pI,c.sacTotal>0?(c.sofTotal>0?'Preenchendo, na área indicada, os requisitos estipulados nos artigos seguintes, o solo é considerado Apto para construção; a restante área é considerada solo para outros fins:':'Preenchendo os requisitos estipulados nos artigos seguintes, o solo é considerado Apto para construção:'):'Não preenchendo qualquer dos requisitos estipulados nos artigos seguintes, o solo é considerado Inapto para construção e por consequência, solo para outros fins:')}
@@ -748,12 +764,12 @@ function fill73(doc,v,c){const body=h=>{const ps=[];let e=h.nextSibling;while(e)
  put('Edificações e construções',T('edifTipos').filter(r=>num(r.area)>0).map(r=>`- ${r.tipo.trim()}: ${m2t(r.area)}${r.obs?` – ${r.obs}`:''}${ab('edifTipos',r)}`));
  put('Arvoredo',T('arvTipos').filter(r=>num(r.qtd)>0).map(r=>`- ${r.tipo.trim()}: ${fmt(num(r.qtd),0)} un.${r.dap?` (DAP / idade: ${r.dap})`:''}${ab('arvTipos',r)}`));
  put('Outras benfeitorias',T('benfTipos').filter(r=>num(r.qtd)>0).map(r=>`- ${r.tipo.trim()}: ${fmt(num(r.qtd))} ${r.un||'un.'}${r.obs?` – ${r.obs}`:''}${ab('benfTipos',r)}`));
- put('Depreciação da sobrante',T('depTipos').filter(r=>num(r.qtd)>0).map(r=>`- ${r.tipo.trim()}${r.obs?` – ${r.obs}`:''}`));
- put('Indemnização por arrendamento',T('arrTipos').filter(r=>num(r.qtd)>0).map(r=>`- ${r.tipo.trim()}: ${fmt(num(r.qtd),0)} rendas${r.obs?` – ${r.obs}`:''}`));
+ put('Depreciação da sobrante',T('depTipos').filter(r=>num(r.qtd)>0).map(r=>`- ${r.tipo.trim()}${r.obs?` – ${r.obs}`:''}${ab('depTipos',r)}`));
+ put('Indemnização por arrendamento',T('arrTipos').filter(r=>num(r.qtd)>0).map(r=>`- ${r.tipo.trim()}: ${fmt(num(r.qtd),0)} rendas${r.obs?` – ${r.obs}`:''}${ab('arrTipos',r)}`));
  put('Situações com reflexo na parte sobrante',T('depTipos').filter(r=>num(r.qtd)>0||String(r.obs||'').trim()).map(r=>`- ${r.tipo.trim()}${r.obs?` – ${r.obs}`:''}`));
   put('Arrendamentos e outros direitos',T('arrTipos').filter(r=>num(r.qtd)>0||String(r.obs||'').trim()).map(r=>`- ${r.tipo.trim()}${r.obs?` – ${r.obs}`:''}`));
   put('Atividades económicas exercidas',T('intTipos').filter(r=>num(r.qtd)>0||String(r.obs||'').trim()).map(r=>`- ${r.tipo.trim()}${r.obs?` – ${r.obs}`:''}`));
- put('Interrupção da atividade',T('intTipos').filter(r=>num(r.qtd)>0).map(r=>`- ${r.tipo.trim()}${r.obs?` – ${r.obs}`:''}`))}
+ put('Interrupção da atividade',T('intTipos').filter(r=>num(r.qtd)>0).map(r=>`- ${r.tipo.trim()}${r.obs?` – ${r.obs}`:''}${ab('intTipos',r)}`))}
 /* epígrafe do acórdão: Processo · Finalidade · Parcela · Expropriante · Expropriado(s) */
 function acEpigrafe(doc,P,pars){const h=findPara(doc,t=>/^processo:/.test(norm(t)));if(!h)return;
  setParaText(h,`Processo: ${P.proc||'[…]'}`);const ps=nextParas(doc,h,8);const put=(re,val)=>{const q=ps.find(q=>re.test(norm(txt(q))));if(q)setParaText(q,val)};
@@ -968,7 +984,8 @@ function drawCover(g,im,x,y,w,h){const k=Math.max(w/im.naturalWidth,h/im.natural
 async function capaImagem(p,v,mode,warns){if(!mode||mode==='nada')return null;
  const mb=v?.gps?await mapImage(v.gps,v.mapMode==='street'?'street':'satellite',1800,1000):null;
  if(!mb)warns.push(v?.gps?'Capa: sem rede para obter o mapa de localização.':'Capa: a parcela não tem GPS — a localização não entra na capa.');
- const fs=(p.fotos||[]).slice();for(let i=fs.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[fs[i],fs[j]]=[fs[j],fs[i]]}
+ /* primeiro as fotografias marcadas «Capa» na parcela; se faltarem, completa com outras ao acaso */
+ const esc_=(p.fotos||[]).filter(f=>f.capa),fs=(p.fotos||[]).filter(f=>!f.capa);for(let i=fs.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[fs[i],fs[j]]=[fs[j],fs[i]]}fs.unshift(...esc_);
  if(mode==='loc')return mb?{blob:mb,w:1800,h:1000}:null;
  const pics=[];for(const f of fs.slice(0,2)){const r=await get('fotos',f.id);const im=r?.blob&&await blobImg(r.blob);if(im)pics.push(im)}
  if(!mb&&!pics.length)return null;if(mode==='loc2'&&pics.length<2)warns.push('Capa: a parcela tem menos de 2 fotografias.');
@@ -1119,6 +1136,11 @@ async function buildWordARB(ask=true,pp=null,opt={}){try{await avaFontesCalibri(
      const row=(l,x)=>mk([{t:l,b:1},{tab:1},{t:x}],{tab:1});row('Área:',`${fmt(num(r.area))} m²`);row('Configuração:',String(r.config||'').trim());row('Composição:',String(r.comp||'').trim());if(String(r.benf||'').trim())row('Benfeitorias:',String(r.benf).trim())});
     const ef=reflexAns(v).filter(x=>x.inc);if(ef.length){vazio();mk([{t:'Efeitos da expropriação no prédio:',b:1}]);
      ef.forEach(({q,r,d})=>{d=d.replace(/[.\s]+$/,'');vazio();mk([{t:`- ${q.t}`,b:1}]);mk([{t:`${r}${d?(r?'. ':'')+d:''}${r||d?'.':''}`}],{ind:1})})}
+    if(v.expTot==='Requerida pelo expropriado'){vazio();mk([{t:'Expropriação total (art. 3.º, n.º 2 do CE):',b:1},{t:' requerida pelo expropriado.'}]);
+     const yn=x=>x==='Sim'?'verifica-se':x==='Não'?'não se verifica':'por apreciar';
+     mk([{t:`- a) A parte restante não assegura, proporcionalmente, os mesmos cómodos que oferecia todo o prédio: ${yn(v.expTotA)}.`}],{ind:1});
+     mk([{t:`- b) Os cómodos assegurados pela parte restante não têm interesse económico para o expropriado, determinado objetivamente: ${yn(v.expTotB)}.`}],{ind:1});
+     if(String(v.expTotJ||'').trim())mk([{t:String(v.expTotJ).trim()}],{ind:1})}
     remove(pQ)}}}
   const tLoc=findTable(doc,'Endereço/designação')||findTable(doc,'Localização GPS')||findTable(doc,'Descrição sumária');if(tLoc)setRow(tLoc,'Endereço/designação',String(v.local||'').trim()||'—');
   {const pG=findPara(doc,t=>/^localização gps/i.test(t.trim()));if(pG&&pG.getElementsByTagNameNS(WNS,'tab').length){setAfterTab(pG,[v.gps,v.local].filter(Boolean).join(' – ')||'[coordenadas por indicar]')}else if(pG){const g=[v.gps,v.local].filter(Boolean).join(' – ')||'[coordenadas por indicar]';const rs=W_(pG,'r');if(rs.length>=2){const ts=W_(rs[0],'t');if(ts[0]){ts[0].textContent='Localização GPS: ';ts[0].setAttribute('xml:space','preserve')}rs.slice(1).forEach((r,i)=>W_(r,'t').forEach((t,j)=>{t.textContent=i===0&&j===0?g:''}))}else setParaText(pG,`Localização GPS: ${g}`)}}if(tLoc){setRow(tLoc,'Tipo de aglomerado',v.aglomerado==='Outro'?(v.aglomeradoOutro||'Outro'):(v.aglomerado||''));setRow(tLoc,'Localização GPS',[v.gps,v.local].filter(Boolean).join(' – '));setRow(tLoc,'Descrição sumária',v.descParcela||'');setRow(tLoc,'Morfologia',morfTxt(v));{const env=v.envolvente==='Outra'?(v.envolventeOutra||'Outra'):(typeof v.envolvente==='string'?v.envolvente:stv(v.envolvente));setRow(tLoc,'Uso dominante',env)||setRow(tLoc,'Tipo de envolvente',env)}setRow(tLoc,'Grau de consolidação',v.consolidacao==='Outra'?(v.consolidacaoOutra||'Outra'):[v.consolidacao,(v.consolidacaoOutra||'').trim()].filter(Boolean).join('. '));setRow(tLoc,'Centralidade',v.centralidade==='Outra'?(v.centralidadeOutra||'Outra'):(v.centralidade||''));setRow(tLoc,'Infraestruturas',(v.infraTxt||'').trim()||stv(v.infra));
@@ -1154,7 +1176,7 @@ async function buildWordARB(ask=true,pp=null,opt={}){try{await avaFontesCalibri(
    else if(q){const ed=/edificabilidade/i.test(txt(h));const com=String(v.outrasConsid||'').trim().replace(/^nada a considerar\.?$/i,'');
     if(!ed)setParaText(q,com||'Nada a considerar');else{const L=[`De acordo com a análise dos IGT aplicáveis ao local, considera-se que o prédio é passível de: ${c.edCap>0?fmt(c.edCap)+' m²':'[área por indicar]'} de construção.`];
      if(v.edOpt==='Sim'){L.push(`Área de construção já instalada: ${fmt(c.edInst)} m²`);L.push(`Área de construção a considerar: ${fmt(Math.max(0,c.edFolga))} m²`)}if(com)L.push(com);
-     setParaText(q,L[0]);let at=q;L.slice(1).forEach(t=>{const n=q.cloneNode(true);at.parentNode.insertBefore(n,at.nextSibling);setParaText(n,t);at=n})}}}}setRow(tPdm,'Incidência em RAN',stv(v.ran));setRow(tPdm,'Incidência em REN',stv(v.ren));setRow(tPdm,'Incidência em domínio público',stv(v.dominio)||'Não sujeito');setRow(tPdm,'Índice de utilização',v.ius||'');setRow(tPdm,'Índice de ocupação',v.ios||'');setRow(tPdm,'Zonas Non Aedificandi',v.naed||'Não identificadas');setRow(tPdm,'Zona em RAN',stv(v.ran));setRow(tPdm,'Zona em REN',stv(v.ren));comboRows(tPdm,[['Zona em RAN',RANREN],['Zona em REN',RANREN],['Incidência em RAN',RANREN],['Incidência em REN',RANREN],['Incidência em domínio público',RANREN],['Classe de solo',['Rústico','Urbano']],['Categoria',CATEG_SOLO],['Perigosidade de incêndio',['Muito baixa','Baixa','Média','Alta','Muito alta','Não identificada']]]);setRow(tPdm,'Outras servidões',v.servidoes||'Nada a considerar')||setRow(tPdm,'Outras restrições',v.servidoes||'Nada a considerar');
+     setParaText(q,L[0]);let at=q;L.slice(1).forEach(t=>{const n=q.cloneNode(true);at.parentNode.insertBefore(n,at.nextSibling);setParaText(n,t);at=n})}}}}setRow(tPdm,'Incidência em RAN',stv(v.ran));setRow(tPdm,'Incidência em REN',stv(v.ren));setRow(tPdm,'Incidência em domínio público',stv(v.dominio)||'Não sujeito');setRow(tPdm,'Índice de utilização',iusTxt(v));setRow(tPdm,'Índice de ocupação',v.ios||'');setRow(tPdm,'Zonas Non Aedificandi',v.naed||'Não identificadas');setRow(tPdm,'Zona em RAN',stv(v.ran));setRow(tPdm,'Zona em REN',stv(v.ren));comboRows(tPdm,[['Zona em RAN',RANREN],['Zona em REN',RANREN],['Incidência em RAN',RANREN],['Incidência em REN',RANREN],['Incidência em domínio público',RANREN],['Classe de solo',['Rústico','Urbano']],['Categoria',CATEG_SOLO],['Perigosidade de incêndio',['Muito baixa','Baixa','Média','Alta','Muito alta','Não identificada']]]);setRow(tPdm,'Outras servidões',v.servidoes||'Nada a considerar')||setRow(tPdm,'Outras restrições',v.servidoes||'Nada a considerar');
    {const a=stv(v.fgcPrim),b=stv(v.fgcSec);if(rowBy(tPdm,'Faixas de gestão')){if(a||b)setRow(tPdm,'Faixas de gestão',[a?'Rede primária: '+a:'',b?'Rede secundária: '+b:''].filter(Boolean).join('\n'));else setRow(tPdm,'Faixas de gestão','Não sujeito')}}}
   {const hR=findHeading(doc,'Resumo de apreciação');if(hR){const q=nextParas(doc,hR,3).find(q=>norm(txt(q)).startsWith('de acordo com a análise dos instrumentos'));if(q){const t=(v.analiseTxt||'').trim();
    const lst=[];let e=q.nextSibling;while(e){if(e.nodeType===1){if(e.localName!=='p')break;const st=e.getElementsByTagNameNS(WNS,'pStyle')[0];if(st&&/Cabealho/.test(st.getAttributeNS(WNS,'val')))break;if(e.getElementsByTagNameNS('urn:schemas-microsoft-com:office:office','OLEObject').length)break;if(/^-/.test(txt(e).trim()))lst.push(e);else if(txt(e).trim())break}e=e.nextSibling}
@@ -1185,13 +1207,16 @@ async function buildWordARB(ask=true,pp=null,opt={}){try{await avaFontesCalibri(
     const pP=sec.find(q=>q.localName==='p'&&/^parametriza/i.test(txt(q).trim())),t=sec.find(q=>q.localName==='tbl');
     const notasP=()=>{let e=t&&t.nextSibling;for(let k=0;e&&k<4;e=e.nextSibling){if(e.nodeType!==1)continue;k++;if(e.localName==='p'&&/^notas\s*:?$/i.test(txt(e).trim()))return e;if(e.localName==='p'&&/Cabealho/.test((e.getElementsByTagNameNS(WNS,'pStyle')[0]||{getAttributeNS:()=>''}).getAttributeNS(WNS,'val')))break}return null};
      if(c.sacTotal>0&&t&&listaUtil(v)&&c.trTAC>0){{const np=notasP();if(np){const nx=np.nextSibling;remove(np);if(nx&&nx.nodeType===1&&nx.localName==='p'&&!txt(nx).trim())remove(nx)}}const ce=num(v.corrEnv),je=String(v.jEnv||'').trim().replace(/[.\s]+$/,'');if(pP)setParaText(pP,`Método comparativo (art. 26.º, n.º 2): média aritmética atualizada dos preços unitários das transações de prédios com características idênticas, na mesma freguesia e nas limítrofes (${c.trTACw}): ${fmt(c.trTAC)} €/m²${ce?`; correção pela envolvente urbana: ${fmt(ce)} %${je?` (${je})`:''}`:''}. Valor unitário: ${fmt(c.vunSAC)} €/m².`);remove(t)}
-     else if(c.sacTotal>0&&t){const fv=k=>v[k]===undefined||v[k]===''?1:num(v[k]);const ius=v.iusN!==undefined&&v.iusN!==''?num(v.iusN):num(v.ius);
+     else if(c.sacTotal>0&&t){const fv=k=>v[k]===undefined||v[k]===''?1:num(v[k]);const ius=iusOf(v);
       {const rs=kids(t,'tr'),k0=r=>norm(txt(kids(r,'tc')[0]||r)).trim();if(!rs.some(r=>k0(r)==='ius')){const rC=rs.find(r=>k0(r)==='crc'||k0(r)==='cc');if(rC){const n=rC.cloneNode(true);rC.parentNode.insertBefore(n,rC.nextSibling);const cs=kids(n,'tc');setCellText(cs[0],'IUS');setCellText(cs[1],'Índice de utilização do solo (m²/m²)');cs.slice(2).forEach(x=>setCellText(x,''))}}}
       const val={'cc':fmt(r2(num(v.cc))),'crc':fmt(r2(num(v.cc))),'ius':fmt(r2(ius)),'au/ab':fmt(r2(v.auab===undefined||v.auab===''?0.85:num(v.auab))),'ifu':fmt(c.ifFat),'etr':fmt(r2(fv('ei'))),'inr':fmt(r2(fv('ir'))),'afu':fmt(r2(fv('afu'))),'agu':fmt(r2(fv('afu')))};
-      const jus={'cc':v.jCRC,'crc':v.jCRC,'ius':[String(v.iusIgt||'').trim(),String(v.jIUS||'').trim()].filter(Boolean).join(' – '),'au/ab':v.jAuAb,'ifu':v.jIFU,'etr':v.jETR,'inr':v.jINR,'afu':v.jAFU,'agu':v.jAFU};
+      const jus={'cc':v.jCRC,'crc':v.jCRC,'ius':(v.a2612==='Aplica-se'?[`Art. 26.º, n.º 12 do CE: IUS médio das construções existentes ou possíveis na envolvente de 300 m do limite da parcela (${fmt(iusOf(v))} m²/m²)`,String(v.a2612j||'').trim()]:[String(v.iusIgt||'').trim(),String(v.jIUS||'').trim()]).filter(Boolean).join(' – '),'au/ab':v.jAuAb,'ifu':v.jIFU,'etr':v.jETR,'inr':v.jINR,'afu':v.jAFU,'agu':v.jAFU};
       kids(t,'tr').forEach((r,ri)=>{const cs=kids(r,'tc');if(cs.length<3)return;const k=norm(txt(cs[0])).trim(),d=norm(txt(cs[1]));if(val[k]!==undefined){setCellText(cs[2],val[k]);if((k==='crc'||k==='cc')&&!/€/.test(txt(cs[1])))setCellText(cs[1],txt(cs[1]).trim()+' (€/m²)')}else if(d.startsWith('valor unitário')){setCellText(cs[2],fmt(c.vunSAC));if(!/€/.test(txt(cs[1])))setCellText(cs[1],txt(cs[1]).trim()+' (€/m²)')}});
       {const np=notasP();const L=[['CRC',jus.crc],['IUS',jus.ius],['Au/Ab',jus['au/ab']],['IFU',jus.ifu],['ETR',jus.etr],['INR',jus.inr],['AGU',jus.agu]].filter(x=>String(x[1]||'').trim()).map(([k,x])=>`- ${k}: ${String(x).trim().replace(/[.\s]+$/,'')}.`);if(np&&L.length){let at=np;L.forEach(x=>{const q=np.cloneNode(true);at.parentNode.insertBefore(q,at.nextSibling);setParaText(q,x);at=q})}}}
     else{if(pP)setParaText(pP,'- Nada a considerar');if(t)remove(t)}}}
+  {/* 8.3: fundamentação do V_Un de cada finalidade do solo para outros fins */const FL=(Array.isArray(v.sofTipos)?v.sofTipos:[]).filter(r=>elegivel(v,'sofTipos',r,'area')&&String(r.fund||'').trim());
+   if(FL.length){const h=findHeading(doc,'Solo para outros fins - parametriza')||findHeading(doc,'Solo para outros fins');if(h){let q=null,e=h.nextSibling;while(e){if(e.nodeType===1){if(e.localName==='p'){const st=e.getElementsByTagNameNS(WNS,'pStyle')[0];if(st&&/Cabealho/.test(st.getAttributeNS(WNS,'val'))&&txt(e).trim())break;q=e;if(txt(e).trim())break}}e=e.nextSibling}
+    if(q){const L=FL.map(r=>`- ${String(r.tipo).trim()}: V_Un ${fmt(num(r.vun))} €/m² – ${String(r.fund).trim().replace(/[.\s]+$/,'')}.`);if(/^-?\s*nada a considerar/i.test(txt(q).trim())||!txt(q).trim())setParaText(q,L.join('\n'));else{const n=q.cloneNode(true);q.parentNode.insertBefore(n,q.nextSibling);setParaText(n,L.join('\n'))}}}}}
   {if(listaUtil(v)&&c.trTOF>0&&c.sofTotal>0){const h=findHeading(doc,'Solo para outros fins - parametriza')||findHeading(doc,'Solo para outros fins');if(h){const q=nextParas(doc,h,2).find(x=>!txt(x).trim());const tx=`Método comparativo (art. 27.º, n.º 1): média aritmética atualizada dos preços unitários das transações de prédios com características idênticas (${c.trTOFw}): ${fmt(c.trTOF)} €/m².`;if(q)setParaText(q,tx)}}}
   /* 7.9 Caraterização do solo apto para construção */
   {const h=findHeading(doc,'Caraterização do solo apto para construção');if(h){const sec=[];let e=h.nextSibling;while(e){if(e.nodeType===1){if(e.localName!=='p')break;const st=e.getElementsByTagNameNS(WNS,'pStyle')[0];if(st&&/Cabealho[12]/.test(st.getAttributeNS(WNS,'val'))&&txt(e).trim())break;if(e.getElementsByTagNameNS(WNS,'br').length&&[...e.getElementsByTagNameNS(WNS,'br')].some(b=>b.getAttributeNS(WNS,'type')==='page'))break;sec.push(e)}e=e.nextSibling}
@@ -1207,7 +1232,7 @@ async function buildWordARB(ask=true,pp=null,opt={}){try{await avaFontesCalibri(
   fill73(doc,v,c);
   // 8 Excel 2
   if(oles[1]){{const ole=oles[1].getElementsByTagNameNS('urn:schemas-microsoft-com:office:office','OLEObject')[0],rid=ole&&ole.getAttributeNS(RNS,'id'),rel=rid&&[...rels.documentElement.childNodes].find(r=>r.nodeType===1&&r.getAttribute('Id')===rid);if(rel){const sl=await xlsxSlots(await zip.file('word/'+rel.getAttribute('Target')).async('uint8array'));if(sl){LINE_SLOTS=sl.slots;XL_TOTAL_ROW=sl.total}}}
-   const a=v.ifAtr||{};const iusUsed=r2(v.iusN!==undefined&&v.iusN!==''?num(v.iusN):num(v.ius));const fv=k=>r2(v[k]===undefined||v[k]===''?1:num(v[k]));const auab=r2(v.auab===undefined||v.auab===''?0.85:num(v.auab));
+   const a=v.ifAtr||{};const iusUsed=r2(iusOf(v));const fv=k=>r2(v[k]===undefined||v[k]===''?1:num(v[k]));const auab=r2(v.auab===undefined||v.auab===''?0.85:num(v.auab));
    const over={};const CLx=calcLines(v);for(const [k,slots] of Object.entries(LINE_SLOTS)){const n=(CLx[k]||[]).length;if(n>slots.length)over[k]=n}
    Object.entries(over).forEach(([k,n])=>warns.push(`Quadro de cálculo: a linha ${k.slice(1)} tem ${n} registos e o Excel só tem ${LINE_SLOTS[k].length} posições — os restantes não foram transcritos.`));
    await replaceOle(zip,rels,ctDoc,oles[1],d=>{IF_ITEMS.forEach(([k],i)=>xlSet(d,`J${4+i}`,c.sacTotal>0&&ifVal(v,k)!==undefined&&ifVal(v,k)!==''?num(ifVal(v,k)):null));xlFormula(d,'J14','ROUND(SUM(J4:J13)/100,2)',c.ifFat);
@@ -1224,7 +1249,9 @@ async function buildWordARB(ask=true,pp=null,opt={}){try{await avaFontesCalibri(
     R.push({c:['','','','','','','','','Total calculado','',fmt(c.total)],b:1,line:1,al:[,,,,,,,,,,'r']});
     return tableImage(R,[4,9,30,7,7,7,7,7,9,9,12],'',w,h)})}
   // 9
-  const pV=findPara(doc,t=>/^de acordo com (a análise e )?os cálculos, o valor de justa/.test(norm(t)));if(pV){const nx=nextParas(doc,pV,1)[0];if(nx&&/^\(.*\)$/.test(norm(txt(nx)))){setParaText(pV,`De acordo com a análise e os cálculos, o valor de justa indemnização é de: ${fmt(c.total)} €`);setParaText(nx,`(${lc(c.extenso)})`)}else setParaText(pV,`De acordo com a análise e os cálculos, o valor de justa indemnização é de ${fmt(c.total)} € (${lc(c.extenso)}).`)}
+  const pV=findPara(doc,t=>/^de acordo com (a análise e )?os cálculos, o valor de justa/.test(norm(t)));if(pV){const nx=nextParas(doc,pV,1)[0];if(nx&&/^\(.*\)$/.test(norm(txt(nx)))){setParaText(pV,`De acordo com a análise e os cálculos, o valor de justa indemnização é de: ${fmt(c.total)} €`);setParaText(nx,`(${lc(c.extenso)})`)}else setParaText(pV,`De acordo com a análise e os cálculos, o valor de justa indemnização é de ${fmt(c.total)} € (${lc(c.extenso)}).`)
+   if(cur.fase==='PER'&&v.acCompRel==='Sim'&&num(v.acValor)>0){/* comparação opcional com o acórdão arbitral */const a=num(v.acValor),d=c.total-a,pc=d/a*100;let at=nextParas(doc,pV,1)[0];if(!(at&&/^\(.*\)$/.test(norm(txt(at)))))at=pV;
+    [``,`Para comparação, o valor fixado no acórdão arbitral${isDate(cur.v.dataAcArb)?` de ${fmtDate(cur.v.dataAcArb)}`:''} foi de ${fmt(a)} €, pelo que o valor agora apurado ${Math.abs(d)<0.005?'coincide com o do acórdão':`é ${d>0?'superior':'inferior'} em ${fmt(Math.abs(d))} € (${fmt(Math.abs(pc),1)} %)`}.`].forEach(t=>{const q=pV.cloneNode(true);at.parentNode.insertBefore(q,at.nextSibling);setParaText(q,t);W_(q,'b').forEach(remove);at=q})}}
   // 10
   const hLa=findHeading(doc,'Posições discordantes')||findHeading(doc,'Laudos Individuais');if(hLa){const q=nextParas(doc,hLa,3).find(q=>txt(q).trim());if(q)setParaText(q,v.discord||'Nada a considerar')}
   // 11
@@ -1256,7 +1283,7 @@ async function fillHeaders(zip,P,pn){
    Array.from(hd.getElementsByTagNameNS(WNS,'p')).forEach(q=>{const rs=Array.from(q.getElementsByTagNameNS(WNS,'r')).filter(r=>r.getElementsByTagNameNS(WNS,'t').length);const t=rs.map(r=>txt(r)).join('');if(!t.trim())return;
     const setRun=(r,x)=>{const ts=r.getElementsByTagNameNS(WNS,'t');ts[0].textContent=x;ts[0].setAttribute('xml:space','preserve');Array.from(ts).slice(1).forEach(y=>y.parentNode.removeChild(y))};
     if(/Proc\./.test(t)){rs.forEach(r=>{const x=txt(r);if(/^\s*Proc\./.test(x)){setRun(r,`Proc. ${String(P.proc||'').trim()||'[n.º por indicar]'}`);ch=true}else if(/^\s*Parcela\b/.test(x)){setRun(r,/^\s*parcela/i.test(pn||'')?String(pn).trim():`Parcela ${pn||''}`);ch=true}});return}
-    if(q.getElementsByTagNameNS(WNS,'pBdr').length&&String(P.intervencao||'').trim()){setRun(rs[0],String(P.intervencao).replace(/\s*\n\s*/g,' ').trim());rs.slice(1).forEach(r=>r.parentNode.removeChild(r));ch=true}});
+    if(q.getElementsByTagNameNS(WNS,'pBdr').length&&String(P.intervCurta||P.intervencao||'').trim()){setRun(rs[0],String(String(P.intervCurta||'').trim()||P.intervencao).replace(/\s*\n\s*/g,' ').trim());rs.slice(1).forEach(r=>r.parentNode.removeChild(r));ch=true}});
    if(ch)zip.file(hn,new XMLSerializer().serializeToString(hd))}
 }
 /* capa: estimativa das linhas ocupadas pelo quadro (texto comprido parte em mais linhas) */
@@ -1330,6 +1357,8 @@ async function buildWordARBMulti(pars,ask=false,opt={}){const P=cur.v,ev=EVENTOS
   {const anc=findHeading(doc,END);const isH1=e=>e.localName==='p'&&styleOf(e)==='Cabealho1'&&txt(e).trim();
    for(const tit of ['Posições discordantes','Quesitos']){const blocos=[];for(const h of bodyEls(doc).filter(e=>isH1(e)&&norm(txt(e)).startsWith(norm(tit)))){const b=[h];let x=h.nextSibling;while(x&&!(x.nodeType===1&&isH1(x))){if(x.nodeType===1)b.push(x);x=x.nextSibling}blocos.push(b)}
     if(blocos.length<2)continue;const corpo=b=>b.slice(1).map(e=>norm(txt(e))).join('|');
+    /* quesitos: cada parcela pode ter os seus – ficam na análise de cada parcela; só passam a bloco comum se forem iguais em todas */
+    if(tit==='Quesitos'&&new Set(blocos.map(corpo)).size>1)continue;
     const dflt=c=>!c.replace(/\|/g,'').replace(/nada a (considerar|registar)|não foram apresentados quesitos|sem quesitos|pelo (expropriante|expropriado|tribunal)|[-–—.\s]/g,'');
     let k=blocos.findIndex(b=>!dflt(corpo(b)));if(k<0)k=0;const fica=blocos[k];
     blocos.forEach((b,i)=>{if(i!==k){if(!dflt(corpo(b))&&corpo(b)!==corpo(fica))warns.push(`${tit}: ${txt(b[0]).split('–').pop().trim()} tem texto próprio, diferente do que ficou no relatório (o de ${txt(fica[0]).split('–').pop().trim()}) – confirme e junte-o à mão, se necessário.`);b.forEach(remove)}});
@@ -1341,6 +1370,10 @@ async function buildWordARBMulti(pars,ask=false,opt={}){const P=cur.v,ev=EVENTOS
 /* regras do CE verificadas no formulário (avisos; o perito decide e fundamenta) */
 const rrOn=x=>{const t=norm(stv(x));return !!t&&!/^n[ãa]o\b/.test(t)&&!/^n[ãa]o /.test(t)};
 function regrasCE(v){const out=[];const c=compute(v);const el=mlist(v.elementos);
+ {const a23=['edifTipos','arvTipos','benfTipos'].some(k=>(Array.isArray(v[k])?v[k]:[]).some(r=>r&&r.on!==false&&r.a23===A23C));if(a23&&!isDate(cur&&cur.v&&cur.v.notifRes))out.push('Art. 23.º, n.º 2, c): há benfeitorias marcadas como posteriores à notificação – indique nos Dados do processo a data da notificação da resolução de expropriar (art. 10.º, n.º 5)')}
+ if(sacOn(v)&&/verde|lazer|equipamento|infraestrutura/i.test(String(stv(v.categoria)||'')+' '+String(v.classPdm||''))&&v.a2612!=='Aplica-se')out.push('Categoria de espaço verde / lazer / equipamentos: confirmar se se aplica o art. 26.º, n.º 12 (valor médio das construções na envolvente de 300 m), se o prédio foi adquirido antes da entrada em vigor do plano');
+ if(v.a2612==='Aplica-se'&&!(num(v.a2612iu)>0))out.push('Art. 26.º, n.º 12: falta o IUS médio da envolvente de 300 m');
+ if(v.expTot==='Requerida pelo expropriado'&&(!v.expTotA||!v.expTotB))out.push('Expropriação total requerida (art. 3.º, n.º 2): responda às alíneas a) e b)');
  if(v.listaTr==='Recebida – não utilizável'&&!String(v.listaMot||'').trim())out.push('Passo 4: indicar porque a lista de transações não é utilizável (arts. 26.º, n.º 4, e 27.º, n.º 3)');
  if(listaUtil(v)&&!(Array.isArray(v.trans)?v.trans:[]).some(r=>r&&num(r.preco)>0))out.push('Passo 4: lista de transações utilizável, mas sem transações introduzidas');
  if(reflexAns(v).some(x=>x.r==='Sim')&&!(Array.isArray(v.depTipos)?v.depTipos:[]).some(r=>r&&num(r.qtd)>0))out.push('Efeitos da expropriação assinalados em 2.5 sem depreciação da sobrante em 7 (art. 29.º, n.º 2) – confirmar se há prejuízo a indemnizar');
@@ -1351,7 +1384,7 @@ function regrasCE(v){const out=[];const c=compute(v);const el=mlist(v.elementos)
  if(num(v.sacC)>0&&!el.some(e=>/PDM|regulamento|IGT|planeamento/i.test(e))&&!v.pdmOrdImg)out.push('Art. 25.º, n.º 2, c): sem extrato / regulamento do IGT nos elementos recebidos (passo 1) nem extrato carregado em 2.3');
  if(num(v.sacD)>0&&!el.some(e=>/alvará|licença/i.test(e)))out.push('Art. 25.º, n.º 2, d): falta o alvará de loteamento ou a licença de construção nos elementos recebidos (passo 1); confirmar que o processo se iniciou antes da notificação do art. 10.º, n.º 5');
  if((Array.isArray(v.edifTipos)?v.edifTipos:[]).some(r=>r&&r.on&&num(r.area)>0&&!/absorv/i.test(String(r.abs||''))))out.push('Art. 28.º, n.ºs 2 e 3: há construções avaliadas autonomamente em solo apto para construção – confirmar se o aproveitamento normal do solo depende da sua demolição (se depender, o valor é o do solo deduzido dos custos de demolição e desalojamento)');
- const ius=v.iusN!==undefined&&v.iusN!==''?num(v.iusN):num(v.ius);
+ const ius=iusOf(v);
  if(!ius)out.push('IUS em falta (passo 2.3 – edificabilidade a considerar)');else if(ius<0.05||ius>5)out.push(`IUS de ${fmt(ius)} m²/m², fora do intervalo contextual 0,05 – 5,00`);
  if(c.edCap>0){if(c.edFolga<=0)out.push('Edificabilidade: a construção já instalada esgota a área de construção permitida no prédio (folga ≤ 0)');else{const pot=r2(c.sacTotal*r2(ius));if(c.edFolga<pot)out.push(`Edificabilidade: pouca folga – a folga (${fmt(c.edFolga)} m²) é inferior à edificabilidade da área apta da parcela (${fmt(pot)} m²)`)}}
  if(listaUtil(v)){const ce=num(v.corrEnv);if(Math.abs(ce)>10)out.push(`Art. 26.º, n.º 2: a correção pela envolvente não pode exceder 10 % (indicado ${fmt(ce)} %)`);if(ce&&!String(v.jEnv||'').trim())out.push('Correção pela envolvente sem justificação');if(!(c.trTAC>0))out.push('Método comparativo: sem transações TAC válidas no passo 4');return out}
@@ -1366,6 +1399,17 @@ function edifInstTxt(v){const R=(v.edifInst||[]).filter(r=>r&&(r.tipo||r.ai||r.a
  const L=R.map(r=>{const pt=[r.ai?`implantação ${fmt(num(r.ai),2)} m²`:'',r.abc?`área bruta de construção ${fmt(num(r.abc),2)} m²`:'',r.pisos?`${String(r.pisos).trim()} piso(s)`:''].filter(Boolean);return `${String(r.tipo||'Construção').trim()}${pt.length?': '+pt.join(', '):''}${r.obs?` – ${String(r.obs).trim()}`:''}`});
  if(R.length>1){const ai=R.reduce((s,r)=>s+num(r.ai),0),abc=R.reduce((s,r)=>s+num(r.abc),0);if(ai||abc)L.push(`Total: ${[ai?`implantação ${fmt(ai,2)} m²`:'',abc?`área bruta de construção ${fmt(abc,2)} m²`:''].filter(Boolean).join('; ')}`)}
  return L.join('\n')}
+/* lista de verificação antes da versão final: coerência de datas, valores, fotografias, quesitos e regras do CE */
+function coerencia(p){const v=p.rel.v,out=[];const P=cur.v;const D=k=>{const x=parDate(p,k);return isDate(x)?x:''};const dup=D('dup')||(isDate(P.dataRef)?P.dataRef:''),posse=D('posse'),vis=visOf(p)?.data||'',rel=isDate(v.acData)?v.acData:'',nt=isDate(P.notifRes)?P.notifRes:'',ac=isDate(P.dataAcArb)?P.dataAcArb:'';
+ const ord=(a,la,b,lb)=>{if(a&&b&&a>b)out.push(`Datas: ${la} (${fmtDate(a)}) é posterior a ${lb} (${fmtDate(b)}) – confirmar`)};
+ ord(nt,'a notificação da resolução de expropriar',dup,'a DUP / data de referência');ord(dup,'a DUP / data de referência',vis,'a visita ao local');ord(dup,'a DUP',posse,'a posse administrativa');ord(vis,'a visita ao local',rel,'a data do relatório');
+ if(cur.fase==='PER'){ord(dup,'a DUP',ac,'o acórdão arbitral');ord(ac,'o acórdão arbitral',vis,'a visita dos peritos')}
+ if(cur.fase!=='VAPRM'){const c=compute(v);if(!(c.total>0))out.push('Valor de justa indemnização nulo – verificar áreas, quantidades e V_Un');
+  const semVun=GRUPOS.flatMap(([k,,l,tb,q])=>(Array.isArray(v[tb])?v[tb]:[]).filter(r=>elegivel(v,tb,r,q)&&!(num(r.vun)>0)).map(r=>`${l} › ${r.tipo}`));if(semVun.length)out.push(`Situações com área / quantidade mas sem V_Un: ${semVun.join('; ')}`);
+  regrasCE(v).forEach(x=>out.push('CE: '+x))}
+ const F=p.fotos||[];if(!F.length)out.push('Parcela sem fotografias');else{const sl=F.filter(f=>!String(f.caption||'').trim()).length;if(sl)out.push(`${sl} fotografia(s) sem legenda`)}
+ for(const [k,l] of [['qExp','Expropriante'],['qExpd','Expropriado'],['qTrib','Tribunal']]){const n=(Array.isArray(v[k])?v[k]:[]).filter(r=>r&&String(r.q||'').trim()&&!String(r.r||'').trim()).length;if(n)out.push(`Quesitos (${l}): ${n} sem resposta`)}
+ return [...new Set(out)]}
 function pendLista(p){const v=p.rel.v,out=[];PAR_SECTION.f.filter(f=>f.r&&isEmpty(v[f.id])).forEach(f=>out.push(f.l));if(!visOf(p)?.data)out.push('Visita ao local (data)');if(sacOn(v)&&ABS_TB.some(tb=>(v[tb]||[]).some(r=>r&&r.on&&num(r[tb==='edifTipos'?'area':'qtd'])>0&&!r.abs)))out.push('8.4–8.6: com solo apto para construção, decidir em cada situação se é elegível ou absorvida pelo uso principal');{const CL=calcLines(v);if(Object.values(CL).some(L=>L.some(x=>!x.vun)))out.push('Cap. 8: V_Un em falta numa situação elegível do 8.3–8.9')}{const ri=refInfo(p);if(!ri.d)out.push('Data de referência (sem DUP: definir no processo a data, o motivo e a evidência)');else if(!ri.dup&&!ri.par&&!ri.txt)out.push('Data de referência sem DUP: indicar a evidência / documento que a suporta')}{const c=compute(v);if(sobLinhas(v).length&&Math.abs(c.sobDif)>=0.005)out.push(`Zonas da área sobrante: a soma não confere com a área sobrante (diferença ${fmt(c.sobDif,2)} m²)`)}
  if(cur.fase!=='VAPRM')out.push(...regrasCE(v));
  if(EVENTOS[cur.fase].modelo)SECS().forEach(s=>s.f.filter(f=>f.r&&(!f.show||f.show(v))&&isEmpty(v[f.id])).forEach(f=>out.push(`${s.t} › ${f.l}`)));return out}
@@ -1377,22 +1421,23 @@ const AMBITO_DEF={VAPRM:'uma',ARB:'uma',PER:'varias',BV:'varias'};
 function ambitoOf(){if(!cur)return 'uma';if(cur.fase==='VAPRM')return 'uma';/* VAPRM conjunta ainda sem modelo (o modelo VAPRM é todo da parcela) */return (cur.layout&&cur.layout.ambito)||AMBITO_DEF[cur.fase]||'uma'}
 function renderRelatorio(M){curParcela=curParcela||null;const ev=EVENTOS[cur.fase],L=cur.layout=cur.layout||{},multi=ambitoOf()==='varias';
  const pars=cur.parcelas.slice().sort((a,b)=>parSortKey(a)-parSortKey(b));const todas=!multi&&L.parSel==='*'&&pars.length>1;const sel1=(curParcela&&pars.includes(curParcela))?curParcela:pars[0];
- const incl=multi?grupoPars():todas?pars:(sel1?[sel1]:[]);const pp=pendProc();const pl=incl.map(p=>({p,l:pendLista(p)}));const nP=pp.length+pl.reduce((n,x)=>n+x.l.length,0);
+ const incl=multi?grupoPars():todas?pars:(sel1?[sel1]:[]);const pp=pendProc();const pl=incl.map(p=>({p,l:pendLista(p)}));const nP=pp.length+pl.reduce((n,x)=>n+x.l.length,0);const cl=ev.modelo?incl.map(p=>({p,l:coerencia(p)})).filter(x=>x.l.length):[];const nC=cl.reduce((n,x)=>n+x.l.length,0);
  const chk=nP?`<div class="warnbox"><b>Verificação: ${nP} ponto(s) por preencher ou a confirmar.</b> Pode gerar na mesma; o documento sai com esses campos vazios.${pp.length?`<div style="margin-top:6px"><b>Processo</b> <a href="#" data-goto="proc">abrir</a><br>${pp.map(esc).join('<br>')}</div>`:''}${pl.filter(x=>x.l.length).map(x=>`<div style="margin-top:6px"><b>${esc(x.p.nome)}</b> <a href="#" data-gopar="${x.p.id}">abrir</a><br>${x.l.map(esc).join('<br>')}</div>`).join('')}</div>`:`<div class="okbox">Verificação: está tudo preenchido.</div>`;
+ const coer=nC?`<div class="warnbox" style="margin-top:8px"><b>Lista de verificação: ${nC} ponto(s) de coerência a confirmar</b> (datas, valores, fotografias, quesitos e regras do CE). Não impede gerar.${cl.map(x=>`<div style="margin-top:6px"><b>${esc(x.p.nome)}</b> <a href="#" data-gopar="${x.p.id}">abrir</a><br>${x.l.map(esc).join('<br>')}</div>`).join('')}</div>`:(ev.modelo&&incl.length?'<div class="okbox" style="margin-top:8px">Lista de verificação: sem incoerências detetadas.</div>':'');
  M.innerHTML=`<h2>Relatório – ${esc(ev.nome)}</h2>${!ev.modelo?`<div class="warnbox">O modelo de <b>${esc(ev.nome)}</b> está em estabilização. A geração de documentos fica disponível quando o modelo estiver ligado.</div>`:''}
  ${!pars.length?`<div class="warnbox">Crie primeiro uma parcela no processo.</div>`:`
  <div class="step">1 · Parcelas a incluir</div>
  <div class="row"><div style="flex-basis:100%"><label>Parcelas por relatório</label><select id="rlAmb"><option value="uma" ${!multi?'selected':''}>Um relatório autónomo por parcela${AMBITO_DEF[cur.fase]==='uma'?' (por defeito)':''}</option>${cur.fase==='VAPRM'?'':`<option value="varias" ${multi?'selected':''}>Um relatório com várias parcelas (texto comum + análise de cada parcela)${AMBITO_DEF[cur.fase]==='varias'?' (por defeito)':''}</option>`}</select></div>
  ${multi?`<div style="flex-basis:100%"><div class="mgrid">${pars.map(p=>`<label class="chk"><input type="checkbox" data-grp="${p.id}" ${incl.includes(p)?'checked':''}> ${esc(p.nome)}${parExpd(p).length?` <span class="muted">– ${esc(parExpd(p).map(x=>x.nome).join('; '))}</span>`:''}</label>`).join('')}</div></div>`:`<div style="flex-basis:100%"><label>Parcela</label><select id="rlPar">${pars.length>1?`<option value="*" ${todas?'selected':''}>Todas – um relatório para cada parcela (${pars.length})</option>`:''}${pars.map(p=>`<option value="${p.id}" ${!todas&&p===sel1?'selected':''}>${esc(p.nome)}${parExpd(p).length?' – '+esc(parExpd(p).map(x=>x.nome).join('; ')):''}</option>`).join('')}</select></div>`}</div>
- <div class="step">2 · Verificação</div>${chk}
+ <div class="step">2 · Verificação</div>${chk}${coer}
  <div class="step">3 · Opções de geração</div>
   ${ev.modelo?tplSelectHTML(cur.fase):''}
- <div class="row"><div><label>Fotografias por linha</label><select data-lay="fotoCols">${[[1,'1 coluna'],[2,'2 colunas'],[3,'3 colunas']].map(([k,l])=>`<option value="${k}" ${+(L.fotoCols||2)===k?'selected':''}>${l}</option>`).join('')}</select></div><div><label>Imagem da capa</label><select data-lay="capaImg">${[['nada','Nada'],['loc','Localização (mapa)'],['loc2','Localização + 2 fotografias aleatórias']].map(([k,l])=>`<option value="${k}" ${(L.capaImg||'nada')===k?'selected':''}>${l}</option>`).join('')}</select></div><div><label>Índice ao abrir no Word</label><select data-lay="tocUpd">${[['perguntar','Perguntar se atualiza (recomendado)'],['nao','Não perguntar (atualizar com F9)']].map(([k,l])=>`<option value="${k}" ${(L.tocUpd||'perguntar')===k?'selected':''}>${l}</option>`).join('')}</select><div class="muted">O Word pergunta «Este documento contém campos que podem referenciar outros ficheiros. Quer atualizar os campos?» – responda Sim para acertar o índice e as páginas.</div></div></div>
+ <div class="row"><div><label>Fotografias por linha</label><select data-lay="fotoCols">${[[1,'1 coluna'],[2,'2 colunas'],[3,'3 colunas']].map(([k,l])=>`<option value="${k}" ${+(L.fotoCols||2)===k?'selected':''}>${l}</option>`).join('')}</select></div><div><label>Imagem da capa</label><select data-lay="capaImg">${[['nada','Nada'],['loc','Localização (mapa)'],['loc2','Localização + 2 fotografias (as marcadas «Capa»; senão, ao acaso)']].map(([k,l])=>`<option value="${k}" ${(L.capaImg||'nada')===k?'selected':''}>${l}</option>`).join('')}</select></div><div><label>Índice ao abrir no Word</label><select data-lay="tocUpd">${[['perguntar','Perguntar se atualiza (recomendado)'],['nao','Não perguntar (atualizar com F9)']].map(([k,l])=>`<option value="${k}" ${(L.tocUpd||'perguntar')===k?'selected':''}>${l}</option>`).join('')}</select><div class="muted">O Word pergunta «Este documento contém campos que podem referenciar outros ficheiros. Quer atualizar os campos?» – responda Sim para acertar o índice e as páginas.</div></div></div>
  <div class="step">4 · Gerar</div>
  ${ev.modelo?`<div class="fluxo">
  <div class="seg" role="tablist"><button data-fx="draft" class="${(L.fx||'draft')==='draft'?'on':''}">A · Draft para debate</button><button data-fx="final" class="${L.fx==='final'?'on':''}">B · Versão final</button></div>
  ${(L.fx||'draft')==='draft'?`<div class="muted">O Word é feito a partir do formulário, com as fotografias da fototeca, e o nome termina em «_Draft_00». Envie-o aos colegas para debate.</div>
- <div class="relbtns ev-${cur.fase}"><button id="rlPrev" class="secondary">👁 Pré-visualizar</button><button id="rlWord">📄 Gerar Word (Draft 00)</button>${!multi&&!todas?`<button id="rlPasta" class="secondary">🗂 Pasta (Draft)</button>`:''}<button id="rlPdf" class="secondary">🖨 PDF de consulta</button></div>`
+ <div class="relbtns ev-${cur.fase}"><button id="rlPrev" class="secondary">👁 Pré-visualizar</button><button id="rlWord">📄 Gerar Word (Draft 00)</button>${!multi?`<button id="rlPasta" class="secondary">🗂 ${todas?'Pastas (Draft, ZIP)':'Pasta (Draft)'}</button>`:''}<button id="rlPdf" class="secondary">🖨 PDF de consulta</button></div>`
  :multi?`<div class="muted">A versão final trata uma parcela de cada vez: em «Parcelas por relatório», escolha uma parcela.</div>`
  :`<ol class="fx-ol"><li><b>Importe o relatório já debatido</b> (Word, com qualquer nome). A app põe-lhe as fotografias da fototeca e dá-lhe o nome <b>${esc(relBase(incl[0]||curParcela))}.docx</b>. O texto não é alterado.
   <div class="relbtns ev-${cur.fase}"><button id="rlFinal">📥 Importar relatório</button></div><input type="file" id="rlFinalF" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
@@ -1408,6 +1453,8 @@ function renderRelatorio(M){curParcela=curParcela||null;const ev=EVENTOS[cur.fas
  $$('[data-gopar]').forEach(a=>a.onclick=e=>{e.preventDefault();curParcela=cur.parcelas.find(p=>p.id===a.dataset.gopar);view='parcela';tab='rel';render()});
  const go=async kind=>{clearTimeout(saveT);await saveCur();if(!incl.length){alert('Assinale pelo menos uma parcela.');return}
   const opt={draft:true};
+  if(!multi&&incl.length>1&&kind==='pasta'){/* pastas de todas as parcelas num só ZIP */const Z=new JSZip(),avisos=[];try{for(const [k,p] of incl.entries()){busy(true,`A preparar a pasta de ${p.nome} (${k+1}/${incl.length})…`);const w=await exportPastaARB(p,{...opt,zipInto:Z});if(w)avisos.push(...w)}
+    busy(true,'A juntar as pastas…');const b=await Z.generateAsync({type:'blob',mimeType:'application/zip',compression:'DEFLATE',compressionOptions:{level:6}});busy(false);if(avisos.length)alert('Pastas geradas com avisos:\n\n- '+avisos.join('\n- '));await deliverFile(new File([b],`${safeName(cur.v.nref||cur.v.proc||'Processo')}_Pastas_${incl.length}_parcelas.zip`,{type:'application/zip'}))}catch(e){busy(false);alert('Falha ao criar as pastas: '+(e.message||e))}return}
   if(!multi&&incl.length>1){/* vários relatórios autónomos de uma vez: um ficheiro por parcela, entregues juntos */const files=[],avisos=[];
    try{for(const [k,p] of incl.entries()){busy(true,`A preparar ${p.nome} (${k+1}/${incl.length})…`);const r=await buildWordARB(false,p,opt);if(!r)continue;r.warns.forEach(w=>avisos.push(`${p.nome}: ${w}`));
      if(kind==='pdf'){const x=await avaFxPdfBlob({pronto:{nome:r.nome,blob:r.blob}});files.push(new File([x.blob],x.nome,{type:'application/pdf'}))}else files.push(new File([r.blob],r.nome,{type:r.blob.type}))}
@@ -1688,7 +1735,7 @@ async function pastaFinal(p,files){const P=cur.v;const fs=[...files];const dx=fs
  catch(e){busy(false);alert('Não foi possível construir a Pasta final: '+(e.message||e))}}
 async function exportPdfARB(pp,opt={}){const r=await buildWordARB(!pp,pp,opt);if(!r)return;try{const pdf=await avaFxPdfBlob({pronto:{nome:r.nome,blob:r.blob}});busy(false);if(r.warns.length)alert('PDF gerado com avisos:\n\n- '+r.warns.join('\n- '));await deliverFile(new File([pdf.blob],pdf.nome,{type:'application/pdf'}))}catch(e){busy(false);alert('Não foi possível preparar o PDF: '+(e.message||e))}}
 async function exportPastaARB(pp,opt={}){const r=await buildWordARB(!pp,pp,opt);if(!r)return;const p=pp||curParcela,P=cur.v;
- try{const base=relBase(p),pasta=pastaNome(P,p),zip=new JSZip(),root=zip.folder(pasta),docs=root.folder('Documentos'),fot=root.folder('Fotografias');
+ try{const base=relBase(p),pasta=pastaNome(P,p),zip=opt.zipInto||new JSZip(),root=zip.folder(pasta),docs=root.folder('Documentos'),fot=root.folder('Fotografias');
   docs.file(r.nome,r.blob,{compression:'STORE'});
   try{const pdf=await avaFxPdfBlob({pronto:{nome:r.nome,blob:r.blob}});docs.file(pdf.nome,pdf.blob,{compression:'STORE'})}catch(e){r.warns.push('A pasta segue sem PDF: '+(e.message||e))}
   const g=parseGps(p.rel?.v?.gps);if(g)docs.file(`${base}_Localizacao.kml`,kmlContent(g.lat,g.lng,`${P.nref||P.proc||'Processo'} – ${p.nome}`));await anexosNaPasta(root,base,p.rel?.v);for(const [k,n] of [['plantaImg','Configuracao_parcela'],['pdmOrdImg','Extrato_Ordenamento'],['pdmCondImg','Extrato_Condicionantes']]){const im=p.rel?.v?.[k];if(im&&im.data)docs.file(`${base}_${n}.jpg`,await dataURLToBlob(im.data),{compression:'STORE'})}
@@ -1697,9 +1744,10 @@ async function exportPastaARB(pp,opt={}){const r=await buildWordARB(!pp,pp,opt);
   for(const a of order){const list=(p.fotos||[]).map((f,i)=>({f,i})).filter(x=>(x.f.aspeto||'Geral')===a);if(!list.length)continue;gi++;const fd=fot.folder(`${pad(gi)}_${safeName(a)}`);
    for(const {f,i} of list){const rec=await get('fotos',f.id);if(!rec?.blob)throw new Error(`${codePhoto(i)} — fotografia em falta na base de dados.`);const fn=`${codePhoto(i)}.jpg`;fd.file(fn,await rec.blob.arrayBuffer(),{compression:'STORE'});lines.push([codePhoto(i),a,(f.caption||'').replace(/[;\n\r]+/g,' '),`Fotografias/${pad(gi)}_${safeName(a)}/${fn}`].join(';'))}}
   docs.file(`${base}_Lista_Fotos.csv`,'﻿'+lines.join('\r\n'));
+  if(opt.zipInto)return r.warns.map(w=>`${p.nome}: ${w}`);
   busy(true,'A construir a Pasta da parcela…');const blob=await zip.generateAsync({type:'blob',mimeType:'application/zip',compression:'DEFLATE',compressionOptions:{level:6}});busy(false);
   if(r.warns.length)alert('Pasta gerada com avisos:\n\n- '+r.warns.join('\n- '));await deliverFile(new File([blob],`${pasta}.zip`,{type:'application/zip'}))}
- catch(e){busy(false);alert('Falha ao criar a Pasta da parcela: '+(e.message||e))}}
+ catch(e){busy(false);if(opt.zipInto)throw e;alert('Falha ao criar a Pasta da parcela: '+(e.message||e))}}
 
 /* ---------- Definições ---------- */
 const ASPETOS_BASE=['Geral','Envolvente','Acessos','Infraestruturas','Benfeitorias','Parte sobrante','Estado da obra','Condicionantes','Outro'];
@@ -1755,6 +1803,7 @@ const PROC_FIELDS=[
  {id:'proc',l:'N.º do processo',t:'text',r:1,h:'Ex.: 213/26.5 T8LSA'},
  {id:'tribunal',l:'Tribunal / Solicitante',t:'text',r:1},
  {id:'intervencao',l:'Designação da intervenção / finalidade',t:'textarea',r:1,h:'Sai na capa (Finalidade) e no quadro do processo expropriativo'},
+ {id:'intervCurta',l:'Designação curta (só para o cabeçalho das páginas)',t:'text',h:'Opcional. Vazio = sai a designação completa. Útil quando a designação é comprida e o cabeçalho ocupa várias linhas.'},
  {id:'expropriante',l:'Entidade expropriante',t:'text',r:1},
  {id:'onus',l:'Tipo de ónus',t:'select',o:['Expropriação','Servidão administrativa','Expropriação e servidão administrativa','Ocupação temporária','Outros'],d:'Expropriação'},
  {id:'onusOutro',l:'Tipo de ónus – descrever',t:'text',show:v=>v.onus==='Outros'},
@@ -1773,6 +1822,7 @@ const PROC_FIELDS=[
  {id:'dataRefJust',l:'Identificação do documento / justificação',t:'textarea',show:v=>!isDate(v.dup),h:'Ex.: Informação técnica n.º …, de dd/mm/aaaa, da Câmara Municipal de …'},
  {id:'posse',l:'Data da posse administrativa',t:'date',h:'Pode ser alterada em cada parcela'},
  {id:'dataAcArb',l:'Data do acórdão arbitral (decisão objeto de recurso)',t:'date',r:1,show:()=>!!(typeof cur!=='undefined'&&cur&&cur.fase==='PER'),h:'Sai nos antecedentes processuais, a seguir à posse administrativa.'},
+ {id:'notifRes',l:'Data da notificação da resolução de expropriar (art. 10.º, n.º 5)',t:'date',h:'Serve o art. 23.º, n.º 2, c): as benfeitorias voluptuárias ou úteis feitas depois desta data não se consideram.'},
  {id:'despDesig',l:'Data do despacho de designação (perito / árbitros)',t:'date'},
  {id:'recProc',l:'Data de receção do processo / elementos',t:'date'},
  {id:'fases',l:'Outros atos do processo (faseamento)',t:'table',cols:[{id:'ato',l:'Ato / fase'},{id:'data',l:'Data'},{id:'ref',l:'Referência'}],h:'Ex.: Resolução de expropriar · Notificação · Acordo/proposta · Remessa a tribunal'}
@@ -1815,7 +1865,12 @@ const sacSum=v=>SAC_AL.reduce((t,[k])=>t+sacArea(v,k),0);const sacOn=v=>/* re-de
 const ABS_TB=['edifTipos','arvTipos','benfTipos'];const ABS_OPT='Absorvida pelo uso principal';
 const GRUPOS=[['l2','2','Solo para outros fins','sofTipos','area'],['l3','3','Edificações e construções','edifTipos','area'],['l4','4','Arvoredo','arvTipos','qtd'],['l5','5','Benfeitorias','benfTipos','qtd'],['l6','6','Depreciação da sobrante','depTipos','qtd'],['l7','7','Indemnização por arrendamento','arrTipos','qtd'],['l8','8','Interrupção da atividade','intTipos','qtd']];
 /* só entram as situações com área / quantidade não nula */
-const elegivel=(v,tb,r,q)=>r&&String(r.tipo||'').trim()&&r.on!==false&&num(r[q])>0&&!(ABS_TB.includes(tb)&&sacOn(v)&&r.abs===ABS_OPT);
+/* IUS único (passo 2.3 › Edificabilidade); com o art. 26.º, n.º 12 aplica-se o IUS médio da envolvente de 300 m */
+function iusOf(v){if(v.a2612==='Aplica-se'&&v.a2612iu!==undefined&&v.a2612iu!=='')return num(v.a2612iu);return v.iusN!==undefined&&v.iusN!==''?num(v.iusN):num(v.ius)}
+const iusTxt=v=>{const x=iusOf(v);return x>0?`${fmt(x)} m²/m²`:(String(v.ius||'').trim()||'Não aplicável')};
+/* art. 23.º, n.º 2, c): benfeitorias voluptuárias ou úteis feitas após a notificação da resolução de expropriar (art. 10.º, n.º 5) não se consideram */
+const A23C='Posterior à notificação da resolução de expropriar – voluptuária ou útil';
+const elegivel=(v,tb,r,q)=>r&&r.a23!==A23C&&r&&String(r.tipo||'').trim()&&r.on!==false&&num(r[q])>0&&!(ABS_TB.includes(tb)&&sacOn(v)&&r.abs===ABS_OPT);
 const calcLines=v=>Object.fromEntries(GRUPOS.map(([k,,,tb,q])=>[k,(Array.isArray(v[tb])?v[tb]:[]).filter(r=>elegivel(v,tb,r,q)).map(r=>({desig:String(r.tipo).trim(),qtd:num(r[q]),vun:num(r.vun)}))]));
 /* 7.3 – situações tipificadas (lista de sugestões; aceita-se qualquer outra) */
 const TITULOS=['Eng.º','Arq.º','Economista','Perito-avaliador','Perito da lista oficial do Tribunal da Relação'];
@@ -1886,7 +1941,7 @@ const ARB_SECTIONS=[
   {id:'fgcSec',l:'Faixas de gestão de combustível – rede secundária',t:'multi',o:['Rede rodoviária','Rede ferroviária','Linhas de transporte / distribuição de energia','Aglomerados populacionais','Edificações isoladas','Parques de campismo / áreas industriais','Outros']},
   {id:'dominio',l:'Incidência em domínio público',t:'selecttext',o:RANREN,d:'Não sujeito',h:'No campo ao lado pode indicar a área ou o tipo (ex.: 120 m² – leito de linha de água)'},
   {id:'servidoes',l:'Outras restrições identificadas',t:'text',d:'Nada a considerar'},
-  {id:'ius',l:'Índice de utilização – IUS',t:'text',d:'Não aplicável',h:'m²/m² ou "Não aplicável"'},
+  {id:'ius',l:'Índice de utilização – IUS (texto, se não numérico)',t:'text',d:'Não aplicável',h:'O IUS numérico indica-se num só sítio: em «Edificabilidade a considerar» (m²/m²); quando preenchido, é esse que sai no quadro do PDM e no cálculo. Este campo serve só para «Não aplicável» ou texto.'},
   {id:'ios',l:'Índice de ocupação – IOS',t:'text',d:'Não aplicável'},
   {id:'naed',l:'Zonas non aedificandi',t:'text',d:'Não identificadas'},
   {id:'morfologia',l:'Morfologia',t:'multi',r:1,o:['Plana','Declive suave','Declive acentuado','Talude','Socalcos','Linha de água','Outros']},
@@ -1897,6 +1952,9 @@ const ARB_SECTIONS=[
    {id:'iusIgt',l:'Índice adotado – IGT e artigo do regulamento',t:'textarea',h:'Ex.: PDM de …, art. …º do regulamento: índice de utilização máximo 0,50 m²/m²'},
    {id:'iusN',l:'IUS – índice de utilização do solo (m²/m²)',t:'number',h:'2 casas decimais; contextualmente entre 0,05 e 5,00. Vazio = IUS de 2.3, se numérico'},
    {id:'jIUS',l:'IUS – justificação (sai nas Notas do 8.2)',t:'textarea'},
+   {id:'a2612',l:'Art. 26.º, n.º 12 – solo classificado como zona verde, de lazer ou para infraestruturas e equipamentos públicos por plano municipal plenamente eficaz, adquirido antes da entrada em vigor do plano',t:'select',o:['Não aplicável','Aplica-se'],d:'Não aplicável',h:'Se se aplica, o valor calcula-se em função do valor médio das construções existentes ou que seja possível edificar nas parcelas situadas numa envolvente de 300 m do limite da parcela expropriada.'},
+   {id:'a2612iu',l:'IUS médio da envolvente de 300 m (m²/m²) – substitui o IUS no cálculo',t:'number',show:v=>v.a2612==='Aplica-se'},
+   {id:'a2612j',l:'Art. 26.º, n.º 12 – fundamentação (prédios considerados, áreas de construção existentes / possíveis)',t:'textarea',show:v=>v.a2612==='Aplica-se'},
    {id:'edCap',l:'Área de construção permitida no prédio (área do prédio × IUS)',t:'calc',k:'edCap',u:'m²'},
    {id:'edInst',l:'Área de construção já instalada (2.3 – edificabilidade instalada)',t:'calc',k:'edInst',u:'m²'},
    {id:'edFolga',l:'Folga = permitida − instalada',t:'calc',k:'edFolga',u:'m²'},
@@ -1919,6 +1977,10 @@ const ARB_SECTIONS=[
   {id:'sobrantes',l:'Parcelas sobrantes (Psb-01, Psb-02, …)',t:'table',cols:[{id:'desig',l:'Designação (opcional)'},{id:'area',l:'Área (m²)',num:1},{id:'config',l:'Configuração',ta:1},{id:'comp',l:'Composição',ta:1},{id:'benf',l:'Benfeitorias',ta:1},{id:'obs',l:'Fundamentação da área'}],h:'Uma linha por cada parcela que fica ao expropriado, numeradas Psb-01, Psb-02… Sem linhas = uma só parcela sobrante com toda a área.'},
   {id:'sobCheck',l:'Verificação das zonas sobrantes',t:'calc',k:'sobCheck'},
   {id:'sobNum',l:'N.º de parcelas que formam a área sobrante (sai por baixo do quadro de áreas; expropriação total = 0)',t:'calc',k:'sobNTxt'},
+  {id:'expTot',l:'Expropriação total (art. 3.º, n.º 2 do CE)',t:'select',o:['Não requerida','Requerida pelo expropriado'],d:'Não requerida'},
+  {id:'expTotA',l:'a) A parte restante não assegura, proporcionalmente, os mesmos cómodos que oferecia todo o prédio?',t:'select',o:['','Sim','Não'],show:v=>v.expTot==='Requerida pelo expropriado'},
+  {id:'expTotB',l:'b) Os cómodos assegurados pela parte restante não têm interesse económico para o expropriado, determinado objetivamente?',t:'select',o:['','Sim','Não'],show:v=>v.expTot==='Requerida pelo expropriado'},
+  {id:'expTotJ',l:'Expropriação total – fundamentação',t:'textarea',show:v=>v.expTot==='Requerida pelo expropriado'},
   {id:'reflex',t:'reflex',l:'Efeitos da expropriação no prédio – questões de análise e reflexão (opcionais no relatório: 6.5, a seguir às parcelas sobrantes)'}]},
  {id:'uso',t:'2.6 · Parcela – composição e uso efetivo (apoio à análise)',f:[
   {id:'usoEfetivo',l:'Solo e ocupação – uma situação por linha',t:'textarea',h:'Vazio = «Solo <natureza> - <finalidades>» a partir do 8.3. Ex.: Solo Florestal - pinhal, mato e eucaliptos'},
@@ -2052,6 +2114,7 @@ const DER_SECTIONS=fz=>ARB_SECTIONS.filter(s=>s.id!=='acordao'&&!(fz==='BV'&&['l
  if(s.id==='elementos')return {...s,f:s.f.map(x=>x.id==='elementos'?{...x,o:DER_ELEM[fz]}:x)};
  if(s.id==='visita')return {...s,f:s.f.map(x=>x.id==='_presencas'?{...x,l:fz==='PER'?'Presença dos peritos':'Presença do perito'}:x)};
  if(s.id==='quesitos')return {...s,f:[...s.f,{id:'qTrib',l:'Pelo Tribunal',t:'table',cols:[{id:'n',l:'N.º'},{id:'q',l:'Quesito',ta:1},{id:'r',l:'Resposta',ta:1}],h:'Vazio = Nada a considerar'}]};
+ if(s.id==='valor'&&fz==='PER')return {...s,f:[...s.f,{id:'_hdAcComp',t:'head',l:'Comparação com o acórdão arbitral (opcional)'},{id:'acValor',l:'Valor fixado no acórdão arbitral para esta parcela (€)',t:'number',h:'Serve para ver a diferença; só sai no relatório se escolher «Sim» em baixo.'},{id:'acComp',t:'acomp'},{id:'acCompRel',l:'Incluir a comparação no relatório (a seguir ao montante de justa indemnização)',t:'select',o:['Não','Sim'],d:'Não'}]};
  if(s.id==='anexos')return {...s,t:fz==='BV'?'9 · Anexos (→ 14)':s.t,f:s.f.map(x=>x.id==='anexosL'?{...x,o:x.o.filter(o=>!/^Acórdão arbitral/.test(o))}:x)};
  if(s.id==='capa'&&fz==='BV')return {...s,t:'11 · Relatório – n.º e versões'};
  return s}).concat([{id:'encerra',t:fz==='BV'?'10 · Termo de encerramento':'12 · Termo de encerramento',f:[{id:'acData',l:'Data do relatório',t:'date',h:'Vazio = data em que o relatório é gerado'}]}]);
@@ -2093,6 +2156,7 @@ function fieldHTML(f,v,scope){
  case 'text':return `<div>${lab}${growTA(a,val)}${hint}</div>`;
  case 'number':return `<div>${lab}<input ${a} inputmode="decimal" value="${esc(val??'')}">${hint}</div>`;
  case 'textarea':return `<div>${lab}<textarea ${a}>${esc(val??'')}</textarea>${hint}</div>`;
+ case 'acomp':return `<div data-acomp="1" style="flex-basis:100%">${acompHTML(v)}</div>`;
  case 'warn':return `<div class="zerobox">⚠ ${esc(f.m(v))}</div>`;
  case 'info':return `<div class="okbox">${esc(f.m(v))}</div>`;
  case 'legis':{const S=Array.isArray(val)?val:[];const L=settings.legis.filter(x=>x&&String(x.t||'').trim()&&(x.on!==false||S.includes(x.id)));
@@ -2110,9 +2174,9 @@ function fieldHTML(f,v,scope){
  case 'table':return `<div style="flex-basis:100%">${lab}${tableHTML(f,v,scope)}${hint}</div>`;
  case 'ticklist':{const rows=Array.isArray(val)?val:[];const absOn=f.abs&&sacOn(v);const da=`data-scope="${scope}" data-tl="${f.id}"`;
   return `<div style="flex-basis:100%">${lab}<div class="tl"><div class="tlh"><span>${esc(f.dl||'Designação')}</span><span>${esc(f.ql||'Área / qtd')}</span><span></span></div>${rows.map((r,i)=>{const own=!(f.opts||[]).includes(r.tipo);
-   return `<div class="tlr"><label class="chk"><input type="checkbox" ${da} data-i="${i}" data-k="on" ${r.on?'checked':''}> ${esc(r.tipo||'')}</label><input ${da} data-i="${i}" data-k="${f.q}" ${f.qt==='text'?'':'inputmode="decimal"'} value="${esc(r[f.q]??'')}" ${r.on?'':'disabled'} placeholder="${r.on?esc(f.ql||''):''}"><span>${own?`<button class="del" data-scope="${scope}" data-tldel="${f.id}" data-i="${i}" title="Retirar">✕</button>`:''}</span>${f.obs&&r.on?`<input class="tlobs" ${da} data-i="${i}" data-k="obs" value="${esc(r.obs||'')}" placeholder="${esc(f.obsPh||'Observação')}">`:''}${absOn&&r.on?`<select ${da} data-i="${i}" data-k="abs">${['','Elegível',ABS_OPT].map(o=>`<option value="${o}" ${o===(r.abs||'')?'selected':''}>${o||'— elegível ou absorvida pelo uso principal? —'}</option>`).join('')}</select>`:''}</div>`}).join('')}</div><button class="secondary mini" data-scope="${scope}" data-tladd="${f.id}">+ Outra situação</button>${hint}</div>`}
+   return `<div class="tlr"><label class="chk"><input type="checkbox" ${da} data-i="${i}" data-k="on" ${r.on?'checked':''}> ${esc(r.tipo||'')}</label><input ${da} data-i="${i}" data-k="${f.q}" ${f.qt==='text'?'':'inputmode="decimal"'} value="${esc(r[f.q]??'')}" ${r.on?'':'disabled'} placeholder="${r.on?esc(f.ql||''):''}"><span>${own?`<button class="del" data-scope="${scope}" data-tldel="${f.id}" data-i="${i}" title="Retirar">✕</button>`:''}</span>${f.obs&&r.on?`<input class="tlobs" ${da} data-i="${i}" data-k="obs" value="${esc(r.obs||'')}" placeholder="${esc(f.obsPh||'Observação')}">`:''}${f.abs&&r.on?`<select ${da} data-i="${i}" data-k="a23">${['',A23C].map(o=>`<option value="${o}" ${o===(r.a23||'')?'selected':''}>${o||'— anterior à notificação (considera-se) —'}</option>`).join('')}</select>`:''}${absOn&&r.on?`<select ${da} data-i="${i}" data-k="abs">${['','Elegível',ABS_OPT].map(o=>`<option value="${o}" ${o===(r.abs||'')?'selected':''}>${o||'— elegível ou absorvida pelo uso principal? —'}</option>`).join('')}</select>`:''}</div>`}).join('')}</div><button class="secondary mini" data-scope="${scope}" data-tladd="${f.id}">+ Outra situação</button>${hint}</div>`}
  case 'vunlist':{const parts=GRUPOS.map(([k,n,l,tb,q])=>{const rows=(Array.isArray(v[tb])?v[tb]:[]).map((r,i)=>[r,i]).filter(([r])=>elegivel(v,tb,r,q));if(!rows.length)return '';
-   return `<div class="tlh"><span><b>${n} · ${esc(l)}</b></span><span>V_Un (€)</span></div>${rows.map(([r,i])=>`<div class="tlr vun"><span>${esc(r.tipo)} <span class="q">· ${fmt(num(r[q]))} ${q==='area'?'m²':'un.'}</span></span><input data-scope="${scope}" data-tl="${tb}" data-i="${i}" data-k="vun" inputmode="decimal" value="${esc(r.vun??'')}" placeholder="€"></div>`).join('')}`}).join('');
+   return `<div class="tlh"><span><b>${n} · ${esc(l)}</b></span><span>V_Un (€)</span></div>${rows.map(([r,i])=>`<div class="tlr vun"><span>${esc(r.tipo)} <span class="q">· ${fmt(num(r[q]))} ${q==='area'?'m²':'un.'}</span></span><input data-scope="${scope}" data-tl="${tb}" data-i="${i}" data-k="vun" inputmode="decimal" value="${esc(r.vun??'')}" placeholder="€"><input class="tlobs" data-scope="${scope}" data-tl="${tb}" data-i="${i}" data-k="fund" value="${esc(r.fund||'')}" placeholder="Fundamentação do V_Un (sai no relatório)"></div>`).join('')}`}).join('');
   return `<div class="vunbox"><div class="vunt">💶 Preços unitários (V_Un)</div><div class="muted" style="margin-bottom:8px">Indique aqui o valor unitário de cada situação valorizada (8.3 a 8.9). Valor = área / quantidade × V_Un.</div>${parts?`<div class="tl">${parts}</div>`:'<div class="muted">Ainda não há situações para valorizar: assinale-as e indique a área / quantidade em 8.3 a 8.9.</div>'}${hint}</div>`}
  case 'calc':return `<div>${lab}<div class="calc" data-calc="${f.k}" data-u="${esc(f.u||'')}">—</div></div>`;
  case 'concelho':return `<div>${lab}<select ${a}><option value="">— escolher —</option>${Object.keys(PT_FREG).sort((x,y)=>x.localeCompare(y,'pt')).map(o=>`<option ${o===val?'selected':''}>${esc(o)}</option>`).join('')}</select>${hint}</div>`;
@@ -2207,7 +2271,7 @@ function compute(v){const c={};
  c.checkAreas=!exp&&!soma?null:(Math.abs(soma-exp)<0.005?{ok:1,msg:`SAC + SOF = ${fmt(soma)} m² = área expropriada.`}:{ok:0,msg:`SAC + SOF = ${fmt(soma)} m², diferente da área expropriada (${fmt(exp)} m²).`});
  let over=[];c.ifPct=IF_ITEMS.reduce((s,[k,l,mx])=>{const x=num(ifVal(v,k));if(x>mx)over.push(`${l}: ${fmt(x,1)}% > máx. ${fmt(mx,1)}%`);return s+x},0);
  c.ifCheck=over.length?{ok:0,msg:'Acima do máximo legal: '+over.join('; ')}:null;
- let ius=v.iusN!==undefined&&v.iusN!==''?num(v.iusN):num(v.ius);
+ let ius=iusOf(v);
  const f=k=>v[k]===undefined||v[k]===''?1:num(v[k]);
  c.ifFat=Math.round(c.ifPct+1e-9)/100;
  {const tm=t=>{const by={};(Array.isArray(v.trans)?v.trans:[]).forEach(r=>{if(!r||String(r.solo||'').trim().toUpperCase()!==t||!(num(r.area)>0)||!(num(r.preco)>0)||!(num(r.ano)>0))return;const y=Math.round(num(r.ano));(by[y]=by[y]||[]).push(num(r.preco)/num(r.area)*(r.coef===undefined||r.coef===''?1:num(r.coef)))});
@@ -2224,8 +2288,9 @@ function compute(v){const c={};
 function totBarHTML(c){const L=[['Solo apto para construção',c.parcialSAC||0],...GRUPOS.map(([k,,l])=>[l,c.subs&&c.subs[k]||0])].filter(x=>x[1]);
  return `<div class="tbsum"><span>Valor calculado</span><b>${fmt(c.total||0)} €</b><span class="tbarr">${totOpen?'▾':'▴'}</span></div>${totOpen?`<div class="tbdet">${L.length?L.map(([l,x])=>`<div><span>${esc(l)}</span><span>${fmt(x)} €</span></div>`).join(''):'<div>Sem valores calculados ainda.</div>'}</div>`:''}`}
 let totOpen=false;
+function acompHTML(v){const c=compute(v),a=num(v.acValor);if(!(a>0))return '<div class="muted">Indique o valor do acórdão para ver a diferença.</div>';const d=c.total-a,pc=d/a*100;return `<div class="${Math.abs(d)<0.005?'okbox':'warnbox'}">Acórdão: ${fmt(a)} € · Peritagem: ${fmt(c.total)} € · Diferença: ${d>=0?'+':''}${fmt(d)} € (${d>=0?'+':''}${fmt(pc,1)} %)</div>`}
 function paintTot(c){const el=document.getElementById('totBar');if(!el)return;el.innerHTML=totBarHTML(c);el.classList.toggle('zero',!(c.total>0))}
-function paintCalcs(){if(!curParcela||!EVENTOS[cur.fase].modelo)return;const v=curParcela.rel.v,c=compute(v);paintTot(c);
+function paintCalcs(){if(!curParcela||!EVENTOS[cur.fase].modelo)return;const v=curParcela.rel.v,c=compute(v);paintTot(c);$$('[data-acomp]').forEach(el=>el.innerHTML=acompHTML(v));
  $$('[data-calc]').forEach(el=>{const k=el.dataset.calc,u=el.dataset.u;let x;
   if(k.startsWith('line:'))x=c.lines[k.slice(5)];else if(k.startsWith('sub:'))x=c.subs[k.slice(4)];else x=c[k];
   el.textContent=typeof x==='number'?`${fmt(x,k==='ifPct'?1:2)}${u?' '+u:''}`:(x||'—')});
@@ -2270,6 +2335,7 @@ function migDefaults(v){if(Array.isArray(v.elementos))v.elementos=v.elementos.ma
  if(['efe1','efe2','efe3','efe4','efe5','efe6'].some(k=>v[k]!==undefined||v[k+'d']!==undefined)){const R=(v.reflex=v.reflex&&typeof v.reflex==='object'?v.reflex:{});['efe1','efe2','efe3','efe4','efe5','efe6'].forEach(k=>{if(v[k]||v[k+'d'])R[k]={r:v[k]||'',d:v[k+'d']||''};delete v[k];delete v[k+'d']})}
  if(Array.isArray(v.elementos))v.elementos=v.elementos.map(x=>x==='Levantamento topográfico (em substituição da planta parcelar)'?'Levantamento topográfico':x);
  if(!v._map50){delete v.mapMode;v._map50=1}
+ if((v.iusN===undefined||v.iusN==='')&&/^\s*\d+([.,]\d+)?\s*(m²\/m²|m2\/m2)?\s*$/i.test(String(v.ius||''))&&num(v.ius)>0)v.iusN=String(num(v.ius));/* IUS único */
  if(!v.plantaFonte&&['planta parcelar','levantamento topográfico'].includes(norm(String(v.plantaLeg||'').trim()))){v.plantaFonte=norm(v.plantaLeg)==='planta parcelar'?'Planta parcelar':'Levantamento topográfico';v.plantaLeg='Configuração da parcela'}
 if(!Array.isArray(v.expropriados)||!v.expropriados.length)v.expropriados=[{}];
  {const t=(v.sofTipos=Array.isArray(v.sofTipos)?v.sofTipos:[]);finList().forEach(x=>{if(!t.some(r=>norm(r.tipo||'')===norm(x)))t.push({tipo:x,on:false})});t.sort((a,b)=>ordPT(a.tipo||'',b.tipo||''))}
@@ -2313,7 +2379,7 @@ function navState(){const n=$('#nav');if(!n)return;n.classList.toggle('hidden',!
  const pb=n.querySelector('[data-nav="parcela"]');const pp=curParcela||cur.parcelas.slice().sort((a,b)=>parSortKey(a)-parSortKey(b))[0];pb.textContent=pp?pp.nome:'Parcela';pb.disabled=!pp;
  n.querySelectorAll('[data-nav]').forEach(b=>b.classList.toggle('on',b.dataset.nav===view));
  const h=document.querySelector('header');if(h)document.documentElement.style.setProperty('--hh',h.offsetHeight+'px')}
-async function render(){if(cur){migProc(cur);migProc713(cur)}crumbs();navState();const M=$('#main');const vk=view+'|'+(cur?.id||'')+'|'+(curParcela?.id||'');if(vk!==lastViewKey){lastViewKey=vk;setTimeout(()=>window.scrollTo(0,0),0)}
+async function render(){if(cur){migProc(cur);migProc713(cur)}crumbs();bkPill();navState();const M=$('#main');const vk=view+'|'+(cur?.id||'')+'|'+(curParcela?.id||'');if(vk!==lastViewKey){lastViewKey=vk;setTimeout(()=>window.scrollTo(0,0),0)}
  if(view==='settings')return renderSettings(M);
  if(view==='modelos')return renderModelos(M);
  if(view==='proc'&&cur)return renderProc(M);
@@ -2346,7 +2412,7 @@ function renderProc(M){curParcela=null;crumbs();const v=cur.v;const req=PROC_FIE
  $('#newPar').onclick=async()=>{const n=await uiPrompt('N.º da parcela, como consta no processo (ex.: 235):','');if(n===null)return;if(n.trim()&&cur.parcelas.some(x=>String(x.rel?.v?.nPar||'').trim()===n.trim())&&!await uiConfirm(`Já existe a parcela ${n.trim()} neste processo. Criar outra com o mesmo número?`))return;const p={id:uid(),nome:parNome(n),fotos:[],rel:{tipo:cur.fase,v:{nPar:n.trim(),expropriados:[],interessados:[],concelho:cur.parcelas.at(-1)?.rel?.v?.concelho||'',freguesia:cur.parcelas.at(-1)?.rel?.v?.freguesia||''}}};defaults(allArbFields(),p.rel.v);cur.parcelas.push(p);await saveCur();curParcela=p;view='parcela';tab='rel';render()};
  $$('[data-par]').forEach(el=>el.onclick=()=>{curParcela=cur.parcelas.find(p=>p.id===el.dataset.par);view='parcela';tab='rel';render()});
  $('#expProc').onclick=exportProcesso;$('#impPar').onclick=()=>pickIO('proc');
- $('#delProc').onclick=async()=>{if(!await uiConfirm(`Eliminar o processo «${v.nref||v.proc||''}» e todas as suas parcelas e fotografias?`))return;for(const p of cur.parcelas)for(const f of (p.fotos||[]))await del('fotos',f.id);await del('processos',cur.id);processos=processos.filter(x=>x.id!==cur.id);cur=null;view='home';render()}}
+ $('#delProc').onclick=async()=>{if(!await uiConfirm(`Eliminar o processo «${v.nref||v.proc||''}» e todas as suas parcelas e fotografias?\n\nFica uma cópia automática durante ${LIXO_DIAS} dias (Definições › 7), para o poder repor.`))return;clearTimeout(saveT);await saveCur();await lixoAdd([cur],'Processo eliminado');await del('processos',cur.id);processos=processos.filter(x=>x.id!==cur.id);cur=null;view='home';render()}}
 function allArbFields(){return [...PAR_SECTION.f,...SECS().flatMap(s=>s.f)]}
 function migPres(v){if(v.presOutros||!(v.presExp||v.presExpd))return;v.presOutros=[];if(v.presExp)v.presOutros.push({nome:v.presExp,qual:'Representante da Expropriante'});if(v.presExpd)v.presOutros.push({nome:v.presExpd,qual:'Expropriado'});delete v.presExp;delete v.presExpd;saveSoon()}
 function presLinhas(v){migPres(v);return (v.presOutros||[]).filter(x=>x&&(x.nome||'').trim()).map(x=>`${x.nome.trim()}${x.qual?' – '+x.qual.trim():''}${x.rep?`, em representação de ${x.rep.trim()}`:''}`)}
@@ -2413,7 +2479,7 @@ function bindFields(scope,v,rerender){
    if(f.t==='freguesia'&&scope==='rel'&&Array.isArray(v.artigos))v.artigos.forEach(a=>{if(!a.freg)a.freg=el.value});
    saveSoon();paintCalcs();if(el.tagName==='SELECT'&&(structural(id)||f.t==='concelho'||f.t==='freguesia'))rerender();else updatePending()};el.oninput=h;el.onchange=()=>{h();if(el.tagName!=='SELECT'&&structural(id))rerender()}});
  $$(`[data-scope="${scope}"][data-tl]`).forEach(el=>{const k=el.dataset.k;const h=()=>{const rows=v[el.dataset.tl]||(v[el.dataset.tl]=[]);const r=rows[+el.dataset.i];if(!r)return;
-   if(k==='on'){r.on=el.checked;saveSoon();rerender();return}r[k]=el.value;saveSoon();paintCalcs();if(k==='abs')rerender();else updatePending()};if(k==='on'||k==='abs')el.onchange=h;else{el.oninput=h;el.onchange=()=>{h();rerender()}}});
+   if(k==='on'){r.on=el.checked;saveSoon();rerender();return}r[k]=el.value;saveSoon();paintCalcs();if(k==='abs'||k==='a23')rerender();else updatePending()};if(k==='on'||k==='abs'||k==='a23')el.onchange=h;else{el.oninput=h;el.onchange=()=>{h();rerender()}}});
  $$(`[data-scope="${scope}"][data-tladd]`).forEach(el=>el.onclick=async()=>{const k=el.dataset.tladd;const n=((await uiPrompt('Designação da nova situação:',''))||'').trim();if(!n)return;(v[k]=Array.isArray(v[k])?v[k]:[]).push({tipo:n,on:true});if(k==='sofTipos'&&!finList().some(x=>norm(x)===norm(n))){settings.finalidades.push(n);saveSettings()}if(k==='sofTipos')v[k].sort((a,b)=>ordPT(a.tipo||'',b.tipo||''));saveSoon();rerender()});
  $$(`[data-scope="${scope}"][data-tldel]`).forEach(el=>el.onclick=async()=>{const k=el.dataset.tldel;if(!await uiConfirm('Retirar esta situação da lista?'))return;v[k].splice(+el.dataset.i,1);saveSoon();rerender()});
  $$(`[data-scope="${scope}"][data-tb]`).forEach(el=>{el.oninput=()=>{const rows=v[el.dataset.tb]||(v[el.dataset.tb]=[]);rows[+el.dataset.i][el.dataset.c]=el.value;saveSoon();paintCalcs()}});
@@ -2517,12 +2583,13 @@ function photosHTML(){const fotos=curParcela.fotos||[];const asp=settings.aspeto
  <div class="photos" style="margin-top:10px">${shown.map(({f,i})=>`<article class="photo" data-card="${f.id}"><div class="thumb" data-zoom="${f.id}"><img data-img="${f.id}" alt="${esc(codePhoto(i))}"></div><div class="code">${esc(codePhoto(i))}${f.fromCamera&&!f.libSaved?' <span class="pill warn">só na app</span>':''}</div>
  <select data-asp="${f.id}">${asp.concat((f.aspeto&&!asp.includes(f.aspeto))?[f.aspeto]:[]).map(a=>`<option ${a===(f.aspeto||'Geral')?'selected':''}>${esc(a)}</option>`).join('')}</select>
  <textarea data-cap="${f.id}" placeholder="Legenda">${esc(f.caption||'')}</textarea>
- <div class="acts"><button class="secondary" data-mv="${f.id}" data-d="-1">▲</button><button class="secondary" data-mv="${f.id}" data-d="1">▼</button><button class="secondary" data-rot="${f.id}">⟳</button><button class="del" data-delf="${f.id}">🗑</button></div></article>`).join('')||'<div class="muted">Sem fotografias neste filtro.</div>'}</div>`}
+ <div class="acts"><button class="secondary" data-mv="${f.id}" data-d="-1">▲</button><button class="secondary" data-mv="${f.id}" data-d="1">▼</button><button class="secondary" data-rot="${f.id}">⟳</button><button class="del" data-delf="${f.id}">🗑</button></div><label class="chk" style="margin-top:4px"><input type="checkbox" data-capa="${f.id}" ${f.capa?'checked':''}> Capa</label></article>`).join('')||'<div class="muted">Sem fotografias neste filtro.</div>'}</div>`}
 function bindPhotos(){const p=curParcela;
  $('#takePhoto').onclick=()=>{$('#fileCam').value='';$('#fileCam').click()};
  $('#choosePhotos').onclick=()=>{$('#fileLib').value='';$('#fileLib').click()};
  $$('[data-flt]').forEach(b=>b.onclick=()=>{photoFilter=b.dataset.flt;render()});
  $$('[data-cap]').forEach(el=>el.oninput=()=>{p.fotos.find(f=>f.id===el.dataset.cap).caption=el.value;saveSoon()});
+ $$('[data-capa]').forEach(el=>el.onchange=()=>{const f=p.fotos.find(x=>x.id===el.dataset.capa);if(el.checked&&p.fotos.filter(x=>x.capa).length>=2){el.checked=false;alert('A capa leva no máximo 2 fotografias. Desmarque primeiro outra.');return}f.capa=el.checked;saveSoon()});
  $$('[data-asp]').forEach(el=>el.onchange=()=>{p.fotos.find(f=>f.id===el.dataset.asp).aspeto=el.value;saveSoon();render()});
  $$('[data-mv]').forEach(b=>b.onclick=async()=>{const i=p.fotos.findIndex(f=>f.id===b.dataset.mv),j=i+(+b.dataset.d);if(j<0||j>=p.fotos.length)return;[p.fotos[i],p.fotos[j]]=[p.fotos[j],p.fotos[i]];await saveCur();render()});
  $$('[data-rot]').forEach(b=>b.onclick=()=>rotatePhoto(b.dataset.rot));
@@ -2553,7 +2620,13 @@ $('#fileCam').onchange=e=>importPhotos([...e.target.files],true);
 $('#fileLib').onchange=e=>importPhotos([...e.target.files],false);
 
 /* ---------- Definições ---------- */
-function renderSettings(M){crumbs();const s=settings;
+async function lixoRender(){const box=$('#lixoL');if(!box)return;const L=(await lixoGet()).slice().reverse();
+ box.innerHTML=L.length?L.map((x,i)=>{const p=x.proc||{},v=p.v||{};const n=(p.parcelas||[]).length;return `<div class="card" style="margin:6px 0"><b>${esc(v.nref||v.proc||'Processo')}</b> <span class="muted">· ${esc(EVENTOS[p.fase]?.nome||'')} · ${n} parcela(s)</span><div class="muted">${esc(x.motivo)} em ${esc(fmtStamp(x.t))}${processos.some(q=>q.id===p.id)?' · já existe um processo com este identificador':''}</div><div class="btns"><button class="secondary mini" data-lxrep="${esc(x.t)}|${esc(p.id)}">↩ Repor</button><button class="del" data-lxdel="${esc(x.t)}|${esc(p.id)}">Apagar cópia</button></div></div>`}).join(''):'<div class="muted">Sem cópias automáticas.</div>';
+ const find=k=>{const [t,id]=k.split('|');return x=>x.t===t&&x.proc&&x.proc.id===id};
+ $$('[data-lxrep]').forEach(b=>b.onclick=async()=>{const all=await lixoGet();const x=all.find(find(b.dataset.lxrep));if(!x)return;const p=structuredClone(x.proc);if(processos.some(q=>q.id===p.id)){if(!await uiConfirm('Já existe um processo com este identificador. Repor como cópia (fica com os dois)?'))return;p.id=uid()}
+  normProc(p);p.updatedAt=stamp();await put('processos',p);processos=await getAll('processos');processos.forEach(normProc);await lixoPut(all.filter(y=>!find(b.dataset.lxrep)(y)));alert('Processo reposto.');render()});
+ $$('[data-lxdel]').forEach(b=>b.onclick=async()=>{if(!await uiConfirm('Apagar definitivamente esta cópia automática (e as fotografias que só ela tem)?'))return;const all=await lixoGet();await lixoPut(all.filter(y=>!find(b.dataset.lxdel)(y)));await purgeFotos();lixoRender()})}
+function renderSettings(M){crumbs();const s=settings;setTimeout(()=>lixoRender().catch(()=>{}),0);
  M.innerHTML=`<h2>Definições</h2>
  <details class="sec" open><summary>1 · Perito</summary><div class="body"><div class="row"><div><label>Nome do perito (para "Inserir-me")</label><input id="sNome" value="${esc(s.peritoNome)}"></div><div><label>Título</label><input id="sTit" value="${esc(s.peritoTitulo)}" placeholder="Eng.º Civil"></div></div></div></details>
  <details class="sec" open><summary>1A · Base de peritos (${peritosOrd().length})</summary><div class="body"><div class="muted">Por ordem alfabética. Na equipa de cada processo escolhe-se da lista; um nome novo escrito na equipa entra aqui automaticamente.</div>
@@ -2576,6 +2649,7 @@ function renderSettings(M){crumbs();const s=settings;
  <details class="sec" open><summary>4 · Fotografias</summary><div class="body"><label>Resolução das fotografias gravadas</label><select id="sKB">${[50,150,300,500].map(k=>`<option value="${k}" ${+s.photoKB===k?'selected':''}>${k} KB${k===50?' (mínima)':k===150?' (baixa – por defeito)':k===300?' (razoável)':' (média)'}</option>`).join('')}</select></div></details>
  <details class="sec" open><summary>5 · Modelos Word</summary><div class="body"><div class="muted">${TPL_FASES.map(f=>`${esc(EVENTOS[f].nome)}: <b>${esc(tplAtivo(f)?.name||'sem modelo')}</b>`).join('<br>')}</div><div class="btns"><button class="secondary" data-tplgo>Gerir modelos ▶</button></div></div></details>
  <details class="sec" open><summary>6 · Cópia de segurança</summary><div class="body"><div class="muted">O Backup OUT guarda processos, parcelas, fotografias e definições num único ficheiro .json. O Backup IN pergunta se acrescenta aos dados atuais ou substitui tudo.</div>${bkBarHTML()}</div></details>
+ <details class="sec"><summary>7 · Cópias automáticas (${LIXO_DIAS} dias)</summary><div class="body"><div class="muted">Antes de eliminar um processo, ou de substituir tudo por um backup, a app guarda aqui uma cópia do processo (com as fotografias) durante ${LIXO_DIAS} dias. Pode repô-lo ou apagar a cópia.</div><div id="lixoL"><div class="muted">A carregar…</div></div></div></details>
  <div class="muted">ExPropria ${VERSION} · base de dados ${DB_NAME}</div>`;
  const sv=()=>saveSettings();
  $('#sNome').oninput=e=>{s.peritoNome=e.target.value;sv()};$('#sTit').oninput=e=>{s.peritoTitulo=e.target.value;sv()};
@@ -2680,8 +2754,10 @@ async function dataURLToBlob(u){return (await fetch(u)).blob()}
 /* estado do backup: data do último Backup OUT e processos alterados desde então */
 function bkEstado(){const t=settings.lastBackup||'';const alt=processos.filter(p=>!t||(p.updatedAt||'')>t).length;const dias=t?Math.floor((Date.now()-new Date(t))/864e5):null;
  return {t,alt,dias,warn:!!processos.length&&(!t||(alt>0&&dias>=1))}}
-function bkBarHTML(){const e=bkEstado();const txt=!e.t?(processos.length?'Ainda não foi feito nenhum backup neste aparelho.':'Sem dados para guardar.'):`Último backup: ${fmtStamp(e.t)}${e.alt?` · ${e.alt} processo(s) alterado(s) desde então`:' · sem alterações desde então'}`;
+function bkBarHTML(){const e=bkEstado();const txt=!e.t?(processos.length?'Ainda não foi feito nenhum backup neste aparelho.':'Sem dados para guardar.'):`Último backup: ${fmtStamp(e.t)} (há ${e.dias} dia${e.dias===1?'':'s'})${e.alt?` · ${e.alt} processo(s) alterado(s) desde então`:' · sem alterações desde então'}`;
  return `<div class="bkbar ${e.warn?'warn':''}"><div class="bktxt"><b>Cópia de segurança</b><span>${esc(txt)}</span></div><div class="btns"><button class="green" data-bk="out">⬇ Backup OUT</button><button class="secondary" data-bk="in">⬆ Backup IN</button></div></div>`}
+/* lembrete de backup no cabeçalho: sem backup, ou há 7 dias ou mais com processos alterados */
+function bkPill(){const b=document.getElementById('bkPill');if(!b)return;const e=bkEstado();const on=!!processos.length&&(!e.t||(e.alt>0&&e.dias>=7));b.classList.toggle('hidden',!on);if(on){b.textContent=e.t?`⚠ Backup há ${e.dias} dias`:'⚠ Sem backup';b.onclick=exportBackup}}
 function bindBkBar(){$$('[data-bk="out"]').forEach(b=>b.onclick=exportBackup);$$('[data-bk="in"]').forEach(b=>b.onclick=()=>pickIO('backup'))}
 async function exportBackup(){busy(true,'A preparar backup…');try{const fotos=[];for(const r of await getAll('fotos'))fotos.push({id:r.id,processoId:r.processoId,parcelaId:r.parcelaId,data:await blobToDataURL(r.blob)});
  const modelos=[];for(const f of TPL_FASES)for(const o of tplCfg(f).lista){const r=await get('config','tpl:'+o.id);if(r?.blob)modelos.push({id:o.id,fase:f,name:r.name,date:r.date,data:await blobToDataURL(r.blob)})}
@@ -2689,14 +2765,20 @@ async function exportBackup(){busy(true,'A preparar backup…');try{const fotos=
  settings.lastBackup=t;await saveSettings();render()}
  catch(e){alert('Erro no backup: '+e.message)}finally{busy(false)}}
 /* apaga fotografias que já não pertencem a nenhuma parcela */
-async function purgeFotos(){const vivos=new Set(processos.flatMap(p=>(p.parcelas||[]).flatMap(x=>(x.fotos||[]).map(f=>f.id))));let n=0;
+/* cópias automáticas: antes de eliminar um processo ou de substituir tudo por um backup, o processo fica guardado 30 dias (com as fotografias) e pode ser reposto nas Definições */
+const LIXO_DIAS=30;
+async function lixoGet(){const x=await get('config','lixo');return Array.isArray(x)?x:[]}
+async function lixoPut(L){await put('config',L,'lixo')}
+async function lixoAdd(procs,motivo){const L=await lixoGet();const t=stamp();procs.forEach(p=>L.push({t,motivo,proc:structuredClone(p)}));await lixoPut(L)}
+async function lixoLimpa(){const L=await lixoGet();const lim=Date.now()-LIXO_DIAS*864e5;const K=L.filter(x=>new Date(x.t).getTime()>=lim);if(K.length!==L.length){await lixoPut(K);await purgeFotos()}}
+async function purgeFotos(){const lx=await lixoGet().catch(()=>[]);const vivos=new Set([...processos,...lx.map(x=>x.proc)].flatMap(p=>(p&&p.parcelas||[]).flatMap(x=>(x.fotos||[]).map(f=>f.id))));let n=0;
  for(const r of await getAll('fotos'))if(!vivos.has(r.id)){await del('fotos',r.id);revoke(r.id);n++}return n}
 async function restoreBackup(j){const ps=j.processos||[];const conf=ps.filter(p=>processos.some(x=>x.id===p.id));
  const modo=await askChoice('Restaurar backup',`O ficheiro tem ${ps.length} processo(s) e ${(j.fotos||[]).length} fotografia(s), de ${esc(fmtStamp(j.date))}.${conf.length?` <b>${conf.length}</b> desses processos já existem neste aparelho.`:''}`,
   [['add','Acrescentar aos dados atuais'+(conf.length?' (fica a versão mais recente de cada processo)':''),'green'],...(conf.length?[['addf','Acrescentar, mas usar sempre a versão do backup']]:[]),['rep','Substituir TUDO pelo backup','del']]);
  if(!modo)return;if(modo==='rep'&&!await uiConfirm('Apagar todos os dados deste aparelho e repor o backup?'))return;
  busy(true,'A restaurar…');try{
-  if(modo==='rep'){await withTx(['processos','fotos'],'readwrite',tx=>{tx.objectStore('processos').clear();tx.objectStore('fotos').clear();return txDone(tx)});processos=[];settings=normSettings(j.settings);settings.lastBackup=j.date||'';await saveSettings()}
+  if(modo==='rep'){if(processos.length)await lixoAdd(processos,'Substituído por backup');await withTx(['processos'],'readwrite',tx=>{tx.objectStore('processos').clear();return txDone(tx)});processos=[];settings=normSettings(j.settings);settings.lastBackup=j.date||'';await saveSettings()}
   if(modo!=='rep'&&j.settings){/* acrescentar: junta as bibliotecas do backup (peritos por nome; questões e legislação por id) sem apagar nada do aparelho */const B=j.settings;
    (B.peritos||[]).forEach(b=>{if(!b||!String(b.nome||'').trim())return;const x=settings.peritos.find(p=>p&&norm(p.nome)===norm(b.nome));if(!x)settings.peritos.push(Object.assign({nome:'',esp:'',tel:'',email:'',res:''},b));else ['esp','tel','email','res'].forEach(k=>{if(!String(x[k]||'').trim()&&b[k])x[k]=b[k]})});
    sortPeritos(settings.peritos);for(const k of ['questoes','legis'])(B[k]||[]).forEach(q=>{if(q&&q.id&&!settings[k].some(x=>x.id===q.id))settings[k].push(q)})}
@@ -2763,7 +2845,7 @@ $('#btnHome').onclick=()=>{view='home';render()};
 $$('[data-nav]').forEach(b=>b.onclick=async()=>{clearTimeout(saveT);if(cur)await saveCur();const k=b.dataset.nav;if(k==='parcela'){curParcela=curParcela||cur.parcelas.slice().sort((a,b)=>parSortKey(a)-parSortKey(b))[0];if(!curParcela)return;tab='rel'}view=k;render()});
 $('#btnSettings').onclick=()=>{view='settings';render()};$('#btnModelos').onclick=async()=>{clearTimeout(saveT);if(cur)await saveCur();view='modelos';render()};
 (async()=>{$('#appVer').textContent=VERSION;document.title=`ExPropria ${VERSION}`;
- try{db=await dbReady();try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist().catch(()=>{})}catch(e){}settings=normSettings(await get('config','settings'));await saveSettings();await tplMigrar();processos=await getAll('processos');
+ try{db=await dbReady();try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist().catch(()=>{})}catch(e){}settings=normSettings(await get('config','settings'));await saveSettings();await tplMigrar();processos=await getAll('processos');try{await lixoLimpa()}catch(e){}
   for(const p of processos){normProc(p);if(p._dirty){delete p._dirty;await put('processos',p)}}}
  catch(e){$('#main').innerHTML=`<div class="badbox">Não foi possível abrir a base de dados: ${esc(e.message)}</div>`;return}
  render()})();
