@@ -89,6 +89,7 @@ table.st{border-collapse:collapse;margin:6px 0 12px;min-width:260px;font-size:13
 .bar{height:8px;background:#e6e8eb;border-radius:4px;overflow:hidden;margin:6px 0}.bar i{display:block;height:100%;background:var(--ok)}
 .photos{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .ph{border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#fafbfc}
+.ph{position:relative}.ph.res img{opacity:.55;filter:grayscale(.5)}.phsel{position:absolute;top:6px;right:6px;padding:6px 9px;font-size:12px;border-radius:8px;border:1px solid #bbb;background:rgba(255,255,255,.92);color:#333;min-height:32px}.phsel.on{background:#2e7d32;border-color:#2e7d32;color:#fff}
 .ph img{width:100%;height:150px;object-fit:cover;display:block;cursor:pointer}
 .ph .cap{padding:6px 8px;font-size:13px;cursor:pointer;min-height:38px}
 .gpsv{padding:8px 10px;background:#f4f5f6;border:1px solid var(--line);border-radius:8px;font-size:14px}
@@ -684,7 +685,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Regi Anomalias =====
-const VERSION='0.14.4';
+const VERSION='0.15.0';
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'}];
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
 const parteNome=(p,n)=>(p.partes||[]).find(x=>x.n==n)?.nome||'';
@@ -763,7 +764,10 @@ const fd=f=>fotoCache.get(f.id)||f.data||'';
 async function loadFotos(p){if(!p)return;const m=p.visita?.map;if(m&&!fotoCache.has(m.id)){try{const r=await fotoGet(m.id);if(r)fotoCache.set(m.id,r.data)}catch(e){}}for(const a of p.anomalias)for(const f of a.fotos)if(!fotoCache.has(f.id)&&!f.data){try{const r=await fotoGet(f.id);if(r)fotoCache.set(f.id,r.data)}catch(e){}}}
 async function migrateFotos(p){let ch=false;const m=p.visita?.map;if(m&&m.data){await fotoPut(m.id,m.data);delete m.data;ch=true}for(const a of p.anomalias||[])for(const f of a.fotos||[]){if(!f.id)f.id=uid();if(f.data){await fotoPut(f.id,f.data);delete f.data;ch=true}}if(ch)await dbPut(p);return p}
 const numOf=(p,a)=>{if(p.lockNum&&a.num)return a.num;const pt=parteOf(p,a);let k=0;for(const x of p.anomalias){if(parteOf(p,x)==pt)k++;if(x===a)return k}return k};
-function hydrate(p){return p.anomalias.map(a=>({...a,_n:numOf(p,a),_code:anCode(p,a),_parte:parteNome(p,parteOf(p,a)),fotos:a.fotos.map(f=>({...f,data:fd(f)}))}))}
+// fotos escolhidas para o relatório (sel!==false) vêm primeiro; as restantes ficam em reserva (guardadas, não exportadas)
+const inRel=f=>f.sel!==false;const relF=a=>a.fotos.filter(inRel);const resF=a=>a.fotos.filter(f=>!inRel(f));const MAXALL=40;
+function normFotos(a){a.fotos=[...relF(a),...resF(a)]}
+function hydrate(p){return p.anomalias.map(a=>({...a,_n:numOf(p,a),_code:anCode(p,a),_parte:parteNome(p,parteOf(p,a)),fotos:relF(a).map(f=>({...f,data:fd(f)}))}))}
 
 function migrateSettings(s){
   s=Object.assign(clone(DEF_SETTINGS),s||{});
@@ -846,12 +850,13 @@ async function phash(src){const i=await loadImg(src);const c=document.createElem
   const d=x.getImageData(0,0,9,8).data;const g=k=>d[k*4]*0.299+d[k*4+1]*0.587+d[k*4+2]*0.114;let h='';
   for(let r=0;r<8;r++){let n=0;for(let cc=0;cc<8;cc++)n=(n<<1)|(g(r*9+cc)>g(r*9+cc+1)?1:0);h+=n.toString(16).padStart(2,'0')}return h}
 const hamm=(a,b)=>{let n=0;for(let i=0;i<a.length;i+=2){let v=parseInt(a.substr(i,2),16)^parseInt(b.substr(i,2),16);while(v){n+=v&1;v>>=1}}return n};
-const SAME=5;
+const SAME=2;
 async function ensureHashes(p){let ch=false;for(const a of p.anomalias)for(const f of a.fotos)if(!f.ph){try{const src=fd(f)||(await fotoGet(f.id))?.data;if(src){f.ph=await phash(src);ch=true}}catch(e){}}return ch}
-function dupGroups(p){const L=[];p.anomalias.forEach(a=>a.fotos.forEach((f,i)=>{if(f.ph)L.push({a,f,i,code:imgCode(p,a,i)})}));const G=[],used=new Set();
+function dupGroups(p){const L=[];p.anomalias.forEach(a=>relF(a).forEach((f,i)=>{if(f.ph)L.push({a,f,i,code:imgCode(p,a,i)})}));const G=[],used=new Set();
   for(let x=0;x<L.length;x++){if(used.has(x))continue;const g=[L[x]];for(let y=x+1;y<L.length;y++)if(!used.has(y)&&hamm(L[x].f.ph,L[y].f.ph)<=SAME){g.push(L[y]);used.add(y)}if(g.length>1)G.push(g)}return G}
-function dupOf(p,f){const out=[];p.anomalias.forEach(a=>a.fotos.forEach((g,i)=>{if(g!==f&&g.id!==f.id&&g.ph&&f.ph&&hamm(g.ph,f.ph)<=SAME)out.push(imgCode(p,a,i))}));return out}
-function warnDup(p,a,i){const c=dupOf(p,a.fotos[i]);if(c.length)toast(`⚠︎ ${imgCode(p,a,i)} parece repetida: igual a ${c.join(', ')}.`,1);return c.length>0}
+function dupOf(p,f){const out=[];p.anomalias.forEach(a=>a.fotos.forEach((g,i)=>{if(g!==f&&g.id!==f.id&&g.ph&&f.ph&&hamm(g.ph,f.ph)<=SAME)out.push(fotoLbl(p,a,i))}));return out}
+const fotoLbl=(p,a,i)=>inRel(a.fotos[i])?imgCode(p,a,i):`${anCode(p,a)} reserva ${i-relF(a).length+1}`;
+function warnDup(p,a,i){const c=dupOf(p,a.fotos[i]);if(c.length)toast(`⚠︎ ${fotoLbl(p,a,i)} parece repetida: igual a ${c.join(', ')}.`,1);return c.length>0}
 async function rotateFoto(f){const i=await loadImg(fd(f));const c=document.createElement('canvas');c.width=i.naturalHeight;c.height=i.naturalWidth;const x=c.getContext('2d');x.translate(c.width,0);x.rotate(Math.PI/2);x.drawImage(i,0,0);await fotoPut(f.id,c.toDataURL('image/jpeg',.8));delete f.data;f.w=c.width;f.h=c.height}
 
 // ---------- Render ----------
@@ -932,7 +937,7 @@ function anomCard(a,i,n,mode){
   const p=cur();const st=isDone(a)?pill('✓ analisada','ok'):pill('por analisar','warn');
   const vals=[];if(useK(p,'conf')&&a.vals?.conf)vals.push(esc(a.vals.conf));if(useK(p,'cons')&&a.vals?.cons?.length)vals.push(esc(a.vals.cons.filter(x=>x!=='OUT').join(', ')));if(useK(p,'tipo')&&a.vals?.tipo?.length)vals.push(esc(a.vals.tipo.join(', ')));
   return `<div class="card ${a.id===S.aid?'active':''}"><div class="cardrow"><div class="grow" data-act="openAnom" data-id="${a.id}"><b>${anCode(p,a)}</b> <span class="muted">${esc((parteNome(p,parteOf(p,a))||'').replace(/\s*\(.*\)$/,''))}${a.ref?' · Item '+esc(a.ref):''}</span> · ${esc(zonaTxt(a))} · <i>${esc(a.elemento||'')}</i>
-  <div class="muted clamp">${esc(a.descricao||'')}</div><div style="margin-top:4px">${mode==='analise'?st:''}${a.origem==='local'?pill('acrescentada no local','bad'):''}${vals.length?pill(vals.join(' · ')):''}${pill('📷 '+a.fotos.length)}</div></div>
+  <div class="muted clamp">${esc(a.descricao||'')}</div><div style="margin-top:4px">${mode==='analise'?st:''}${a.origem==='local'?pill('acrescentada no local','bad'):''}${vals.length?pill(vals.join(' · ')):''}${pill('📷 '+relF(a).length+(resF(a).length?` (+${resF(a).length})`:''))}</div></div>
   ${S.view==='anom'?`<div class="mv"><button class="secondary mini" data-act="mvA" data-id="${a.id}" data-d="-1" ${i?'':'disabled'}>▲</button><button class="secondary mini" data-act="mvA" data-id="${a.id}" data-d="1" ${i<n-1?'':'disabled'}>▼</button><button class="del" data-act="delA" data-id="${a.id}">🗑</button></div>`:''}</div></div>`;
 }
 // ----- Anomalias (pronúncia) -----
@@ -971,9 +976,12 @@ function vFicha(){
   if(!fromList){
     const prev=p.anomalias[idx-1];const prevHas=prev&&Object.entries(prev.vals||{}).some(([k,v])=>useK(p,k)&&(Array.isArray(v)?v.length:v));
     h+=sec('f2','2 · Pronúncia',(prevHas?`<div class="btns" style="margin-top:0"><button class="secondary mini" data-act="copyPrev">⧉ Copiar a pronúncia de ${anCode(p,prev)}</button></div>`:'')+txt('a.comentario',`${lblC(p)} (sai por baixo, com o título «${lblC(p)}:»)`,a.comentario,2)+(fs.length?fs.map(f=>fieldUI(f,a)).join(''):'<p class="muted">Nenhum campo a atender — escolha-os no separador Processo › 3.</p>'),{cnt:pill(`${nFilled}/${fsC.length}`,nFilled===fsC.length&&fsC.length?'ok':'warn')});
-    h+=sec('f3','3 · Fotografias',`<div class="photos">${a.fotos.map((f,i)=>`<div class="ph"><img src="${fd(f)}" data-act="zoom" data-i="${i}"><div class="cap" data-act="zoom" data-i="${i}"><b>${imgCode(cur(),a,i)}</b> ${esc(f.legenda||'— sem legenda (toque para editar)')}</div></div>`).join('')}</div>
-      ${a.fotos.length<max?`<div class="btns"><label class="btn green">📷 Tirar fotografia<input type="file" accept="image/*" capture="environment" data-act="addCam" hidden></label><label class="btn green">🖼 Escolher da fototeca<input type="file" accept="image/*" multiple data-act="addLib" hidden></label></div>`:'<p class="muted">Limite de fotos atingido.</p>'}
-      ${S.camShots.length?`<div class="btns"><button class="secondary" data-act="saveCam">💾 Guardar ${S.camShots.length} foto(s) tirada(s) na fototeca</button></div>`:''}`,{cnt:pill(`${a.fotos.length}/${max}`,a.fotos.length?'ok':'')});
+    {const RF=relF(a),RS=resF(a);const th=(f,i,res)=>`<div class="ph ${res?'res':''}"><img src="${fd(f)}" data-act="zoom" data-i="${i}"><div class="cap" data-act="zoom" data-i="${i}"><b>${res?'Reserva':imgCode(cur(),a,i)}</b> ${esc(f.legenda||(res?'':'— sem legenda (toque para editar)'))}</div><button class="phsel ${res?'':'on'}" data-act="selF" data-i="${i}" title="${res?'Passar para o relatório':'Retirar do relatório (fica em reserva)'}">${res?'＋ Usar':'✓ No relatório'}</button></div>`;
+    h+=sec('f3','3 · Fotografias',`<p class="muted" style="margin-top:0">${RF.length}/${max} no relatório${RS.length?` · ${RS.length} em reserva`:''}. Pode carregar mais fotos do que o limite: as que excedem ficam em reserva e escolhe depois as melhores.</p>
+      <div class="photos">${RF.map((f,i)=>th(f,i,false)).join('')}</div>
+      ${RS.length?`<label style="margin-top:12px">Reserva — não vai para o relatório (${RS.length})</label><div class="photos">${RS.map((f,k)=>th(f,RF.length+k,true)).join('')}</div>`:''}
+      ${a.fotos.length<MAXALL?`<div class="btns"><label class="btn green">📷 Tirar fotografia<input type="file" accept="image/*" capture="environment" data-act="addCam" hidden></label><label class="btn green">🖼 Escolher da fototeca<input type="file" accept="image/*" multiple data-act="addLib" hidden></label></div>`:`<p class="muted">Máximo de ${MAXALL} fotos guardadas nesta anomalia (relatório + reserva). Elimine algumas da reserva para juntar mais.</p>`}
+      ${S.camShots.length?`<div class="btns"><button class="secondary" data-act="saveCam">💾 Guardar ${S.camShots.length} foto(s) tirada(s) na fototeca</button></div>`:''}`,{cnt:pill(`${relF(a).length}/${max}${resF(a).length?' +'+resF(a).length:''}`,relF(a).length?'ok':'')})}
   }
   h+=`<div class="btns"><button class="green" data-act="stepA" data-d="1" ${idx<n-1?'':'disabled'}>Anomalia seguinte ▶</button><span class="grow"></span><button class="secondary mini" data-act="dupA">⧉ Duplicar</button><button class="del" data-act="delAnom">Eliminar</button></div>`;
   return h;
@@ -1009,14 +1017,14 @@ function computeStats(p){
   return T;
 }
 function statsHTML(T){return T.map(t=>`<table class="st"><tr><th>${esc(t.title)}</th><th class="n">N.º</th></tr>${t.rows.map(([l,n])=>`<tr><td>${esc(l)}</td><td class="n">${esc(n)}</td></tr>`).join('')}</table>`).join('')}
-function vRel(){const p=cur();const nf=p.anomalias.reduce((s,a)=>s+a.fotos.length,0),done=p.anomalias.filter(isDone).length;
-  const an=p.anomalias,W=[];const todo=an.filter(a=>!isDone(a)),semF=an.filter(a=>!a.fotos.length),semL=an.reduce((s,a)=>s+a.fotos.filter(f=>!String(f.legenda||'').trim()).length,0),semD=an.filter(a=>!String(a.descricao||'').trim());
+function vRel(){const p=cur();const nf=p.anomalias.reduce((s,a)=>s+relF(a).length,0),done=p.anomalias.filter(isDone).length;
+  const an=p.anomalias,W=[];const todo=an.filter(a=>!isDone(a)),semF=an.filter(a=>!relF(a).length),semL=an.reduce((s,a)=>s+relF(a).filter(f=>!String(f.legenda||'').trim()).length,0),semD=an.filter(a=>!String(a.descricao||'').trim());
   if(todo.length)W.push([`${todo.length} anomalia(s) por analisar`,'chkTodo',todo.slice(0,6).map(a=>anCode(p,a)).join(', ')+(todo.length>6?'…':'')]);
   if(semD.length)W.push([`${semD.length} anomalia(s) sem «${lblD(p)}»`,'chkGo:'+semD[0].id,semD.slice(0,6).map(a=>anCode(p,a)).join(', ')]);
   if(semF.length)W.push([`${semF.length} anomalia(s) sem fotografias`,'chkGo:'+semF[0].id,semF.slice(0,6).map(a=>anCode(p,a)).join(', ')+(semF.length>6?'…':'')]);
   if(an.some(a=>a.fotos.some(f=>!f.ph))&&!S.hashing&&S.hashDone!==p.id){S.hashing=true;S.hashDone=p.id;(async()=>{await loadFotos(p);if(await ensureHashes(p))await saveProc();S.hashing=false;S.scrollTop=window.scrollY;render()})()}
   const DG=dupGroups(p);if(DG.length)W.push([`${DG.length} fotografia(s) repetida(s)`,'chkGo:'+DG[0][1].a.id,DG.slice(0,4).map(g=>g.map(x=>x.code).join(' = ')).join(' · ')+(DG.length>4?'…':'')]);
-  if(semL)W.push([`${semL} fotografia(s) sem legenda`,'chkGo:'+(an.find(a=>a.fotos.some(f=>!String(f.legenda||'').trim()))||{}).id,'']);
+  if(semL)W.push([`${semL} fotografia(s) sem legenda`,'chkGo:'+(an.find(a=>relF(a).some(f=>!String(f.legenda||'').trim()))||{}).id,'']);
   if(settings.dateCom!==false&&!p.visita?.data)W.push(['Sem data da vistoria (sai antes de «'+lblC(p)+'»)','chkProc','']);
   if(!p.codigo)W.push(['Processo sem código (vai no nome dos ficheiros)','chkProc','']);
   const chk=W.length?`<div class="card chk"><b>Antes de exportar, confirme:</b>${W.map(([t,act,sub])=>{const [ac,id]=act.split(':');return `<div class="chkrow"><span>⚠︎ ${esc(t)}${sub?`<br><small>${esc(sub)}</small>`:''}</span><button class="secondary mini" data-act="${ac}" ${id?`data-id="${id}"`:''}>Ver ›</button></div>`}).join('')}</div>`:'<div class="card chk ok">✓ Tudo analisado e completo.</div>';
@@ -1047,12 +1055,12 @@ function paperHTML(p){
       let t=`<div class="tf" style="margin:0 0 18px"><div><b style="font-size:13px">${anCode(p,a)}</b> <span style="color:#777">· Item ${esc(a.ref||'—')}</span></div><div><i>${esc([zona,a.elemento].filter(Boolean).join(' · '))}</i></div>${a.origem==='local'?'<div><i class="red">Anomalia acrescentada no local</i></div>':''}
       <p style="margin:8px 0 2px"><b>${esc(lblD(p))}:</b></p>${txHTML(a.descricao)}${pc.map(x=>`<div style="font-size:11px">${x}</div>`).join('')}<p style="margin:10px 0 2px"><b>${settings.dateCom!==false&&p.visita?.data?esc(p.visita.data)+' - ':''}${esc(lblC(p))}:</b></p>${txHTML(a.comentario)}
       ${lF.map(f=>{const v=fieldValueText(f,a.vals?.[f.id],settings,a.vals);return v?`<p><b>${esc(f.label)}:</b> ${esc(v)}</p>`:''}).join('')}`;
-      if(settings.txtPhotos!==false&&a.fotos.length){t+=`<table class="pg">`;for(let i=0;i<a.fotos.length;i+=C){const g=Array.from({length:C},(_,k)=>a.fotos[i+k]);t+=`<tr class="pr">${g.map(f=>`<td style="width:${100/C}%">${f?`<img src="${fd(f)}">`:''}</td>`).join('')}</tr><tr class="cap">${g.map((f,k)=>`<td>${f?`${imgCode(p,a,i+k)}${f.legenda?' – '+esc(f.legenda):''}`:''}</td>`).join('')}</tr>`}t+='</table>'}
+      if(settings.txtPhotos!==false&&relF(a).length){const RF=relF(a);t+=`<table class="pg">`;for(let i=0;i<RF.length;i+=C){const g=Array.from({length:C},(_,k)=>RF[i+k]);t+=`<tr class="pr">${g.map(f=>`<td style="width:${100/C}%">${f?`<img src="${fd(f)}">`:''}</td>`).join('')}</tr><tr class="cap">${g.map((f,k)=>`<td>${f?`${imgCode(p,a,i+k)}${f.legenda?' – '+esc(f.legenda):''}`:''}</td>`).join('')}</tr>`}t+='</table>'}
       return t+'</div>'}
     let r=`<table class="ft"><tr class="h"><td style="width:11.7%">${anCode(p,a)}</td><td style="width:11.7%"><small>Item</small> ${esc(a.ref||'—')}</td><td style="width:26.6%"><small>Zona:</small> ${esc(zona)}</td><td><small>Elemento:</small> ${esc(a.elemento)}</td></tr>
     <tr><td colspan="4"><b class="tt">${esc(lblD(p))}:</b>${txHTML(a.descricao)}</td></tr>${carH}<tr><td colspan="4"><b class="tt">${settings.dateCom!==false&&p.visita?.data?esc(p.visita.data)+' - ':''}${esc(lblC(p))}:</b>${txHTML(a.comentario)||'<div class="tx">&nbsp;</div>'}</td></tr>
     ${lF.map(f=>{const t=fieldValueText(f,a.vals?.[f.id],settings,a.vals);return t?`<tr><td colspan="4"><b class="lb">${esc(f.label)}</b><br>${esc(t)}</td></tr>`:''}).join('')}`;
-    if(a.fotos.length){r+=`<tr><td colspan="4" style="padding:0"><table class="pg">`;for(let i=0;i<a.fotos.length;i+=C){const g=Array.from({length:C},(_,k)=>a.fotos[i+k]);r+=`<tr class="pr">${g.map(f=>`<td style="width:${100/C}%">${f?`<img src="${fd(f)}">`:''}</td>`).join('')}</tr><tr class="cap">${g.map((f,k)=>`<td>${f?`${imgCode(p,a,i+k)}${f.legenda?' – '+esc(f.legenda):''}`:''}</td>`).join('')}</tr>`}r+='</table></td></tr>'}
+    const RF=relF(a);if(settings.txtPhotos!==false&&RF.length){r+=`<tr><td colspan="4" style="padding:0"><table class="pg">`;for(let i=0;i<RF.length;i+=C){const g=Array.from({length:C},(_,k)=>RF[i+k]);r+=`<tr class="pr">${g.map(f=>`<td style="width:${100/C}%">${f?`<img src="${fd(f)}">`:''}</td>`).join('')}</tr><tr class="cap">${g.map((f,k)=>`<td>${f?`${imgCode(p,a,i+k)}${f.legenda?' – '+esc(f.legenda):''}`:''}</td>`).join('')}</tr>`}r+='</table></td></tr>'}
     return r+'</table>'}).join('');
   if(p.printResumo&&p.resumo)h+=`<h4>Resumo de apreciação geral</h4><p>${esc(p.resumo).replace(/\n/g,'<br>')}</p>`;
   return h;
@@ -1209,13 +1217,14 @@ function openCalendar(cur0,onPick){
 // ---------- Editor de foto ampliado (do Exprop) ----------
 function openPhotoModal(i){const a=curA();const f=a?.fotos[i];if(!f)return;$('#pm')?.remove();
   const m=document.createElement('div');m.className='modal';m.id='pm';
-  m.innerHTML=`<div class="box pmbox"><div class="row" style="margin-top:0"><b class="grow">${imgCode(cur(),a,i)} <span class="muted">(${i+1}/${a.fotos.length})</span></b><button class="sm" data-act="pmClose">✕ Fechar</button></div>
+  m.innerHTML=`<div class="box pmbox"><div class="row" style="margin-top:0"><b class="grow">${inRel(f)?`${imgCode(cur(),a,i)} <span class="muted">(${i+1}/${relF(a).length})</span>`:`Reserva <span class="muted">(${i-relF(a).length+1}/${resF(a).length}) — não vai para o relatório</span>`}</b><button class="sm" data-act="pmClose">✕ Fechar</button></div>
   <img src="${fd(f)}" class="pmimg" data-act="pmFull" data-i="${i}">
   ${(()=>{const c=dupOf(cur(),f);return c.length?`<div class="red" style="font-size:13px;margin:6px 0">⚠︎ Esta foto parece repetida — igual a ${esc(c.join(', '))}. Pode eliminá-la ou substituí-la.</div>`:''})()}
   <label class="fld"><span>Legenda</span><textarea rows="5" data-bind="f.${i}.legenda" placeholder="Legenda da fotografia">${esc(f.legenda)}</textarea></label>
-  <label>Mover para outra anomalia</label><select data-act="pmMoveTo" data-i="${i}"><option value="">— escolher —</option>${cur().anomalias.filter(x=>x!==a).map(x=>`<option value="${x.id}" ${x.fotos.length>=settings.maxFotos?'disabled':''}>${anCode(cur(),x)} · ${esc([x.local||x.zona,x.elemento].filter(Boolean).join(' · ')||'—')} (${x.fotos.length}/${settings.maxFotos})</option>`).join('')}</select>
-  <div class="row"><button class="sm" data-act="pmRot" data-i="${i}">⟳ Rodar</button><button class="sm" data-act="pmMv" data-i="${i}" data-d="-1" ${i?'':'disabled'}>◀ Mover</button><button class="sm" data-act="pmMv" data-i="${i}" data-d="1" ${i<a.fotos.length-1?'':'disabled'}>Mover ▶</button><span class="grow"></span><button class="danger xs" data-act="pmDel" data-i="${i}">🗑 Eliminar</button></div>
-  <div class="row"><span class="muted" style="font-size:12px">Substituir esta foto (mantém o número ${imgCode(cur(),a,i)} e a legenda):</span></div>
+  <label>Mover para outra anomalia</label><select data-act="pmMoveTo" data-i="${i}"><option value="">— escolher —</option>${cur().anomalias.filter(x=>x!==a).map(x=>`<option value="${x.id}" ${x.fotos.length>=MAXALL?'disabled':''}>${anCode(cur(),x)} · ${esc([x.local||x.zona,x.elemento].filter(Boolean).join(' · ')||'—')} (${relF(x).length}/${settings.maxFotos}${relF(x).length>=settings.maxFotos?' → reserva':''})</option>`).join('')}</select>
+  <div class="row"><button class="${inRel(f)?'green':'secondary'}" data-act="pmSel" data-i="${i}">${inRel(f)?'✓ No relatório — tocar para pôr em reserva':'＋ Usar no relatório'}</button></div>
+  <div class="row"><button class="sm" data-act="pmRot" data-i="${i}">⟳ Rodar</button><button class="sm" data-act="pmMv" data-i="${i}" data-d="-1" ${i&&inRel(a.fotos[i-1])===inRel(f)?'':'disabled'}>◀ Mover</button><button class="sm" data-act="pmMv" data-i="${i}" data-d="1" ${i<a.fotos.length-1&&inRel(a.fotos[i+1])===inRel(f)?'':'disabled'}>Mover ▶</button><span class="grow"></span><button class="danger xs" data-act="pmDel" data-i="${i}">🗑 Eliminar</button></div>
+  <div class="row"><span class="muted" style="font-size:12px">Substituir esta foto (mantém ${inRel(f)?'o número '+imgCode(cur(),a,i)+' e ':''}a legenda):</span></div>
   <div class="row"><label class="btn sm">📷 Substituir — câmara<input type="file" accept="image/*" capture="environment" data-act="pmRepCam" data-i="${i}" hidden></label><label class="btn sm">🖼 Substituir — fototeca<input type="file" accept="image/*" data-act="pmRepLib" data-i="${i}" hidden></label></div>
   <div class="row"><span class="grow"></span><button class="pri" data-act="pmClose">Concluído</button></div></div>`;
   document.body.appendChild(m);m.querySelectorAll('textarea').forEach(autosize);
@@ -1232,11 +1241,11 @@ async function docxFor(p,lay){const o=await docOpts(p,lay,'.docx');if(settings.u
 async function pdfFor(p,lay){return buildPdf(await docOpts(p,lay,'.pdf'))}
 const fmts=()=>[settings.expFichas!==false&&'grelha',settings.expTexto!==false&&'texto'].filter(Boolean);
 const ZIPK=[['zipWord','Word'],['zipPdf','PDF'],['zipXlsx','Excel'],['zipKml','KML (localização)'],['zipFotos','Pastas das fotos']];
-function zipEstimate(p){const nF=p.anomalias.reduce((s,a)=>s+a.fotos.length,0);const per=nF*(settings.photoKB||150)/1024;const nd=fmts().length;
-  const copies=(settings.txtPhotos!==false?nd*((settings.zipWord!==false?1:0)+(settings.zipPdf!==false?1:0)):0)+(settings.zipFotos!==false?1:0);return {nF,mb:per*copies+0.3}}
+function zipEstimate(p){const nF=p.anomalias.reduce((s,a)=>s+relF(a).length,0),nA=p.anomalias.reduce((s,a)=>s+a.fotos.length,0);const per=nF*(settings.photoKB||150)/1024;const nd=fmts().length;
+  const copies=(settings.txtPhotos!==false?nd*((settings.zipWord!==false?1:0)+(settings.zipPdf!==false?1:0)):0);return {nF,mb:per*copies+(settings.zipFotos!==false?nA*(settings.photoKB||150)/1024:0)+0.3}}
 function xlsxFor(p){const fs=settings.fields.filter(f=>p.use?.[f.id]);
   const rows=[['Código','Item','Parte','Origem','Zona','Piso','Local','Elemento','Descrição','Comentário',...fs.map(f=>f.label),'N.º fotos','Legendas']];
-  for(const a of p.anomalias)rows.push([anCode(p,a),a.ref,parteNome(p,parteOf(p,a)),a.origem==='local'?'Constatada no local':'Da lista',a.zona,a.piso||'',a.local,a.elemento,a.descricao,a.comentario||'',...fs.map(f=>f.id==='conf'&&a.origem==='local'?'':fieldValueText(f,a.vals?.[f.id],settings,a.vals)),a.fotos.length,a.fotos.map((f,i)=>f.legenda?`${imgCode(p,a,i)}: ${f.legenda}`:'').filter(Boolean).join(' | ')]);
+  for(const a of p.anomalias)rows.push([anCode(p,a),a.ref,parteNome(p,parteOf(p,a)),a.origem==='local'?'Constatada no local':'Da lista',a.zona,a.piso||'',a.local,a.elemento,a.descricao,a.comentario||'',...fs.map(f=>f.id==='conf'&&a.origem==='local'?'':fieldValueText(f,a.vals?.[f.id],settings,a.vals)),relF(a).length,relF(a).map((f,i)=>f.legenda?`${imgCode(p,a,i)}: ${f.legenda}`:'').filter(Boolean).join(' | ')]);
   return buildXlsx('Anomalias',rows,[9,8,14,14,8,12,18,18,60,40,...fs.map(f=>f.type==='long'?40:16),8,40])}
 function migrateProc(p){
   for(const k of ['use','print'])if(p[k]&&['prej','cEst','cFun'].some(x=>x in p[k])){if(!('cons' in p[k]))p[k].cons=!!(p[k].prej||p[k].cEst||p[k].cFun);delete p[k].prej;delete p[k].cEst;delete p[k].cFun}
@@ -1260,6 +1269,9 @@ document.addEventListener('click',async e=>{
   switch(act){
     case 'go':{e.preventDefault();if(dirty)await saveProc();const v=el.dataset.v;if(['proc','anom','rel'].includes(v)&&!p)return toast('Escolha ou crie primeiro um processo.',1);S.view=v;S.sub=null;S.gpsMsg='';S.scrollTop=0;break}
     case 'backList':if(dirty)await saveProc();S.sub=null;if(S.view!=='anom'){S.view='anom'}S.scrollTop=S.listScroll||0;break;
+    case 'selF':case 'pmSel':{const i=+el.dataset.i;const f=a.fotos[i];if(!f)return;
+      if(inRel(f)){f.sel=false}else{if(relF(a).length>=settings.maxFotos){toast(`O relatório já tem ${settings.maxFotos} fotos. Retire primeiro uma («✓ No relatório») para pôr esta.`,1);return}f.sel=true}
+      normFotos(a);S.prevStale=true;await saveProc();if(act==='pmSel'){const k=a.fotos.indexOf(f);S.scrollTop=window.scrollY;render();openPhotoModal(k);return}S.scrollTop=window.scrollY;break}
     case 'ddTog':{S.dd=S.dd||{};const k=el.dataset.k;S.dd[k]=!S.dd[k];S.scrollTop=window.scrollY;break}
     case 'setLay':settings.layout=el.dataset.v;await saveSettings();S.scrollTop=window.scrollY;break;
     case 'setCols':settings.photoCols=+el.dataset.v;await saveSettings();S.scrollTop=window.scrollY;break;
@@ -1309,7 +1321,7 @@ document.addEventListener('click',async e=>{
         for(const lay of fmts()){if(on('zipWord'))files.push({name:`${base}/${docName(p,lay,'.docx')}`,data:await docxFor(p,lay)});if(on('zipPdf'))files.push({name:`${base}/${docName(p,lay,'.pdf')}`,data:await pdfFor(p,lay)})}
         if(on('zipXlsx'))files.push({name:`${base}/${base}_Dados_Anomalias.xlsx`,data:xlsxFor(p)});
         const g=p.visita?.gps;if(on('zipKml')&&g)files.push({name:`${base}/${base}_Localizacao.kml`,data:kmlContent(g.lat,g.lon,`${p.codigo||'Processo'}${p.designacao?' – '+p.designacao:''}`)});
-        if(on('zipFotos')){await loadFotos(p);for(const a of p.anomalias){const c=anCode(p,a);a.fotos.forEach((f,i)=>files.push({name:`${base}/Fotos/${c}/${imgCode(p,a,i).replace(' ','_')}.jpg`,data:b64ToU8(fd(f))}))}}
+        if(on('zipFotos')){await loadFotos(p);for(const a of p.anomalias){const c=anCode(p,a);const nR=relF(a).length;a.fotos.forEach((f,i)=>files.push({name:inRel(f)?`${base}/Fotos/${c}/${imgCode(p,a,i).replace(' ','_')}.jpg`:`${base}/Fotos/${c}/Reserva/Reserva_${c}_${i-nR+1}.jpg`,data:b64ToU8(fd(f))}))}}
         if(!files.length)return toast('Marque pelo menos um conteúdo para a pasta.',1);
         await saveBlob(new Blob([zipStore(files)],{type:'application/zip'}),`${base}_Relatorio.zip`)}catch(err){toast('Erro ao gerar a pasta: '+err.message,1)}return}
     case 'toggleCfg':S.openCfg=!S.openCfg;break;
@@ -1327,7 +1339,7 @@ document.addEventListener('click',async e=>{
     case 'delAnom':if(await ask(`Eliminar a ficha ${anCode(p,a)}? (inclui as fotos)${p.lockNum?'':'\nAs seguintes da mesma parte são renumeradas.'}`,['Cancelar','Eliminar'],1)){removeAnomUndo(p,a);S.sub=null;await saveProc()}else return;break;
     case 'delProc':if(await ask(`Eliminar o processo ${p.codigo||''} e todas as fichas e fotos?\nSugestão: faça antes uma cópia de segurança.`,['Cancelar','Eliminar'],1)){p.anomalias.forEach(x=>x.fotos.forEach(f=>fotoDel(f.id)));procs=procs.filter(x=>x!==p);await dbDel(p.id);S.pid=null;S.view='home'}else return;break;
     case 'rotF':{await rotateFoto(a.fotos[+el.dataset.i]);S.scrollTop=window.scrollY;await saveProc();break}
-    case 'mvF':{const i=+el.dataset.i,j=i+ +el.dataset.d;[a.fotos[i],a.fotos[j]]=[a.fotos[j],a.fotos[i]];S.scrollTop=window.scrollY;await saveProc();break}
+    case 'mvF':{const i=+el.dataset.i,j=i+ +el.dataset.d;if(!a.fotos[j]||inRel(a.fotos[i])!==inRel(a.fotos[j]))return;[a.fotos[i],a.fotos[j]]=[a.fotos[j],a.fotos[i]];S.scrollTop=window.scrollY;await saveProc();break}
     case 'delF':{removeFotoUndo(p,a,+el.dataset.i);S.scrollTop=window.scrollY;await saveProc();break}
     case 'zoom':openPhotoModal(+el.dataset.i);return;
     case 'pmClose':{$('#pm')?.remove();await saveProc();S.scrollTop=window.scrollY;break}
@@ -1382,7 +1394,7 @@ document.addEventListener('change',async e=>{
   if(el.dataset.pn!==undefined){const i=+el.dataset.pn,old=p.partes[i].n,n=parseInt(el.value,10);if(!(n>0)||p.partes.some((x,j)=>j!==i&&x.n==n)){el.value=old;return toast('Número de parte inválido ou repetido.',1)}for(const x of p.anomalias)if(parteOf(p,x)==old)x.parte=n;if(p.parteLocal==old)p.parteLocal=n;p.partes[i].n=n;await saveProc();S.scrollTop=window.scrollY;render();return}
   if(el.dataset.pnome!==undefined){p.partes[+el.dataset.pnome].nome=el.value;await saveProc();return}
   if(act==='filtZona'){S.filt.zona=el.value;S.scrollTop=window.scrollY;render();return}
-  if(act==='pmMoveTo'){const t=p.anomalias.find(x=>x.id===el.value);if(!t)return;if(t.fotos.length>=settings.maxFotos){toast(`${anCode(p,t)} já tem ${settings.maxFotos} fotos.`,1);return}const [f]=a.fotos.splice(+el.dataset.i,1);t.fotos.push(f);$('#pm')?.remove();await saveProc();toast(`Foto movida para ${anCode(p,t)} (${imgCode(p,t,t.fotos.length-1)}).`);S.scrollTop=window.scrollY;render();return}
+  if(act==='pmMoveTo'){const t=p.anomalias.find(x=>x.id===el.value);if(!t)return;if(t.fotos.length>=MAXALL){toast(`${anCode(p,t)} já tem ${MAXALL} fotos guardadas.`,1);return}const [f]=a.fotos.splice(+el.dataset.i,1);f.sel=relF(t).length<settings.maxFotos;t.fotos.push(f);normFotos(t);$('#pm')?.remove();await saveProc();toast(`Foto movida para ${anCode(p,t)} (${fotoLbl(p,t,t.fotos.indexOf(f))}).`);S.scrollTop=window.scrollY;render();return}
   if(act==='tkExp'){settings[el.dataset.k]=el.checked;await saveSettings();S.scrollTop=window.scrollY;render();return}
   if(act==='tkCols'){settings.photoCols=+el.dataset.v;await saveSettings();S.scrollTop=window.scrollY;render();return}
   if(act==='tkOrig'){a.origem=el.dataset.v;await saveProc();S.scrollTop=window.scrollY;render();return}
@@ -1398,9 +1410,10 @@ document.addEventListener('change',async e=>{
       undoToast(`${imgCode(p,a,i)} substituída.${dc.length?` ⚠︎ Parece igual a ${dc.join(', ')}.`:''}`,async()=>{const k=a.fotos.findIndex(x=>x.id===fid);if(k<0)return;a.fotos[k]=old;await fotoDel(fid);await saveProc();if($('#pm'))openPhotoModal(k);S.scrollTop=window.scrollY;render()},()=>fotoDel(old.id))}
     catch(err){toast(err.message,1)}return}
   if(act==='addCam'||act==='addLib'){
-    const files=[...el.files];el.value='';const room=settings.maxFotos-a.fotos.length;
-    if(files.length>room)toast(`Só cabem mais ${room} foto(s); as restantes foram ignoradas.`,1);
-    for(const f of files.slice(0,room)){try{const r=await compressImage(f,settings.photoKB);const fid=uid();await fotoPut(fid,r.data);let ph='';try{ph=await phash(r.data)}catch(e){}a.fotos.push({id:fid,w:r.w,h:r.h,legenda:'',ph});S.prevStale=true;await loadFotos(p);await ensureHashes(p);warnDup(p,a,a.fotos.length-1);if(act==='addCam'){S.camShots.push(f);gpsAutoFromCamera(p)}}catch(err){toast(err.message,1)}}
+    const files=[...el.files];el.value='';const room=MAXALL-a.fotos.length;let nRes=0;
+    if(files.length>room)toast(`Só cabem mais ${room} foto(s) nesta anomalia (máx. ${MAXALL} com a reserva); as restantes foram ignoradas.`,1);
+    for(const f of files.slice(0,room)){try{const r=await compressImage(f,settings.photoKB);const fid=uid();await fotoPut(fid,r.data);let ph='';try{ph=await phash(r.data)}catch(e){}{const sel=relF(a).length<settings.maxFotos;if(!sel)nRes++;a.fotos.push({id:fid,w:r.w,h:r.h,legenda:'',ph,sel});normFotos(a)}S.prevStale=true;await loadFotos(p);await ensureHashes(p);warnDup(p,a,a.fotos.findIndex(x=>x.id===fid));if(act==='addCam'){S.camShots.push(f);gpsAutoFromCamera(p)}}catch(err){toast(err.message,1)}}
+    if(nRes)toast(`${nRes} foto(s) ficaram em reserva (o relatório já tem ${settings.maxFotos}). Escolha as melhores com «✓ No relatório» / «＋ Usar».`);
     await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='impFile'){const f=el.files[0];el.value='';if(!f)return;const u=new Uint8Array(await f.arrayBuffer());
     try{const isDocx=/\.docx$/i.test(f.name)||!!(await (await unzip(u)).get('word/document.xml'));
