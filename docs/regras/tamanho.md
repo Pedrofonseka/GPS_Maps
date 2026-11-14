@@ -5,6 +5,7 @@
 |---|---|---|---|
 | Regi Anomalias | 0.16.2 | assunto (anomalia) | `outKB` — Como gravadas/300/200/150/100/60 KB |
 | ExPropria | 0.13.3 | parcela | `outKB` — Original/300/200/150/100/60 KB; documentos com mínimo legível |
+| Relat_Anomalias | 1.0.0 | assunto (anomalia) | herdada do Regi 0.16.4 |
 | FullTopics | 1.07 | tópico | `docPhotoKB` existente (20…300 KB) |
 
 ## 1. Máximo de fotografias no relatório

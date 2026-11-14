@@ -5,6 +5,7 @@
 |---|---|---|
 | Regi Anomalias | 0.14.2–0.16.0 | origem; 0.16.0 tem máximo de fotos por assunto (maxF/enforceMax) |
 | ExPropria | 0.13.2–0.13.3 | máximo por parcela desde 0.13.3 |
+| Relat_Anomalias | 1.0.0 | herdada do Regi 0.16.4 |
 | FullTopics | 1.06–1.07 | assinaturas guardadas no registo da foto (store 'fotos') |
 
 ## 1. Fotografias em reserva
