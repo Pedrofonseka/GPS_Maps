@@ -706,7 +706,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relat_Anomalias =====
-const VERSION='1.0.4';
+const VERSION='1.0.5';
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'}];
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
 const parteNome=(p,n)=>(p.partes||[]).find(x=>x.n==n)?.nome||'';
@@ -974,7 +974,7 @@ function vProc(){
   const nUse=settings.fields.filter(f=>fieldOn(p,f)).length;
   const nl=an.filter(a=>a.origem!=='local').length,nc=an.length-nl;
   return `<h2>Processo</h2>${blk('A · Processo e vistoria','Identificação, data, presenças e localização')}
-  ${sec('p1','1 · Dados do processo',`<label>Tipo de trabalho</label><div class="seg">${MODOS.map(([k,t])=>`<button class="${(p.modo||'misto')===k?'on':''}" data-act="setModo" data-v="${k}">${t}</button>`).join('')}</div><p class="muted">${MODOS.find(m=>m[0]===(p.modo||'misto'))[2]}</p>${inp('p.codigo','N.º / código do processo',p.codigo,'ex.: Trib. 2630')}${inp('p.designacao','Designação',p.designacao)}${inp('p.local','Local / morada',p.local)}`,{cnt:falta(f1)})}
+  ${sec('p1','1 · Dados do processo',`<label>Tipo de trabalho</label><div class="seg">${MODOS.map(([k,t])=>`<button class="${(p.modo||'misto')===k?'on':''}" data-act="setModo" data-v="${k}">${t}</button>`).join('')}</div><p class="muted">${MODOS.find(m=>m[0]===(p.modo||'misto'))[2]}</p>${inp('p.codigo','N_Ref — código interno do processo',p.codigo,'ex.: Trib 2630')}${inp('p.designacao','Designação',p.designacao)}${inp('p.local','Local / morada',p.local)}`,{cnt:falta(f1)})}
   ${sec('p2','2 · Vistoria',`<label>Data da vistoria</label><div class="inrow"><input data-bind="vis.data" value="${esc(v.data)}" placeholder="dd/mm/aaaa"><button class="secondary" data-act="visCal">📅</button></div>
     ${txt('vis.presencas','Presenças (nome – qualidade)',v.presencas,3)}${gpsBlock(p)}`,{cnt:falta(f2)})}
   ${relProcHTML(p)}
@@ -1402,12 +1402,13 @@ Não é pressuposto deste trabalho:
 - realizar análise de projeto ou averiguar a legalidade das edificações, em termos de uso ou licenciamento;
 - atestar sobre a qualidade ambiental.`;
 const MESES_R=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
-function ensureRel(p){const r=p.rel=p.rel||{};const d={ambito:'institucional',modo:'singular',gab:'proficis',peritos:[],nref:'',entidade:'',funcao:'Peritagem',contexto:'',parte1:'',parte2:'',objeto:'',versao:'1.00',h1:'',h3:'',h4a:'',h4b:'',despacho:'De acordo com o despacho:',objIntro:'Constitui objeto da perícia determinar:',quesitos:[],docs:{},docsOutros:'',docsCom:'',hora:'',interv:'',decurso:'',constrang:'',nota:'',incReservas:true,incAmbiente:true,reservas:'',ambiente:'',unan:true,discord:'',dataEnc:'',anexos:{},anexosOutros:'',incComp:true};
+function ensureRel(p){const r=p.rel=p.rel||{};const d={ambito:'institucional',modo:'singular',gab:'proficis',peritos:[],procJud:'',entidade:'',funcao:'Peritagem',contexto:'',parte1:'',parte2:'',objeto:'',versao:'1.00',h1:'',h3:'',h4a:'',h4b:'',despacho:'De acordo com o despacho:',objIntro:'Constitui objeto da perícia determinar:',quesitos:[],docs:{},docsOutros:'',docsCom:'',hora:'',interv:'',decurso:'',constrang:'',nota:'',incReservas:true,incAmbiente:true,reservas:'',ambiente:'',unan:true,discord:'',dataEnc:'',anexos:{},anexosOutros:'',incComp:true};
+  if(r.nref!==undefined){if(String(r.nref).trim()){if(!r.procJud&&/\//.test(p.codigo||''))r.procJud=p.codigo;p.codigo=r.nref}delete r.nref}
   for(const k in d)if(r[k]===undefined)r[k]=clone(d[k]);r.quesitos.forEach(q=>{if(!q.id)q.id=uid();if(!q.rp)q.rp={}});return r}
 // nome do ficheiro: <N_Ref>_Proc_<processo>-Relatorio_<versão>.docx  (ex.: Trib_2630_Proc_1407_25_6_T8CBR-Relatorio_1.01VF.docx)
 function relFileName(p){const r=ensureRel(p);const cl=t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
-  const nref=cl(r.nref).replace(/[^A-Za-z0-9]+/g,'_').replace(/^_|_$/g,'');
-  const proc=cl(p.codigo).replace(/(\d)(T\d)/g,'$1_$2').replace(/[^A-Za-z0-9]+/g,'_').replace(/^_|_$/g,'');
+  const nref=cl(p.codigo).replace(/[^A-Za-z0-9]+/g,'_').replace(/^_|_$/g,'');
+  const proc=cl(r.procJud).replace(/(\d)(T\d)/g,'$1_$2').replace(/[^A-Za-z0-9]+/g,'_').replace(/^_|_$/g,'');
   const ver=cl(r.versao).replace(/\s+/g,'').replace(/[^A-Za-z0-9.]+/g,'_')||'1.00';
   return [nref,proc?'Proc_'+proc:''].filter(Boolean).join('_')+(nref||proc?'-':'')+'Relatorio_'+ver+'.docx'}
 const isCol=r=>r.modo==='colegial',isPart=r=>r.ambito==='particular';
@@ -1418,7 +1419,7 @@ const mesAno=()=>{const d=new Date();return `${MESES_R[d.getMonth()]} de ${d.get
 const RL=(k,lbl,val,ph='')=>`<label>${esc(lbl)}</label><input data-bind="r.${k}" value="${esc(val||'')}" placeholder="${esc(ph)}">`;
 const RT=(k,lbl,val,rows=3,ph='')=>`${lbl?`<label>${esc(lbl)}</label>`:''}<textarea data-bind="r.${k}" rows="${rows}" placeholder="${esc(ph)}">${esc(val||'')}</textarea>`;
 const segR=(act,opts,cur)=>`<div class="seg">${opts.map(([k,t])=>`<button class="${cur===k?'on':''}" data-act="${act}" data-v="${k}">${esc(t)}</button>`).join('')}</div>`;
-function hdrDefaults(p){const r=p.rel;return {h1:`${r.funcao||'Peritagem'} - Relatório`,h3:p.designacao||'',h4a:p.codigo?`Proc. ${p.codigo}`:'',h4b:r.nref?` - ${r.nref}`:''}}
+function hdrDefaults(p){const r=p.rel;return {h1:`${r.funcao||'Peritagem'} - Relatório`,h3:p.designacao||'',h4a:r.procJud?`Proc. ${r.procJud}`:'',h4b:p.codigo?` - ${p.codigo}`:''}}
 // ---------- Separador Processo: blocos do relatório ----------
 function relProcHTML(p){const r=ensureRel(p),col=isCol(r),part=isPart(r),hd=hdrDefaults(p);
   const rec=AMB_GAB[r.ambito]||[];
@@ -1428,8 +1429,8 @@ function relProcHTML(p){const r=ensureRel(p),col=isCol(r),part=isPart(r),hd=hdrD
     <p class="muted">✓ = habitual para este âmbito. NID = sem imagem de gabinete (cabeçalho genérico de 4 linhas). ${part?'Particular: sem compromisso de honra.':col?'Institucional colegial: compromisso de honra coletivo.':'Institucional singular: compromisso de honra do perito (texto em Definições).'}</p>
     ${r.gab==='nid'?`<p class="muted">Cabeçalho genérico (4 linhas). Deixe vazio para usar o texto sugerido.</p>${RL('h1','Linha 1 — título',r.h1,hd.h1)}${RL('h3','Linha 3 — descrição (itálico)',r.h3,hd.h3)}<div class="grid2"><div>${RL('h4a','Linha 4 — à direita',r.h4a,hd.h4a)}</div><div>${RL('h4b','Linha 4 — parte a negrito',r.h4b,hd.h4b)}</div></div>`:''}
     ${col?`<label>Peritos do colégio</label><div class="rows">${r.peritos.map((x,i)=>`<div class="rw"><input data-bind="pe.${i}.nome" value="${esc(x.nome||'')}" placeholder="Nome do perito" style="flex:1 1 55%;min-width:0"><select data-act="rQual" data-i="${i}" style="flex:1 1 40%;min-width:0">${QUAL_R.map(q=>`<option ${x.qual===q?'selected':''}>${q}</option>`).join('')}</select><button class="del" data-act="rDelPer" data-i="${i}">✕</button></div>`).join('')}</div><div class="btns"><button class="secondary mini" data-act="rAddPer">+ Perito</button></div>`:''}`;
-  const t2=`${RL('nref','N_Ref (referência interna)',r.nref,'ex.: Trib_2630')}
-    <p class="muted">O n.º do processo e o local estão em «1 · Dados do processo».</p>
+  const t2=`<p class="muted">N_Ref (código interno): <b>${esc(p.codigo||'— preencha em «1 · Dados do processo»')}</b></p>${RL('procJud','N.º do processo (tribunal)',r.procJud,part?'Em situações particulares, normalmente não existe':'ex.: 1407/25.6T8CBR')}
+    <p class="muted">O local está em «1 · Dados do processo».</p>
     ${RL('entidade',part?'Solicitante (entidade / nome)':'Tribunal / entidade',r.entidade,part?'':'ex.: Tribunal Judicial de Coimbra')}
     ${RL('objeto','Objeto de análise',r.objeto,'ex.: Moradia – Rua X, n.º 10 (habitação e logradouro)')}
     ${RL('funcao','Função',r.funcao,'Peritagem')}${RL('contexto','Contexto/ finalidade',r.contexto,'ex.: Ação de despejo')}
@@ -1504,15 +1505,15 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
   let body=`<w:tbl><w:tblPr><w:tblW w:w="${TW}" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders>${noB}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="20" w:type="dxa"/><w:left w:w="20" w:type="dxa"/><w:bottom w:w="20" w:type="dxa"/><w:right w:w="20" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${CW}"/><w:gridCol w:w="${CW}"/><w:gridCol w:w="${TW-2*CW}"/></w:tblGrid>${rows}</w:tbl>`;
   body+=P(R(g?`${g.lat.toFixed(6)}°, ${g.lon.toFixed(6)}°`:'',{sz:8,color:'404040'}),{sp:[20,0]})+P('',{sp:[0,0]})+P('',{sp:[0,0]});
   // quadro de identificação
-  const part0=isPart(r);const LBL=[`N_Ref: ${r.nref||''}`,part0?'Proc. / Solicitante':'Proc. / Entidade','Objeto de análise',p.local?'Local':'',r.contexto?'Contexto/ finalidade':'',part0?'Solicitante':'Parte 1',part0?'':'Parte 2',p.visita?.data?'Data de Visita':'','Versões/ Datas:'].filter(Boolean);
+  const part0=isPart(r);const LBL=[`N_Ref: ${p.codigo||''}`,part0?'Proc. / Solicitante':'Proc. / Entidade','Objeto de análise',p.local?'Local':'',r.contexto?'Contexto/ finalidade':'',part0?'Solicitante':'Parte 1',part0?'':'Parte 2',p.visita?.data?'Data de Visita':'','Versões/ Datas:'].filter(Boolean);
   const L1=Math.max(1300,Math.min(3400,Math.round((Math.max(...LBL.map(l=>l.length))+4)*100))),L2=TW-L1;const bd=(t,b)=>`<w:tcBorders>${t?'<w:top w:val="single" w:sz="6" w:space="0" w:color="404040"/>':''}${b?'<w:bottom w:val="single" w:sz="6" w:space="0" w:color="404040"/>':''}</w:tcBorders>`;
   const ip=(runs,jc)=>`<w:p><w:pPr><w:spacing w:before="30" w:after="30"/>${jc?`<w:jc w:val="${jc}"/>`:''}</w:pPr>${runs}</w:p>`;
   const irow=(lbl,val,o={})=>`<w:tr><w:trPr><w:cantSplit/></w:trPr><w:tc><w:tcPr><w:tcW w:w="${L1}" w:type="dxa"/>${bd(o.t,o.b)}<w:vAlign w:val="center"/></w:tcPr>${ip(R(lbl,{b:true,sz:9}))}</w:tc><w:tc><w:tcPr><w:tcW w:w="${L2}" w:type="dxa"/>${bd(o.t,o.b)}<w:vAlign w:val="center"/></w:tcPr>${val}</w:tc></w:tr>`;
   const vi=(t,o={})=>ip(R(t||'',{i:true,sz:o.sz||10,b:o.b,color:o.color}),o.jc);
   const titulo=`${r.funcao||'Peritagem'} – Relatório`;
   const dl=p.visita?.data||'';
-  let id=irow(`N_Ref: ${r.nref||''}`,vi(titulo,{b:true,sz:13}),{b:1});
-  {const pt=p.codigo?`Proc. ${p.codigo}`:'',et=String(r.entidade||'');const CH=95;let pw=Math.min(L2-1200,Math.max(1400,pt.length*CH+240)),ew=L2-pw;let esz=10;if(et.length*CH>ew){const need=et.length*CH;if(need-ew<pw-(pt.length*CH+120)){pw=Math.max(pt.length*CH+120,1200);ew=L2-pw}if(et.length*CH>ew)esz=Math.max(7,Math.floor(10*ew/(et.length*CH)*2)/2)}
+  let id=irow(`N_Ref: ${p.codigo||''}`,vi(titulo,{b:true,sz:13}),{b:1});
+  {const pt=r.procJud?`Proc. ${r.procJud}`:'',et=String(r.entidade||'');const CH=95;let pw=Math.min(L2-1200,Math.max(1400,pt.length*CH+240)),ew=L2-pw;let esz=10;if(et.length*CH>ew){const need=et.length*CH;if(need-ew<pw-(pt.length*CH+120)){pw=Math.max(pt.length*CH+120,1200);ew=L2-pw}if(et.length*CH>ew)esz=Math.max(7,Math.floor(10*ew/(et.length*CH)*2)/2)}
    id+=irow(part?'Proc. / Solicitante':'Proc. / Entidade',`<w:tbl><w:tblPr><w:tblW w:w="${L2}" w:type="dxa"/><w:tblBorders>${noB}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${pw}"/><w:gridCol w:w="${ew}"/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:w="${pw}" w:type="dxa"/><w:noWrap/></w:tcPr>${vi(pt)}</w:tc><w:tc><w:tcPr><w:tcW w:w="${ew}" w:type="dxa"/><w:noWrap/></w:tcPr>${vi(et,{jc:'right',sz:esz})}</w:tc></w:tr></w:tbl>${ip('')}`)}
   id+=irow('Objeto de análise',vi(r.objeto,{b:true,sz:13,color:'000000'}));
   if(p.local)id+=irow('Local',vi(p.local));
