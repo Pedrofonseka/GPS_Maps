@@ -1,14 +1,14 @@
 {
-  "name": "Relat_Anomalias",
-  "short_name": "Relat_Anomalias",
+  "name": "Relatório de Peritagem",
+  "short_name": "Rel. Peritagem",
   "description": "Gerador de relatórios de peritagem de anomalias em edifícios",
   "lang": "pt-PT",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#eaf1f8",
-  "theme_color": "#1f4e79",
+  "background_color": "#f7f4ea",
+  "theme_color": "#E3AE1F",
   "icons": [
     {
       "src": "icon-192.png",
