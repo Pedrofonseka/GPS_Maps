@@ -320,7 +320,7 @@ function buildDocx({proc,settings,anoms,onePerPage,withResumo,withVistoria,bodyO
   const PCELLS={1:[[0,6]],2:[[0,4],[4,2]],3:[[0,3],[3,2],[5,1]]}[cols];
   const rPr=o=>{let s='';if(o.b)s+='<w:b/>';if(o.i)s+='<w:i/>';if(o.color)s+=`<w:color w:val="${o.color}"/>`;if(o.sz)s+=`<w:sz w:val="${o.sz*2}"/><w:szCs w:val="${o.sz*2}"/>`;return s?`<w:rPr>${s}</w:rPr>`:''};
   const run=(text,o={})=>String(text??'').split('\n').map((ln,i)=>`<w:r>${rPr(o)}${i?'<w:br/>':''}<w:t xml:space="preserve">${xesc(ln)}</w:t></w:r>`).join('');
-  const para=(runs,o={})=>`<w:p><w:pPr>${o.keep?'<w:keepNext/>':''}${o.tabs||''}<w:spacing w:before="${o.before||0}" w:after="${o.after||0}"${o.line?` w:line="${o.line}" w:lineRule="auto"`:''}/>${o.ind?`<w:ind w:left="${o.ind}"/>`:''}${o.jc?`<w:jc w:val="${o.jc}"/>`:''}${o.ol!=null?`<w:outlineLvl w:val="${o.ol}"/>`:''}</w:pPr>${runs}</w:p>`;
+  const para=(runs,o={})=>`<w:p><w:pPr>${o.keep?'<w:keepNext/>':''}${o.bdrB?'<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="2" w:color="808080"/></w:pBdr>':''}${o.tabs||''}<w:spacing w:before="${o.before||0}" w:after="${o.after||0}"${o.line?` w:line="${o.line}" w:lineRule="auto"`:''}/>${o.ind?`<w:ind w:left="${o.ind}"/>`:''}${o.jc?`<w:jc w:val="${o.jc}"/>`:''}${o.ol!=null?`<w:outlineLvl w:val="${o.ol}"/>`:''}</w:pPr>${runs}</w:p>`;
   const cell=(content,o={})=>`<w:tc><w:tcPr><w:tcW w:w="${o.w}" w:type="dxa"/>${o.span>1?`<w:gridSpan w:val="${o.span}"/>`:''}${o.fill?`<w:shd w:val="clear" w:color="auto" w:fill="${o.fill}"/>`:''}<w:vAlign w:val="${o.v||'center'}"/></w:tcPr>${content||'<w:p/>'}</w:tc>`;
   const tpara=(text,ro,po={})=>{const ls=String(text??'').split('\n');return ls.map((ln,i)=>para(run(ln,ro),{...po,jc:jcFor(ln),after:i<ls.length-1?20:(po.after||0)})).join('')};
   const full=(content,o={})=>cell(content,{...o,w:TW,span:6});
@@ -354,30 +354,35 @@ function buildDocx({proc,settings,anoms,onePerPage,withResumo,withVistoria,bodyO
   const zonaOf=a=>[a.zona,a.piso,a.local].filter(Boolean).filter((v,i,arr)=>arr.indexOf(v)===i).join(' · ');
   const codeOf=(a,ix)=>a._code||('AN_'+String(a._n??(ix+1)).padStart(3,'0'));
   let hN=0;const H1=(t,nm)=>para(bm(nm,run(`${++hN}.  ${t}`,{b:true,sz:13,color:'000000'})),{keep:1,after:200,ol:0});
+  // títulos de grupo (ordenação por zona/piso/local/elemento, tipo, …): aparecem quando o grupo muda
+  const GRP=anoms.some(a=>a._grp);const gStart=anoms.map((a,i)=>!!a._grp&&(i===0||a._grp!==anoms[i-1]._grp));const FL=GRP?3:2;
+  const GH=(t,i)=>para(bm('_RA_g'+i,run(t,{b:true,sz:11,color:'404040'}))+(IDX?`<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> TC "${xesc(String(t).slice(0,95).replace(/"/g,"'"))}" \\l 2 </w:instrText></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>`:''),{keep:1,after:120,bdrB:1});
   if(IDX){
     const nSt=stats&&stats.length?stats.reduce((n,t)=>n+t.rows.length+2,0):0;const hasR=withResumo&&proc.resumo;
-    const P=onePerPage&&fitPage!==false&&nSt<45;
-    const cov=body?1:0;const ents=[[1,`1.  ${secT}`,'_RA_h1']];anoms.forEach((a,ix)=>{const z=zonaOf(a);ents.push([2,`${codeOf(a,ix)}  –  ${[a.ref?'Item '+a.ref:'',a.elemento,z].filter(Boolean).join(' · ')}`.slice(0,95),'_RA_'+ix])});
-    let k=1;if(nSt)ents.push([1,`${++k}.  Resumo estatístico`,'_RA_h'+k]);if(hasR)ents.push([1,`${++k}.  Resumo de apreciação geral`,'_RA_h'+k]);
+    const stH=stats&&stats.length?stats.reduce((n,t)=>n+(t.chart?t.chart.hcm+1.4:(t.rows.length+2)*0.5),0):0;
+    const P=onePerPage&&fitPage!==false;const stPages=Math.max(1,Math.ceil((stH+(stats&&stats[0]?.text?3:0))/22));
+    const cov=body?1:0;const ents=[[1,`1.  ${secT}`,'_RA_h1',0]];anoms.forEach((a,ix)=>{const z=zonaOf(a);if(gStart[ix])ents.push([2,a._grp,'_RA_g'+ix,ix]);ents.push([FL,`${codeOf(a,ix)}  –  ${[a.ref?'Item '+a.ref:'',a.elemento,z].filter(Boolean).join(' · ')}`.slice(0,95),'_RA_'+ix,ix])});
+    let k=1;if(nSt)ents.push([1,`${++k}.  Resumo estatístico`,'_RA_h'+k,'st']);if(hasR)ents.push([1,`${++k}.  Resumo de apreciação geral`,'_RA_h'+k,'r']);
     const idxP=Math.max(1,Math.ceil((ents.length+3)/38));const p0=cov+idxP+1;
-    const pg=ents.map((e,i)=>{if(!P)return '';if(i===0)return p0;if(e[0]===2)return p0+i-1;const after=p0+anoms.length;return /estat/.test(e[1])?after:after+(nSt?1:0)});
+    const pg=ents.map(e=>{if(!P)return '';if(typeof e[3]==='number')return p0+e[3];const after=p0+anoms.length;return e[3]==='st'?after:after+(nSt?stPages:0)});
     if(body)body+=BR;
     body+=para(run('Índice',{b:true,sz:14,color:'000000'}),{after:240});
     const TABS='<w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9627"/></w:tabs>';
-    const F0=`<w:r><w:fldChar w:fldCharType="begin"${P?'':' w:dirty="true"'}/></w:r><w:r><w:instrText xml:space="preserve"> TOC \\o "1-1" \\u \\f \\l "2-2" \\h \\z </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r>`;
-    ents.forEach((e,i)=>{const o=e[0]===1?{b:true,sz:10,color:'000000'}:{sz:9.5,color:'202020'};
-      body+=para((i===0?F0:'')+`<w:hyperlink w:anchor="${e[2]}" w:history="1">${run(e[1],o)}${pg[i]?run('\t',o).replace('<w:t xml:space="preserve">\t</w:t>','<w:tab/>')+run(String(pg[i]),o):''}</w:hyperlink>`,{tabs:TABS,ind:e[0]===2?340:0,before:e[0]===1&&i?120:0,after:e[0]===1?60:20})});
+    const F0=`<w:r><w:fldChar w:fldCharType="begin"${P?'':' w:dirty="true"'}/></w:r><w:r><w:instrText xml:space="preserve"> TOC \\o "1-1" \\u \\f \\l "2-${FL}" \\h \\z </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r>`;
+    ents.forEach((e,i)=>{const o=e[0]===1?{b:true,sz:10,color:'000000'}:e[0]===2&&GRP?{b:true,sz:9.5,color:'404040'}:{sz:9.5,color:'202020'};
+      body+=para((i===0?F0:'')+`<w:hyperlink w:anchor="${e[2]}" w:history="1">${run(e[1],o)}${pg[i]?run('\t',o).replace('<w:t xml:space="preserve">\t</w:t>','<w:tab/>')+run(String(pg[i]),o):''}</w:hyperlink>`,{tabs:TABS,ind:e[0]===1?0:e[0]===2?340:680,before:e[0]===1&&i?120:(GRP&&e[0]===2?60:0),after:e[0]===1?60:20})});
     body+=para('<w:r><w:fldChar w:fldCharType="end"/></w:r>');
     body+=BR+H1(secT,'_RA_h1');
   }
   anoms.forEach((a,ix)=>{
     if(IDX&&ix===0){}else if(ix>0||(ix===0&&body&&onePerPage))body+=onePerPage?'<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/></w:pPr><w:r><w:rPr><w:sz w:val="2"/></w:rPr><w:br w:type="page"/></w:r></w:p>':para('',{after:200});
+    if(gStart[ix])body+=GH(a._grp,ix);
     let rows='';
     const zona=[a.zona,a.piso,a.local].filter(Boolean).filter((v,i,arr)=>arr.indexOf(v)===i).join(' · ');
     const hd={b:true,color:'FFFFFF',sz:9};
     const code=codeOf(a,ix);
     const tcTxt=`${code}  –  ${[a.ref?'Item '+a.ref:'',a.elemento,zona].filter(Boolean).join(' · ')}`.slice(0,95).replace(/"/g,"'");
-    const mark=r=>IDX?bm('_RA_'+ix,r)+`<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> TC "${xesc(tcTxt)}" \\l 2 </w:instrText></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>`:r;
+    const mark=r=>IDX?bm('_RA_'+ix,r)+`<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> TC "${xesc(tcTxt)}" \\l ${FL} </w:instrText></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>`:r;
     const sm={color:'D9D9D9',sz:8};
     rows+=row(cell(para(mark(run(code,hd)),{keep:1})+(a._parte?para(run(a._parte.replace(/\s*\(.*\)$/,''),{color:'D9D9D9',sz:7}),{keep:1}):''),{w:sum(0,1),fill:'404040'})+
              cell(para(run('Item ',sm)+run(a.ref||'—',hd),{keep:1}),{w:sum(1,1),fill:'404040'})+
@@ -416,7 +421,7 @@ function buildDocx({proc,settings,anoms,onePerPage,withResumo,withVistoria,bodyO
         tx+=LH(10)+2+(String(a.comentario||'').trim()?pars(a.comentario,10,W2)+9:15);
         for(const f of longF){const t=fieldValueText(f,a.vals?.[f.id],settings,a.vals);if(t)tx+=LH(10)+2+pars(t,10,W2)+8}
       }
-      const pagePt=(16838-2268-1100)/20-(IDX&&ix===0?LH(13)+10:0);
+      const pagePt=(16838-2268-1100)/20-(IDX&&ix===0?LH(13)+10:0)-(gStart[ix]?LH(11)+6+3:0);
       const avail=(fitPage?pagePt-tx:pagePt)-9; // margem de segurança mínima (9 pt)
       const nr=Math.ceil(fotos.length/cols);const capW=(PCELLS[0]?sum(...PCELLS[0]):TW)/20-8.5;
       const rowsNat=[],rowsOv=[];for(let r=0;r<nr;r++){const g=fotos.slice(r*cols,r*cols+cols);
@@ -454,7 +459,9 @@ function buildDocx({proc,settings,anoms,onePerPage,withResumo,withVistoria,bodyO
     body+=onePerPage?'<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/></w:pPr><w:r><w:rPr><w:sz w:val="2"/></w:rPr><w:br w:type="page"/></w:r></w:p>':para('',{after:240});
     body+=IDX?H1('Resumo estatístico','_RA_h'+(hN+1)):para(run('Resumo estatístico',{b:true,sz:12,color:'000000'}),{after:120,keep:1});
     const SW=[3685,1134];
+    if(stats[0]?.text)body+=tpara(stats[0].text,{sz:10},{after:200});
     for(const t of stats){
+      if(t.chart){body+=para(run(t.title,{b:true,sz:10,color:'404040'}),{keep:1,after:60,bdrB:1})+para(img({...t.chart,id:'__ch'+stats.indexOf(t),_max:[15*360000,t.chart.hcm*360000]}),{after:220});continue}
       let rs=row(cell(para(run(t.title,{b:true,color:'FFFFFF',sz:9}),{keep:1}),{w:SW[0],fill:'404040'})+cell(para(run('N.º',{b:true,color:'FFFFFF',sz:9}),{jc:'right',keep:1}),{w:SW[1],fill:'404040'}));
       t.rows.forEach(([l,n],i)=>{rs+=row(cell(para(run(String(l),{sz:9}),{keep:i<t.rows.length-1?1:0}),{w:SW[0],fill:i%2?'F5F5F5':''})+cell(para(run(String(n),{sz:9}),{jc:'right'}),{w:SW[1],fill:i%2?'F5F5F5':''}))});
       body+=`<w:tbl><w:tblPr><w:tblW w:w="${SW[0]+SW[1]}" w:type="dxa"/><w:tblBorders>${['top','left','bottom','right','insideH','insideV'].map(s=>`<w:${s} w:val="nil"/>`).join('')}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="30" w:type="dxa"/><w:left w:w="85" w:type="dxa"/><w:bottom w:w="30" w:type="dxa"/><w:right w:w="85" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${SW[0]}"/><w:gridCol w:w="${SW[1]}"/></w:tblGrid>${rs}</w:tbl>`+para('',{after:160});
@@ -600,14 +607,15 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
   // ---------- índice (reserva de páginas; preenchido no fim) ----------
   const IDX=withIndex!==false&&anoms.length>0;const ents=[];let idxPages=[];
   const nSt=stats&&stats.length;const hasR=withResumo&&proc.resumo;
-  if(IDX){const nEnt=1+anoms.length+(nSt?1:0)+(hasR?1:0);const per=Math.floor((BOT-TOP-40)/14);const np=Math.max(1,Math.ceil(nEnt/per));for(let i=0;i<np;i++){newPage();idxPages.push(pg)}}
+  if(IDX){const nEnt=1+anoms.length+(nSt?1:0)+(hasR?1:0)+anoms.filter((a,i)=>a._grp&&(i===0||a._grp!==anoms[i-1]._grp)).length;const per=Math.floor((BOT-TOP-40)/14);const np=Math.max(1,Math.ceil(nEnt/per));for(let i=0;i<np;i++){newPage();idxPages.push(pg)}}
   let hN=0;const H1=(t)=>{need(30);const pIdx=pages.length;text(`${++hN}.  ${t}`,X0,y+13,'b',13);y+=26;ents.push({lvl:1,t:`${hN}.  ${t}`,page:pIdx,y:y-26})};
   // ---------- fichas ----------
   anoms.forEach((a,ix)=>{
     if(ix===0||onePerPage!==false)newPage();else{y+=14;need(80)}
     if(ix===0&&IDX)H1(secT);
+    if(a._grp&&(ix===0||a._grp!==anoms[ix-1]._grp)){need(40);ents.push({lvl:2,grp:1,t:String(a._grp).slice(0,95),page:pages.length,y});text(a._grp,X0,y+11,'b',11,'404040');y+=LH(11)+2;hline(X0,X0+W,y,false,'808080',0.6);y+=7}
     const code=a._code||String(ix+1);const zona=zonaOf(a);
-    ents.push({lvl:2,t:`${code}  –  ${[a.ref?'Item '+a.ref:'',a.elemento,zona].filter(Boolean).join(' · ')}`.slice(0,95),page:pages.length,y});
+    ents.push({lvl:anoms.some(x=>x._grp)?3:2,t:`${code}  –  ${[a.ref?'Item '+a.ref:'',a.elemento,zona].filter(Boolean).join(' · ')}`.slice(0,95),page:pages.length,y});
     const items=[];for(const f of shortF){if(f.id==='conf'&&a.origem==='local')continue;const t=fieldValueText(f,a.vals?.[f.id],settings,a.vals);if(t)items.push([f.label,t])}
     const comLbl=(dateCom&&v.data?v.data+' - ':'')+lblC(proc)+':';
     if(!TXT){ // ---- grelha ----
@@ -651,13 +659,20 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
   });
   // ---------- estatística e resumo ----------
   if(nSt){newPage();if(IDX)H1('Resumo estatístico');else{text('Resumo estatístico',X0,y+12,'b',12);y+=24}
-    for(const t of stats){need(LH(9)*3);rect(X0,y,240,16,'404040');text(t.title,X0+4,y+11,'b',9,'FFFFFF');text('N.º',X0+240-4-tw('N.º','b',9),y+11,'b',9,'FFFFFF');y+=16;
+    if(stats[0]?.text){paraT(stats[0].text,'r',10,'000000',{after:12})}
+    for(const t of stats){
+      if(t.chart){const R=t.rows.filter(r=>typeof r[1]==='number');const rh=15,lw=Math.min(170,Math.max(...R.map(r=>tw(String(r[0]),'r',9)))+10),bw=W-lw-30,mx=Math.max(1,...R.map(r=>r[1]));
+        need(LH(10)+8+Math.min(R.length,6)*rh);text(t.title,X0,y+10,'b',10,'404040');y+=LH(10)+2;hline(X0,X0+W,y,false,'808080',0.6);y+=6;
+        for(const [l,n] of R){need(rh);let L=String(l);while(tw(L,'r',9)>lw-10&&L.length>3)L=L.slice(0,-2);if(L!==String(l))L+='…';text(L,X0+lw-6-tw(L,'r',9),y+10.5,'r',9,'202020');
+          rect(X0+lw,y+3,bw,rh-6,'EFEFEF');const w=Math.max(1.5,bw*n/mx);rect(X0+lw,y+3,w,rh-6,'5F5F5F');text(String(n),X0+lw+w+4,y+10.5,'b',9);y+=rh}
+        y+=14;continue}
+      need(LH(9)*3);rect(X0,y,240,16,'404040');text(t.title,X0+4,y+11,'b',9,'FFFFFF');text('N.º',X0+240-4-tw('N.º','b',9),y+11,'b',9,'FFFFFF');y+=16;
       t.rows.forEach(([l,n],i)=>{need(14);if(i%2)rect(X0,y,240,14,'F5F5F5');text(String(l),X0+4,y+10,'r',9);text(String(n),X0+236-tw(String(n),'r',9),y+10,'r',9);y+=14});y+=12}}
   if(hasR){if(onePerPage!==false)newPage();else y+=16;if(IDX)H1('Resumo de apreciação geral');else{text('Resumo de apreciação geral',X0,y+11,'b',11,'404040');y+=20}paraT(proc.resumo,'r',10,'000000',{after:6})}
   // ---------- preencher o índice ----------
   if(IDX){let pi=0;pg=idxPages[0];y=TOP;text('Índice',X0,y+14,'b',14);y+=30;
-    for(const e of ents){if(y+14>BOT){pg=idxPages[++pi];y=TOP}const f=e.lvl===1?'b':'r',s=e.lvl===1?10:9.5,ind=e.lvl===1?0:17;if(e.lvl===1&&e!==ents[0])y+=6;
-      const pn=String(e.page);const xr=X0+W;text(e.t,X0+ind,y+s,f,s,e.lvl===1?'000000':'202020');const x1=X0+ind+tw(e.t,f,s)+3,x2=xr-tw(pn,f,s)-3;let dots='';const dw=tw('.',f,s);for(let d=x1;d<x2-dw;d+=dw)dots+='.';
+    for(const e of ents){if(y+14>BOT){pg=idxPages[++pi];y=TOP}const f=e.lvl===1||e.grp?'b':'r',s=e.lvl===1?10:9.5,ind=e.lvl===1?0:e.lvl===2?17:34;if(e.grp)y+=3;if(e.lvl===1&&e!==ents[0])y+=6;
+      const pn=String(e.page);const xr=X0+W;text(e.t,X0+ind,y+s,f,s,e.lvl===1?'000000':e.grp?'404040':'202020');const x1=X0+ind+tw(e.t,f,s)+3,x2=xr-tw(pn,f,s)-3;let dots='';const dw=tw('.',f,s);for(let d=x1;d<x2-dw;d+=dw)dots+='.';
       text(dots,x2-tw(dots,f,s),y+s,f,s,'808080');text(pn,xr-tw(pn,f,s),y+s,f,s);pg.links.push({x:X0,y,w:W,h:LH(s),page:e.page,ty:e.y});y+=LH(s)+3}}
   // ---------- cabeçalho e rodapé em todas as páginas ----------
   pages.forEach((p,i)=>{pg=p;const hy=0.5*CM;text('Perícia - Análise de anomalias',X0,hy+12+14,'r',12);hline(X0,X0+W,hy+30,false,'000000',0.5);
@@ -685,7 +700,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Regi Anomalias =====
-const VERSION='0.15.0';
+const VERSION='0.16.0';
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'}];
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
 const parteNome=(p,n)=>(p.partes||[]).find(x=>x.n==n)?.nome||'';
@@ -712,7 +727,7 @@ const DEF_PISO=['Cv', 'Rc', '1A', '2A', '3A', 'St', '4A', 'Sb', 'Cb'];
 const DEF_LOCAL=['Cozinha', 'Sala de estar', 'Sala de jantar', 'Sala comum', 'Escritório', 'Despensa', 'Zona técnica', 'Arrumo', 'Garagem', 'Mezanino', 'I. Sanitária 01', 'I. Sanitária 02', 'I. Sanitária 03', 'I. Sanitária 04', 'I. Sanitária 05', 'Quarto 01', 'Quarto 02', 'Quarto 03', 'Quarto 04', 'Quarto 05', 'Varanda 01', 'Varanda 02', 'Varanda 03', 'Varanda 04', 'Varanda 05', 'Terraço', 'Alpendre', 'Átrio', 'Corredor', 'Hall de entrada', 'Lavandaria', 'Closet', 'Escadas', 'Patamar', 'Sótão', 'Cave', 'Telheiro', 'Logradouro'];
 const DEF_ELEM=['Parede exterior', 'Parede interior', 'Teto', 'Pavimento', 'Orlas e rodapés', 'Mobiliário', 'Mob. cozinha', 'Eletrodoméstico', 'Equip. sanitário', 'Porta interior', 'Porta exterior', 'Janela', 'Vidros', 'Cantaria', 'Rd água', 'Rd esgoto', 'Rd elétrica', 'Rd telecom', 'Rd gás', 'Rd incêndio', 'Rd intrusão', 'Rd AVAC', 'AQS', 'Cobertura', 'Telhas', 'Caleiras e tubos de queda', 'Rufos', 'Chaminé', 'Rd pluviais', 'Rd ventilação', 'Revestimento', 'Pintura', 'Teto falso', 'Escadas', 'Guardas e corrimãos', 'Estores e caixas', 'Portão', 'Muro'];
 const CATS=[['catZona','Zona','zona'],['catPiso','Piso','piso'],['catLocal','Local (compartimento)','local'],['catElem','Elemento','elemento'],['catalog','Tipo de anomalia',null]];
-const DEF_SETTINGS={fields:DEF_FIELDS,catalog:DEF_CATALOG,catZona:DEF_ZONA,catPiso:DEF_PISO,catLocal:DEF_LOCAL,catElem:DEF_ELEM,printStyle:'both',photoKB:150,maxFotos:9,photoCols:2,onePerPage:true,fitPage:true,dateCom:true,layout:'grelha',txtPhotos:true};
+const DEF_SETTINGS={fields:DEF_FIELDS,catalog:DEF_CATALOG,catZona:DEF_ZONA,catPiso:DEF_PISO,catLocal:DEF_LOCAL,catElem:DEF_ELEM,printStyle:'both',photoKB:150,maxFotos:8,maxFotos3:9,photoCols:2,onePerPage:true,fitPage:true,dateCom:true,layout:'grelha',txtPhotos:true};
 
 let db,settings,procs=[];
 const S={view:'home',open:{},sub:null,filt:{st:'all',zona:''},openId:false,gpsMsg:'',pid:null,aid:null,imp:null,camShots:[],openCfg:false};
@@ -763,11 +778,35 @@ const fotoGet=id=>tx('foto','readonly',s=>s.get(id));
 const fd=f=>fotoCache.get(f.id)||f.data||'';
 async function loadFotos(p){if(!p)return;const m=p.visita?.map;if(m&&!fotoCache.has(m.id)){try{const r=await fotoGet(m.id);if(r)fotoCache.set(m.id,r.data)}catch(e){}}for(const a of p.anomalias)for(const f of a.fotos)if(!fotoCache.has(f.id)&&!f.data){try{const r=await fotoGet(f.id);if(r)fotoCache.set(f.id,r.data)}catch(e){}}}
 async function migrateFotos(p){let ch=false;const m=p.visita?.map;if(m&&m.data){await fotoPut(m.id,m.data);delete m.data;ch=true}for(const a of p.anomalias||[])for(const f of a.fotos||[]){if(!f.id)f.id=uid();if(f.data){await fotoPut(f.id,f.data);delete f.data;ch=true}}if(ch)await dbPut(p);return p}
-const numOf=(p,a)=>{if(p.lockNum&&a.num)return a.num;const pt=parteOf(p,a);let k=0;for(const x of p.anomalias){if(parteOf(p,x)==pt)k++;if(x===a)return k}return k};
+const numOf=(p,a)=>{if(p.lockNum&&a.num)return a.num;const pt=parteOf(p,a);let k=0;for(const x of p.anomalias){if(parteOf(p,x)==pt)k++;if(x===a||(a.id&&x.id===a.id))return k}return k};
 // fotos escolhidas para o relatório (sel!==false) vêm primeiro; as restantes ficam em reserva (guardadas, não exportadas)
+// máximo de fotos no relatório por assunto: 2·4·6·8·10; com grelha de 3 colunas: 3·6·9
+const MAXOPT=()=>+settings.photoCols===3?[3,6,9]:[2,4,6,8,10];
+const maxF=()=>{const o=MAXOPT();const v=+settings.photoCols===3?(settings.maxFotos3||9):(settings.maxFotos||8);return o.includes(v)?v:o[o.length-1]};
+const maxUI=()=>`<label>Fotos no relatório, por assunto (máximo)${+settings.photoCols===3?' — grelha de 3 colunas':''}</label><div class="seg">${MAXOPT().map(v=>`<button class="${maxF()===v?'on':''}" data-act="setMax" data-v="${v}">${v}</button>`).join('')}</div><p class="muted">As fotos a mais não se perdem: ficam na reserva de cada anomalia.</p>`;
+async function enforceMax(){const m=maxF();let n=0;for(const p of procs){let ch=false;for(const a of p.anomalias){const R=a.fotos.filter(f=>f.sel!==false);if(R.length>m){R.slice(m).forEach(f=>{f.sel=false;n++});a.fotos=[...a.fotos.filter(f=>f.sel!==false),...a.fotos.filter(f=>f.sel===false)];ch=true}}if(ch)await saveProc(p)}
+  if(n)toast(`${n} foto(s) passaram para a reserva (máximo ${m} por assunto).`)}
 const inRel=f=>f.sel!==false;const relF=a=>a.fotos.filter(inRel);const resF=a=>a.fotos.filter(f=>!inRel(f));const MAXALL=40;
 function normFotos(a){a.fotos=[...relF(a),...resF(a)]}
-function hydrate(p){return p.anomalias.map(a=>({...a,_n:numOf(p,a),_code:anCode(p,a),_parte:parteNome(p,parteOf(p,a)),fotos:relF(a).map(f=>({...f,data:fd(f)}))}))}
+// ---------- ordenação da saída (Word, PDF, pré-visualização) ----------
+const ORDENS=[['lista','Ordem em que foram colocadas'],['hier','Zona › Piso › Local › Elemento'],['zona','Zona'],['local','Local (compartimento)'],['elemento','Elemento'],['tipo','Tipo de anomalia'],['grav','Gravidade'],['urg','Urgência'],['parte','Parte']];
+function ordAnoms(p,L){const o=p.ordem||'lista';if(o==='lista')return L.map(a=>({...a,_grp:''}));
+  const ci=(cat,v)=>{if(!v)return 1e6;const i=(settings[cat]||[]).indexOf(v);return i<0?1e5:i};const fo=id=>settings.fields.find(f=>f.id===id);
+  const optI=(id,v)=>{const f=fo(id);if(!v||!f)return 1e6;const i=(f.opts||[]).findIndex(x=>x[0]===v);return i<0?1e5:i};
+  const optT=(id,v)=>{const f=fo(id);const x=(f?.opts||[]).find(x=>x[0]===v);return x?optText(x,settings.printStyle):v};
+  const firstOpt=(id,arr)=>{const f=fo(id);const a=(arr||[]).filter(v=>v!=='OUT');if(!a.length)return '';return [...a].sort((x,y)=>optI(id,x)-optI(id,y))[0]};
+  const K=a=>{switch(o){
+    case 'hier':return {k:[ci('catZona',a.zona),a.zona||'',ci('catPiso',a.piso),a.piso||'',ci('catLocal',a.local),a.local||'',ci('catElem',a.elemento),a.elemento||''],g:[a.zona,a.piso,a.local,a.elemento].filter(Boolean).join('  ›  ')||'(sem identificação)'};
+    case 'zona':return {k:[ci('catZona',a.zona),a.zona||''],g:'Zona: '+(a.zona||'(sem zona)')};
+    case 'local':return {k:[ci('catLocal',a.local),a.local||''],g:'Local: '+(a.local||'(sem local)')};
+    case 'elemento':return {k:[ci('catElem',a.elemento),a.elemento||''],g:'Elemento: '+(a.elemento||'(sem elemento)')};
+    case 'tipo':{const t=(a.vals?.tipo||[])[0]||'';return {k:[ci('catalog',t),t],g:(fo('tipo')?.label||'Tipo')+': '+(t||'(sem tipo)')}}
+    case 'grav':{const v=firstOpt('cons',a.vals?.cons);return {k:[optI('cons',v)],g:(fo('cons')?.label||'Gravidade')+': '+(v?optT('cons',v):'(sem classificação)')}}
+    case 'urg':{const v=a.vals?.urg;return {k:[optI('urg',v)],g:(fo('urg')?.label||'Urgência')+': '+(v?optT('urg',v):'(sem classificação)')}}
+    case 'parte':{const n=parteOf(p,a);return {k:[n],g:`Parte ${n} – ${parteNome(p,n)||''}`}}}};
+  const cmp=(x,y)=>{for(let i=0;i<Math.max(x.length,y.length);i++){if(x[i]===y[i])continue;if(typeof x[i]==='number'&&typeof y[i]==='number')return x[i]-y[i];return String(x[i]).localeCompare(String(y[i]),'pt')}return 0};
+  return L.map((a,i)=>({a,i,...K(a)})).sort((x,y)=>cmp(x.k,y.k)||x.i-y.i).map(x=>({...x.a,_grp:x.g}))}
+function hydrate(p){return ordAnoms(p,p.anomalias.map(a=>({...a,_n:numOf(p,a),_code:anCode(p,a),_parte:parteNome(p,parteOf(p,a)),fotos:relF(a).map(f=>({...f,data:fd(f)}))})))}
 
 function migrateSettings(s){
   s=Object.assign(clone(DEF_SETTINGS),s||{});
@@ -907,6 +946,7 @@ function vHome(){
   <div class="list">${list.map(x=>{const n=x.anomalias.length,ok=x.anomalias.filter(isDone).length;return `<div class="card ${x.id===S.pid?'active':''}" data-act="openProc" data-id="${x.id}"><b>${esc(x.codigo||'(sem código)')}</b> ${esc(x.designacao||'')}<div class="muted">${esc(x.local||'')}${x.visita?.data?' · vistoria '+esc(x.visita.data):''}</div><div style="margin-top:4px"><button class="secondary mini" style="float:right" data-act="sendProc" data-id="${x.id}">📤 Enviar</button>${pill(n+' anomalia'+(n===1?'':'s'))}${n?pill(ok+' analisada'+(ok===1?'':'s'),ok===n?'ok':'warn'):''}</div></div>`}).join('')||'<p class="muted">Ainda não há processos.</p>'}</div>`;
 }
 // ----- Processo -----
+const MODOS=[['livre','Levantamento livre','O perito observa, descreve, fotografa e classifica as situações que encontra no local.'],['confirma','Confirmação','As situações vêm alegadas (lista importada ou escrita). No local, o perito confirma ou não (Status), comenta e classifica.'],['misto','Misto','Situações alegadas a confirmar + outras situações constatadas livremente no local.']];
 function vProc(){
   const p=cur(),v=p.visita,an=p.anomalias;
   const f1=[p.codigo,p.designacao,p.local].filter(x=>!String(x||'').trim()).length;
@@ -914,7 +954,7 @@ function vProc(){
   const nUse=settings.fields.filter(f=>fieldOn(p,f)).length;
   const nl=an.filter(a=>a.origem!=='local').length,nc=an.length-nl;
   return `<h2>Processo</h2>${blk('A · Processo e vistoria','Identificação, data, presenças e localização')}
-  ${sec('p1','1 · Dados do processo',`${inp('p.codigo','N.º / código do processo',p.codigo,'ex.: Trib. 2630')}${inp('p.designacao','Designação',p.designacao)}${inp('p.local','Local / morada',p.local)}`,{cnt:falta(f1)})}
+  ${sec('p1','1 · Dados do processo',`<label>Tipo de trabalho</label><div class="seg">${MODOS.map(([k,t])=>`<button class="${(p.modo||'misto')===k?'on':''}" data-act="setModo" data-v="${k}">${t}</button>`).join('')}</div><p class="muted">${MODOS.find(m=>m[0]===(p.modo||'misto'))[2]}</p>${inp('p.codigo','N.º / código do processo',p.codigo,'ex.: Trib. 2630')}${inp('p.designacao','Designação',p.designacao)}${inp('p.local','Local / morada',p.local)}`,{cnt:falta(f1)})}
   ${sec('p2','2 · Vistoria',`<label>Data da vistoria</label><div class="inrow"><input data-bind="vis.data" value="${esc(v.data)}" placeholder="dd/mm/aaaa"><button class="secondary" data-act="visCal">📅</button></div>
     ${txt('vis.presencas','Presenças (nome – qualidade)',v.presencas,3)}${gpsBlock(p)}`,{cnt:falta(f2)})}
   ${blk('B · Pronúncia','O que vai ser apreciado em cada anomalia')}
@@ -941,13 +981,17 @@ function anomCard(a,i,n,mode){
   ${S.view==='anom'?`<div class="mv"><button class="secondary mini" data-act="mvA" data-id="${a.id}" data-d="-1" ${i?'':'disabled'}>▲</button><button class="secondary mini" data-act="mvA" data-id="${a.id}" data-d="1" ${i<n-1?'':'disabled'}>▼</button><button class="del" data-act="delA" data-id="${a.id}">🗑</button></div>`:''}</div></div>`;
 }
 // ----- Anomalias (pronúncia) -----
+function addBtns(p,short){const m=p.modo||'misto';const imp=`<button class="secondary" data-act="goImport">⬆ Importar lista (Excel/Word)</button>`;
+  const al=`<button class="${m==='confirma'?'green':'secondary'}" data-act="newAnom" data-o="lista">+ Situação alegada</button>`,lc=`<button class="green" data-act="newAnom" data-o="local">+ Constatada no local</button>`;
+  return `<div class="btns">${m==='livre'?lc.replace('+ Constatada no local','+ Nova situação'):m==='confirma'?(short?'':imp)+al:(short?'':imp)+al+lc}</div>`}
 function vAnoms(){
   const p=cur(),an=p.anomalias,done=an.filter(isDone).length;const nl=an.filter(a=>a.origem!=='local').length,nc=an.length-nl;
   const F=S.filt||(S.filt={st:'all',zona:''});const zonas=[...new Set(an.map(a=>a.zona).filter(Boolean))];
   const usedP=[...new Set(an.map(a=>parteOf(p,a)))].sort();const q=(F.q||'').trim().toLowerCase();const vis=an.filter(a=>(!q||[anCode(p,a),a.ref,a.zona,a.piso,a.local,a.elemento,a.descricao,a.comentario].join(' ').toLowerCase().includes(q))&&(F.st==='all'||(F.st==='done'?isDone(a):!isDone(a)))&&(!F.zona||a.zona===F.zona)&&(!F.parte||parteOf(p,a)==F.parte));
   return `<h2>Anomalias</h2>
-  <div class="card"><div class="steps3"><span><b>1</b> Criar a lista</span><span><b>2</b> Tocar numa anomalia</span><span><b>3</b> Pronunciar-se e fotografar</span></div>
-  <div class="btns"><button class="secondary" data-act="goImport">⬆ Importar lista (Excel)</button><button class="green" data-act="newAnom">+ Acrescentar anomalia</button></div>
+  <div class="card"><div class="muted" style="margin-bottom:6px">Tipo de trabalho: <b>${(MODOS.find(m=>m[0]===(p.modo||'misto'))||MODOS[2])[1]}</b> <button class="secondary mini" data-act="go" data-v="proc">alterar</button></div>
+  <div class="steps3">${p.modo==='livre'?'<span><b>1</b> Nova situação</span><span><b>2</b> Descrever e classificar</span><span><b>3</b> Fotografar</span>':'<span><b>1</b> Criar a lista</span><span><b>2</b> Tocar numa situação</span><span><b>3</b> Confirmar, comentar e fotografar</span>'}</div>
+  ${addBtns(p)}
   ${an.length?`<div class="muted">${nl} da lista · ${nc} acrescentada${nc===1?'':'s'} no local</div><div class="bar"><i style="width:${Math.round(100*done/an.length)}%"></i></div><b>${done}/${an.length}</b> analisadas
   <div class="lockrow">${p.lockNum?`<span>🔒 <b>Numeração fixa</b> — os códigos AN não mudam ao reordenar ou eliminar</span><button class="secondary mini" data-act="lockNum" data-v="0">Desbloquear</button>`:`<span class="muted">Numeração pela ordem da lista (muda ao reordenar ou eliminar)</span><button class="secondary mini" data-act="lockNum" data-v="1">🔒 Fixar numeração</button>`}</div>`:''}</div>
   ${an.length>4?`<div class="search"><input id="fq" data-act="filtQ" value="${esc(F.q||'')}" placeholder="🔍 Pesquisar código, item, local ou texto…">${F.q?'<button class="secondary mini" data-act="filtQClear">✕</button>':''}</div>`:''}
@@ -956,13 +1000,13 @@ function vAnoms(){
   ${usedP.length>1&&an.some((a,i)=>i&&parteOf(p,an[i-1])>parteOf(p,a))?'<div class="btns"><button class="secondary mini" data-act="sortParte">⇅ Ordenar a lista por código</button></div>':''}
   ${zonas.length>1?`<select data-act="filtZona"><option value="">Todas as zonas</option>${zonas.map(z=>`<option ${F.zona===z?'selected':''}>${esc(z)}</option>`).join('')}</select>`:''}`:''}
   <div class="list">${vis.map(a=>anomCard(a,an.indexOf(a),an.length,'analise')).join('')||(an.length?'<p class="muted">Nenhuma anomalia com este filtro.</p>':'<p class="muted">Sem anomalias. Importe a lista fornecida ou acrescente-as uma a uma.</p>')}</div>
-  ${an.length>3?'<div class="btns"><button class="green" data-act="newAnom">+ Acrescentar anomalia</button></div>':''}
+  ${an.length>3?addBtns(p,true):''}
   ${an.length?'<div class="btns"><button class="green" data-act="go" data-v="rel">Avançar para o relatório ▶</button></div>':''}`;
 }
 function tickBox(name,checked,label,attrs){return `<label class="tk ${checked?'on':''}"><input type="checkbox" ${checked?'checked':''} ${attrs}><span>${label}</span></label>`}
 function vFicha(){
   const p=cur(),a=curA();const idx=p.anomalias.indexOf(a),n=p.anomalias.length;
-  const fs=settings.fields.filter(f=>fieldOn(p,f));const max=settings.maxFotos;
+  const fs=settings.fields.filter(f=>fieldOn(p,f));const max=maxF();
   const fromList=false;
   const idMiss=[a.zona,a.local,a.elemento,a.descricao].filter(x=>!String(x||'').trim()).length;
   const fsC=fs.filter(f=>!(f.id==='conf'&&a.origem==='local'));const nFilled=fsC.filter(f=>{const v=a.vals?.[f.id];return Array.isArray(v)?v.length:v}).length;
@@ -1004,7 +1048,7 @@ function fieldUI(f,a){
   return inp('v.'+f.id,f.label,v,f.ph||'');
 }
 // ----- Relatório -----
-const printOpts=p=>`${tplBytes?tickBox('',settings.useTpl,`Usar o meu modelo Word (${esc(settings.tplName)})`,'data-act="tickTpl"'):''}${tickBox('',p.printVistoria,'Dados da vistoria no início','data-act="tickVis"')}${p.visita?.gps?tickBox('',p.printMap!==false,`Mapa de localização no início (${p.visita.mapMode==='street'?'mapa':'satélite'})${mapOk(p)?'':' — será obtido ao gerar (precisa de rede)'}`,'data-act="tkMap"'):''}${tickBox('',settings.withIndex!==false,`Índice depois da capa, e título «1. ${/^quest/i.test(lblD(p))?'Questões a responder':'Situações a analisar'}»`,'data-act="tkExp" data-k="withIndex"')}${tickBox('',p.printResumo,'Resumo de apreciação no fim','data-act="tickResumo"')}${tickBox('',settings.dateCom!==false,`Data da vistoria antes de «${esc(lblC(p))}» (ex.: ${esc(p.visita?.data||'26/05/2026')} - ${esc(lblC(p))}:)`,'data-act="tkExp" data-k="dateCom"')}${tickBox('',settings.fitPage!==false,'Ajustar cada ficha a uma página (reduz a altura das fotos)','data-act="tkExp" data-k="fitPage"')}${tickBox('',settings.onePerPage,'Começar cada ficha numa página nova','data-act="tickPage"')}<div class="tks col">${tickBox('',settings.txtPhotos!==false,'Incluir fotografias (nos dois formatos)','data-act="tkExp" data-k="txtPhotos"')}</div>${settings.expFichas!==false&&settings.expTexto!==false?`<label>Pré-visualizar no formato</label><div class="seg">${[['grelha','Grelha'],['texto','Texto corrido']].map(([k,t])=>`<button class="${prevLay()===k?'on':''}" data-act="setLay" data-v="${k}">${t}</button>`).join('')}</div>`:''}<label>Grelha de fotografias</label><div class="seg">${[1,2,3].map(n=>`<button class="${settings.photoCols==n?'on':''}" data-act="setCols" data-v="${n}">${n} coluna${n>1?'s':''}</button>`).join('')}</div>`;
+const printOpts=p=>`${tplBytes?tickBox('',settings.useTpl,`Usar o meu modelo Word (${esc(settings.tplName)})`,'data-act="tickTpl"'):''}${tickBox('',p.printVistoria,'Dados da vistoria no início','data-act="tickVis"')}${p.visita?.gps?tickBox('',p.printMap!==false,`Mapa de localização no início (${p.visita.mapMode==='street'?'mapa':'satélite'})${mapOk(p)?'':' — será obtido ao gerar (precisa de rede)'}`,'data-act="tkMap"'):''}${tickBox('',settings.withIndex!==false,`Índice depois da capa, e título «1. ${/^quest/i.test(lblD(p))?'Questões a responder':'Situações a analisar'}»`,'data-act="tkExp" data-k="withIndex"')}${tickBox('',p.printResumo,'Resumo de apreciação no fim','data-act="tickResumo"')}${tickBox('',settings.dateCom!==false,`Data da vistoria antes de «${esc(lblC(p))}» (ex.: ${esc(p.visita?.data||'26/05/2026')} - ${esc(lblC(p))}:)`,'data-act="tkExp" data-k="dateCom"')}${tickBox('',settings.fitPage!==false,'Ajustar cada ficha a uma página (reduz a altura das fotos)','data-act="tkExp" data-k="fitPage"')}${tickBox('',settings.onePerPage,'Começar cada ficha numa página nova','data-act="tickPage"')}<div class="tks col">${tickBox('',settings.txtPhotos!==false,'Incluir fotografias (nos dois formatos)','data-act="tkExp" data-k="txtPhotos"')}</div>${settings.expFichas!==false&&settings.expTexto!==false?`<label>Pré-visualizar no formato</label><div class="seg">${[['grelha','Grelha'],['texto','Texto corrido']].map(([k,t])=>`<button class="${prevLay()===k?'on':''}" data-act="setLay" data-v="${k}">${t}</button>`).join('')}</div>`:''}<label>Ordenar as fichas por</label><select data-act="setOrdem">${ORDENS.map(([k,t])=>`<option value="${k}" ${(p.ordem||'lista')===k?'selected':''}>${t}</option>`).join('')}</select><p class="muted">${(p.ordem||'lista')==='lista'?'As fichas saem pela ordem da lista (numeração 1.001, 1.002…).':'As fichas são agrupadas, com um título por grupo (também no índice). Os códigos 1.001… não mudam.'}</p><label>Grelha de fotografias</label><div class="seg">${[1,2,3].map(n=>`<button class="${settings.photoCols==n?'on':''}" data-act="setCols" data-v="${n}">${n} coluna${n>1?'s':''}</button>`).join('')}</div>${maxUI()}`;
 function computeStats(p){
   const an=p.anomalias,T=[];const fo=id=>settings.fields.find(f=>f.id===id&&p.use?.[id]);const cnt=(m,k)=>m.set(k,(m.get(k)||0)+1);
   const done=an.filter(isDone).length;T.push({title:'Síntese',rows:[['Anomalias analisadas',`${done} de ${an.length}`],['Da lista fornecida',an.filter(a=>a.origem!=='local').length],['Acrescentadas no local',an.filter(a=>a.origem==='local').length]]});
@@ -1013,10 +1057,29 @@ function computeStats(p){
   const f3=fo('cons');if(f3){const m=new Map();for(const o of f3.opts)m.set(o[0],0);for(const a of an)for(const v of (a.vals?.cons||[]))cnt(m,v);const rows=[...m].filter(r=>r[1]).map(([k,n])=>[optText(f3.opts.find(o=>o[0]===k)||[k,k],settings.printStyle),n]);if(rows.length)T.push({title:f3.label,rows})}
   for(const [id] of [['estado'],['tend'],['urg'],['rep']]){const f=fo(id);if(!f)continue;const m=new Map();for(const a of an){const v=a.vals?.[id];if(v){const o=f.opts.find(o=>o[0]===v);cnt(m,o?optText(o,settings.printStyle):v)}}if(m.size)T.push({title:f.label,rows:[...m]})}
   const mp=new Map();for(const a of an){const n=parteOf(p,a);cnt(mp,`${n} – ${parteNome(p,n)||'?'}`)}if(mp.size)T.push({title:'Parte',rows:[...mp].sort()});
-  const mz=new Map();for(const a of an)cnt(mz,a.zona||'(sem zona)');const mpi=new Map();for(const a of an)if(a.piso)cnt(mpi,a.piso);if(mpi.size)T.push({title:'Piso',rows:[...mpi]});if(mz.size)T.push({title:'Zona',rows:[...mz]});
+  const mz=new Map();for(const a of an)cnt(mz,a.zona||'(sem zona)');const mpi=new Map();for(const a of an)if(a.piso)cnt(mpi,a.piso);if(mz.size)T.push({title:'Zona',rows:[...mz].sort((x,y)=>y[1]-x[1])});if(mpi.size)T.push({title:'Piso',rows:[...mpi].sort((x,y)=>y[1]-x[1])});
+  const ml=new Map();for(const a of an)if(a.local)cnt(ml,a.local);if(ml.size)T.push({title:'Local (compartimento)',rows:[...ml].sort((x,y)=>y[1]-x[1]).slice(0,15)});
+  const me=new Map();for(const a of an)if(a.elemento)cnt(me,a.elemento);if(me.size)T.push({title:'Elemento',rows:[...me].sort((x,y)=>y[1]-x[1]).slice(0,15)});
+  // texto de síntese automático (pode ser copiado e ajustado no Resumo de apreciação)
+  const nl=an.filter(a=>a.origem!=='local').length,nc=an.length-nl;const top=(t,k=2)=>{const x=T.find(z=>z.title===t||z.title.startsWith(t));if(!x)return '';return [...x.rows].sort((a,b)=>b[1]-a[1]).slice(0,k).filter(r=>r[1]).map(([l,n])=>`${l} (${n})`).join(', ')};
+  const st=f1?T.find(z=>z.title.startsWith(f1.label)):null;const ph=[];
+  ph.push(`Foram registadas ${an.length} situaç${an.length===1?'ão':'ões'}${nl&&nc?`: ${nl} alegada${nl===1?'':'s'} (lista fornecida) e ${nc} constatada${nc===1?'':'s'} no local pelo perito`:nl?', todas alegadas (lista fornecida)':', todas constatadas no local pelo perito'}.`);
+  if(st&&st.rows.length)ph.push(`Quanto às situações alegadas: ${st.rows.map(([l,n])=>`${l} — ${n}`).join('; ')}.`);
+  const tz=top('Zona'),tl=top('Local'),tt=f2?top(f2.label,3):'',tg=f3?top(f3.label,2):'';
+  if(tt)ph.push(`Tipos mais frequentes: ${tt}.`);if(tz)ph.push(`Zonas com mais situações: ${tz}.`);if(tl)ph.push(`Locais com mais situações: ${tl}.`);if(tg)ph.push(`Classificação mais frequente (${f3.label.toLowerCase()}): ${tg}.`);
+  T[0].text=ph.join(' ');
   return T;
 }
-function statsHTML(T){return T.map(t=>`<table class="st"><tr><th>${esc(t.title)}</th><th class="n">N.º</th></tr>${t.rows.map(([l,n])=>`<tr><td>${esc(l)}</td><td class="n">${esc(n)}</td></tr>`).join('')}</table>`).join('')}
+// gráfico de barras horizontais (imagem JPEG para o Word; o PDF desenha-o em vetor)
+function barChart(t){const R=t.rows.filter(r=>typeof r[1]==='number');if(!R.length)return null;const sc=2,W=760*sc,rh=30*sc,top=6*sc,H=top*2+R.length*rh;
+  const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,W,H);
+  const F=`${17*sc}px Calibri, Carlito, "Segoe UI", Arial, sans-serif`;x.font=F;const lw=Math.min(320*sc,Math.max(...R.map(r=>x.measureText(String(r[0])).width))+14*sc);
+  const mx=Math.max(...R.map(r=>r[1]),1);const bw=W-lw-46*sc;
+  R.forEach(([l,n],i)=>{const y=top+i*rh;x.fillStyle='#202020';x.textBaseline='middle';x.textAlign='right';let L=String(l);while(x.measureText(L).width>lw-14*sc&&L.length>3)L=L.slice(0,-2);if(L!==String(l))L+='…';x.fillText(L,lw-8*sc,y+rh/2);
+    x.fillStyle='#EFEFEF';x.fillRect(lw,y+6*sc,bw,rh-12*sc);const w=Math.max(2,bw*n/mx);x.fillStyle='#5F5F5F';x.fillRect(lw,y+6*sc,w,rh-12*sc);
+    x.textAlign='left';x.fillStyle='#202020';x.font=`bold ${17*sc}px Calibri, Carlito, Arial, sans-serif`;x.fillText(String(n),lw+w+6*sc,y+rh/2);x.font=F});
+  return {data:c.toDataURL('image/jpeg',0.92),w:W,h:H,hcm:15*H/W}}
+function statsHTML(T){return (T[0]?.text?`<p style="font-size:13px">${esc(T[0].text)}</p>`:'')+T.map((t,ti)=>{const mx=Math.max(1,...t.rows.map(r=>+r[1]||0));return `<table class="st"><tr><th>${esc(t.title)}</th><th class="n">N.º</th></tr>${t.rows.map(([l,n])=>`<tr><td>${esc(l)}${ti&&typeof n==='number'?`<div style="height:6px;background:#eee;margin-top:3px"><div style="height:6px;width:${Math.round(100*n/mx)}%;background:#5f5f5f"></div></div>`:''}</td><td class="n">${esc(n)}</td></tr>`).join('')}</table>`}).join('')}
 function vRel(){const p=cur();const nf=p.anomalias.reduce((s,a)=>s+relF(a).length,0),done=p.anomalias.filter(isDone).length;
   const an=p.anomalias,W=[];const todo=an.filter(a=>!isDone(a)),semF=an.filter(a=>!relF(a).length),semL=an.reduce((s,a)=>s+relF(a).filter(f=>!String(f.legenda||'').trim()).length,0),semD=an.filter(a=>!String(a.descricao||'').trim());
   if(todo.length)W.push([`${todo.length} anomalia(s) por analisar`,'chkTodo',todo.slice(0,6).map(a=>anCode(p,a)).join(', ')+(todo.length>6?'…':'')]);
@@ -1030,7 +1093,7 @@ function vRel(){const p=cur();const nf=p.anomalias.reduce((s,a)=>s+relF(a).lengt
   const chk=W.length?`<div class="card chk"><b>Antes de exportar, confirme:</b>${W.map(([t,act,sub])=>{const [ac,id]=act.split(':');return `<div class="chkrow"><span>⚠︎ ${esc(t)}${sub?`<br><small>${esc(sub)}</small>`:''}</span><button class="secondary mini" data-act="${ac}" ${id?`data-id="${id}"`:''}>Ver ›</button></div>`}).join('')}</div>`:'<div class="card chk ok">✓ Tudo analisado e completo.</div>';
   return `<h2>Relatório</h2>${blk('Resultado da análise',`${p.anomalias.length} anomalia(s) · ${done} analisada(s) · ${nf} foto(s)`)}${chk}
   ${sec('r1','1 · Resumo de apreciação geral',txt('p.resumo','',p.resumo,5),{cnt:p.resumo?pill('✓','ok'):pill('vazio')})}
-  ${sec('r5','Resumo estatístico',`${statsHTML(computeStats(p))}${tickBox('',!!p.printStats,'Incluir este resumo no Word (no fim das fichas)','data-act="tkStats"')}`,{cnt:pill(p.printStats?'no Word':'só no ecrã',p.printStats?'ok':''),def:false})}
+  ${sec('r5','Resumo estatístico',`${statsHTML(computeStats(p))}<div class="tks col">${tickBox('',!!p.printStats,'Incluir este resumo no relatório (Word e PDF, no fim das fichas)','data-act="tkStats"')}${p.printStats?tickBox('',p.printCharts!==false,'Com gráficos de barras horizontais','data-act="tkCharts"'):''}</div>`,{cnt:pill(p.printStats?'no Word':'só no ecrã',p.printStats?'ok':''),def:false})}
   ${sec('r2','2 · O que entra no Word',`<div class="tks col">${printOpts(p)}</div>`)}
   ${sec('r3','3 · Pré-visualização',`<div class="btns"><button class="secondary mini" data-act="prevMode">${S.prevSimple?'📄 Ver o Word real':'⚡ Vista rápida'}</button></div>${S.prevSimple?`<div class="paper">${paperHTML(p)||'<p class="muted">Sem fichas.</p>'}</div>`:`${S.prevNode&&S.prevStale?'<div class="msg pvstale">A pré-visualização está desatualizada (houve alterações). <button class="green mini" data-act="prevRefresh">🔄 Atualizar</button></div>':S.prevNode?'<div class="btns"><button class="secondary mini" data-act="prevRefresh">🔄 Atualizar</button></div>':''}<div id="docxPrev" class="docxprev"><p class="muted">A preparar a pré-visualização…</p></div>`}`)}
   ${sec('r4','4 · Exportar',`<label>Formatos da análise</label><div class="tks col">${tickBox('',settings.expFichas!==false,'Fichas em grelha','data-act="tkExp" data-k="expFichas"')}${tickBox('',settings.expTexto!==false,'Texto em parágrafos corridos (resposta clássica)','data-act="tkExp" data-k="expTexto"')}</div>${tickBox('',settings.txtPhotos!==false,'Com fotografias','data-act="tkExp" data-k="txtPhotos"')}
@@ -1046,7 +1109,7 @@ function paperHTML(p){
   let h='';
   if(p.printVistoria){const g=v.gps;h+=`<div class="vis">${v.data?`<div><b>Data da vistoria:</b> ${esc(v.data)}</div>`:''}${v.presencas?`<div><b>Presenças:</b> ${esc(v.presencas).replace(/\n/g,'<br>')}</div>`:''}${g?`<div><b>Localização GPS:</b> ${g.lat.toFixed(6)}, ${g.lon.toFixed(6)}</div>`:''}</div>`}
   if(p.printMap!==false&&mapOk(p))h+=`<div class="vis"><img src="${fotoCache.get(p.visita.map.id)}" style="width:9cm;max-width:100%;display:block"><i style="font-size:9px;color:#666">${esc(mapAttr(p.visita.map.mode))}</i></div>`;
-  h+=p.anomalias.map(a=>{
+  h+=ordAnoms(p,p.anomalias).map((a,ix,L)=>{const gh=a._grp&&(ix===0||L[ix-1]._grp!==a._grp)?`<div style="font-weight:700;color:#404040;border-bottom:1px solid #888;margin:16px 0 6px;padding-bottom:2px">${esc(a._grp)}</div>`:'';
     const car=[];for(const f of sF){if(f.id==='conf'&&a.origem==='local')continue;const t=fieldValueText(f,a.vals?.[f.id],settings,a.vals);if(t)car.push(`<b class="lb">${esc(f.label)}:</b><br>${esc(t)}`)}
     let carH='';if(a.origem==='local')carH+=`<tr class="c"><td colspan="4"><i class="red">Anomalia acrescentada no local</i></td></tr>`;
     if(car.length){carH+=`<tr class="c"><td colspan="4" style="padding:0"><table class="c3">`;for(let i=0;i<car.length;i+=3)carH+=`<tr>${[0,1,2].map(k=>`<td>${car[i+k]||''}</td>`).join('')}</tr>`;carH+='</table></td></tr>'}
@@ -1056,12 +1119,12 @@ function paperHTML(p){
       <p style="margin:8px 0 2px"><b>${esc(lblD(p))}:</b></p>${txHTML(a.descricao)}${pc.map(x=>`<div style="font-size:11px">${x}</div>`).join('')}<p style="margin:10px 0 2px"><b>${settings.dateCom!==false&&p.visita?.data?esc(p.visita.data)+' - ':''}${esc(lblC(p))}:</b></p>${txHTML(a.comentario)}
       ${lF.map(f=>{const v=fieldValueText(f,a.vals?.[f.id],settings,a.vals);return v?`<p><b>${esc(f.label)}:</b> ${esc(v)}</p>`:''}).join('')}`;
       if(settings.txtPhotos!==false&&relF(a).length){const RF=relF(a);t+=`<table class="pg">`;for(let i=0;i<RF.length;i+=C){const g=Array.from({length:C},(_,k)=>RF[i+k]);t+=`<tr class="pr">${g.map(f=>`<td style="width:${100/C}%">${f?`<img src="${fd(f)}">`:''}</td>`).join('')}</tr><tr class="cap">${g.map((f,k)=>`<td>${f?`${imgCode(p,a,i+k)}${f.legenda?' – '+esc(f.legenda):''}`:''}</td>`).join('')}</tr>`}t+='</table>'}
-      return t+'</div>'}
+      return gh+t+'</div>'}
     let r=`<table class="ft"><tr class="h"><td style="width:11.7%">${anCode(p,a)}</td><td style="width:11.7%"><small>Item</small> ${esc(a.ref||'—')}</td><td style="width:26.6%"><small>Zona:</small> ${esc(zona)}</td><td><small>Elemento:</small> ${esc(a.elemento)}</td></tr>
     <tr><td colspan="4"><b class="tt">${esc(lblD(p))}:</b>${txHTML(a.descricao)}</td></tr>${carH}<tr><td colspan="4"><b class="tt">${settings.dateCom!==false&&p.visita?.data?esc(p.visita.data)+' - ':''}${esc(lblC(p))}:</b>${txHTML(a.comentario)||'<div class="tx">&nbsp;</div>'}</td></tr>
     ${lF.map(f=>{const t=fieldValueText(f,a.vals?.[f.id],settings,a.vals);return t?`<tr><td colspan="4"><b class="lb">${esc(f.label)}</b><br>${esc(t)}</td></tr>`:''}).join('')}`;
     const RF=relF(a);if(settings.txtPhotos!==false&&RF.length){r+=`<tr><td colspan="4" style="padding:0"><table class="pg">`;for(let i=0;i<RF.length;i+=C){const g=Array.from({length:C},(_,k)=>RF[i+k]);r+=`<tr class="pr">${g.map(f=>`<td style="width:${100/C}%">${f?`<img src="${fd(f)}">`:''}</td>`).join('')}</tr><tr class="cap">${g.map((f,k)=>`<td>${f?`${imgCode(p,a,i+k)}${f.legenda?' – '+esc(f.legenda):''}`:''}</td>`).join('')}</tr>`}r+='</table></td></tr>'}
-    return r+'</table>'}).join('');
+    return gh+r+'</table>'}).join('');
   if(p.printResumo&&p.resumo)h+=`<h4>Resumo de apreciação geral</h4><p>${esc(p.resumo).replace(/\n/g,'<br>')}</p>`;
   return h;
 }
@@ -1119,15 +1182,14 @@ function vDefs(){
   ${settings.fields.map(fieldSec).join('')}
   ${sec('dnew','+ Novo campo',`<label>Nome</label><input id="nfLabel" placeholder="ex.: Risco para pessoas"><label>Tipo</label><select id="nfType"><option value="choice">Escolha única</option><option value="multi">Escolha múltipla</option><option value="text">Texto curto</option><option value="long">Texto longo</option></select><label>Opções (se for escolha) — uma por linha</label><textarea id="nfOpts" placeholder="BX = Baixo&#10;MD = Médio&#10;AL = Alto"></textarea><div class="btns"><button class="green" data-act="addField">+ Criar campo</button></div>`,{def:false})}
   ${blk('C · Relatório (Word)','Como saem as fichas')}
-  ${sec('dr','Grelha e impressão',`<div class="tks col">${tickBox('',settings.txtPhotos!==false,'Incluir fotografias (nos dois formatos)','data-act="tkExp" data-k="txtPhotos"')}</div>${settings.expFichas!==false&&settings.expTexto!==false?`<label>Pré-visualizar no formato</label><div class="seg">${[['grelha','Grelha'],['texto','Texto corrido']].map(([k,t])=>`<button class="${prevLay()===k?'on':''}" data-act="setLay" data-v="${k}">${t}</button>`).join('')}</div>`:''}<label>Grelha de fotografias</label><div class="seg">${[1,2,3].map(n=>`<button class="${settings.photoCols==n?'on':''}" data-act="setCols" data-v="${n}">${n} coluna${n>1?'s':''}</button>`).join('')}</div>
+  ${sec('dr','Grelha e impressão',`<div class="tks col">${tickBox('',settings.txtPhotos!==false,'Incluir fotografias (nos dois formatos)','data-act="tkExp" data-k="txtPhotos"')}</div>${settings.expFichas!==false&&settings.expTexto!==false?`<label>Pré-visualizar no formato</label><div class="seg">${[['grelha','Grelha'],['texto','Texto corrido']].map(([k,t])=>`<button class="${prevLay()===k?'on':''}" data-act="setLay" data-v="${k}">${t}</button>`).join('')}</div>`:''}<label>Grelha de fotografias</label><div class="seg">${[1,2,3].map(n=>`<button class="${settings.photoCols==n?'on':''}" data-act="setCols" data-v="${n}">${n} coluna${n>1?'s':''}</button>`).join('')}</div>${maxUI()}
     <div class="tks col">${tickBox('',settings.fitPage!==false,'Ajustar cada ficha a uma página','data-act="tkExp" data-k="fitPage"')}${tickBox('',settings.onePerPage,'Começar cada ficha numa página nova','data-act="tickPage"')}</div>
     <label>Valores de escolha no Word</label><select data-set="printStyle"><option value="both" ${settings.printStyle==='both'?'selected':''}>Código (descrição) — ex.: 2-EPR (Estético pouco relevante)</option><option value="code" ${settings.printStyle==='code'?'selected':''}>Só código — ex.: 2-EPR</option><option value="text" ${settings.printStyle==='text'?'selected':''}>Só descrição — ex.: Estético pouco relevante</option></select>`)}
   ${sec('dt','Modelo Word próprio (opcional)',`<p class="muted">Sem modelo, a app gera o Word com formato próprio. Com um .docx seu, as fichas entram no lugar de <b>{{FICHAS}}</b> (ou no fim). São também preenchidos {{PROCESSO}}, {{DESIGNACAO}}, {{LOCAL}}, {{DATA}} e {{DATA_HOJE}}.</p>
     ${tplBytes?`<div class="gpsv">📄 <b>${esc(settings.tplName)}</b></div><div class="tks">${tickBox('',settings.useTpl,'Usar este modelo','data-act="tickTpl"')}</div><div class="btns"><button class="del" data-act="tplDel">Retirar modelo</button></div>`:''}
     <div class="btns"><label class="btn secondary">📂 ${tplBytes?'Substituir':'Carregar'} modelo (.docx)<input type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" data-act="tplIn" hidden></label></div>`,{cnt:tplBytes&&settings.useTpl?pill('ativo','ok'):pill('não usado'),def:false})}
   ${blk('D · Fotografias')}
-  ${sec('dp','Resolução e quantidade',`<label>Resolução das fotos</label><div class="seg">${[[50,'50 KB'],[150,'150 KB'],[300,'300 KB'],[500,'500 KB']].map(([v,t])=>`<button class="${settings.photoKB==v?'on':''}" data-act="setNum" data-k="photoKB" data-v="${v}">${t}</button>`).join('')}</div><p class="muted">50 mínima · 150 baixa (recomendada) · 300 razoável · 500 média.</p>
-    <label>Fotos por anomalia (máximo)</label><select data-set="maxFotos">${[1,2,3,4,5,6,7,8,9].map(v=>`<option value="${v}" ${settings.maxFotos==v?'selected':''}>${v}</option>`).join('')}</select>`)}
+  ${sec('dp','Resolução',`<label>Resolução das fotos</label><div class="seg">${[[50,'50 KB'],[150,'150 KB'],[300,'300 KB'],[500,'500 KB']].map(([v,t])=>`<button class="${settings.photoKB==v?'on':''}" data-act="setNum" data-k="photoKB" data-v="${v}">${t}</button>`).join('')}</div><p class="muted">50 mínima · 150 baixa (recomendada) · 300 razoável · 500 média. O número máximo de fotos por assunto escolhe-se em «Grelha e impressão».</p>`)}
   ${blk('E · Cópias de segurança')}${bkBarHTML()}
   <p class="muted center">Regi Anomalias · v${VERSION}</p>`;
 }
@@ -1221,7 +1283,7 @@ function openPhotoModal(i){const a=curA();const f=a?.fotos[i];if(!f)return;$('#p
   <img src="${fd(f)}" class="pmimg" data-act="pmFull" data-i="${i}">
   ${(()=>{const c=dupOf(cur(),f);return c.length?`<div class="red" style="font-size:13px;margin:6px 0">⚠︎ Esta foto parece repetida — igual a ${esc(c.join(', '))}. Pode eliminá-la ou substituí-la.</div>`:''})()}
   <label class="fld"><span>Legenda</span><textarea rows="5" data-bind="f.${i}.legenda" placeholder="Legenda da fotografia">${esc(f.legenda)}</textarea></label>
-  <label>Mover para outra anomalia</label><select data-act="pmMoveTo" data-i="${i}"><option value="">— escolher —</option>${cur().anomalias.filter(x=>x!==a).map(x=>`<option value="${x.id}" ${x.fotos.length>=MAXALL?'disabled':''}>${anCode(cur(),x)} · ${esc([x.local||x.zona,x.elemento].filter(Boolean).join(' · ')||'—')} (${relF(x).length}/${settings.maxFotos}${relF(x).length>=settings.maxFotos?' → reserva':''})</option>`).join('')}</select>
+  <label>Mover para outra anomalia</label><select data-act="pmMoveTo" data-i="${i}"><option value="">— escolher —</option>${cur().anomalias.filter(x=>x!==a).map(x=>`<option value="${x.id}" ${x.fotos.length>=MAXALL?'disabled':''}>${anCode(cur(),x)} · ${esc([x.local||x.zona,x.elemento].filter(Boolean).join(' · ')||'—')} (${relF(x).length}/${maxF()}${relF(x).length>=maxF()?' → reserva':''})</option>`).join('')}</select>
   <div class="row"><button class="${inRel(f)?'green':'secondary'}" data-act="pmSel" data-i="${i}">${inRel(f)?'✓ No relatório — tocar para pôr em reserva':'＋ Usar no relatório'}</button></div>
   <div class="row"><button class="sm" data-act="pmRot" data-i="${i}">⟳ Rodar</button><button class="sm" data-act="pmMv" data-i="${i}" data-d="-1" ${i&&inRel(a.fotos[i-1])===inRel(f)?'':'disabled'}>◀ Mover</button><button class="sm" data-act="pmMv" data-i="${i}" data-d="1" ${i<a.fotos.length-1&&inRel(a.fotos[i+1])===inRel(f)?'':'disabled'}>Mover ▶</button><span class="grow"></span><button class="danger xs" data-act="pmDel" data-i="${i}">🗑 Eliminar</button></div>
   <div class="row"><span class="muted" style="font-size:12px">Substituir esta foto (mantém ${inRel(f)?'o número '+imgCode(cur(),a,i)+' e ':''}a legenda):</span></div>
@@ -1236,7 +1298,7 @@ const prevLay=()=>settings.expFichas===false?'texto':settings.expTexto===false?'
 const docName=(p,lay,ext)=>safeName(p.codigo)+(lay==='texto'?'_Analise_Anomalias_texto':'_Fichas_Anomalias')+ext;
 async function docOpts(p,lay,ext){await loadFotos(p);let mapImg=null;lay=lay||prevLay();
   if(p.printMap!==false&&p.visita?.gps&&await ensureMap(p,true)){const m=p.visita.map;mapImg={data:fotoCache.get(m.id),w:m.w,h:m.h,caption:mapAttr(m.mode)}}
-  return {mapImg,proc:p,settings,anoms:hydrate(p),stats:p.printStats?computeStats(p):null,onePerPage:settings.onePerPage,photoCols:settings.photoCols,fitPage:settings.fitPage!==false,dateCom:settings.dateCom!==false,withResumo:p.printResumo,withVistoria:p.printVistoria,layout:lay,fileName:docName(p,lay,ext),withPhotos:settings.txtPhotos!==false,withIndex:settings.withIndex!==false}}
+  return {mapImg,proc:p,settings,anoms:hydrate(p),stats:p.printStats?computeStats(p).map((t,i)=>i&&p.printCharts!==false?{...t,chart:barChart(t)}:t):null,onePerPage:settings.onePerPage,photoCols:settings.photoCols,fitPage:settings.fitPage!==false,dateCom:settings.dateCom!==false,withResumo:p.printResumo,withVistoria:p.printVistoria,layout:lay,fileName:docName(p,lay,ext),withPhotos:settings.txtPhotos!==false,withIndex:settings.withIndex!==false}}
 async function docxFor(p,lay){const o=await docOpts(p,lay,'.docx');if(settings.useTpl&&tplBytes)return await buildDocxTpl(o,tplBytes);return buildDocx(o)}
 async function pdfFor(p,lay){return buildPdf(await docOpts(p,lay,'.pdf'))}
 const fmts=()=>[settings.expFichas!==false&&'grelha',settings.expTexto!==false&&'texto'].filter(Boolean);
@@ -1247,7 +1309,7 @@ function xlsxFor(p){const fs=settings.fields.filter(f=>p.use?.[f.id]);
   const rows=[['Código','Item','Parte','Origem','Zona','Piso','Local','Elemento','Descrição','Comentário',...fs.map(f=>f.label),'N.º fotos','Legendas']];
   for(const a of p.anomalias)rows.push([anCode(p,a),a.ref,parteNome(p,parteOf(p,a)),a.origem==='local'?'Constatada no local':'Da lista',a.zona,a.piso||'',a.local,a.elemento,a.descricao,a.comentario||'',...fs.map(f=>f.id==='conf'&&a.origem==='local'?'':fieldValueText(f,a.vals?.[f.id],settings,a.vals)),relF(a).length,relF(a).map((f,i)=>f.legenda?`${imgCode(p,a,i)}: ${f.legenda}`:'').filter(Boolean).join(' | ')]);
   return buildXlsx('Anomalias',rows,[9,8,14,14,8,12,18,18,60,40,...fs.map(f=>f.type==='long'?40:16),8,40])}
-function migrateProc(p){
+function migrateProc(p){if(!p.modo)p.modo='misto';if(!p.ordem)p.ordem='lista';
   for(const k of ['use','print'])if(p[k]&&['prej','cEst','cFun'].some(x=>x in p[k])){if(!('cons' in p[k]))p[k].cons=!!(p[k].prej||p[k].cEst||p[k].cFun);delete p[k].prej;delete p[k].cEst;delete p[k].cFun}
   for(const a of p.anomalias||[]){if(!a.vals)continue;const arr=Array.isArray(a.vals.cons)?a.vals.cons:[];for(const x of ['prej','cEst','cFun']){if(a.vals[x]&&!arr.includes(a.vals[x]))arr.push(a.vals[x]);delete a.vals[x]}if(arr.length)a.vals.cons=arr}
   for(const a of p.anomalias||[])if(a.vals?.conf==='CON')a.vals.conf='CFM';
@@ -1270,11 +1332,13 @@ document.addEventListener('click',async e=>{
     case 'go':{e.preventDefault();if(dirty)await saveProc();const v=el.dataset.v;if(['proc','anom','rel'].includes(v)&&!p)return toast('Escolha ou crie primeiro um processo.',1);S.view=v;S.sub=null;S.gpsMsg='';S.scrollTop=0;break}
     case 'backList':if(dirty)await saveProc();S.sub=null;if(S.view!=='anom'){S.view='anom'}S.scrollTop=S.listScroll||0;break;
     case 'selF':case 'pmSel':{const i=+el.dataset.i;const f=a.fotos[i];if(!f)return;
-      if(inRel(f)){f.sel=false}else{if(relF(a).length>=settings.maxFotos){toast(`O relatório já tem ${settings.maxFotos} fotos. Retire primeiro uma («✓ No relatório») para pôr esta.`,1);return}f.sel=true}
+      if(inRel(f)){f.sel=false}else{if(relF(a).length>=maxF()){toast(`O relatório já tem ${maxF()} fotos. Retire primeiro uma («✓ No relatório») para pôr esta.`,1);return}f.sel=true}
       normFotos(a);S.prevStale=true;await saveProc();if(act==='pmSel'){const k=a.fotos.indexOf(f);S.scrollTop=window.scrollY;render();openPhotoModal(k);return}S.scrollTop=window.scrollY;break}
     case 'ddTog':{S.dd=S.dd||{};const k=el.dataset.k;S.dd[k]=!S.dd[k];S.scrollTop=window.scrollY;break}
     case 'setLay':settings.layout=el.dataset.v;await saveSettings();S.scrollTop=window.scrollY;break;
-    case 'setCols':settings.photoCols=+el.dataset.v;await saveSettings();S.scrollTop=window.scrollY;break;
+    case 'setModo':p.modo=el.dataset.v;await saveProc();S.scrollTop=window.scrollY;break;
+    case 'setCols':settings.photoCols=+el.dataset.v;await saveSettings();await enforceMax();S.scrollTop=window.scrollY;break;
+    case 'setMax':if(+settings.photoCols===3)settings.maxFotos3=+el.dataset.v;else settings.maxFotos=+el.dataset.v;await saveSettings();await enforceMax();S.scrollTop=window.scrollY;break;
     case 'setNum':settings[el.dataset.k]=+el.dataset.v;await saveSettings();S.scrollTop=window.scrollY;break;
     case 'setPair':p.lblDesc=el.dataset.d;p.lblCom=el.dataset.c;await saveProc();S.scrollTop=window.scrollY;break;
     case 'lockNum':{if(el.dataset.v==='1'){p.anomalias.forEach(x=>{x.num=undefined;x.num=numOf({...p,lockNum:false},x)});p.lockNum=true;toast('Numeração fixada.')}else{if(!await ask('Desbloquear a numeração? Os códigos AN e IMG voltam a seguir a ordem da lista (podem mudar).',['Cancelar','Desbloquear']))return;p.anomalias.forEach(x=>delete x.num);p.lockNum=false}await saveProc();S.scrollTop=window.scrollY;break}
@@ -1387,6 +1451,7 @@ document.addEventListener('change',async e=>{
   if(act==='tickVis'){p.printVistoria=el.checked;await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='tkMap'){p.printMap=el.checked;await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='tkStats'){p.printStats=el.checked;await saveProc();S.scrollTop=window.scrollY;render();return}
+  if(act==='tkCharts'){p.printCharts=el.checked;await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='tkParte'){const n=+el.dataset.v;if(parteOf(p,a)!=n){a.parte=n;a.origem=n==(p.parteLocal??4)?'local':'lista';if(p.lockNum)a.num=nextNum(p,n)}await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='impParte'){S.impParte=+el.value;return}
   if(act==='filtParte'){S.filt.parte=el.value?+el.value:0;S.scrollTop=window.scrollY;render();return}
@@ -1394,7 +1459,8 @@ document.addEventListener('change',async e=>{
   if(el.dataset.pn!==undefined){const i=+el.dataset.pn,old=p.partes[i].n,n=parseInt(el.value,10);if(!(n>0)||p.partes.some((x,j)=>j!==i&&x.n==n)){el.value=old;return toast('Número de parte inválido ou repetido.',1)}for(const x of p.anomalias)if(parteOf(p,x)==old)x.parte=n;if(p.parteLocal==old)p.parteLocal=n;p.partes[i].n=n;await saveProc();S.scrollTop=window.scrollY;render();return}
   if(el.dataset.pnome!==undefined){p.partes[+el.dataset.pnome].nome=el.value;await saveProc();return}
   if(act==='filtZona'){S.filt.zona=el.value;S.scrollTop=window.scrollY;render();return}
-  if(act==='pmMoveTo'){const t=p.anomalias.find(x=>x.id===el.value);if(!t)return;if(t.fotos.length>=MAXALL){toast(`${anCode(p,t)} já tem ${MAXALL} fotos guardadas.`,1);return}const [f]=a.fotos.splice(+el.dataset.i,1);f.sel=relF(t).length<settings.maxFotos;t.fotos.push(f);normFotos(t);$('#pm')?.remove();await saveProc();toast(`Foto movida para ${anCode(p,t)} (${fotoLbl(p,t,t.fotos.indexOf(f))}).`);S.scrollTop=window.scrollY;render();return}
+  if(act==='setOrdem'){p.ordem=el.value;S.prevStale=true;await saveProc();S.scrollTop=window.scrollY;render();return}
+  if(act==='pmMoveTo'){const t=p.anomalias.find(x=>x.id===el.value);if(!t)return;if(t.fotos.length>=MAXALL){toast(`${anCode(p,t)} já tem ${MAXALL} fotos guardadas.`,1);return}const [f]=a.fotos.splice(+el.dataset.i,1);f.sel=relF(t).length<maxF();t.fotos.push(f);normFotos(t);$('#pm')?.remove();await saveProc();toast(`Foto movida para ${anCode(p,t)} (${fotoLbl(p,t,t.fotos.indexOf(f))}).`);S.scrollTop=window.scrollY;render();return}
   if(act==='tkExp'){settings[el.dataset.k]=el.checked;await saveSettings();S.scrollTop=window.scrollY;render();return}
   if(act==='tkCols'){settings.photoCols=+el.dataset.v;await saveSettings();S.scrollTop=window.scrollY;render();return}
   if(act==='tkOrig'){a.origem=el.dataset.v;await saveProc();S.scrollTop=window.scrollY;render();return}
@@ -1412,8 +1478,8 @@ document.addEventListener('change',async e=>{
   if(act==='addCam'||act==='addLib'){
     const files=[...el.files];el.value='';const room=MAXALL-a.fotos.length;let nRes=0;
     if(files.length>room)toast(`Só cabem mais ${room} foto(s) nesta anomalia (máx. ${MAXALL} com a reserva); as restantes foram ignoradas.`,1);
-    for(const f of files.slice(0,room)){try{const r=await compressImage(f,settings.photoKB);const fid=uid();await fotoPut(fid,r.data);let ph='';try{ph=await phash(r.data)}catch(e){}{const sel=relF(a).length<settings.maxFotos;if(!sel)nRes++;a.fotos.push({id:fid,w:r.w,h:r.h,legenda:'',ph,sel});normFotos(a)}S.prevStale=true;await loadFotos(p);await ensureHashes(p);warnDup(p,a,a.fotos.findIndex(x=>x.id===fid));if(act==='addCam'){S.camShots.push(f);gpsAutoFromCamera(p)}}catch(err){toast(err.message,1)}}
-    if(nRes)toast(`${nRes} foto(s) ficaram em reserva (o relatório já tem ${settings.maxFotos}). Escolha as melhores com «✓ No relatório» / «＋ Usar».`);
+    for(const f of files.slice(0,room)){try{const r=await compressImage(f,settings.photoKB);const fid=uid();await fotoPut(fid,r.data);let ph='';try{ph=await phash(r.data)}catch(e){}{const sel=relF(a).length<maxF();if(!sel)nRes++;a.fotos.push({id:fid,w:r.w,h:r.h,legenda:'',ph,sel});normFotos(a)}S.prevStale=true;await loadFotos(p);await ensureHashes(p);warnDup(p,a,a.fotos.findIndex(x=>x.id===fid));if(act==='addCam'){S.camShots.push(f);gpsAutoFromCamera(p)}}catch(err){toast(err.message,1)}}
+    if(nRes)toast(`${nRes} foto(s) ficaram em reserva (o relatório já tem ${maxF()}). Escolha as melhores com «✓ No relatório» / «＋ Usar».`);
     await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='impFile'){const f=el.files[0];el.value='';if(!f)return;const u=new Uint8Array(await f.arrayBuffer());
     try{const isDocx=/\.docx$/i.test(f.name)||!!(await (await unzip(u)).get('word/document.xml'));
