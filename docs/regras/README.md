@@ -1,6 +1,6 @@
 # Biblioteca de regras — apps PFK
 
-Regras e modelos comuns às apps HTML (Regi Anomalias, ExPropria, FullTopics, …).
+Regras e modelos comuns às apps HTML (Regi Anomalias, ExPropria, FullTopics, Revip, …).
 Cada ficheiro descreve **uma rotina**: o que faz, o modelo de dados, a interface, as saídas e os testes.
 Ao melhorar uma rotina numa app, atualizar o ficheiro respetivo e a tabela «Onde está aplicada».
 

@@ -1,0 +1,16 @@
+{
+  "name": "Revip — Revisão e variação de preços",
+  "short_name": "Revip",
+  "description": "Variação de preços entre datas: revisão de preços (IMPIC), custos de construção, habitação e IPC (INE), com relatório PDF/Word/Excel",
+  "lang": "pt-PT",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f5f2",
+  "theme_color": "#1f6f4a",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
