@@ -63,6 +63,7 @@ details.sec .body{padding:0 12px 12px}
 .tks{display:flex;flex-wrap:wrap;gap:6px 8px;margin:2px 0 4px}.tks.col{flex-direction:column}
 .ddh{display:flex;align-items:center;gap:8px;width:100%;margin:6px 0 0;padding:10px 12px;background:#f2f2f2;border:1px solid #d9d9d9;border-radius:10px;color:#222;font-size:15px;text-align:left;min-height:44px}
 .ddh.on{background:#e6e6e6;border-color:#bdbdbd;border-bottom-left-radius:0;border-bottom-right-radius:0}.ddl{color:#555;font-size:13px;min-width:74px}.ddv{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ddv.muted{font-weight:400}.dda{color:#777}
+.req{border-left:4px solid #2e9d4f;background:#eef8f0;border-radius:10px;padding:2px 10px 8px;margin:8px 0}.req>label:first-child,.req .ddl{color:#1e7a3c;font-weight:700}.req>label:first-child::after{content:' • a responder';font-weight:600;font-size:12px;color:#2e9d4f}.req.done{background:transparent;border-left-color:#9fd3ae}.req.done>label:first-child::after{content:' ✓';color:#2e9d4f}.req .ddh{border-color:#9fd3ae}.reqnote{font-size:12.5px;color:#1e7a3c;margin:8px 0 0}
 .ddb{border:1px solid #bdbdbd;border-top:0;border-radius:0 0 10px 10px;padding:8px 10px 6px;margin-bottom:4px}
 .tk{display:inline-flex;align-items:center;gap:7px;margin:0;padding:7px 10px 7px 8px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:14.5px;color:var(--ink);cursor:pointer}
 .tk input{width:20px;height:20px;margin:0;accent-color:var(--pri)}
@@ -234,7 +235,7 @@ function parseTSV(t){
   if(cell!==''||row.length){row.push(cell);rows.push(row)}
   return rows.filter(r=>r.some(c=>String(c).trim()));
 }
-const IMPORT_TARGETS=[['ref','Item',/^(ref|item|n\.?\s*[ºo°]|nº|num|art|quesito\s*n)/i],['zona','Zona',/zona/i],['piso','Piso',/^piso|andar/i],['local','Local',/local|compart|divis/i],['elemento','Elemento',/elem/i],['descricao','Situação / questão',/anomal|descri|quesit|pergunt|quest|situa|alega/i]];
+const IMPORT_TARGETS=[['ref','Item',/^(ref|item|n\.?\s*[ºo°]|nº|num|art|quesito\s*n)/i],['zona','NUF',/nuf|n[uú]cleo|zona/i],['piso','Piso',/^piso|andar/i],['local','Local',/local|compart|divis/i],['elemento','Elemento',/elem/i],['descricao','Situação / questão',/anomal|descri|quesit|pergunt|quest|situa|alega/i]];
 function detectHeader(rows){
   for(let i=0;i<Math.min(rows.length,40);i++){
     const r=(rows[i]||[]).map(c=>String(c).trim());const m={};const used=new Set();
@@ -361,7 +362,7 @@ function buildDocx({proc,settings,anoms,onePerPage,withResumo,withVistoria,bodyO
     const nSt=stats&&stats.length?stats.reduce((n,t)=>n+t.rows.length+2,0):0;const hasR=withResumo&&proc.resumo;
     const stH=stats&&stats.length?stats.reduce((n,t)=>n+(t.chart?t.chart.hcm+1.4:(t.rows.length+2)*0.5),0):0;
     const P=onePerPage&&fitPage!==false;const stPages=Math.max(1,Math.ceil((stH+(stats&&stats[0]?.text?3:0))/22));
-    const cov=body?1:0;const ents=[[1,`1.  ${secT}`,'_RA_h1',0]];anoms.forEach((a,ix)=>{const z=zonaOf(a);if(gStart[ix])ents.push([2,a._grp,'_RA_g'+ix,ix]);ents.push([FL,`${codeOf(a,ix)}  –  ${[a.ref?'Item '+a.ref:'',a.elemento,z].filter(Boolean).join(' · ')}`.slice(0,95),'_RA_'+ix,ix])});
+    const cov=body?1:0;const ents=[[1,`1.  ${secT}`,'_RA_h1',0]];anoms.forEach((a,ix)=>{const z=zonaOf(a);if(gStart[ix])ents.push([2,a._grp,'_RA_g'+ix,ix]);ents.push([FL,`${codeOf(a,ix)}  –  ${[a.ref?'Item '+a.ref:'',z,a.elemento].filter(Boolean).join(' · ')}`.slice(0,95),'_RA_'+ix,ix])});
     let k=1;if(nSt)ents.push([1,`${++k}.  Resumo estatístico`,'_RA_h'+k,'st']);if(hasR)ents.push([1,`${++k}.  Resumo de apreciação geral`,'_RA_h'+k,'r']);
     const idxP=Math.max(1,Math.ceil((ents.length+3)/38));const p0=cov+idxP+1;
     const pg=ents.map(e=>{if(!P)return '';if(typeof e[3]==='number')return p0+e[3];const after=p0+anoms.length;return e[3]==='st'?after:after+(nSt?stPages:0)});
@@ -381,12 +382,12 @@ function buildDocx({proc,settings,anoms,onePerPage,withResumo,withVistoria,bodyO
     const zona=[a.zona,a.piso,a.local].filter(Boolean).filter((v,i,arr)=>arr.indexOf(v)===i).join(' · ');
     const hd={b:true,color:'FFFFFF',sz:9};
     const code=codeOf(a,ix);
-    const tcTxt=`${code}  –  ${[a.ref?'Item '+a.ref:'',a.elemento,zona].filter(Boolean).join(' · ')}`.slice(0,95).replace(/"/g,"'");
+    const tcTxt=`${code}  –  ${[a.ref?'Item '+a.ref:'',zona,a.elemento].filter(Boolean).join(' · ')}`.slice(0,95).replace(/"/g,"'");
     const mark=r=>IDX?bm('_RA_'+ix,r)+`<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> TC "${xesc(tcTxt)}" \\l ${FL} </w:instrText></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>`:r;
     const sm={color:'D9D9D9',sz:8};
     rows+=row(cell(para(mark(run(code,hd)),{keep:1})+(a._parte?para(run(a._parte.replace(/\s*\(.*\)$/,''),{color:'D9D9D9',sz:7}),{keep:1}):''),{w:sum(0,1),fill:'404040'})+
              cell(para(run('Item ',sm)+run(a.ref||'—',hd),{keep:1}),{w:sum(1,1),fill:'404040'})+
-             cell(para(run('Zona: ',sm)+run(zona||'—',hd),{keep:1}),{w:sum(2,2),span:2,fill:'404040'})+
+             cell(para(run('NUF: ',sm)+run(zona||'—',hd),{keep:1}),{w:sum(2,2),span:2,fill:'404040'})+
              cell(para(run('Elemento: ',sm)+run(a.elemento||'—',hd),{keep:1}),{w:sum(4,2),span:2,fill:'404040'}),{h:400});
     const T=t=>run(t,{b:true,sz:9,color:'000000'});
     rows+=row(full(para(T(lblD(proc)+':'),{keep:1,before:40,after:40})+tpara(a.descricao||'',{sz:9},{keep:1,after:60})),{});
@@ -407,7 +408,7 @@ function buildDocx({proc,settings,anoms,onePerPage,withResumo,withVistoria,bodyO
       const pars=(t,sz,w,f='r')=>{const ps=String(t??'').split('\n');return ps.reduce((h,p)=>h+cwLines(p,f,sz,w)*LH(sz),0)+(ps.length-1)*1};
       let tx=0;const z=zona;
       if(!TXT){
-        tx+=Math.max(20,Math.max(LH(9)+(a._parte?LH(7):0),cwLines('Zona: '+(z||'—'),'b',9,120)*LH(9),cwLines('Elemento: '+(a.elemento||'—'),'b',9,232)*LH(9))+4);
+        tx+=Math.max(20,Math.max(LH(9)+(a._parte?LH(7):0),cwLines('NUF: '+(z||'—'),'b',9,120)*LH(9),cwLines('Elemento: '+(a.elemento||'—'),'b',9,232)*LH(9))+4);
         tx+=4+LH(9)+pars(a.descricao||' ',9,BW)+3+4;
         if(a.origem==='local')tx+=LH(9)+8;
         const CWs=[ (G[0]+G[1]+G[2])/20-8.5,(G[3]+G[4])/20-8.5,G[5]/20-8.5];
@@ -616,12 +617,12 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
     if(ix===0&&IDX)H1(secT);
     if(a._grp&&(ix===0||a._grp!==anoms[ix-1]._grp)){need(40);ents.push({lvl:2,grp:1,t:String(a._grp).slice(0,95),page:pages.length,y});text(a._grp,X0,y+11,'b',11,'404040');y+=LH(11)+2;hline(X0,X0+W,y,false,'808080',0.6);y+=7}
     const code=a._code||String(ix+1);const zona=zonaOf(a);
-    ents.push({lvl:anoms.some(x=>x._grp)?3:2,t:`${code}  –  ${[a.ref?'Item '+a.ref:'',a.elemento,zona].filter(Boolean).join(' · ')}`.slice(0,95),page:pages.length,y});
+    ents.push({lvl:anoms.some(x=>x._grp)?3:2,t:`${code}  –  ${[a.ref?'Item '+a.ref:'',zona,a.elemento].filter(Boolean).join(' · ')}`.slice(0,95),page:pages.length,y});
     const items=[];for(const f of shortF){if(f.id==='conf'&&a.origem==='local')continue;const t=fieldValueText(f,a.vals?.[f.id],settings,a.vals);if(t)items.push([f.label,t])}
     const comLbl=(dateCom&&v.data?v.data+' - ':'')+lblC(proc)+':';
     if(!TXT){ // ---- grelha ----
       const G=[1124,1124,964,1607,1607,3211].map(t=>t/20);const cx=i=>X0+G.slice(0,i).reduce((s,x)=>s+x,0);const span=(i,n)=>G.slice(i,i+n).reduce((s,x)=>s+x,0);
-      const cells=[[0,1,null,code],[1,1,'Item ',a.ref||'—'],[2,2,'Zona: ',zona||'—'],[4,2,'Elemento: ',a.elemento||'—']];
+      const cells=[[0,1,null,code],[1,1,'Item ',a.ref||'—'],[2,2,'NUF: ',zona||'—'],[4,2,'Elemento: ',a.elemento||'—']];
       let bh=22;for(const [i,n,l,t] of cells){const lw=l?tw(l,'r',8):0;const ls=wrap(t,'b',9,span(i,n)-10-lw);bh=Math.max(bh,ls.length*LH(9)+(i===0&&a._parte?LH(7):0)+10)}
       need(bh+40);rect(X0,y,W,bh,'404040');
       for(const [i,n,l,t] of cells){let xx=cx(i)+5;let yy=y+5;if(l){text(l,xx,yy+8,'r',8,'D9D9D9');xx+=tw(l,'r',8)}wrap(t,'b',9,span(i,n)-10-(l?tw(l,'r',8):0)).forEach((ln,k)=>text(ln.t,xx,yy+8+k*LH(9),'b',9,'FFFFFF'));
@@ -702,7 +703,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Regi Anomalias =====
-const VERSION='0.16.2';
+const VERSION='0.16.3';
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'}];
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
 const parteNome=(p,n)=>(p.partes||[]).find(x=>x.n==n)?.nome||'';
@@ -712,7 +713,7 @@ const imgCode=(p,a,i)=>`IMG ${anCode(p,a)}.${i+1}`;
 const DB_NAME='RegiAnomalias_DB';
 const DEF_CATALOG=['Humidade', 'Infiltrações', 'Impermeabilizações', 'Fissuração', 'Desgaste', 'Desagregação', 'Por concluir', 'Fratura', 'Riscado', 'Picado', 'Erro de medidas', 'Erro de geometria', 'Condensações', 'Bolores', 'Eflorescências', 'Corrosão', 'Destacamento', 'Deformação', 'Assentamento', 'Falta de estanquidade', 'Mau funcionamento', 'Vetustez'];
 const DEF_FIELDS=[
-  {id:'conf',label:'Status',type:'choice',opts:[['NID','Situação não identificada'],['CFM','Confirmado'],['RES','Resolvido'],['APR','Aparentemente resolvido']],on:true,print:true},
+  {id:'conf',label:'Status',type:'choice',opts:[['NID','Situação não identificada'],['CFM','Confirmado'],['RES','Resolvido'],['EEX','Em execução'],['STB','Em stand-by'],['APR','Aparentemente resolvido']],on:true,print:true},
   {id:'tipo',label:'Tipo de anomalia',type:'catalog',on:true,print:true},
   {id:'estado',label:'Evolução de estado',type:'choice',opts:[['Ativo','Ativo'],['Desconhecido','Desconhecido']],on:true,print:true},
   {id:'cons',label:'Gravidade',type:'multi',opts:[['1-ENR','Estético não relevante'],['2-EPR','Estético pouco relevante'],['3-ERV','Estético relevante'],['6-FNR','Funcional não relevante'],['7-FPR','Funcional pouco relevante'],['8-FRV','Funcional relevante'],['OUT','Outras']],free:'OUT',excl:true,on:true,print:true},
@@ -728,7 +729,7 @@ const DEF_ZONA=['Edifício', 'Anexo', 'Garagem', 'Jardim', 'Piscina', 'Pavimenta
 const DEF_PISO=['Cv', 'Rc', '1A', '2A', '3A', 'St', '4A', 'Sb', 'Cb'];
 const DEF_LOCAL=['Cozinha', 'Sala de estar', 'Sala de jantar', 'Sala comum', 'Escritório', 'Despensa', 'Zona técnica', 'Arrumo', 'Garagem', 'Mezanino', 'I. Sanitária 01', 'I. Sanitária 02', 'I. Sanitária 03', 'I. Sanitária 04', 'I. Sanitária 05', 'Quarto 01', 'Quarto 02', 'Quarto 03', 'Quarto 04', 'Quarto 05', 'Varanda 01', 'Varanda 02', 'Varanda 03', 'Varanda 04', 'Varanda 05', 'Terraço', 'Alpendre', 'Átrio', 'Corredor', 'Hall de entrada', 'Lavandaria', 'Closet', 'Escadas', 'Patamar', 'Sótão', 'Cave', 'Telheiro', 'Logradouro'];
 const DEF_ELEM=['Parede exterior', 'Parede interior', 'Teto', 'Pavimento', 'Orlas e rodapés', 'Mobiliário', 'Mob. cozinha', 'Eletrodoméstico', 'Equip. sanitário', 'Porta interior', 'Porta exterior', 'Janela', 'Vidros', 'Cantaria', 'Rd água', 'Rd esgoto', 'Rd elétrica', 'Rd telecom', 'Rd gás', 'Rd incêndio', 'Rd intrusão', 'Rd AVAC', 'AQS', 'Cobertura', 'Telhas', 'Caleiras e tubos de queda', 'Rufos', 'Chaminé', 'Rd pluviais', 'Rd ventilação', 'Revestimento', 'Pintura', 'Teto falso', 'Escadas', 'Guardas e corrimãos', 'Estores e caixas', 'Portão', 'Muro'];
-const CATS=[['catZona','Zona','zona'],['catPiso','Piso','piso'],['catLocal','Local (compartimento)','local'],['catElem','Elemento','elemento'],['catalog','Tipo de anomalia',null]];
+const CATS=[['catZona','NUF – Núcleo Funcional','zona'],['catPiso','Piso','piso'],['catLocal','Local (compartimento)','local'],['catElem','Elemento','elemento'],['catalog','Tipo de anomalia',null]];
 const DEF_SETTINGS={fields:DEF_FIELDS,catalog:DEF_CATALOG,catZona:DEF_ZONA,catPiso:DEF_PISO,catLocal:DEF_LOCAL,catElem:DEF_ELEM,printStyle:'both',photoKB:150,maxFotos:6,outKB:0,photoCols:2,onePerPage:true,fitPage:true,dateCom:true,layout:'grelha',txtPhotos:true};
 
 let db,settings,procs=[];
@@ -802,7 +803,7 @@ async function enforceMax(){const m=maxF();let n=0;for(const p of procs){let ch=
 const inRel=f=>f.sel!==false;const relF=a=>a.fotos.filter(inRel);const resF=a=>a.fotos.filter(f=>!inRel(f));const MAXALL=40;
 function normFotos(a){a.fotos=[...relF(a),...resF(a)]}
 // ---------- ordenação da saída (Word, PDF, pré-visualização) ----------
-const ORDENS=[['lista','Ordem em que foram colocadas'],['hier','Zona › Piso › Local › Elemento'],['zona','Zona'],['local','Local (compartimento)'],['elemento','Elemento'],['tipo','Tipo de anomalia'],['grav','Gravidade'],['urg','Urgência'],['parte','Parte']];
+const ORDENS=[['lista','Ordem em que foram colocadas'],['hier','NUF › Piso › Local › Elemento'],['zona','NUF – Núcleo Funcional'],['local','Local (compartimento)'],['elemento','Elemento'],['tipo','Tipo de anomalia'],['grav','Gravidade'],['urg','Urgência'],['parte','Parte']];
 function ordAnoms(p,L){const o=p.ordem||'lista';if(o==='lista')return L.map(a=>({...a,_grp:''}));
   const ci=(cat,v)=>{if(!v)return 1e6;const i=(settings[cat]||[]).indexOf(v);return i<0?1e5:i};const fo=id=>settings.fields.find(f=>f.id===id);
   const optI=(id,v)=>{const f=fo(id);if(!v||!f)return 1e6;const i=(f.opts||[]).findIndex(x=>x[0]===v);return i<0?1e5:i};
@@ -810,7 +811,7 @@ function ordAnoms(p,L){const o=p.ordem||'lista';if(o==='lista')return L.map(a=>(
   const firstOpt=(id,arr)=>{const f=fo(id);const a=(arr||[]).filter(v=>v!=='OUT');if(!a.length)return '';return [...a].sort((x,y)=>optI(id,x)-optI(id,y))[0]};
   const K=a=>{switch(o){
     case 'hier':return {k:[ci('catZona',a.zona),a.zona||'',ci('catPiso',a.piso),a.piso||'',ci('catLocal',a.local),a.local||'',ci('catElem',a.elemento),a.elemento||''],g:[a.zona,a.piso,a.local,a.elemento].filter(Boolean).join('  ›  ')||'(sem identificação)'};
-    case 'zona':return {k:[ci('catZona',a.zona),a.zona||''],g:'Zona: '+(a.zona||'(sem zona)')};
+    case 'zona':return {k:[ci('catZona',a.zona),a.zona||''],g:'NUF: '+(a.zona||'(sem NUF)')};
     case 'local':return {k:[ci('catLocal',a.local),a.local||''],g:'Local: '+(a.local||'(sem local)')};
     case 'elemento':return {k:[ci('catElem',a.elemento),a.elemento||''],g:'Elemento: '+(a.elemento||'(sem elemento)')};
     case 'tipo':{const t=(a.vals?.tipo||[])[0]||'';return {k:[ci('catalog',t),t],g:(fo('tipo')?.label||'Tipo')+': '+(t||'(sem tipo)')}}
@@ -843,6 +844,7 @@ function migrateSettings(s){
     s.fields=s.fields.filter(f=>!['prej','cEst','cFun','cons'].includes(f.id));
     const at=k>=0?k:(s.fields.findIndex(f=>f.id==='estado')+1||s.fields.length);s.fields.splice(at,0,nf);
     s.removed=(s.removed||[]).filter(x=>x!=='cons');s.mig062=s.mig061=true}
+  if(!s.mig0163){const c=s.fields.find(f=>f.id==='conf');if(c&&Array.isArray(c.opts)){const ks=c.opts.map(o=>o[0]);const add=[['EEX','Em execução'],['STB','Em stand-by']].filter(o=>!ks.includes(o[0]));if(add.length){const at=ks.indexOf('RES');c.opts.splice(at>=0?at+1:c.opts.length,0,...add)}}s.mig0163=true}
   if(!s.mig060){const c=s.fields.find(f=>f.id==='conf');if(c&&c.opts&&c.opts.map(o=>o[0]).join()==='CON,NID'){c.opts=clone(DEF_FIELDS[0].opts);if(c.label==='Confirmação')c.label='Status'}if(s.maxFotos===4)s.maxFotos=9;s.mig060=true}
   return s;
 }
@@ -1006,7 +1008,7 @@ function vAnoms(){
   <div class="steps3">${p.modo==='livre'?'<span><b>1</b> Nova situação</span><span><b>2</b> Descrever e classificar</span><span><b>3</b> Fotografar</span>':'<span><b>1</b> Criar a lista</span><span><b>2</b> Tocar numa situação</span><span><b>3</b> Confirmar, comentar e fotografar</span>'}</div>
   ${addBtns(p)}
   ${an.length?`<div class="muted">${nl} da lista · ${nc} acrescentada${nc===1?'':'s'} no local</div><div class="bar"><i style="width:${Math.round(100*done/an.length)}%"></i></div><b>${done}/${an.length}</b> analisadas
-  <div class="lockrow">${p.lockNum?`<span>🔒 <b>Numeração fixa</b> — os códigos AN não mudam ao reordenar ou eliminar</span><button class="secondary mini" data-act="lockNum" data-v="0">Desbloquear</button>`:`<span class="muted">Numeração pela ordem da lista (muda ao reordenar ou eliminar)</span><button class="secondary mini" data-act="lockNum" data-v="1">🔒 Fixar numeração</button>`}</div>`:''}</div>
+  <div class="lockrow">${p.lockNum?`<span>🔒 <b>Numeração fixa</b> — os códigos AN não mudam ao reordenar ou eliminar</span><button class="secondary mini" data-act="lockNum" data-v="0">Desbloquear</button>${seqOk(p)?'':`<span style="color:#a15c00;font-weight:600">⚠ Há números fora de sequência ou em falta.</span><button class="mini green" data-act="renumSeq">Renumerar por ordem (1.001, 1.002…)</button>`}`:`<span class="muted">Numeração pela ordem da lista (muda ao reordenar ou eliminar)</span><button class="secondary mini" data-act="lockNum" data-v="1">🔒 Fixar numeração</button>`}</div>`:''}</div>
   ${an.length>4?`<div class="search"><input id="fq" data-act="filtQ" value="${esc(F.q||'')}" placeholder="🔍 Pesquisar código, item, local ou texto…">${F.q?'<button class="secondary mini" data-act="filtQClear">✕</button>':''}</div>`:''}
   ${an.length?`<div class="seg">${[['all','Todas',an.length],['todo','Por analisar',an.length-done],['done','Analisadas',done]].map(([k,t,n])=>`<button class="${F.st===k?'on':''}" data-act="filt" data-v="${k}">${t} (${n})</button>`).join('')}</div>
   ${usedP.length>1?`<select data-act="filtParte"><option value="">Todas as partes</option>${usedP.map(n=>`<option value="${n}" ${F.parte==n?'selected':''}>${n} – ${esc(parteNome(p,n))}</option>`).join('')}</select>`:''}
@@ -1025,14 +1027,14 @@ function vFicha(){
   const fsC=fs.filter(f=>!(f.id==='conf'&&a.origem==='local'));const nFilled=fsC.filter(f=>{const v=a.vals?.[f.id];return Array.isArray(v)?v.length:v}).length;
   const idBody=`<div class="ancode">${anCode(p,a)} <span class="muted">— código pela ordem da lista</span></div>
     <label>Parte que coloca a questão / situação</label><div class="tks">${p.partes.map(x=>tickBox('',parteOf(p,a)==x.n,`<b>${x.n}</b> – ${esc(x.nome)}`,`data-act="tkParte" data-v="${x.n}"`)).join('')}</div>
-    ${inp('a.ref','Item (n.º na lista fornecida)',a.ref,'ex.: 1a)')}${idPick(a,'zona','Zona','catZona')}${idPick(a,'piso','Piso','catPiso')}${idPick(a,'local','Local (compartimento)','catLocal')}${idPick(a,'elemento','Elemento','catElem')}
+    ${inp('a.ref','Item (n.º na lista fornecida)',a.ref,'ex.: 1a)')}${idPick(a,'zona','NUF – Núcleo Funcional','catZona')}${idPick(a,'piso','Piso','catPiso')}${idPick(a,'local','Local (compartimento)','catLocal')}${idPick(a,'elemento','Elemento','catElem')}
     ${txt('a.descricao',`${lblD(p)} (sai com o título «${lblD(p)}:»)`,a.descricao,3)}`;
   S.subNav=`<div class="fnav"><button class="secondary" data-act="backList">◀ Lista</button><b class="grow center">${anCode(p,a)} · ${idx+1}/${n}</b><button class="secondary" data-act="stepA" data-d="-1" ${idx?'':'disabled'}>◀</button><button class="secondary" data-act="stepA" data-d="1" ${idx<n-1?'':'disabled'}>▶</button></div>${a.descricao?`<div class="subdesc ${S.descFull?'full':''}" data-act="descFull"><b>${esc(lblD(p))}:</b> ${esc(a.descricao)}<span class="dmore">${S.descFull?'▲':'▼'}</span></div>`:''}`;
   let h='';
   h+=sec('f1','1 · Identificação'+(fromList?'':` <span class="muted" style="font-weight:400">· ${esc(a.elemento||'')}</span>`),idBody,{cnt:falta(idMiss),def:fromList||!!idMiss});
   if(!fromList){
     const prev=p.anomalias[idx-1];const prevHas=prev&&Object.entries(prev.vals||{}).some(([k,v])=>useK(p,k)&&(Array.isArray(v)?v.length:v));
-    h+=sec('f2','2 · Pronúncia',(prevHas?`<div class="btns" style="margin-top:0"><button class="secondary mini" data-act="copyPrev">⧉ Copiar a pronúncia de ${anCode(p,prev)}</button></div>`:'')+txt('a.comentario',`${lblC(p)} (sai por baixo, com o título «${lblC(p)}:»)`,a.comentario,2)+(fs.length?fs.map(f=>fieldUI(f,a)).join(''):'<p class="muted">Nenhum campo a atender — escolha-os no separador Processo › 3.</p>'),{cnt:pill(`${nFilled}/${fsC.length}`,nFilled===fsC.length&&fsC.length?'ok':'warn')});
+    h+=sec('f2','2 · Pronúncia',(prevHas?`<div class="btns" style="margin-top:0"><button class="secondary mini" data-act="copyPrev">⧉ Copiar a pronúncia de ${anCode(p,prev)}</button></div>`:'')+txt('a.comentario',`${lblC(p)} (sai por baixo, com o título «${lblC(p)}:»)`,a.comentario,2)+(fs.length?`<p class="reqnote">Os campos a verde são os definidos para este processo (Processo › 3) e precisam de resposta.</p>`+fs.map(f=>{const v=a.vals?.[f.id],na=f.id==='conf'&&a.origem==='local',ok=Array.isArray(v)?v.length:v;return na?fieldUI(f,a):`<div class="req ${ok?'done':''}">${fieldUI(f,a)}</div>`}).join(''):'<p class="muted">Nenhum campo a atender — escolha-os no separador Processo › 3.</p>'),{cnt:pill(`${nFilled}/${fsC.length}`,nFilled===fsC.length&&fsC.length?'ok':'warn')});
     {const RF=relF(a),RS=resF(a);const th=(f,i,res)=>`<div class="ph ${res?'res':''}"><img src="${fd(f)}" data-act="zoom" data-i="${i}"><div class="cap" data-act="zoom" data-i="${i}"><b>${res?'Reserva':imgCode(cur(),a,i)}</b> ${esc(f.legenda||(res?'':'— sem legenda (toque para editar)'))}</div><button class="phsel ${res?'':'on'}" data-act="selF" data-i="${i}" title="${res?'Passar para o relatório':'Retirar do relatório (fica em reserva)'}">${res?'＋ Usar':'✓ No relatório'}</button></div>`;
     h+=sec('f3','3 · Fotografias',`<p class="muted" style="margin-top:0">${RF.length}/${max} no relatório${RS.length?` · ${RS.length} em reserva`:''}. Pode carregar mais fotos do que o limite: as que excedem ficam em reserva e escolhe depois as melhores.</p>
       <div class="photos">${RF.map((f,i)=>th(f,i,false)).join('')}</div>
@@ -1070,7 +1072,7 @@ function computeStats(p){
   const f3=fo('cons');if(f3){const m=new Map();for(const o of f3.opts)m.set(o[0],0);for(const a of an)for(const v of (a.vals?.cons||[]))cnt(m,v);const rows=[...m].filter(r=>r[1]).map(([k,n])=>[optText(f3.opts.find(o=>o[0]===k)||[k,k],settings.printStyle),n]);if(rows.length)T.push({key:'cons',title:f3.label,rows})}
   for(const [id] of [['estado'],['tend'],['urg'],['rep']]){const f=fo(id);if(!f)continue;const m=new Map();for(const a of an){const v=a.vals?.[id];if(v){const o=f.opts.find(o=>o[0]===v);cnt(m,o?optText(o,settings.printStyle):v)}}if(m.size)T.push({key:id,title:f.label,rows:[...m]})}
   const mp=new Map();for(const a of an){const n=parteOf(p,a);cnt(mp,`${n} – ${parteNome(p,n)||'?'}`)}if(mp.size)T.push({key:'parte',title:'Parte',rows:[...mp].sort()});
-  const mz=new Map();for(const a of an)cnt(mz,a.zona||'(sem zona)');const mpi=new Map();for(const a of an)if(a.piso)cnt(mpi,a.piso);if(mz.size)T.push({key:'zona',title:'Zona',rows:[...mz].sort((x,y)=>y[1]-x[1])});if(mpi.size)T.push({key:'piso',title:'Piso',rows:[...mpi].sort((x,y)=>y[1]-x[1])});
+  const mz=new Map();for(const a of an)cnt(mz,a.zona||'(sem NUF)');const mpi=new Map();for(const a of an)if(a.piso)cnt(mpi,a.piso);if(mz.size)T.push({key:'zona',title:'NUF – Núcleo Funcional',rows:[...mz].sort((x,y)=>y[1]-x[1])});if(mpi.size)T.push({key:'piso',title:'Piso',rows:[...mpi].sort((x,y)=>y[1]-x[1])});
   const ml=new Map();for(const a of an)if(a.local)cnt(ml,a.local);if(ml.size)T.push({key:'local',title:'Local (compartimento)',rows:[...ml].sort((x,y)=>y[1]-x[1]).slice(0,15)});
   const me=new Map();for(const a of an)if(a.elemento)cnt(me,a.elemento);if(me.size)T.push({key:'elemento',title:'Elemento',rows:[...me].sort((x,y)=>y[1]-x[1]).slice(0,15)});
   // texto de síntese automático (pode ser copiado e ajustado no Resumo de apreciação)
@@ -1078,8 +1080,8 @@ function computeStats(p){
   const st=f1?T.find(z=>z.title.startsWith(f1.label)):null;const ph=[];
   ph.push(`Foram registadas ${an.length} situaç${an.length===1?'ão':'ões'}${nl&&nc?`: ${nl} alegada${nl===1?'':'s'} (lista fornecida) e ${nc} constatada${nc===1?'':'s'} no local pelo perito`:nl?', todas alegadas (lista fornecida)':', todas constatadas no local pelo perito'}.`);
   if(st&&st.rows.length)ph.push(`Quanto às situações alegadas: ${st.rows.map(([l,n])=>`${l} — ${n}`).join('; ')}.`);
-  const tz=top('Zona'),tl=top('Local'),tt=f2?top(f2.label,3):'',tg=f3?top(f3.label,2):'';
-  if(tt)ph.push(`Tipos mais frequentes: ${tt}.`);if(tz)ph.push(`Zonas com mais situações: ${tz}.`);if(tl)ph.push(`Locais com mais situações: ${tl}.`);if(tg)ph.push(`Classificação mais frequente (${f3.label.toLowerCase()}): ${tg}.`);
+  const tz=top('NUF'),tl=top('Local'),tt=f2?top(f2.label,3):'',tg=f3?top(f3.label,2):'';
+  if(tt)ph.push(`Tipos mais frequentes: ${tt}.`);if(tz)ph.push(`Núcleos funcionais com mais situações: ${tz}.`);if(tl)ph.push(`Locais com mais situações: ${tl}.`);if(tg)ph.push(`Classificação mais frequente (${f3.label.toLowerCase()}): ${tg}.`);
   T[0].text=ph.join(' ');
   return T;
 }
@@ -1138,7 +1140,7 @@ function paperHTML(p){
       ${lF.map(f=>{const v=fieldValueText(f,a.vals?.[f.id],settings,a.vals);return v?`<p><b>${esc(f.label)}:</b> ${esc(v)}</p>`:''}).join('')}`;
       if(settings.txtPhotos!==false&&relF(a).length){const RF=relF(a);t+=`<table class="pg">`;for(let i=0;i<RF.length;i+=C){const g=Array.from({length:C},(_,k)=>RF[i+k]);t+=`<tr class="pr">${g.map(f=>`<td style="width:${100/C}%">${f?`<img src="${fd(f)}">`:''}</td>`).join('')}</tr><tr class="cap">${g.map((f,k)=>`<td>${f?`${imgCode(p,a,i+k)}${f.legenda?' – '+esc(f.legenda):''}`:''}</td>`).join('')}</tr>`}t+='</table>'}
       return gh+t+'</div>'}
-    let r=`<table class="ft"><tr class="h"><td style="width:11.7%">${anCode(p,a)}</td><td style="width:11.7%"><small>Item</small> ${esc(a.ref||'—')}</td><td style="width:26.6%"><small>Zona:</small> ${esc(zona)}</td><td><small>Elemento:</small> ${esc(a.elemento)}</td></tr>
+    let r=`<table class="ft"><tr class="h"><td style="width:11.7%">${anCode(p,a)}</td><td style="width:11.7%"><small>Item</small> ${esc(a.ref||'—')}</td><td style="width:26.6%"><small>NUF:</small> ${esc(zona)}</td><td><small>Elemento:</small> ${esc(a.elemento)}</td></tr>
     <tr><td colspan="4"><b class="tt">${esc(lblD(p))}:</b>${txHTML(a.descricao)}</td></tr>${carH}<tr><td colspan="4"><b class="tt">${settings.dateCom!==false&&p.visita?.data?esc(p.visita.data)+' - ':''}${esc(lblC(p))}:</b>${txHTML(a.comentario)||'<div class="tx">&nbsp;</div>'}</td></tr>
     ${lF.map(f=>{const t=fieldValueText(f,a.vals?.[f.id],settings,a.vals);return t?`<tr><td colspan="4"><b class="lb">${esc(f.label)}</b><br>${esc(t)}</td></tr>`:''}).join('')}`;
     const RF=relF(a);if(settings.txtPhotos!==false&&RF.length){r+=`<tr><td colspan="4" style="padding:0"><table class="pg">`;for(let i=0;i<RF.length;i+=C){const g=Array.from({length:C},(_,k)=>RF[i+k]);r+=`<tr class="pr">${g.map(f=>`<td style="width:${100/C}%">${f?`<img src="${fd(f)}">`:''}</td>`).join('')}</tr><tr class="cap">${g.map((f,k)=>`<td>${f?`${imgCode(p,a,i+k)}${f.legenda?' – '+esc(f.legenda):''}`:''}</td>`).join('')}</tr>`}r+='</table></td></tr>'}
@@ -1325,7 +1327,7 @@ function zipEstimate(p){const T=outTarget('foto'),sz=f=>{const b=(fd(f)||'').len
   const word=(.08*M+map+ph)/M,pdf=word*1.02,zip=nd*((settings.zipWord!==false?word:0)+(settings.zipPdf!==false?pdf:0))+(settings.zipFotos!==false?all/M:0)+.05;return {nF,word,pdf,mb:zip}}
 function tamHTML(p){const e=zipEstimate(p),mx=Math.max(e.word,e.pdf,e.mb),k=outKB();return `<label>Resolução das fotos nos documentos</label><div class="seg">${OUT_KB.map(([v,t])=>`<button class="${k===v?'on':''}" data-act="setNum" data-k="outKB" data-v="${v}">${t}</button>`).join('')}</div><p class="muted" style="${mx>8?'color:#8a5a00;font-weight:600':''}">Tamanho previsto${fmts().length>1?' (cada documento)':''}: Word ≈ ${fmtMB(e.word)} · PDF ≈ ${fmtMB(e.pdf)} · Pasta ≈ ${fmtMB(e.mb)} — ${e.nF} foto(s) no relatório${k?`, até ${k} KB cada (lado maior ≥ 800 px)`:', como foram gravadas'}.${mx>20?' Ficheiro muito grande: baixe a resolução.':mx>8?' Pode não seguir por e-mail (limite habitual 10–25 MB) — pode baixar a resolução.':''} As fotos guardadas não são alteradas.</p>`}
 function xlsxFor(p){const fs=settings.fields.filter(f=>p.use?.[f.id]);
-  const rows=[['Código','Item','Parte','Origem','Zona','Piso','Local','Elemento','Descrição','Comentário',...fs.map(f=>f.label),'N.º fotos','Legendas']];
+  const rows=[['Código','Item','Parte','Origem','NUF','Piso','Local','Elemento','Descrição','Comentário',...fs.map(f=>f.label),'N.º fotos','Legendas']];
   for(const a of p.anomalias)rows.push([anCode(p,a),a.ref,parteNome(p,parteOf(p,a)),a.origem==='local'?'Constatada no local':'Da lista',a.zona,a.piso||'',a.local,a.elemento,a.descricao,a.comentario||'',...fs.map(f=>f.id==='conf'&&a.origem==='local'?'':fieldValueText(f,a.vals?.[f.id],settings,a.vals)),relF(a).length,relF(a).map((f,i)=>f.legenda?`${imgCode(p,a,i)}: ${f.legenda}`:'').filter(Boolean).join(' | ')]);
   return buildXlsx('Anomalias',rows,[9,8,14,14,8,12,18,18,60,40,...fs.map(f=>f.type==='long'?40:16),8,40])}
 function migrateProc(p){if(!p.modo)p.modo='misto';if(!p.ordem)p.ordem='lista';
@@ -1341,6 +1343,8 @@ function migrateProc(p){if(!p.modo)p.modo='misto';if(!p.ordem)p.ordem='lista';
 function newProc(){const p={id:uid(),partes:clone(DEF_PARTES),parteLocal:4,codigo:'',designacao:'',local:'',visita:{data:'',presencas:'',gps:null},printVistoria:false,use:{},print:{},resumo:'',printResumo:false,anomalias:[],createdAt:Date.now(),updatedAt:Date.now()};
   for(const f of settings.fields){p.use[f.id]=!!f.on;p.print[f.id]=!!f.print}return p}
 const nextNum=(p,pt)=>Math.max(0,...p.anomalias.filter(a=>parteOf(p,a)==pt).map(a=>a.num||0))+1;
+function renumParte(p,pt){if(!p.lockNum)return;let k=0;for(const x of p.anomalias)if(parteOf(p,x)==pt)x.num=++k}
+function seqOk(p){if(!p.lockNum)return true;const c={};for(const x of p.anomalias){const pt=parteOf(p,x);c[pt]=(c[pt]||0)+1;if(x.num!==c[pt])return false}return true}
 function newAnom(origem,parte){const p=cur();const pt=parte??(origem==='local'?(p.parteLocal??4):1);
   return {id:uid(),parte:pt,num:p&&p.lockNum?nextNum(p,pt):undefined,ref:'',zona:'',local:'',elemento:'',descricao:'',origem,vals:{},fotos:[],createdAt:Date.now()}}
 
@@ -1361,6 +1365,7 @@ document.addEventListener('click',async e=>{
     case 'setNum':settings[el.dataset.k]=+el.dataset.v;await saveSettings();S.scrollTop=window.scrollY;break;
     case 'setPair':p.lblDesc=el.dataset.d;p.lblCom=el.dataset.c;await saveProc();S.scrollTop=window.scrollY;break;
     case 'lockNum':{if(el.dataset.v==='1'){p.anomalias.forEach(x=>{x.num=undefined;x.num=numOf({...p,lockNum:false},x)});p.lockNum=true;toast('Numeração fixada.')}else{if(!await ask('Desbloquear a numeração? Os códigos AN e IMG voltam a seguir a ordem da lista (podem mudar).',['Cancelar','Desbloquear']))return;p.anomalias.forEach(x=>delete x.num);p.lockNum=false}await saveProc();S.scrollTop=window.scrollY;break}
+    case 'renumSeq':{if(!await ask('Renumerar todas as fichas sequencialmente, por parte e pela ordem da lista? Os códigos AN e IMG mudam.',['Cancelar','Renumerar']))return;const pts=[...new Set(p.anomalias.map(x=>parteOf(p,x)))];pts.forEach(pt=>renumParte(p,pt));await saveProc();toast('Numeração sequencial refeita.');S.scrollTop=window.scrollY;break}
     case 'filt':S.filt.st=el.dataset.v;S.scrollTop=window.scrollY;break;
     case 'dupA':{const c=JSON.parse(JSON.stringify(a));c.id=uid();c.ref='';c.fotos=[];c.num=p.lockNum?nextNum(p,parteOf(p,a)):undefined;c.parte=parteOf(p,a);c.createdAt=Date.now();p.anomalias.splice(p.anomalias.indexOf(a)+1,0,c);S.aid=c.id;S.openId=true;S.open.f1=true;S.scrollTop=0;await saveProc();toast(`Duplicada como ${anCode(p,c)} (sem fotografias).`);break}
     case 'copyPrev':{const i=p.anomalias.indexOf(a),pv=p.anomalias[i-1];if(!pv)return;const has=Object.entries(a.vals||{}).some(([k,v])=>useK(p,k)&&(Array.isArray(v)?v.length:v));
@@ -1472,7 +1477,7 @@ document.addEventListener('change',async e=>{
   if(act==='tkStats'){p.printStats=el.checked;await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='tkStat'){const k=el.dataset.k;p.statsOff=(p.statsOff||[]).filter(x=>x!==k);if(!el.checked)p.statsOff.push(k);await saveProc();return}
   if(act==='tkCharts'){p.printCharts=el.checked;await saveProc();S.scrollTop=window.scrollY;render();return}
-  if(act==='tkParte'){const n=+el.dataset.v;if(parteOf(p,a)!=n){a.parte=n;a.origem=n==(p.parteLocal??4)?'local':'lista';if(p.lockNum)a.num=nextNum(p,n)}await saveProc();S.scrollTop=window.scrollY;render();return}
+  if(act==='tkParte'){const n=+el.dataset.v;if(parteOf(p,a)!=n){const old=anCode(p,a),po=parteOf(p,a);a.parte=n;a.origem=n==(p.parteLocal??4)?'local':'lista';const L=p.anomalias;L.splice(L.indexOf(a),1);let at=-1;L.forEach((x,i)=>{if(parteOf(p,x)==n)at=i});if(at<0)L.forEach((x,i)=>{if(parteOf(p,x)<n)at=i});L.splice(at+1,0,a);renumParte(p,po);renumParte(p,n);toast(`${old} passa a ${anCode(p,a)} — as partes ${po} e ${n} foram renumeradas por ordem.`)}await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='impParte'){S.impParte=+el.value;return}
   if(act==='filtParte'){S.filt.parte=el.value?+el.value:0;S.scrollTop=window.scrollY;render();return}
   if(act==='parteLocal'){p.parteLocal=+el.value;for(const x of p.anomalias)x.origem=parteOf(p,x)==p.parteLocal?'local':'lista';await saveProc();return}
