@@ -447,9 +447,10 @@ function buildDocx({proc,settings,anoms,onePerPage,withResumo,withVistoria,bodyO
       const TT=t=>run(t,{b:true,sz:10,color:'000000'});
       tb+=para(TT(lblD(proc)+':'),{keep:1,after:40})+tpara(a.descricao||'',{sz:10},{keep:1,after:180});
       if(a.origem==='local')tb+=para(run('Situação acrescentada no local pelo perito.',{i:true,sz:9,color:'606060'}),{keep:1,after:60});
-      for(let i=0;i<items.length;i+=3)tb+=para(items.slice(i,i+3).map(([l,t])=>run(l+': ',{b:true,sz:9,color:'404040'})+run(t,{sz:9.5})).join(run('    ·    ',{sz:9,color:'909090'})),{keep:1,after:i+3>=items.length?160:30});
-      tb+=para(TT((dateCom&&proc.visita?.data?proc.visita.data+' - ':'')+lblC(proc)+':'),{keep:1,after:40})+(String(a.comentario||'').trim()?tpara(a.comentario,{sz:10},{keep:1,after:180}):para('',{after:300}));
+      tb+=para(TT((dateCom&&proc.visita?.data?proc.visita.data+' - ':'')+lblC(proc)+':'),{keep:1,after:60});
+      for(let i=0;i<items.length;i+=3)tb+=para(items.slice(i,i+3).map(([l,t])=>run(l+': ',{b:true,sz:9,color:'404040'})+run(t,{sz:9.5})).join(run('    ·    ',{sz:9,color:'909090'})),{keep:1,after:i+3>=items.length?120:30});
       for(const f of longF){const t=fieldValueText(f,a.vals?.[f.id],settings,a.vals);if(!t)continue;tb+=para(TT(f.label+':'),{keep:1,after:40})+tpara(t,{sz:10},{keep:1,after:160})}
+      tb+=String(a.comentario||'').trim()?tpara(a.comentario,{sz:10},{keep:1,after:180}):para('',{after:items.length?60:300});
       body+=tb+(prow?tblWrap(prow):'');
       return;
     }
@@ -642,12 +643,13 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
       const loc=[zona,a.elemento].filter(Boolean).join(' — ');if(loc){paraT(loc,'i',10,'404040',{after:8})}
       need(LH(10)*2);text(lblD(proc)+':',X0,y+10,'b',10);y+=LH(10)+2;paraT(a.descricao||'','r',10,'000000',{after:9});
       if(a.origem==='local')paraT('Situação acrescentada no local pelo perito.','i',9,'606060',{after:4});
+      need(LH(10)*2);text(comLbl,X0,y+10,'b',10);y+=LH(10)+3;
       for(let i=0;i<items.length;i+=3){const gI=items.slice(i,i+3);let segs=[];gI.forEach((it,k)=>{if(k)segs.push(['    ·    ','r',9,'909090']);segs.push([it[0]+': ','b',9,'404040'],[it[1],'r',9.5,'000000'])});
         const tot=segs.reduce((s,x)=>s+tw(x[0],x[1],x[2]),0);if(tot<=W){need(LH(9.5));let xx=X0;for(const sg of segs){text(sg[0],xx,y+9.5,sg[1],sg[2],sg[3]);xx+=tw(sg[0],sg[1],sg[2])}y+=LH(9.5)+2}
         else for(const it of gI){need(LH(9.5));text(it[0]+': ',X0,y+9.5,'b',9,'404040');paraT(it[1],'r',9.5,'000000',{ind:tw(it[0]+': ','b',9),after:2})}}
       if(items.length)y+=6;
-      need(LH(10)*2);text(comLbl,X0,y+10,'b',10);y+=LH(10)+2;if(String(a.comentario||'').trim())paraT(a.comentario,'r',10,'000000',{after:9});else y+=16;
       for(const f of longF){const t=fieldValueText(f,a.vals?.[f.id],settings,a.vals);if(!t)continue;need(LH(10)*2);text(f.label+':',X0,y+10,'b',10);y+=LH(10)+2;paraT(t,'r',10,'000000',{after:8})}
+      if(String(a.comentario||'').trim())paraT(a.comentario,'r',10,'000000',{after:9});else if(!items.length)y+=16;
     }
     // ---- grelha de fotos: largura fixa; se a última legenda não couber, encolhe só a altura das linhas de imagens ----
     const fotos=PH?(a.fotos||[]).map(f=>({f,im:imgObj(f.id,f.data)})).filter(x=>x.im):[];
@@ -703,7 +705,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Regi Anomalias =====
-const VERSION='0.16.3';
+const VERSION='0.16.4';
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'}];
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
 const parteNome=(p,n)=>(p.partes||[]).find(x=>x.n==n)?.nome||'';
@@ -1034,7 +1036,7 @@ function vFicha(){
   h+=sec('f1','1 · Identificação'+(fromList?'':` <span class="muted" style="font-weight:400">· ${esc(a.elemento||'')}</span>`),idBody,{cnt:falta(idMiss),def:fromList||!!idMiss});
   if(!fromList){
     const prev=p.anomalias[idx-1];const prevHas=prev&&Object.entries(prev.vals||{}).some(([k,v])=>useK(p,k)&&(Array.isArray(v)?v.length:v));
-    h+=sec('f2','2 · Pronúncia',(prevHas?`<div class="btns" style="margin-top:0"><button class="secondary mini" data-act="copyPrev">⧉ Copiar a pronúncia de ${anCode(p,prev)}</button></div>`:'')+txt('a.comentario',`${lblC(p)} (sai por baixo, com o título «${lblC(p)}:»)`,a.comentario,2)+(fs.length?`<p class="reqnote">Os campos a verde são os definidos para este processo (Processo › 3) e precisam de resposta.</p>`+fs.map(f=>{const v=a.vals?.[f.id],na=f.id==='conf'&&a.origem==='local',ok=Array.isArray(v)?v.length:v;return na?fieldUI(f,a):`<div class="req ${ok?'done':''}">${fieldUI(f,a)}</div>`}).join(''):'<p class="muted">Nenhum campo a atender — escolha-os no separador Processo › 3.</p>'),{cnt:pill(`${nFilled}/${fsC.length}`,nFilled===fsC.length&&fsC.length?'ok':'warn')});
+    h+=sec('f2','2 · Pronúncia',(prevHas?`<div class="btns" style="margin-top:0"><button class="secondary mini" data-act="copyPrev">⧉ Copiar a pronúncia de ${anCode(p,prev)}</button></div>`:'')+(fs.length?`<p class="reqnote">Os campos a verde são os definidos para este processo (Processo › 3) e precisam de resposta.</p>`+fs.map(f=>{const v=a.vals?.[f.id],na=f.id==='conf'&&a.origem==='local',ok=Array.isArray(v)?v.length:v;return na?fieldUI(f,a):`<div class="req ${ok?'done':''}">${fieldUI(f,a)}</div>`}).join(''):'<p class="muted">Nenhum campo a atender — escolha-os no separador Processo › 3.</p>')+txt('a.comentario',`Comentários complementares (opcional) — saem logo a seguir às respostas, antes das fotografias, por baixo do título «${lblC(p)}:»`,a.comentario,3),{cnt:pill(`${nFilled}/${fsC.length}`,nFilled===fsC.length&&fsC.length?'ok':'warn')});
     {const RF=relF(a),RS=resF(a);const th=(f,i,res)=>`<div class="ph ${res?'res':''}"><img src="${fd(f)}" data-act="zoom" data-i="${i}"><div class="cap" data-act="zoom" data-i="${i}"><b>${res?'Reserva':imgCode(cur(),a,i)}</b> ${esc(f.legenda||(res?'':'— sem legenda (toque para editar)'))}</div><button class="phsel ${res?'':'on'}" data-act="selF" data-i="${i}" title="${res?'Passar para o relatório':'Retirar do relatório (fica em reserva)'}">${res?'＋ Usar':'✓ No relatório'}</button></div>`;
     h+=sec('f3','3 · Fotografias',`<p class="muted" style="margin-top:0">${RF.length}/${max} no relatório${RS.length?` · ${RS.length} em reserva`:''}. Pode carregar mais fotos do que o limite: as que excedem ficam em reserva e escolhe depois as melhores.</p>
       <div class="photos">${RF.map((f,i)=>th(f,i,false)).join('')}</div>
