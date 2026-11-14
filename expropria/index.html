@@ -1,5 +1,11 @@
 <!doctype html>
 <!--
+ExPropria v0.13.2 — resumo (rotina de fotografias atualizada a partir do Regi Anomalias 0.14.2–0.15.0)
+- Fotografias em reserva: pode juntar mais fotos do que as que quer usar; «✓ No relatório» / «＋ Usar» decide as que saem. A reserva fica guardada na app, não sai no Word nem no PDF (na Pasta vai numa subpasta «Reserva»).
+- Substituir fotografia (câmara ou fototeca) no editor, mantendo o número, o aspeto e a legenda.
+- Aviso de fotografias repetidas (assinatura visual): ao juntar, ao substituir, no editor, na grelha e na lista de verificação do relatório.
+- Correção: os códigos das fotografias (n-IMG_xxx) passam a usar o número da própria parcela também nos relatórios conjuntos e nas pastas em lote.
+
 ExPropria v0.13.1 — resumo
 - Parcela: «⧉ Copiar dados de outra parcela» – escolhe a parcela de origem e as secções a copiar (por defeito as que costumam repetir-se: prédio, PDM, envolvente, classificação, transações, valores unitários…; ficam de fora a identificação, as áreas, o montante, os quesitos e os anexos). Fotografias e visita não se copiam.
 
@@ -633,6 +639,9 @@ button.mini{min-height:34px}button.del{min-height:30px;min-width:30px}
 .uiToast{position:fixed;left:12px;right:12px;bottom:16px;z-index:9999;background:#263238;color:#fff;padding:12px 14px;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,.3);white-space:pre-line;font-size:14px;cursor:pointer}
 
 button:not(.tiny):not([data-tldel]):not([data-del]){min-height:44px!important}
+.photo{position:relative}.photo .thumb{position:relative}.photo.res img{opacity:.55;filter:grayscale(.5)}
+.phsel{position:absolute;top:6px;right:6px;padding:5px 9px;font-size:12px;border-radius:8px;border:1px solid #bbb;background:rgba(255,255,255,.93);color:#333;min-height:30px;width:auto}
+.phsel.on{background:#2f5d3a;border-color:#2f5d3a;color:#fff}
 #totBar{position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:900;max-width:740px;margin:0 auto;background:#2f5d3a;color:#fff;border-radius:12px;box-shadow:0 6px 20px #0004;padding:9px 14px;cursor:pointer;font-size:15px}
 #totBar.zero{background:#a8452c}
 #totBar .tbsum{display:flex;align-items:center;gap:10px}#totBar .tbsum b{margin-left:auto;font-size:18px}#totBar .tbarr{opacity:.8}
@@ -682,7 +691,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
 <script>
 'use strict';
-const VERSION='0.13.1';
+const VERSION='0.13.2';
 function growFit(t){if(!t||!t.classList?.contains('grow')||!t.offsetParent)return;t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px'}
 function growAll(root){(root||document).querySelectorAll('textarea.grow').forEach(growFit)}
 document.addEventListener('input',e=>growFit(e.target),true);
@@ -845,7 +854,7 @@ async function fotosNoDoc(doc,zip,rels,ctDoc,p,o={}){
      for(let j=0;j<cols;j++){const c=cell.cloneNode(true);setW(c);if(img)[...c.getElementsByTagNameNS('http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing','extent')].forEach(e=>{e.setAttribute('cx',G.cx);e.setAttribute('cy',G.cy)});r2.appendChild(c)}return r2};
     var rowImgN=mk(rowImg,imgCell,true),rowCapN=mk(rowCap,capCell,false);
     var gridN=()=>{const g=doc.createElementNS(WNS,'w:tblGrid');for(let j=0;j<cols;j++){const gc=doc.createElementNS(WNS,'w:gridCol');gc.setAttributeNS(WNS,'w:w',String(cw));g.appendChild(gc)}return g}}
-   const fotos=(p.fotos||[]).map((f,i)=>({f,i}));const order=[...settings.aspetos,...new Set(fotos.map(x=>x.f.aspeto||'Geral').filter(a=>!settings.aspetos.includes(a)))];
+   const fotos=relFotos(p).map((f,i)=>({f,i}));const order=[...settings.aspetos,...new Set(fotos.map(x=>x.f.aspeto||'Geral').filter(a=>!settings.aspetos.includes(a)))];
    let n=0,dp=9100;const insertBefore=el=>anchor.parentNode.insertBefore(el,anchor);
    const groups=order.map(a=>({a,list:fotos.filter(x=>(x.f.aspeto||'Geral')===a)})).filter(g=>g.list.length);
    for(const g of groups){if(groups.length>1||g.a!=='Geral'){const hp=doc.createElementNS(WNS,'w:p');const ppr=doc.createElementNS(WNS,'w:pPr');const kn=doc.createElementNS(WNS,'w:keepNext');ppr.appendChild(kn);hp.appendChild(ppr);const rp=doc.createElementNS(WNS,'w:rPr');rp.appendChild(doc.createElementNS(WNS,'w:b'));hp.appendChild(mkRun(doc,rp,g.a));insertBefore(hp)}
@@ -853,7 +862,7 @@ async function fotosNoDoc(doc,zip,rels,ctDoc,p,o={}){
     for(let k=0;k<g.list.length;k+=cols){const ri=rowImgN.cloneNode(true),rc=rowCapN.cloneNode(true);const ics=W_(ri,'tc'),ccs=W_(rc,'tc');W_(ri,'sdt').concat(W_(rc,'sdt')).forEach(sd=>{const idn=sd.getElementsByTagNameNS(WNS,'id')[0];if(idn)idn.setAttributeNS(WNS,'w:val',String(Math.floor(Math.random()*2e9)))});
      for(let j=0;j<cols;j++){const it=g.list[k+j];const dr=ics[j]&&ics[j].getElementsByTagNameNS(WNS,'drawing')[0];
       if(it){n++;const rec=await get('fotos',it.f.id);if(rec?.blob&&dr){const sdt=ics[j].parentNode&&ics[j].parentNode.parentNode;if(sdt&&sdt.localName==='sdt'){const ph=sdt.getElementsByTagNameNS(WNS,'showingPlcHdr')[0];ph&&ph.parentNode.removeChild(ph)}const dims=it.f.w&&it.f.h?{w:it.f.w,h:it.f.h}:await blobDims(rec.blob);const id=addImagePart(zip,rels,ctDoc,rec.blob,'jpg');fitDrawing(dr,id,dims.w,dims.h,++dp)}
-       if(ccs[j]){setCellText(ccs[j],`F${n} - ${codePhoto(it.i)}${it.f.caption?' – '+it.f.caption:''}`);capSz(ccs[j])}}
+       if(ccs[j]){setCellText(ccs[j],`F${n} - ${codePhoto(it.i,p)}${it.f.caption?' – '+it.f.caption:''}`);capSz(ccs[j])}}
       else{if(ccs[j])setCellText(ccs[j],'');const dr2=ics[j]&&ics[j].getElementsByTagNameNS(WNS,'drawing')[0];if(dr2){const run=dr2.parentNode;remove(run)}const sd=ics[j]&&ics[j].parentNode&&ics[j].parentNode.parentNode;if(sd&&sd.localName==='sdt'){sd.parentNode.insertBefore(ics[j],sd);remove(sd)}}}
      t.appendChild(ri);t.appendChild(rc)}
     insertBefore(t);const sp=doc.createElementNS(WNS,'w:p');insertBefore(sp)}
@@ -988,7 +997,7 @@ async function capaImagem(p,v,mode,warns){if(!mode||mode==='nada')return null;
  const mb=v?.gps?await mapImage(v.gps,v.mapMode==='street'?'street':'satellite',1800,1000):null;
  if(!mb)warns.push(v?.gps?'Capa: sem rede para obter o mapa de localização.':'Capa: a parcela não tem GPS — a localização não entra na capa.');
  /* primeiro as fotografias marcadas «Capa» na parcela; se faltarem, completa com outras ao acaso */
- const esc_=(p.fotos||[]).filter(f=>f.capa),fs=(p.fotos||[]).filter(f=>!f.capa);for(let i=fs.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[fs[i],fs[j]]=[fs[j],fs[i]]}fs.unshift(...esc_);
+ const esc_=relFotos(p).filter(f=>f.capa),fs=relFotos(p).filter(f=>!f.capa);for(let i=fs.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[fs[i],fs[j]]=[fs[j],fs[i]]}fs.unshift(...esc_);
  if(mode==='loc')return mb?{blob:mb,w:1800,h:1000}:null;
  const pics=[];for(const f of fs.slice(0,2)){const r=await get('fotos',f.id);const im=r?.blob&&await blobImg(r.blob);if(im)pics.push(im)}
  if(!mb&&!pics.length)return null;if(mode==='loc2'&&pics.length<2)warns.push('Capa: a parcela tem menos de 2 fotografias.');
@@ -1410,7 +1419,8 @@ function coerencia(p){const v=p.rel.v,out=[];const P=cur.v;const D=k=>{const x=p
  if(cur.fase!=='VAPRM'){const c=compute(v);if(!(c.total>0))out.push('Valor de justa indemnização nulo – verificar áreas, quantidades e V_Un');
   const semVun=GRUPOS.flatMap(([k,,l,tb,q])=>(Array.isArray(v[tb])?v[tb]:[]).filter(r=>elegivel(v,tb,r,q)&&!(num(r.vun)>0)).map(r=>`${l} › ${r.tipo}`));if(semVun.length)out.push(`Situações com área / quantidade mas sem V_Un: ${semVun.join('; ')}`);
   regrasCE(v).forEach(x=>out.push('CE: '+x))}
- const F=p.fotos||[];if(!F.length)out.push('Parcela sem fotografias');else{const sl=F.filter(f=>!String(f.caption||'').trim()).length;if(sl)out.push(`${sl} fotografia(s) sem legenda`)}
+ const F=relFotos(p);if(!F.length)out.push((p.fotos||[]).length?'Nenhuma fotografia escolhida para o relatório (estão todas em reserva)':'Parcela sem fotografias');else{const sl=F.filter(f=>!String(f.caption||'').trim()).length;if(sl)out.push(`${sl} fotografia(s) sem legenda`)}
+ {const DG=dupGroups(p);if(DG.length)out.push(`Fotografias repetidas: ${DG.slice(0,4).map(g=>g.map(x=>x.code).join(' = ')).join(' · ')}${DG.length>4?'…':''}`)}
  for(const [k,l] of [['qExp','Expropriante'],['qExpd','Expropriado'],['qTrib','Tribunal']]){const n=(Array.isArray(v[k])?v[k]:[]).filter(r=>r&&String(r.q||'').trim()&&!String(r.r||'').trim()).length;if(n)out.push(`Quesitos (${l}): ${n} sem resposta`)}
  return [...new Set(out)]}
 /* copiar dados de outra parcela do mesmo processo, por secções (o que se repete: prédio, PDM, envolvente, classificação, valores…) */
@@ -1705,7 +1715,7 @@ async function importarFinal(p,file){clearTimeout(saveT);await saveCur();const v
   const doc=Pz.parseFromString(await zip.file('word/document.xml').async('string'),'application/xml');
   const rels=Pz.parseFromString(await zip.file('word/_rels/document.xml.rels').async('string'),'application/xml');
   const ctDoc=Pz.parseFromString(await zip.file('[Content_Types].xml').async('string'),'application/xml');
-  if((p.fotos||[]).length){
+  if(relFotos(p).length){
    /* destino das fotografias, por esta ordem: 1) marcador «[FOTOS]» escrito no Word; 2) fotografias postas antes pela app (legendas «F1 - …»);
       3) frase «Fotografias a inserir na versão final.»; 4) capítulo «Reportagem fotográfica»; 5) o perito escolhe o capítulo (ou o fim do documento) */
    const body=doc.getElementsByTagNameNS(WNS,'body')[0];const top=[...body.childNodes].filter(e=>e.nodeType===1);
@@ -1721,7 +1731,7 @@ async function importarFinal(p,file){clearTimeout(saveT);await saveCur();const v
    if(th){let x=th.nextSibling;while(x){if(x.nodeType===1){if(x.localName==='p'){const st=x.getElementsByTagNameNS(WNS,'pStyle')[0];if(st&&/Cabealho/.test(st.getAttributeNS(WNS,'val'))&&txt(x).trim())break}else if(x.localName==='tbl'&&W_(x,'drawing').length)molde.push(x)}x=x.nextSibling}}
    if(!molde.length)throw new Error('o modelo embutido não tem as grelhas das fotografias.');
    /* com as grelhas antigas saem também os títulos de grupo (aspetos) e a linha em branco que a app lhes junta */
-   {const asp=new Set([...settings.aspetos,...(p.fotos||[]).map(f=>f.aspeto||'Geral')].map(x=>norm(x)));old.filter(isOld).forEach(t=>{const pv=t.previousSibling,nx=t.nextSibling;if(pv&&pv.nodeType===1&&pv.localName==='p'&&asp.has(norm(txt(pv).trim()))){if(ref===t)ref=pv;old.push(pv)}if(nx&&nx.nodeType===1&&nx.localName==='p'&&!txt(nx).trim()&&nx!==ref)old.push(nx)})}
+   {const asp=new Set([...settings.aspetos,...relFotos(p).map(f=>f.aspeto||'Geral')].map(x=>norm(x)));old.filter(isOld).forEach(t=>{const pv=t.previousSibling,nx=t.nextSibling;if(pv&&pv.nodeType===1&&pv.localName==='p'&&asp.has(norm(txt(pv).trim()))){if(ref===t)ref=pv;old.push(pv)}if(nx&&nx.nodeType===1&&nx.localName==='p'&&!txt(nx).trim()&&nx!==ref)old.push(nx)})}
    const tbls=molde.map(t=>{const n=doc.importNode(t,true);ref?body.insertBefore(n,ref):body.appendChild(n);return n});old.forEach(remove);
    await fotosNoDoc(doc,zip,rels,ctDoc,p,{tbls})}
   else warns.push('A parcela não tem fotografias na fototeca: o Word final segue sem fotografias novas.');
@@ -1743,9 +1753,9 @@ async function pastaFinal(p,files){const P=cur.v;const fs=[...files];const dx=fs
  try{busy(true,'A construir a Pasta final…');const base=relBase(p),pasta=pastaNome(P,p),zip=new JSZip(),root=zip.folder(pasta),docs=root.folder('Documentos'),fot=root.folder('Fotografias');
   if(dx)docs.file(`${base}.docx`,await dx.arrayBuffer(),{compression:'STORE'});if(pd)docs.file(`${base}.pdf`,await pd.arrayBuffer(),{compression:'STORE'});
   const g=parseGps(p.rel?.v?.gps);if(g)docs.file(`${base}_Localizacao.kml`,kmlContent(g.lat,g.lng,`${P.nref||P.proc||'Processo'} – ${p.nome}`));await anexosNaPasta(root,base,p.rel?.v);for(const [k,n] of [['plantaImg','Configuracao_parcela'],['pdmOrdImg','Extrato_Ordenamento'],['pdmCondImg','Extrato_Condicionantes']]){const im=p.rel?.v?.[k];if(im&&im.data)docs.file(`${base}_${n}.jpg`,await dataURLToBlob(im.data),{compression:'STORE'})}
-  const order=[...settings.aspetos,...new Set((p.fotos||[]).map(f=>f.aspeto||'Geral').filter(a=>!settings.aspetos.includes(a)))];const lines=['Código;Aspeto;Legenda;Ficheiro'];let gi=0;
-  for(const a of order){const list=(p.fotos||[]).map((f,i)=>({f,i})).filter(x=>(x.f.aspeto||'Geral')===a);if(!list.length)continue;gi++;const fd=fot.folder(`${pad(gi)}_${safeName(a)}`);
-   for(const {f,i} of list){const rec=await get('fotos',f.id);if(!rec?.blob)continue;const fn=`${codePhoto(i)}.jpg`;fd.file(fn,await rec.blob.arrayBuffer(),{compression:'STORE'});lines.push([codePhoto(i),a,(f.caption||'').replace(/[;\n\r]+/g,' '),`Fotografias/${pad(gi)}_${safeName(a)}/${fn}`].join(';'))}}
+  const order=[...settings.aspetos,...new Set(relFotos(p).map(f=>f.aspeto||'Geral').filter(a=>!settings.aspetos.includes(a)))];const lines=['Código;Aspeto;Legenda;Ficheiro'];let gi=0;
+  for(const a of order){const list=relFotos(p).map((f,i)=>({f,i})).filter(x=>(x.f.aspeto||'Geral')===a);if(!list.length)continue;gi++;const fd=fot.folder(`${pad(gi)}_${safeName(a)}`);
+   for(const {f,i} of list){const rec=await get('fotos',f.id);if(!rec?.blob)continue;const fn=`${codePhoto(i,p)}.jpg`;fd.file(fn,await rec.blob.arrayBuffer(),{compression:'STORE'});lines.push([codePhoto(i,p),a,(f.caption||'').replace(/[;\n\r]+/g,' '),`Fotografias/${pad(gi)}_${safeName(a)}/${fn}`].join(';'))}}
   docs.file(`${base}_Lista_Fotos.csv`,'\ufeff'+lines.join('\r\n'));
   const blob=await zip.generateAsync({type:'blob',mimeType:'application/zip',compression:'DEFLATE',compressionOptions:{level:6}});busy(false);await deliverFile(new File([blob],`${pasta}.zip`,{type:'application/zip'}))}
  catch(e){busy(false);alert('Não foi possível construir a Pasta final: '+(e.message||e))}}
@@ -1755,10 +1765,11 @@ async function exportPastaARB(pp,opt={}){const r=await buildWordARB(!pp,pp,opt);
   docs.file(r.nome,r.blob,{compression:'STORE'});
   try{const pdf=await avaFxPdfBlob({pronto:{nome:r.nome,blob:r.blob}});docs.file(pdf.nome,pdf.blob,{compression:'STORE'})}catch(e){r.warns.push('A pasta segue sem PDF: '+(e.message||e))}
   const g=parseGps(p.rel?.v?.gps);if(g)docs.file(`${base}_Localizacao.kml`,kmlContent(g.lat,g.lng,`${P.nref||P.proc||'Processo'} – ${p.nome}`));await anexosNaPasta(root,base,p.rel?.v);for(const [k,n] of [['plantaImg','Configuracao_parcela'],['pdmOrdImg','Extrato_Ordenamento'],['pdmCondImg','Extrato_Condicionantes']]){const im=p.rel?.v?.[k];if(im&&im.data)docs.file(`${base}_${n}.jpg`,await dataURLToBlob(im.data),{compression:'STORE'})}
-  busy(true,'A juntar as fotografias…');const order=[...settings.aspetos,...new Set((p.fotos||[]).map(f=>f.aspeto||'Geral').filter(a=>!settings.aspetos.includes(a)))];
+  busy(true,'A juntar as fotografias…');const order=[...settings.aspetos,...new Set(relFotos(p).map(f=>f.aspeto||'Geral').filter(a=>!settings.aspetos.includes(a)))];
   const lines=['Código;Aspeto;Legenda;Ficheiro'];let gi=0;
-  for(const a of order){const list=(p.fotos||[]).map((f,i)=>({f,i})).filter(x=>(x.f.aspeto||'Geral')===a);if(!list.length)continue;gi++;const fd=fot.folder(`${pad(gi)}_${safeName(a)}`);
-   for(const {f,i} of list){const rec=await get('fotos',f.id);if(!rec?.blob)throw new Error(`${codePhoto(i)} — fotografia em falta na base de dados.`);const fn=`${codePhoto(i)}.jpg`;fd.file(fn,await rec.blob.arrayBuffer(),{compression:'STORE'});lines.push([codePhoto(i),a,(f.caption||'').replace(/[;\n\r]+/g,' '),`Fotografias/${pad(gi)}_${safeName(a)}/${fn}`].join(';'))}}
+  for(const a of order){const list=relFotos(p).map((f,i)=>({f,i})).filter(x=>(x.f.aspeto||'Geral')===a);if(!list.length)continue;gi++;const fd=fot.folder(`${pad(gi)}_${safeName(a)}`);
+   for(const {f,i} of list){const rec=await get('fotos',f.id);if(!rec?.blob)throw new Error(`${codePhoto(i,p)} — fotografia em falta na base de dados.`);const fn=`${codePhoto(i,p)}.jpg`;fd.file(fn,await rec.blob.arrayBuffer(),{compression:'STORE'});lines.push([codePhoto(i,p),a,(f.caption||'').replace(/[;\n\r]+/g,' '),`Fotografias/${pad(gi)}_${safeName(a)}/${fn}`].join(';'))}}
+  {const RS=resFotos(p);if(RS.length){const rf=fot.folder('Reserva');for(const [k,f] of RS.entries()){const rec=await get('fotos',f.id);if(!rec?.blob)continue;const fn=`Reserva_${pad(k+1,3)}.jpg`;rf.file(fn,await rec.blob.arrayBuffer(),{compression:'STORE'});lines.push([`Reserva ${k+1}`,f.aspeto||'Geral',(f.caption||'').replace(/[;\n\r]+/g,' '),`Fotografias/Reserva/${fn}`].join(';'))}}}
   docs.file(`${base}_Lista_Fotos.csv`,'﻿'+lines.join('\r\n'));
   if(opt.zipInto)return r.warns.map(w=>`${p.nome}: ${w}`);
   busy(true,'A construir a Pasta da parcela…');const blob=await zip.generateAsync({type:'blob',mimeType:'application/zip',compression:'DEFLATE',compressionOptions:{level:6}});busy(false);
@@ -2445,7 +2456,7 @@ function renderParcela(M){const p=curParcela,r=p.rel;crumbs();r.tipo=cur.fase;co
  else body=photosHTML();
  M.innerHTML=`<h2 id="parH">${esc(p.nome)}</h2><div class="blk" style="margin-top:6px">B · Análise da parcela<small>Processo ${esc(cur.v.proc||cur.v.nref||'')} — os dados abaixo são próprios desta parcela; os gerais estão no processo (bloco A)</small></div>
  <div style="margin:8px 0"><span class="fasepill ev-${cur.fase}" style="background:var(--evc)">Fase: ${esc(ev.nome)}</span> <span class="muted">(definida no processo)</span></div>
-${ev.modelo&&cur.fase!=='VAPRM'?'<div id="totBar"></div>':''}<div class="tabs"><button data-tab="rel" class="${tab==='rel'?'on':''}">Dados</button><button data-tab="fotos" class="${tab==='fotos'?'on':''}">Fotografias (${(p.fotos||[]).length})</button></div>${body}
+${ev.modelo&&cur.fase!=='VAPRM'?'<div id="totBar"></div>':''}<div class="tabs"><button data-tab="rel" class="${tab==='rel'?'on':''}">Dados</button><button data-tab="fotos" class="${tab==='fotos'?'on':''}">Fotografias (${relFotos(p).length}${resFotos(p).length?' +'+resFotos(p).length:''})</button></div>${body}
  <div class="btns" style="margin-top:24px"><button class="secondary" id="backProc">◀ Processo</button>${ev.modelo?`<button id="goRel">Gerar relatório ▶</button>`:''}${cur.parcelas.length>1?'<button class="secondary" id="copyPar">⧉ Copiar dados de outra parcela</button>':''}<button class="secondary" id="expPar">⬇ Exportar parcela</button><button class="del" id="delPar">Eliminar parcela</button></div>`;
  $$('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;render()});
  $('#copyPar')&&($('#copyPar').onclick=()=>copiarDeParcela(p));
@@ -2590,17 +2601,35 @@ function bindGps(v){const el=$('#gps');if(!el)return;const st=$('#gpsStatus');
 function gpsAutoFromCamera(p){const v=p.rel?.v;if(!v||parseGps(v.gps)||!navigator.geolocation)return;navigator.geolocation.getCurrentPosition(pos=>{if(parseGps(v.gps)||pos.coords.accuracy>150)return;v.gps=`${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`;visRegistoLocal(p);saveCur();const b=$('#busy');b.textContent=`GPS registado (precisão ≈ ${Math.round(pos.coords.accuracy)} m)`;b.classList.remove('hidden');setTimeout(()=>b.classList.add('hidden'),2500)},()=>{},{enableHighAccuracy:true,timeout:15000,maximumAge:60000})}
 
 /* ---------- Fotografias ---------- */
-function parcelaN(){return cur.parcelas.indexOf(curParcela)+1}
-function codePhoto(i){return `${parcelaN()}-IMG_${pad(i+1,3)}`}
-function photosHTML(){const fotos=curParcela.fotos||[];const asp=settings.aspetos;const counts=a=>fotos.filter(f=>(f.aspeto||'Geral')===a).length;
+function parcelaN(p=curParcela){return cur.parcelas.indexOf(p)+1}
+function codePhoto(i,p=curParcela){return `${parcelaN(p)}-IMG_${pad(i+1,3)}`}
+/* fotografias do relatório (sel!==false) primeiro; as outras ficam em reserva: guardadas na app, fora do relatório */
+const inRel=f=>f.sel!==false;const relFotos=p=>(p&&p.fotos||[]).filter(inRel);const resFotos=p=>(p&&p.fotos||[]).filter(f=>!inRel(f));
+function normFotos(p){if(p&&p.fotos)p.fotos=[...relFotos(p),...resFotos(p)]}
+const fotoLbl=(p,i)=>inRel(p.fotos[i])?codePhoto(i,p):`Reserva ${i-relFotos(p).length+1}`;
+/* fotografias repetidas: assinatura visual (dHash 64 bits) – apanha a mesma imagem mesmo reimportada noutra qualidade */
+async function phashBlob(blob){const u=URL.createObjectURL(blob);try{const im=await new Promise((ok,no)=>{const x=new Image;x.onload=()=>ok(x);x.onerror=no;x.src=u});const c=document.createElement('canvas');c.width=9;c.height=8;const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(im,0,0,9,8);
+ const d=g.getImageData(0,0,9,8).data;const L=k=>d[k*4]*.299+d[k*4+1]*.587+d[k*4+2]*.114;let h='';for(let r=0;r<8;r++){let n=0;for(let cc=0;cc<8;cc++)n=(n<<1)|(L(r*9+cc)>L(r*9+cc+1)?1:0);h+=n.toString(16).padStart(2,'0')}return h}finally{URL.revokeObjectURL(u)}}
+const hamm=(a,b)=>{let n=0;for(let i=0;i<a.length;i+=2){let v=parseInt(a.substr(i,2),16)^parseInt(b.substr(i,2),16);while(v){n+=v&1;v>>=1}}return n};const SAME=2;
+async function ensureHashes(P=cur){let ch=false;for(const p of P.parcelas||[])for(const f of p.fotos||[])if(!f.ph){try{const r=await get('fotos',f.id);if(r?.blob){f.ph=await phashBlob(r.blob);ch=true}}catch(e){}}return ch}
+function dupOf(f,P=cur){const out=[];for(const p of P.parcelas||[])(p.fotos||[]).forEach((g,i)=>{if(g!==f&&g.id!==f.id&&g.ph&&f.ph&&hamm(g.ph,f.ph)<=SAME)out.push(`${p===curParcela?'':p.nome+' › '}${fotoLbl(p,i)}`)});return out}
+function dupGroups(p,P=cur){const L=[];(P.parcelas||[]).forEach(q=>relFotos(q).forEach((f,i)=>{if(f.ph)L.push({q,f,code:`${q.nome} › ${codePhoto(i,q)}`})}));const G=[],used=new Set();
+ for(let x=0;x<L.length;x++){if(used.has(x)||(p&&L[x].q!==p))continue;const g=[L[x]];for(let y=0;y<L.length;y++)if(y!==x&&!used.has(y)&&hamm(L[x].f.ph,L[y].f.ph)<=SAME){g.push(L[y]);used.add(y)}used.add(x);if(g.length>1)G.push(g)}return G}
+let hashing=false;
+function photosHTML(){const p=curParcela;normFotos(p);const fotos=p.fotos||[];const asp=settings.aspetos;const counts=a=>fotos.filter(f=>(f.aspeto||'Geral')===a).length;
+ const nR=relFotos(p).length,nS=resFotos(p).length;
  const shown=fotos.map((f,i)=>({f,i})).filter(x=>photoFilter==='Todos'||(x.f.aspeto||'Geral')===photoFilter);
- return `<div class="btns"><button class="green" id="takePhoto">📷 Tirar fotografia</button><button class="green" id="choosePhotos">🖼 Escolher da fototeca</button></div>
- <div class="chips"><button data-flt="Todos" class="${photoFilter==='Todos'?'on':''}">Todos (${fotos.length})</button>${asp.map(a=>`<button data-flt="${esc(a)}" class="${photoFilter===a?'on':''}">${esc(a)} (${counts(a)})</button>`).join('')}</div>
- <div class="muted">Aspeto aplicado às fotografias novas: <select id="newAsp" style="width:auto">${asp.map(a=>`<option ${a===(photoFilter!=='Todos'?photoFilter:'Geral')?'selected':''}>${esc(a)}</option>`).join('')}</select></div>
- <div class="photos" style="margin-top:10px">${shown.map(({f,i})=>`<article class="photo" data-card="${f.id}"><div class="thumb" data-zoom="${f.id}"><img data-img="${f.id}" alt="${esc(codePhoto(i))}"></div><div class="code">${esc(codePhoto(i))}${f.fromCamera&&!f.libSaved?' <span class="pill warn">só na app</span>':''}</div>
+ const card=({f,i})=>{const res=!inRel(f),dup=dupOf(f);return `<article class="photo ${res?'res':''}" data-card="${f.id}"><div class="thumb" data-zoom="${f.id}"><img data-img="${f.id}" alt="${esc(fotoLbl(p,i))}"><button class="phsel ${res?'':'on'}" data-sel="${f.id}" title="${res?'Passar para o relatório':'Retirar do relatório (fica em reserva)'}">${res?'＋ Usar':'✓ No relatório'}</button></div><div class="code">${esc(fotoLbl(p,i))}${f.fromCamera&&!f.libSaved?' <span class="pill warn">só na app</span>':''}${dup.length?` <span class="pill bad" title="Igual a ${esc(dup.join(', '))}">⚠ repetida</span>`:''}</div>
  <select data-asp="${f.id}">${asp.concat((f.aspeto&&!asp.includes(f.aspeto))?[f.aspeto]:[]).map(a=>`<option ${a===(f.aspeto||'Geral')?'selected':''}>${esc(a)}</option>`).join('')}</select>
  <textarea data-cap="${f.id}" placeholder="Legenda">${esc(f.caption||'')}</textarea>
- <div class="acts"><button class="secondary" data-mv="${f.id}" data-d="-1">▲</button><button class="secondary" data-mv="${f.id}" data-d="1">▼</button><button class="secondary" data-rot="${f.id}">⟳</button><button class="del" data-delf="${f.id}">🗑</button></div><label class="chk" style="margin-top:4px"><input type="checkbox" data-capa="${f.id}" ${f.capa?'checked':''}> Capa</label></article>`).join('')||'<div class="muted">Sem fotografias neste filtro.</div>'}</div>`}
+ <div class="acts"><button class="secondary" data-mv="${f.id}" data-d="-1">▲</button><button class="secondary" data-mv="${f.id}" data-d="1">▼</button><button class="secondary" data-rot="${f.id}">⟳</button><button class="del" data-delf="${f.id}">🗑</button></div>${res?'':`<label class="chk" style="margin-top:4px"><input type="checkbox" data-capa="${f.id}" ${f.capa?'checked':''}> Capa</label>`}</article>`};
+ const R=shown.filter(x=>inRel(x.f)),S_=shown.filter(x=>!inRel(x.f));
+ return `<div class="btns"><button class="green" id="takePhoto">📷 Tirar fotografia</button><button class="green" id="choosePhotos">🖼 Escolher da fototeca</button></div>
+ <div class="muted">${nR} no relatório${nS?` · ${nS} em reserva`:''}. Pode juntar mais fotografias do que as que quer usar: toque em «✓ No relatório» para pôr uma em reserva (fica guardada, mas não sai no relatório) e em «＋ Usar» para a trazer de volta.</div>
+ <div class="chips"><button data-flt="Todos" class="${photoFilter==='Todos'?'on':''}">Todos (${fotos.length})</button>${asp.map(a=>`<button data-flt="${esc(a)}" class="${photoFilter===a?'on':''}">${esc(a)} (${counts(a)})</button>`).join('')}</div>
+ <div class="muted">Aspeto aplicado às fotografias novas: <select id="newAsp" style="width:auto">${asp.map(a=>`<option ${a===(photoFilter!=='Todos'?photoFilter:'Geral')?'selected':''}>${esc(a)}</option>`).join('')}</select></div>
+ <div class="photos" style="margin-top:10px">${R.map(card).join('')||'<div class="muted">Sem fotografias para o relatório neste filtro.</div>'}</div>
+ ${S_.length?`<label style="margin-top:14px">Reserva – não vai para o relatório (${S_.length})</label><div class="photos">${S_.map(card).join('')}</div>`:''}`}
 function bindPhotos(){const p=curParcela;
  $('#takePhoto').onclick=()=>{$('#fileCam').value='';$('#fileCam').click()};
  $('#choosePhotos').onclick=()=>{$('#fileLib').value='';$('#fileLib').click()};
@@ -2608,11 +2637,13 @@ function bindPhotos(){const p=curParcela;
  $$('[data-cap]').forEach(el=>el.oninput=()=>{p.fotos.find(f=>f.id===el.dataset.cap).caption=el.value;saveSoon()});
  $$('[data-capa]').forEach(el=>el.onchange=()=>{const f=p.fotos.find(x=>x.id===el.dataset.capa);if(el.checked&&p.fotos.filter(x=>x.capa).length>=2){el.checked=false;alert('A capa leva no máximo 2 fotografias. Desmarque primeiro outra.');return}f.capa=el.checked;saveSoon()});
  $$('[data-asp]').forEach(el=>el.onchange=()=>{p.fotos.find(f=>f.id===el.dataset.asp).aspeto=el.value;saveSoon();render()});
- $$('[data-mv]').forEach(b=>b.onclick=async()=>{const i=p.fotos.findIndex(f=>f.id===b.dataset.mv),j=i+(+b.dataset.d);if(j<0||j>=p.fotos.length)return;[p.fotos[i],p.fotos[j]]=[p.fotos[j],p.fotos[i]];await saveCur();render()});
+ $$('[data-sel]').forEach(b=>b.onclick=async e=>{e.stopPropagation();const f=p.fotos.find(x=>x.id===b.dataset.sel);if(!f)return;if(inRel(f)){f.sel=false;f.capa=false}else delete f.sel;normFotos(p);await saveCur();render()});
+ $$('[data-mv]').forEach(b=>b.onclick=async()=>{const i=p.fotos.findIndex(f=>f.id===b.dataset.mv),j=i+(+b.dataset.d);if(j<0||j>=p.fotos.length||inRel(p.fotos[i])!==inRel(p.fotos[j]))return;[p.fotos[i],p.fotos[j]]=[p.fotos[j],p.fotos[i]];await saveCur();render()});
  $$('[data-rot]').forEach(b=>b.onclick=()=>rotatePhoto(b.dataset.rot));
  $$('[data-delf]').forEach(b=>b.onclick=async()=>{if(!await uiConfirm('Eliminar esta fotografia?'))return;p.fotos=p.fotos.filter(f=>f.id!==b.dataset.delf);await del('fotos',b.dataset.delf);revoke(b.dataset.delf);await saveCur();render()});
  $$('[data-zoom]').forEach(el=>el.onclick=()=>openPhotoModal(el.dataset.zoom));
- loadImages()}
+ loadImages();
+ if(!hashing&&(p.fotos||[]).some(f=>!f.ph)){hashing=true;ensureHashes().then(async ch=>{hashing=false;if(ch){await saveCur();if(view==='parcela'&&tab==='fotos')render()}}).catch(()=>{hashing=false})}}
 async function imgUrl(id){if(urls.has(id))return urls.get(id);const r=await get('fotos',id);if(!r?.blob)return '';const u=URL.createObjectURL(r.blob);urls.set(id,u);return u}
 function revoke(id){const u=urls.get(id);if(u)URL.revokeObjectURL(u);urls.delete(id)}
 async function loadImages(){for(const im of $$('[data-img]'))im.src=await imgUrl(im.dataset.img)}
@@ -2620,19 +2651,31 @@ async function normalizarImagem(file){const P={50:{max:700,q:.7},150:{max:900,q:
  try{const im=await new Promise((ok,no)=>{const x=new Image;x.onload=()=>ok(x);x.onerror=()=>no(new Error('Não foi possível interpretar a fotografia.'));x.src=url});let w=im.naturalWidth,h=im.naturalHeight;if(Math.max(w,h)>pr.max){const k=pr.max/Math.max(w,h);w=Math.round(w*k);h=Math.round(h*k)}
   const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d',{alpha:false});g.fillStyle='#fff';g.fillRect(0,0,w,h);g.drawImage(im,0,0,w,h);
   let q=pr.q,blob=await new Promise(ok=>c.toBlob(ok,'image/jpeg',q));while(blob&&blob.size>kb*1024*1.1&&q>.35){q-=.08;blob=await new Promise(ok=>c.toBlob(ok,'image/jpeg',q))}return {blob,w,h}}finally{URL.revokeObjectURL(url)}}
-async function importPhotos(files,fromCamera){const p=curParcela;if(!p||!files.length)return;const asp=$('#newAsp')?.value||'Geral';const total=files.length;if(total>15)alert(`Foram selecionadas ${total} fotografias. Serão processadas uma a uma para proteger a memória do aparelho.`);
- try{for(let n=0;n<total;n++){busy(true,`A gravar fotografia ${n+1} de ${total}…`);const r=await normalizarImagem(files[n]),id=uid();const meta={id,caption:'',aspeto:asp,w:r.w,h:r.h,createdAt:stamp(),...(fromCamera?{fromCamera:true,libSaved:false}:{})};
-   await put('fotos',{id,processoId:cur.id,parcelaId:p.id,blob:r.blob});p.fotos.push(meta);await saveCur()}}
+async function importPhotos(files,fromCamera){const p=curParcela;if(!p||!files.length)return;const reps=[];const asp=$('#newAsp')?.value||'Geral';const total=files.length;if(total>15)alert(`Foram selecionadas ${total} fotografias. Serão processadas uma a uma para proteger a memória do aparelho.`);
+ try{for(let n=0;n<total;n++){busy(true,`A gravar fotografia ${n+1} de ${total}…`);const r=await normalizarImagem(files[n]),id=uid();let ph='';try{ph=await phashBlob(r.blob)}catch(e){}const meta={id,caption:'',aspeto:asp,w:r.w,h:r.h,createdAt:stamp(),ph,...(fromCamera?{fromCamera:true,libSaved:false}:{})};
+   await put('fotos',{id,processoId:cur.id,parcelaId:p.id,blob:r.blob});p.fotos.push(meta);normFotos(p);await saveCur();if(ph){await ensureHashes();const dc=dupOf(meta);if(dc.length)reps.push(`${fotoLbl(p,p.fotos.indexOf(meta))} = ${dc.join(', ')}`)}}}
  catch(e){alert('Erro ao gravar fotografias: '+e.message)}finally{busy(false)}
- if(fromCamera){visRegistoLocal(p);await saveCur()}render();if(fromCamera){offerLibrarySave();gpsAutoFromCamera(p)}}
+ if(fromCamera){visRegistoLocal(p);await saveCur()}render();if(reps.length)alert(`⚠ Fotografia(s) que parecem repetidas:\n\n- ${reps.join('\n- ')}\n\nPode eliminá-las, pô-las em reserva ou substituí-las no editor da fotografia.`);if(fromCamera){offerLibrarySave();gpsAutoFromCamera(p)}}
 async function offerLibrarySave(){const pend=(curParcela?.fotos||[]).filter(f=>f.fromCamera&&!f.libSaved);if(!pend.length||!navigator.canShare)return;
  try{const files=[];for(const f of pend){const r=await get('fotos',f.id);files.push(new File([r.blob],`${f.id}.jpg`,{type:'image/jpeg'}))}if(!navigator.canShare({files}))return;
   navigator.share({files}).then(async()=>{pend.forEach(f=>f.libSaved=true);await saveCur();if(view==='parcela')render()}).catch(()=>{})}catch(e){}}
 async function rotatePhoto(id){busy(true,'A rodar fotografia…');try{const r=await get('fotos',id),u=URL.createObjectURL(r.blob),im=await new Promise((ok,no)=>{const x=new Image;x.onload=()=>ok(x);x.onerror=no;x.src=u});const c=document.createElement('canvas');c.width=im.naturalHeight;c.height=im.naturalWidth;const g=c.getContext('2d',{alpha:false});g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.translate(c.width/2,c.height/2);g.rotate(Math.PI/2);g.drawImage(im,-im.naturalWidth/2,-im.naturalHeight/2);URL.revokeObjectURL(u);
  r.blob=await new Promise(ok=>c.toBlob(ok,'image/jpeg',.84));await put('fotos',r);const f=curParcela.fotos.find(x=>x.id===id);[f.w,f.h]=[f.h,f.w];revoke(id);await saveCur()}catch(e){alert('Erro ao rodar: '+e.message)}finally{busy(false)}render()}
-async function openPhotoModal(id){const p=curParcela,i=p.fotos.findIndex(f=>f.id===id),f=p.fotos[i];if(!f)return;const asp=settings.aspetos;
- openModal(`<div class="code" style="font-weight:700;margin-bottom:6px">${esc(codePhoto(i))}</div><img id="pmImg"><label>Aspeto</label><select id="pmAsp">${asp.map(a=>`<option ${a===(f.aspeto||'Geral')?'selected':''}>${esc(a)}</option>`).join('')}</select><label>Legenda</label><textarea id="pmCap" style="min-height:120px">${esc(f.caption||'')}</textarea><div class="btns"><button id="pmOk">Fechar</button></div>`);
- $('#pmImg').src=await imgUrl(id);$('#pmCap').oninput=e=>{f.caption=e.target.value;saveSoon()};$('#pmAsp').onchange=e=>{f.aspeto=e.target.value;saveSoon()};$('#pmOk').onclick=()=>{closeModal();render()}}
+async function openPhotoModal(id){const p=curParcela,i=p.fotos.findIndex(f=>f.id===id),f=p.fotos[i];if(!f)return;const asp=settings.aspetos;const dc=dupOf(f);
+ openModal(`<div class="code" style="font-weight:700;margin-bottom:6px">${esc(fotoLbl(p,i))}${inRel(f)?'':' <span class="muted">– em reserva, não vai para o relatório</span>'}</div><img id="pmImg">
+ ${dc.length?`<div class="warnbox" style="margin:6px 0">⚠ Esta fotografia parece repetida – igual a ${esc(dc.join(', '))}. Pode eliminá-la, pô-la em reserva ou substituí-la.</div>`:''}
+ <div class="btns"><button class="${inRel(f)?'green':'secondary'}" id="pmSel">${inRel(f)?'✓ No relatório – tocar para pôr em reserva':'＋ Usar no relatório'}</button></div>
+ <label>Aspeto</label><select id="pmAsp">${asp.map(a=>`<option ${a===(f.aspeto||'Geral')?'selected':''}>${esc(a)}</option>`).join('')}</select><label>Legenda</label><textarea id="pmCap" style="min-height:120px">${esc(f.caption||'')}</textarea>
+ <div class="muted" style="margin-top:8px">Substituir esta fotografia (mantém ${inRel(f)?'o número '+esc(codePhoto(i))+', ':''}o aspeto e a legenda):</div>
+ <div class="btns"><button class="secondary" id="pmRepCam">📷 Substituir – câmara</button><button class="secondary" id="pmRepLib">🖼 Substituir – fototeca</button></div>
+ <div class="btns"><button id="pmOk">Fechar</button></div>`);
+ $('#pmImg').src=await imgUrl(id);$('#pmCap').oninput=e=>{f.caption=e.target.value;saveSoon()};$('#pmAsp').onchange=e=>{f.aspeto=e.target.value;saveSoon()};$('#pmOk').onclick=()=>{closeModal();render()};
+ $('#pmSel').onclick=async()=>{if(inRel(f)){f.sel=false;f.capa=false}else delete f.sel;normFotos(p);await saveCur();closeModal();render();openPhotoModal(id)};
+ const repl=cam=>{const inp=document.createElement('input');inp.type='file';inp.accept='image/*';if(cam)inp.capture='environment';inp.onchange=async()=>{const file=inp.files[0];if(!file)return;busy(true,'A substituir a fotografia…');
+   try{const r=await normalizarImagem(file),nid=uid();let ph='';try{ph=await phashBlob(r.blob)}catch(e){}await put('fotos',{id:nid,processoId:cur.id,parcelaId:p.id,blob:r.blob});const k=p.fotos.indexOf(f);const nf={...f,id:nid,w:r.w,h:r.h,ph,createdAt:stamp(),...(cam?{fromCamera:true,libSaved:false}:{fromCamera:false})};p.fotos[k]=nf;
+    await del('fotos',f.id);revoke(f.id);await saveCur();busy(false);closeModal();render();const d2=dupOf(nf);if(d2.length)alert(`Fotografia substituída. ⚠ Parece igual a ${d2.join(', ')}.`);openPhotoModal(nid);if(cam){offerLibrarySave();gpsAutoFromCamera(p)}}
+   catch(e){busy(false);alert('Não foi possível substituir: '+(e.message||e))}};inp.click()};
+ $('#pmRepCam').onclick=()=>repl(true);$('#pmRepLib').onclick=()=>repl(false)}
 $('#fileCam').onchange=e=>importPhotos([...e.target.files],true);
 $('#fileLib').onchange=e=>importPhotos([...e.target.files],false);
 
