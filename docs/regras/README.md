@@ -7,3 +7,4 @@ Ao melhorar uma rotina numa app, atualizar o ficheiro respetivo e a tabela «Ond
 | Rotina | Ficheiro | Versão |
 |---|---|---|
 | Fotografias (reserva, substituir, repetidas) | [fotos.md](fotos.md) | 1.0 |
+| Máximo de fotos e tamanho previsto / resolução de saída | [tamanho.md](tamanho.md) | 1.0 |

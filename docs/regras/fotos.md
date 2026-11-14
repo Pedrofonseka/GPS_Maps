@@ -4,8 +4,8 @@
 | App | Versão | Notas |
 |---|---|---|
 | Regi Anomalias | 0.14.2–0.16.0 | origem; 0.16.0 tem máximo de fotos por assunto (maxF/enforceMax) |
-| ExPropria | 0.13.2 | sem limite por parcela |
-| FullTopics | 1.06 | assinaturas guardadas no registo da foto (store 'fotos') |
+| ExPropria | 0.13.2–0.13.3 | máximo por parcela desde 0.13.3 |
+| FullTopics | 1.06–1.07 | assinaturas guardadas no registo da foto (store 'fotos') |
 
 ## 1. Fotografias em reserva
 - Campo `sel` na meta da foto: ausente = no relatório; `sel:false` = reserva. Fotos antigas ficam no relatório sem migração.
@@ -40,8 +40,8 @@
   5. verificação antes de exportar: «n fotografia(s) repetida(s) no relatório» (só fotos do relatório), com atalho para corrigir.
 - A procura manual de repetidas, se existir, passa a usar a mesma cache.
 
-## 4. Opcional — máximo de fotos por assunto (Regi 0.16.0)
-- `maxF` configurável; `enforceMax` passa as excedentes para a reserva em vez de as rejeitar.
+## 4. Máximo de fotos por assunto
+- Ver [tamanho.md](tamanho.md): 2·4·6·8·9·10·sem limite, por defeito 6, excedentes para a reserva.
 
 ## 5. Testes mínimos (Playwright)
 1. Importar 4 fotos com uma cópia → 1 alerta, 2 etiquetas visíveis.
