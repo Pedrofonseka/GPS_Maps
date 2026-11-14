@@ -705,7 +705,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Regi Anomalias =====
-const VERSION='0.16.4';
+const VERSION='0.16.5';
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'}];
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
 const parteNome=(p,n)=>(p.partes||[]).find(x=>x.n==n)?.nome||'';
@@ -715,7 +715,7 @@ const imgCode=(p,a,i)=>`IMG ${anCode(p,a)}.${i+1}`;
 const DB_NAME='RegiAnomalias_DB';
 const DEF_CATALOG=['Humidade', 'Infiltrações', 'Impermeabilizações', 'Fissuração', 'Desgaste', 'Desagregação', 'Por concluir', 'Fratura', 'Riscado', 'Picado', 'Erro de medidas', 'Erro de geometria', 'Condensações', 'Bolores', 'Eflorescências', 'Corrosão', 'Destacamento', 'Deformação', 'Assentamento', 'Falta de estanquidade', 'Mau funcionamento', 'Vetustez'];
 const DEF_FIELDS=[
-  {id:'conf',label:'Status',type:'choice',opts:[['NID','Situação não identificada'],['CFM','Confirmado'],['RES','Resolvido'],['EEX','Em execução'],['STB','Em stand-by'],['APR','Aparentemente resolvido']],on:true,print:true},
+  {id:'conf',label:'Status',type:'choice',opts:[['NID','Situação não identificada'],['CFM','Confirmado'],['NCF','Não confirmado'],['RES','Resolvido'],['EEX','Em execução'],['STB','Em stand-by'],['APR','Aparentemente resolvido']],on:true,print:true},
   {id:'tipo',label:'Tipo de anomalia',type:'catalog',on:true,print:true},
   {id:'estado',label:'Evolução de estado',type:'choice',opts:[['Ativo','Ativo'],['Desconhecido','Desconhecido']],on:true,print:true},
   {id:'cons',label:'Gravidade',type:'multi',opts:[['1-ENR','Estético não relevante'],['2-EPR','Estético pouco relevante'],['3-ERV','Estético relevante'],['6-FNR','Funcional não relevante'],['7-FPR','Funcional pouco relevante'],['8-FRV','Funcional relevante'],['OUT','Outras']],free:'OUT',excl:true,on:true,print:true},
@@ -846,6 +846,7 @@ function migrateSettings(s){
     s.fields=s.fields.filter(f=>!['prej','cEst','cFun','cons'].includes(f.id));
     const at=k>=0?k:(s.fields.findIndex(f=>f.id==='estado')+1||s.fields.length);s.fields.splice(at,0,nf);
     s.removed=(s.removed||[]).filter(x=>x!=='cons');s.mig062=s.mig061=true}
+  if(!s.mig0165){const c=s.fields.find(f=>f.id==='conf');if(c&&Array.isArray(c.opts)&&!c.opts.some(o=>o[0]==='NCF')){const at=c.opts.findIndex(o=>o[0]==='CFM');c.opts.splice(at>=0?at+1:c.opts.length,0,['NCF','Não confirmado'])}s.mig0165=true}
   if(!s.mig0163){const c=s.fields.find(f=>f.id==='conf');if(c&&Array.isArray(c.opts)){const ks=c.opts.map(o=>o[0]);const add=[['EEX','Em execução'],['STB','Em stand-by']].filter(o=>!ks.includes(o[0]));if(add.length){const at=ks.indexOf('RES');c.opts.splice(at>=0?at+1:c.opts.length,0,...add)}}s.mig0163=true}
   if(!s.mig060){const c=s.fields.find(f=>f.id==='conf');if(c&&c.opts&&c.opts.map(o=>o[0]).join()==='CON,NID'){c.opts=clone(DEF_FIELDS[0].opts);if(c.label==='Confirmação')c.label='Status'}if(s.maxFotos===4)s.maxFotos=9;s.mig060=true}
   return s;
