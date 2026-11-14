@@ -706,7 +706,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relat_Anomalias =====
-const VERSION='1.0.5';
+const VERSION='1.0.6';
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'}];
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
 const parteNome=(p,n)=>(p.partes||[]).find(x=>x.n==n)?.nome||'';
@@ -888,7 +888,7 @@ async function saveBlob(blob,name){
   if(isMobile()&&navigator.canShare){const f=new File([blob],name,{type:blob.type});if(navigator.canShare({files:[f]})){try{await navigator.share({files:[f]});return}catch(e){if(e.name==='AbortError')return}}}
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},5000);
 }
-const safeName=s=>String(s||'Processo').normalize('NFC').replace(/[\\/:*?"<>|&#%{}$!'@+`=]+/g,'').replace(/[^\p{L}\p{N}._\- ]/gu,'').trim().replace(/\s+/g,'_').slice(0,60)||'Processo';
+const safeName=s=>String(s||'Processo').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z0-9._-]+/g,'_').replace(/_+/g,'_').replace(/^[_.]+|[_.]+$/g,'').slice(0,60)||'Processo';
 
 // ---------- Fotos ----------
 function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error('Imagem não suportada (HEIC no PC? converta para JPG)'));i.src=src})}
@@ -1639,7 +1639,7 @@ document.addEventListener('click',async e=>{
     case 'chkProc':S.view='proc';S.sub=null;S.open.p1=true;S.open.p2=true;S.scrollTop=0;break;
     case 'sendProc':{if(dirty)await saveProc();const pp=procs.find(x=>x.id===el.dataset.id);if(!pp)return;toast('A preparar o processo…');await loadFotos(pp);
       const one={...pp,visita:pp.visita?.map?{...pp.visita,map:{...pp.visita.map,data:fotoCache.get(pp.visita.map.id)||''}}:pp.visita,anomalias:pp.anomalias.map(a=>({...a,fotos:a.fotos.map(f=>({...f,data:fd(f)}))}))};
-      await saveBlob(new Blob([JSON.stringify({app:'RelatAnomalias',kind:'processo',version:VERSION,date:new Date().toISOString(),procs:[one]})],{type:'application/json'}),`${safeName(pp.codigo)}_Processo_Regi.json`);return}
+      await saveBlob(new Blob([JSON.stringify({app:'RelatAnomalias',kind:'processo',version:VERSION,date:new Date().toISOString(),procs:[one]})],{type:'application/json'}),`${safeName(pp.codigo)}_Processo_Relat.json`);return}
     case 'help':{const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="box helpbox"><div class="btns" style="margin-top:0;justify-content:space-between"><b style="font-size:17px">Como funciona a Relat_Anomalias</b><button class="secondary mini" data-x>✕</button></div>${HELP_HTML}</div>`;m.addEventListener('click',e=>{if(e.target===m||e.target.closest('[data-x]'))m.remove()});document.body.appendChild(m);return}
     case 'filtQClear':S.filt.q='';S.scrollTop=window.scrollY;break;
     case 'addParte':{const n=Math.max(0,...p.partes.map(x=>+x.n))+1;p.partes.push({n,nome:'Parte '+n});await saveProc();S.scrollTop=window.scrollY;break}

@@ -705,7 +705,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Regi Anomalias =====
-const VERSION='0.16.5';
+const VERSION='0.16.6';
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'}];
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
 const parteNome=(p,n)=>(p.partes||[]).find(x=>x.n==n)?.nome||'';
@@ -886,7 +886,7 @@ async function saveBlob(blob,name){
   if(isMobile()&&navigator.canShare){const f=new File([blob],name,{type:blob.type});if(navigator.canShare({files:[f]})){try{await navigator.share({files:[f]});return}catch(e){if(e.name==='AbortError')return}}}
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},5000);
 }
-const safeName=s=>String(s||'Processo').normalize('NFC').replace(/[\\/:*?"<>|&#%{}$!'@+`=]+/g,'').replace(/[^\p{L}\p{N}._\- ]/gu,'').trim().replace(/\s+/g,'_').slice(0,60)||'Processo';
+const safeName=s=>String(s||'Processo').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z0-9._-]+/g,'_').replace(/_+/g,'_').replace(/^[_.]+|[_.]+$/g,'').slice(0,60)||'Processo';
 
 // ---------- Fotos ----------
 function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error('Imagem não suportada (HEIC no PC? converta para JPG)'));i.src=src})}
