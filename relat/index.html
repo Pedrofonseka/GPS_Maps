@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Relat_Anomalias">
-<meta name="theme-color" content="#3a3e44">
+<meta name="theme-color" content="#1f4e79">
 <title>Relat_Anomalias</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" href="icon-192.png">
 <style>
-:root{--bg:#f2f3f5;--card:#fff;--ink:#1f2328;--mute:#5f656d;--line:#d5d8dd;--pri:#3a3e44;--pri2:#55595f;--ok:#2e7d32;--okbg:#e8f5e9;--warn:#9a5b00;--warnbg:#fff4e0;--bad:#c62828;--badbg:#fdecea;--safe:150px}
+:root{--bg:#eaf1f8;--card:#fff;--ink:#1f2328;--mute:#5f656d;--line:#cfd9e5;--pri:#1f4e79;--pri2:#2f6aa3;--ok:#2e7d32;--okbg:#e8f5e9;--warn:#9a5b00;--warnbg:#fff4e0;--bad:#c62828;--badbg:#fdecea;--safe:150px}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 Calibri,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%}
 #top{position:sticky;top:0;z-index:20}
@@ -706,7 +706,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relat_Anomalias =====
-const VERSION='1.0.0';
+const VERSION='1.0.1';
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'}];
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
 const parteNome=(p,n)=>(p.partes||[]).find(x=>x.n==n)?.nome||'';
