@@ -1,5 +1,11 @@
 <!doctype html>
 <!--
+ExPropria v0.13.5 — resumo
+- Imagens fornecidas da parcela: uma ou mais, cada uma com «o que mostra» (Parcela · Parcela no contexto do prédio · Prédio) e a fonte (Planta parcelar · Planta cadastral · Levantamento topográfico · Ortofotomapa · Outra).
+- Legenda automática: «Parcela 745 - planta parcelar» · «Parcela 745 no contexto do prédio - planta parcelar» · «Prédio da Parcela 745 - planta cadastral».
+- No Word: a seguir à descrição da parcela, antes das infraestruturas (VAPRM: fim de 2.3; Arbitragem/Peritagem/Bases: em 6.3, logo após «Descrição sumária», na grelha de 14,3 × 12,9 cm, uma por imagem).
+- A imagem de configuração antiga passa automaticamente para a nova lista.
+
 ExPropria v0.13.4 — resumo
 - Separadores: Processo (tijolo) e Parcela (verde) bem distintos; setas ◀ ▶ para passar de parcela em parcela, mantendo o separador.
 - Relatório: a hora da visita deixa de sair (só a data).
@@ -552,7 +558,7 @@ table.tb td input,table.tb td textarea{padding:5px 6px;min-height:0}
 .multibox{border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 12px;margin:10px 0}
 .tl{border:1px solid var(--line,#dde3e8);border-radius:10px;padding:4px 10px;margin:4px 0 8px}
 .tlh{display:grid;grid-template-columns:1fr 130px 30px;gap:8px;font-size:12px;color:var(--muted,#667);padding:4px 0;border-bottom:1px solid var(--line,#dde3e8)}
-.tlr{display:grid;grid-template-columns:1fr 130px 30px;gap:8px;align-items:center;padding:3px 0;border-bottom:1px solid var(--line,#eef1f4)}.tlr .tlobs{grid-column:1/-1}.pickper{width:100%;margin:0 0 6px;min-height:46px}.rq{border:1px solid var(--line,#ddd);border-radius:8px;padding:8px;margin:0 0 10px}.rq .rqt{font-weight:600;margin:0 0 6px}.rq select{margin:0 0 6px}.anx{display:flex;gap:10px;align-items:flex-start;margin:0 0 10px;padding:8px;border:1px solid var(--line,#ddd);border-radius:8px}.anx img{width:72px;height:96px;object-fit:contain;background:#fff;border:1px solid #ddd;flex:0 0 auto}.anxb{flex:1 1 auto;min-width:0}.percard{border:1px solid var(--line,#dfe5ec);border-radius:10px;padding:8px 10px;margin:8px 0;background:#fbfcfd}.percard>div{margin:4px 0}
+.tlr{display:grid;grid-template-columns:1fr 130px 30px;gap:8px;align-items:center;padding:3px 0;border-bottom:1px solid var(--line,#eef1f4)}.tlr .tlobs{grid-column:1/-1}.pickper{width:100%;margin:0 0 6px;min-height:46px}.rq{border:1px solid var(--line,#ddd);border-radius:8px;padding:8px;margin:0 0 10px}.rq .rqt{font-weight:600;margin:0 0 6px}.rq select{margin:0 0 6px}.anx{display:flex;gap:10px;align-items:flex-start;margin:0 0 10px;padding:8px;border:1px solid var(--line,#ddd);border-radius:8px}.anx img{width:72px;height:96px;object-fit:contain;background:#fff;border:1px solid #ddd;flex:0 0 auto}.anxb{flex:1 1 auto;min-width:0}.row2{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:6px}.row2 select,.row2 input{flex:1 1 180px;min-width:0;width:auto}.row2 label{margin:0}.percard{border:1px solid var(--line,#dfe5ec);border-radius:10px;padding:8px 10px;margin:8px 0;background:#fbfcfd}.percard>div{margin:4px 0}
 @media (min-width:700px){textarea:not(.grow){min-height:150px}textarea.grow:not(.one){min-height:110px}textarea.grow.one{min-height:52px}.tlr input,.tlr .tlobs{min-height:48px}}
 .vunbox{flex-basis:100%;margin-top:16px;padding:12px;border:2px solid #e0a800;border-radius:12px;background:#fff8e6}.vunbox .vunt{font-weight:800;color:#8a5a00;font-size:17px;margin-bottom:4px}
 .tlr.vun input{background:#fffdf3;border:2px solid #e0a800;font-weight:700;color:#5a3d00}
@@ -704,7 +710,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
 <script>
 'use strict';
-const VERSION='0.13.4';
+const VERSION='0.13.5';
 function growFit(t){if(!t||!t.classList?.contains('grow')||!t.offsetParent)return;t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px'}
 function growAll(root){(root||document).querySelectorAll('textarea.grow').forEach(growFit)}
 document.addEventListener('input',e=>growFit(e.target),true);
@@ -836,8 +842,45 @@ async function imgFromFile(file){let cv;if(/pdf$/i.test(file.type)||/\.pdf$/i.te
 /* põe as imagens dos extratos nas grelhas do Word (controlo de imagem mantido, para trocar depois no Word) */
 const plantaFonteTxt=v=>v.plantaFonte==='Outra'?String(v.plantaFonteOutra||'').trim():String(v.plantaFonte||'').trim();
 const plantaCap=v=>{const f=plantaFonteTxt(v);let leg=String(v.plantaLeg||'').trim()||'Configuração da parcela';if(f&&norm(leg)===norm(f))leg='Configuração da parcela';return f?`${leg} - Fonte: ${f}`:leg};
-async function extratosNoDoc(doc,zip,rels,ctDoc,v){let dp=9600;{const leg=plantaCap(v);if(norm(leg)!==norm('Configuração da parcela'))for(const t of bodyEls(doc).filter(e=>e.localName==='tbl')){const r=kids(t,'tr').find(r=>norm(txt(r)).includes('configuração da parcela'));if(r){const pp=Array.from(r.getElementsByTagNameNS(WNS,'p')).find(p=>txt(p).trim());if(pp)setParaText(pp,`- ${leg}`);break}}}
- for(const [lab,k] of [['extrato da carta de ordenamento','pdmOrdImg'],['extrato da carta de condicionantes','pdmCondImg'],[norm(plantaCap(v)),'plantaImg']]){const im=v[k];if(!im||!im.data)continue;
+const IMGF_TIPOS=['Parcela','Parcela no contexto do prédio','Prédio'],IMGF_FONTES=['Planta parcelar','Planta cadastral','Levantamento topográfico','Ortofotomapa','Outra'];
+const imgfFonte=x=>x.fonte==='Outra'?String(x.fonteOutra||'').trim():String(x.fonte||'').trim();
+/* legenda automática: «Parcela 745 - planta parcelar» · «Parcela 745 no contexto do prédio - planta parcelar» · «Prédio da Parcela 745 - planta cadastral» */
+const imgfCap=(v,x)=>{const P=parNome(v.nPar);const t=x.tipo||'Parcela';const base=t==='Prédio'?`Prédio da ${P}`:t==='Parcela no contexto do prédio'?`${P} no contexto do prédio`:P;const fo=imgfFonte(x);return fo?`${base} - ${x.fonte==='Outra'?fo:fo.charAt(0).toLowerCase()+fo.slice(1)}`:base};
+const imgsF=v=>(Array.isArray(v.imgsForn)?v.imgsForn:[]).filter(x=>x&&x.data);
+function migImgsForn(v){if(!Array.isArray(v.imgsForn)){v.imgsForn=[];if(v.plantaImg&&v.plantaImg.data){const fo=v.plantaFonte||'';v.imgsForn.push({...v.plantaImg,id:uid(),tipo:'Parcela',fonte:IMGF_FONTES.includes(fo)?fo:(fo?'Outra':''),fonteOutra:fo&&!IMGF_FONTES.includes(fo)?fo:(v.plantaFonteOutra||'')})}}if(v.plantaImg){v.plantaImg=null}}
+let sdtSeq=0;const sdtId=()=>String(700000000+(Date.now()%100000000)+(++sdtSeq));
+/* ARB / PER / BV: grelha «- Configuração da parcela» passa para logo a seguir à descrição da parcela (6.3), repetida por imagem */
+async function imgsFornNoDoc(doc,zip,rels,ctDoc,v){migImgsForn(v);const L=imgsF(v);
+ const grid=bodyEls(doc).find(e=>e.localName==='tbl'&&kids(e,'tr').length===2&&norm(txt(kids(e,'tr')[0])).includes('configuração da parcela'));if(!grid)return;
+ const isEmptyP=e=>e&&e.nodeType===1&&e.localName==='p'&&!txt(e).trim()&&!e.getElementsByTagNameNS(WNS,'drawing').length&&!e.getElementsByTagNameNS(WNS,'br').length&&!e.getElementsByTagNameNS(WNS,'sectPr').length;
+ let pv=grid.previousSibling;while(pv&&pv.nodeType!==1)pv=pv.previousSibling;const sep=isEmptyP(pv)?pv:null;const sepT=(sep||doc.createElementNS(WNS,'w:p')).cloneNode(true);
+ const tLoc=bodyEls(doc).find(e=>e.localName==='tbl'&&e!==grid&&kids(e,'tr').some(r=>norm(txt(kids(r,'tc')[0]||r)).startsWith('descrição sumária')));
+ let at=null;/* nó antes do qual se inserem as grelhas */
+ if(tLoc){const rs=kids(tLoc,'tr');const k=rs.findIndex(r=>norm(txt(kids(r,'tc')[0]||r)).startsWith('descrição sumária'));
+  if(k>=0&&k<rs.length-1){const t2=tLoc.cloneNode(true);kids(t2,'tr').slice(0,k+1).forEach(r=>t2.removeChild(r));rs.slice(k+1).forEach(r=>tLoc.removeChild(r));tLoc.parentNode.insertBefore(t2,tLoc.nextSibling);at=t2}
+  else{at=tLoc.nextSibling}}
+ if(at){if(sep)sep.parentNode.removeChild(sep);grid.parentNode.removeChild(grid)}
+ const items=L.length?L:[null];const grids=[];
+ for(const [i,x] of items.entries()){const g=i?grid.cloneNode(true):grid;grids.push([g,x])}
+ if(at){for(const [g] of grids){at.parentNode.insertBefore(sepT.cloneNode(true),at);at.parentNode.insertBefore(g,at)}at.parentNode.insertBefore(sepT.cloneNode(true),at)}
+ else{let ref=grid.nextSibling;for(const [g] of grids.slice(1)){grid.parentNode.insertBefore(sepT.cloneNode(true),ref);grid.parentNode.insertBefore(g,ref)}}
+ let dp=9500;for(const [i,[g,x]] of grids.entries()){const rs=kids(g,'tr');for(const pp of rs[0].getElementsByTagNameNS(WNS,'p')){let pr=kids(pp,'pPr')[0];if(!pr){pr=doc.createElementNS(WNS,'w:pPr');pp.insertBefore(pr,pp.firstChild)}if(!kids(pr,'keepNext').length){const kn=doc.createElementNS(WNS,'w:keepNext');const after=kids(pr,'pStyle')[0];pr.insertBefore(kn,after?after.nextSibling:pr.firstChild)}}
+  if(x){const pp=Array.from(rs[0].getElementsByTagNameNS(WNS,'p')).find(p=>txt(p).trim());if(pp)setParaText(pp,`- ${imgfCap(v,x)}`);
+   const dr=rs[1].getElementsByTagNameNS(WNS,'drawing')[0];if(dr){const id=addImagePart(zip,rels,ctDoc,await outBlob(await dataURLToBlob(x.data),'doc'),'jpg');fitDrawing(dr,id,x.w,x.h,++dp)}
+   const ph=rs[1].getElementsByTagNameNS(WNS,'showingPlcHdr')[0];if(ph)ph.parentNode.removeChild(ph)}
+  const al=rs[1].getElementsByTagNameNS(WNS,'alias')[0];if(al)al.setAttributeNS(WNS,'w:val',x?`Imagem fornecida ${i+1}`:'Configuração da parcela');
+  if(i){const sid=rs[1].getElementsByTagNameNS(WNS,'id')[0];if(sid&&sid.parentNode.localName==='sdtPr')sid.setAttributeNS(WNS,'w:val',sdtId());const dpr=rs[1].getElementsByTagNameNS('http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing','docPr')[0];if(dpr&&!x)dpr.setAttribute('id',String(++dp))}}}
+/* VAPRM: imagens no fim de 2.3 (Descrição da parcela), antes de 2.4 */
+async function imgsFornVap(doc,zip,rels,ctDoc,v){migImgsForn(v);const L=imgsF(v);if(!L.length)return;const h=findHeading(doc,'Existência de infraestruturas');if(!h)return;
+ const hD=findHeading(doc,'Descrição da parcela');let pRef=null;if(hD){let e=hD.nextSibling;while(e&&e!==h){if(e.nodeType===1&&e.localName==='p'&&txt(e).trim()){pRef=e;break}e=e.nextSibling}}
+ const pPr=pRef&&kids(pRef,'pPr')[0];const st=pPr&&pPr.getElementsByTagNameNS(WNS,'pStyle')[0];const sty=st?`<w:pStyle w:val="${st.getAttributeNS(WNS,'val')}"/>`:'';
+ const NS='xmlns:w="'+WNS+'" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="'+RNS+'"';
+ const add=xml=>{const n=doc.importNode(new DOMParser().parseFromString(xml,'application/xml').documentElement,true);h.parentNode.insertBefore(n,h)};let dp=9550;
+ for(const [i,x] of L.entries()){add(`<w:p ${NS}><w:pPr>${sty}<w:keepNext/><w:spacing w:before="160" w:after="60"/><w:jc w:val="both"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">${esc('- '+imgfCap(v,x))}</w:t></w:r></w:p>`);
+  const id=addImagePart(zip,rels,ctDoc,await outBlob(await dataURLToBlob(x.data),'doc'),'jpg');const MX=5138420,MY=4631055;let cx=MX,cy=Math.round(MX*x.h/x.w);if(cy>MY){cy=MY;cx=Math.round(MY*x.w/x.h)}dp++;
+  add(`<w:sdt ${NS}><w:sdtPr><w:alias w:val="Imagem"/><w:id w:val="${sdtId()}"/><w:picture/></w:sdtPr><w:sdtContent><w:p><w:pPr><w:spacing w:before="0" w:after="120"/><w:jc w:val="center"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${dp}" name="Imagem fornecida ${i+1}"/><wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="0" name="imagem_${i+1}.jpg"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${id}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p></w:sdtContent></w:sdt>`)}}
+async function extratosNoDoc(doc,zip,rels,ctDoc,v){let dp=9600;await imgsFornNoDoc(doc,zip,rels,ctDoc,v);
+ for(const [lab,k] of [['extrato da carta de ordenamento','pdmOrdImg'],['extrato da carta de condicionantes','pdmCondImg']]){const im=v[k];if(!im||!im.data)continue;
  for(const t of bodyEls(doc).filter(e=>e.localName==='tbl')){const rs=kids(t,'tr');const i=rs.findIndex(r=>norm(txt(r)).includes(lab));if(i<0||!rs[i+1])continue;const dr=rs[i+1].getElementsByTagNameNS(WNS,'drawing')[0];if(!dr)break;
   const id=addImagePart(zip,rels,ctDoc,await outBlob(await dataURLToBlob(im.data),'doc'),'jpg');fitDrawing(dr,id,im.w,im.h,++dp);const ph=rs[i+1].getElementsByTagNameNS(WNS,'showingPlcHdr')[0];if(ph)ph.parentNode.removeChild(ph);break}}}
 function pageTextW(doc){const ss=doc.getElementsByTagNameNS(WNS,'sectPr');const sp=ss[ss.length-1];if(!sp)return 9781;const g=(t,a)=>{const e=sp.getElementsByTagNameNS(WNS,t)[0];return e?+(e.getAttributeNS(WNS,a)||e.getAttribute('w:'+a)||0):0};const w=g('pgSz','w')-g('pgMar','left')-g('pgMar','right');return w>3000?w:9781}
@@ -1296,7 +1339,7 @@ async function buildWordARB(ask=true,pp=null,opt={}){try{await avaFontesCalibri(
   {const pD=findPara(doc,t=>/^data:/.test(norm(t)));if(pD)setParaText(pD,`Data: ${fmtDate(v.acData||hojeISO())}`)}
   acEpigrafe(doc,P,[p]);setRelacaoTxt(doc);
   const pEx=findPara(doc,t=>norm(t)==='(extenso)');if(pEx)setParaText(pEx,`(${lc(c.extenso)})`);
-  if(VAP)fillVAP(doc,v,c,p,P,team);else assinaturas(doc,team);
+  if(VAP){fillVAP(doc,v,c,p,P,team);await imgsFornVap(doc,zip,rels,ctDoc,v)}else assinaturas(doc,team);
   if(opt.raw)return {zip,doc,rels,ctDoc,warns,c,outName,p};
   await fillHeaders(zip,P,p.nome);
   const blob=await finishDocx(zip,doc,rels,ctDoc,outName);
@@ -1765,7 +1808,7 @@ async function pastaFinal(p,files){const P=cur.v;const fs=[...files];const dx=fs
  if(!pd&&!dx){alert('Escolha o Word final e/ou o PDF exportado do Word.');return}
  try{busy(true,'A construir a Pasta final…');const base=relBase(p),pasta=pastaNome(P,p),zip=new JSZip(),root=zip.folder(pasta),docs=root.folder('Documentos'),fot=root.folder('Fotografias');
   if(dx)docs.file(`${base}.docx`,await dx.arrayBuffer(),{compression:'STORE'});if(pd)docs.file(`${base}.pdf`,await pd.arrayBuffer(),{compression:'STORE'});
-  const g=parseGps(p.rel?.v?.gps);if(g)docs.file(`${base}_Localizacao.kml`,kmlContent(g.lat,g.lng,`${P.nref||P.proc||'Processo'} – ${p.nome}`));await anexosNaPasta(root,base,p.rel?.v);for(const [k,n] of [['plantaImg','Configuracao_parcela'],['pdmOrdImg','Extrato_Ordenamento'],['pdmCondImg','Extrato_Condicionantes']]){const im=p.rel?.v?.[k];if(im&&im.data)docs.file(`${base}_${n}.jpg`,await outBlob(await dataURLToBlob(im.data),'doc'),{compression:'STORE'})}
+  const g=parseGps(p.rel?.v?.gps);if(g)docs.file(`${base}_Localizacao.kml`,kmlContent(g.lat,g.lng,`${P.nref||P.proc||'Processo'} – ${p.nome}`));await anexosNaPasta(root,base,p.rel?.v);for(const [k,n] of [['pdmOrdImg','Extrato_Ordenamento'],['pdmCondImg','Extrato_Condicionantes']]){const im=p.rel?.v?.[k];if(im&&im.data)docs.file(`${base}_${n}.jpg`,await outBlob(await dataURLToBlob(im.data),'doc'),{compression:'STORE'})}if(p.rel?.v){migImgsForn(p.rel.v);for(const [i,x] of imgsF(p.rel.v).entries())docs.file(`${base}_Imagem_${String(i+1).padStart(2,'0')}_${winName(imgfCap(p.rel.v,x))}.jpg`,await outBlob(await dataURLToBlob(x.data),'doc'),{compression:'STORE'})}
   const order=[...settings.aspetos,...new Set(relFotos(p).map(f=>f.aspeto||'Geral').filter(a=>!settings.aspetos.includes(a)))];const lines=['Código;Aspeto;Legenda;Ficheiro'];let gi=0;
   for(const a of order){const list=relFotos(p).map((f,i)=>({f,i})).filter(x=>(x.f.aspeto||'Geral')===a);if(!list.length)continue;gi++;const fd=fot.folder(`${pad(gi)}_${safeName(a)}`);
    for(const {f,i} of list){const rec=await get('fotos',f.id);if(!rec?.blob)continue;const fn=`${codePhoto(i,p)}.jpg`;fd.file(fn,await (await outBlob(rec.blob,'foto',f.id+'|'+(f.rev||0))).arrayBuffer(),{compression:'STORE'});lines.push([codePhoto(i,p),a,(f.caption||'').replace(/[;\n\r]+/g,' '),`Fotografias/${pad(gi)}_${safeName(a)}/${fn}`].join(';'))}}
@@ -1777,7 +1820,7 @@ async function exportPastaARB(pp,opt={}){const r=await buildWordARB(!pp,pp,opt);
  try{const base=relBase(p),pasta=pastaNome(P,p),zip=opt.zipInto||new JSZip(),root=zip.folder(pasta),docs=root.folder('Documentos'),fot=root.folder('Fotografias');
   docs.file(r.nome,r.blob,{compression:'STORE'});
   try{const pdf=await avaFxPdfBlob({pronto:{nome:r.nome,blob:r.blob}});docs.file(pdf.nome,pdf.blob,{compression:'STORE'})}catch(e){r.warns.push('A pasta segue sem PDF: '+(e.message||e))}
-  const g=parseGps(p.rel?.v?.gps);if(g)docs.file(`${base}_Localizacao.kml`,kmlContent(g.lat,g.lng,`${P.nref||P.proc||'Processo'} – ${p.nome}`));await anexosNaPasta(root,base,p.rel?.v);for(const [k,n] of [['plantaImg','Configuracao_parcela'],['pdmOrdImg','Extrato_Ordenamento'],['pdmCondImg','Extrato_Condicionantes']]){const im=p.rel?.v?.[k];if(im&&im.data)docs.file(`${base}_${n}.jpg`,await outBlob(await dataURLToBlob(im.data),'doc'),{compression:'STORE'})}
+  const g=parseGps(p.rel?.v?.gps);if(g)docs.file(`${base}_Localizacao.kml`,kmlContent(g.lat,g.lng,`${P.nref||P.proc||'Processo'} – ${p.nome}`));await anexosNaPasta(root,base,p.rel?.v);for(const [k,n] of [['pdmOrdImg','Extrato_Ordenamento'],['pdmCondImg','Extrato_Condicionantes']]){const im=p.rel?.v?.[k];if(im&&im.data)docs.file(`${base}_${n}.jpg`,await outBlob(await dataURLToBlob(im.data),'doc'),{compression:'STORE'})}if(p.rel?.v){migImgsForn(p.rel.v);for(const [i,x] of imgsF(p.rel.v).entries())docs.file(`${base}_Imagem_${String(i+1).padStart(2,'0')}_${winName(imgfCap(p.rel.v,x))}.jpg`,await outBlob(await dataURLToBlob(x.data),'doc'),{compression:'STORE'})}
   busy(true,'A juntar as fotografias…');const order=[...settings.aspetos,...new Set(relFotos(p).map(f=>f.aspeto||'Geral').filter(a=>!settings.aspetos.includes(a)))];
   const lines=['Código;Aspeto;Legenda;Ficheiro'];let gi=0;
   for(const a of order){const list=relFotos(p).map((f,i)=>({f,i})).filter(x=>(x.f.aspeto||'Geral')===a);if(!list.length)continue;gi++;const fd=fot.folder(`${pad(gi)}_${safeName(a)}`);
@@ -1957,13 +2000,10 @@ const ARB_SECTIONS=[
   {id:'consolidacaoOutra',l:'Grau de consolidação edificativa – descrição / complemento',t:'text',h:'Ex.: Há apontamentos de habitação dispersa, a cerca de 200 metros'},
   {id:'gps',l:'Coordenadas GPS',t:'gps',r:1},
   {id:'descParcela',l:'Descrição sumária da parcela',t:'textarea',r:1},
+  {id:'imgsForn',l:'Imagens fornecidas da parcela (planta parcelar, cadastral, levantamento…)',t:'imgsf',h:'Uma ou mais imagens (ou PDF – 1.ª página). Cada uma: o que mostra + a fonte. Legenda automática, ex.: «Parcela 745 - planta parcelar». No Word: a seguir à descrição da parcela, antes das infraestruturas.'},
   {id:'infra',l:'Infraestruturas existentes (servem também o índice fundiário do cap. 8 – Resumo de Avaliação)',t:'multi',rr:1,o:[...IF_ITEMS.slice(1).map(x=>x[1]),'Iluminação pública','Nenhuma','Outros']},
   {id:'infraTxt',l:'Infraestruturas a considerar – descrição',t:'text',h:'Se preenchida, é esta frase que sai no relatório (ex.: Acesso rodoviário pavimentado, contíguo à parcela)'},
-   {id:'plantaImg',l:'Imagem de configuração da parcela (planta parcelar, levantamento topográfico ou outra)',t:'img',h:'Imagem ou PDF (1.ª página). Sai no fim de 6.3, antes da identificação do prédio, na grelha de 14,3 × 12,9 cm (sem limites). Vazio = grelha vazia no Word, para inserir a imagem mais tarde.'},
-   {id:'plantaFonte',l:'Fonte da imagem de configuração',t:'select',o:['','Planta parcelar','Planta cadastral','Levantamento topográfico','Outra'],h:'Sai na legenda: «- Configuração da parcela - Fonte: …».'},
-   {id:'plantaFonteOutra',l:'Fonte da imagem – descrever',t:'text',show:v=>v.plantaFonte==='Outra',h:'Ex.: Ortofotomapa com a implantação da obra fornecido pela entidade expropriante'},
-   {id:'_plFonte',t:'warn',show:v=>!!(v.plantaImg&&v.plantaImg.data)&&!plantaFonteTxt(v),m:v=>'Imagem de configuração carregada sem fonte: indique se é planta parcelar, levantamento topográfico ou outra.'},
-   {id:'plantaLeg',l:'Legenda da imagem de configuração',t:'text',d:'Configuração da parcela',h:'A fonte é acrescentada automaticamente: «… - Fonte: …».'}]},
+   {id:'_plOld',t:'info',show:()=>false}]},
  {id:'ident',t:'2.2 · Prédio – identificação: registo e matriz (→ 6.4)',f:[
   {id:'registo',l:'Registo predial (conservatória, n.º de descrição)',t:'text',r:1,d:'Desconhecido'},
   {id:'artigos',l:'Artigos matriciais (cadernetas prediais)',t:'table',r:1,cols:[{id:'freg',l:'Freguesia',list:'dlFreg'},{id:'art',l:'N.º do artigo'},{id:'desig',l:'Designação'},{id:'area',l:'AT – área de terreno (m²)',num:1},{id:'abp',l:'ABP – área bruta privativa (m²)',num:1},{id:'abd',l:'ABD – área bruta dependente (m²)',num:1},{id:'abc',l:'ABC – área bruta de construção (m²)',num:1}],h:'Áreas conforme definidas no Código do IMI (caderneta predial). Deixe vazio o que não constar da caderneta.'}]},
@@ -2133,7 +2173,7 @@ const VAP_SECTIONS=(()=>{const AF=id=>{const f=ARB_SECTIONS.flatMap(s=>s.f).find
   {id:'p1',t:'1 Processo – elementos facultados (1.5)',f:[{...AF('elementos'),l:'Elementos facultados, nos termos do art.º 21.º do CE',o:VAP_ELEM}].concat(S('elementos').f.filter(f=>f.id!=='elementos'))},
   {id:'ident',t:'1.6 Informação documentada · 1.7 Área',f:[AF('registo'),AF('artigos'),{id:'confrontacoes',l:'Confrontações',t:'textarea',h:'Uma por linha. Ex.: Norte: caminho público · Sul: … · Nascente: … · Poente: …'},AF('areaExp')]},
   {id:'visita',t:'2.1 Data e presenças',f:[{...AF('presOutros'),l:'Presentes na vistoria',h:'Uma linha por pessoa. Quem representa a entidade expropriante sai em «Pela Expropriante» (qualidade ou representação com «Expropriante»); os restantes em «Pelos proprietários e demais interessados».'}]},
-  {id:'vist',t:'2.2 Envolvente · 2.3 Descrição da parcela',f:[{id:'envDesc',l:'Descrição sumária da envolvente',t:'textarea',r:1},AF('descParcela'),AF('gps')]},
+  {id:'vist',t:'2.2 Envolvente · 2.3 Descrição da parcela',f:[{id:'envDesc',l:'Descrição sumária da envolvente',t:'textarea',r:1},AF('descParcela'),AF('gps'),AF('imgsForn')]},
   {id:'infra',t:'2.4 Infraestruturas ou projeto aprovado antes da DUP',f:[{id:'infraVap',l:'Situações elegíveis junto da parcela – assinale as que existem (Sim)',t:'ticklist',dl:'Situação',ql:'Observação',q:'txt',qt:'text',opts:VAP_INFRA,h:'As não assinaladas saem «Não». «+ Outra situação» acrescenta linhas à grelha.'}]},
   {id:'carat',t:'3 Caraterização geral',f:[AF('agVias'),AF('agNat'),{id:'agOrog',l:'Orografia / declive',t:'selecttext',o:['1 – Plano','2 – Suave','3 – Inclinado','4 – Muito inclinado','5 – Escarpado']},AF('agProf'),{...AF('agPedr'),l:'Índice de pedregosidade ou existência de rocha'},
    {id:'sofTipos',l:'Ocupação atual – assinale e indique a área',t:'ticklist',dl:'Ocupação',ql:'Área (m²)',q:'area',opts:SIT73.sof},{id:'ocupTxt',l:'Ocupação atual – descrição (opcional, substitui a lista)',t:'textarea',h:'Ex.: Pinhal bravo não ordenado, de regeneração natural após incêndio; DAP médio de 8 a 15 cm'},
@@ -2205,6 +2245,8 @@ function fieldHTML(f,v,scope){
   return `<div><label>${esc(f.l)}</label><div class="muted">Biblioteca comum a todos os processos (Definições › 1C). Servem para reflexão e análise; só saem no relatório as que assinalar «Incluir no relatório».</div>${L.map(q=>{const x=R[q.id]||{};return `<div class="rq"><div class="rqt">${esc(q.t)}</div><select ${a} data-rqr="${esc(q.id)}">${['','Sim','Não','Não aplicável'].map(o=>`<option ${x.r===o?'selected':''} value="${esc(o)}">${o||'—'}</option>`).join('')}</select><textarea ${a} data-rqd="${esc(q.id)}" placeholder="Fundamentação">${esc(x.d||'')}</textarea><label class="chk" style="margin-top:4px"><input type="checkbox" ${a} data-rqi="${esc(q.id)}" ${x.inc?'checked':''}> Incluir no relatório</label></div>`}).join('')}<div class="btns"><button type="button" class="secondary" ${a} data-rqnew="1">+ Nova questão para a biblioteca</button></div></div>`}
  case 'anexf':{const L=Array.isArray(val)?val:[];const dl=mlist(v.anexosL).filter(o=>o!=='Outros');
   return `<div>${lab}<datalist id="dlAnx">${dl.map(o=>`<option value="${esc(o)}"></option>`).join('')}</datalist>${L.map((x,i)=>`<div class="anx"><img src="${(x.pages&&x.pages[0]&&x.pages[0].data)||''}" alt=""><div class="anxb"><input ${a} data-anxlab="${i}" list="dlAnx" placeholder="Designação (ex.: Planta parcelar)" value="${esc(x.lab||'')}"><div class="muted">${esc(x.nome||'')} · ${(x.pages||[]).length} página(s)</div><div class="imgbtns">${i?`<button type="button" class="secondary" ${a} data-anxup="${i}">↑ Subir</button>`:''}<button type="button" class="secondary" ${a} data-anxrot="${i}">⟳ Rodar 90°</button><button type="button" class="secondary" ${a} data-anxdel="${i}">Remover</button></div></div></div>`).join('')||'<div class="muted">Sem ficheiros carregados.</div>'}<div class="imgbtns"><button type="button" class="secondary" ${a} data-anxpick="1">📎 Carregar anexos (imagem ou PDF)</button><input type="file" multiple accept="image/*,application/pdf" ${a} data-anxfile="1" hidden></div>${hint}</div>`}
+ case 'imgsf':{migImgsForn(v);const L=v.imgsForn;const opt=(o,cv)=>o.map(x=>`<option value="${esc(x)}"${x===cv?' selected':''}>${esc(x||'— escolher —')}</option>`).join('');
+  return `<div style="flex-basis:100%">${lab}${L.map((x,i)=>`<div class="anx"><img src="${x.data||''}" alt=""><div class="anxb"><div class="row2"><label class="muted">Mostra</label><select ${a} data-ifk="tipo" data-ifi="${i}">${opt(IMGF_TIPOS,x.tipo||'Parcela')}</select><label class="muted">Fonte</label><select ${a} data-ifk="fonte" data-ifi="${i}">${opt(['',...IMGF_FONTES],x.fonte||'')}</select>${x.fonte==='Outra'?`<input ${a} data-ifk="fonteOutra" data-ifi="${i}" placeholder="Fonte – descrever (ex.: ortofotomapa da entidade expropriante)" value="${esc(x.fonteOutra||'')}">`:''}</div><div class="${imgfFonte(x)?'muted':'zerobox'}">Legenda: <b>${esc(imgfCap(v,x))}</b>${imgfFonte(x)?'':' — ⚠ falta a fonte'}</div><div class="imgbtns">${i?`<button type="button" class="secondary" ${a} data-ifup="${i}">↑ Subir</button>`:''}<button type="button" class="secondary" ${a} data-ifrot="${i}">⟳ Rodar 90°</button><button type="button" class="secondary" ${a} data-ifdel="${i}">Remover</button></div></div></div>`).join('')||'<div class="muted">Sem imagens carregadas (no Word fica a grelha vazia, para inserir mais tarde).</div>'}<div class="imgbtns"><button type="button" class="secondary" ${a} data-ifpick="1">🖼 Acrescentar imagens (imagem ou PDF)</button><input type="file" multiple accept="image/*,application/pdf" ${a} data-iffile="1" hidden></div>${hint}</div>`}
  case 'img':return `<div>${lab}<div class="imgf">${val&&val.data?`<img src="${val.data}" alt="">`:'<div class="muted">Sem imagem.</div>'}</div><div class="imgbtns"><button type="button" class="secondary" ${a} data-imgpick="1">🖼 ${val&&val.data?'Trocar':'Escolher'} imagem ou PDF</button>${val&&val.data?`<button type="button" class="secondary" ${a} data-imgrot="1">⟳ Rodar 90°</button><button type="button" class="secondary" ${a} data-imgdel="1">Remover</button>`:''}<input type="file" accept="image/*,application/pdf" ${a} data-img="1" hidden></div>${hint}</div>`;
  case 'date':return `<div>${lab}<button type="button" class="datebtn ${val?'':'empty'}" ${a} data-date="1">${val?fmtDate(val):'dd/mm/aaaa'}</button>${hint}</div>`;
  case 'select':return `<div>${lab}<select ${a}>${f.o.map(o=>`<option ${o===val?'selected':''} value="${esc(o)}">${esc(o||'—')}</option>`).join('')}</select>${hint}</div>`;
@@ -2375,7 +2417,7 @@ function migPar747(v){if(v._mig747)return;v._mig747=1;const M={'não sujeito':'N
  ['ran','ren'].forEach(k=>{const x=v[k];const o=x&&typeof x==='object'?x:{s:String(x||''),t:''};const n=M[String(o.s||'').trim().toLowerCase()];if(n)v[k]={s:n,t:o.t||''}});
  const d=v.dominio;if(d!==undefined&&d!==null&&typeof d!=='object'){const a=num(d);v.dominio=a>0?{s:'Parcialmente sujeito',t:m2(a)}:{s:'Não sujeito',t:''}}}
 function migPar787(v){if(v._mig787)return;v._mig787=1;['A','B','C','D'].forEach(L=>{if(v['sac'+L+'s']==='Nada a considerar')v['sac'+L]=''})}
-function migDefaults(v){if(Array.isArray(v.elementos))v.elementos=v.elementos.map(x=>x==='Acórdão arbitral e laudos'?'Laudo e acórdão arbitral':x);
+function migDefaults(v){migImgsForn(v);if(Array.isArray(v.elementos))v.elementos=v.elementos.map(x=>x==='Acórdão arbitral e laudos'?'Laudo e acórdão arbitral':x);
  if(['efe1','efe2','efe3','efe4','efe5','efe6'].some(k=>v[k]!==undefined||v[k+'d']!==undefined)){const R=(v.reflex=v.reflex&&typeof v.reflex==='object'?v.reflex:{});['efe1','efe2','efe3','efe4','efe5','efe6'].forEach(k=>{if(v[k]||v[k+'d'])R[k]={r:v[k]||'',d:v[k+'d']||''};delete v[k];delete v[k+'d']})}
  if(Array.isArray(v.elementos))v.elementos=v.elementos.map(x=>x==='Levantamento topográfico (em substituição da planta parcelar)'?'Levantamento topográfico':x);
  if(!v._map50){delete v.mapMode;v._map50=1}
@@ -2512,6 +2554,12 @@ function bindFields(scope,v,rerender){
   if(el.dataset.anxup){el.onclick=()=>{const L=v[id],i=+el.dataset.anxup;if(!L||!L[i])return;[L[i-1],L[i]]=[L[i],L[i-1]];saveSoon();rerender()};return}
   if(el.dataset.anxrot){el.onclick=async()=>{const x=(v[id]||[])[+el.dataset.anxrot];if(!x)return;busy(true,'A rodar…');try{x.pages=await Promise.all(x.pages.map(rodarImg))}finally{busy(false)}saveSoon();rerender()};return}
   if(el.dataset.anxdel){el.onclick=async()=>{if(await uiConfirm('Remover este anexo?','Remover')){v[id].splice(+el.dataset.anxdel,1);saveSoon();rerender()}};return}
+  if(el.dataset.ifpick){el.onclick=()=>{const i=el.parentNode.querySelector('input[data-iffile]');i.value='';i.click()};return}
+  if(el.dataset.iffile){el.onchange=async()=>{const fs=[...el.files];if(!fs.length)return;migImgsForn(v);const L=v[id];try{for(const [k,fl] of fs.entries()){busy(true,`A preparar a imagem ${k+1} de ${fs.length}…`);const im=await imgFromFile(fl);L.push({...im,id:uid(),tipo:'Parcela',fonte:'',fonteOutra:''})}busy(false);saveSoon();rerender()}catch(e){busy(false);saveSoon();rerender();alert('Não foi possível usar este ficheiro: '+(e.message||e))}};return}
+  if(el.dataset.ifk){const x=(v[id]||[])[+el.dataset.ifi];if(el.tagName==='SELECT'){el.onchange=()=>{if(x){x[el.dataset.ifk]=el.value;saveSoon();rerender()}}}else{el.oninput=()=>{if(x){x[el.dataset.ifk]=el.value;saveSoon()}};el.onchange=()=>rerender()}return}
+  if(el.dataset.ifup){el.onclick=()=>{const L=v[id],i=+el.dataset.ifup;if(!L||!L[i])return;[L[i-1],L[i]]=[L[i],L[i-1]];saveSoon();rerender()};return}
+  if(el.dataset.ifrot){el.onclick=async()=>{const L=v[id],i=+el.dataset.ifrot;if(!L||!L[i])return;busy(true,'A rodar…');try{L[i]={...L[i],...await rodarImg(L[i])}}finally{busy(false)}saveSoon();rerender()};return}
+  if(el.dataset.ifdel){el.onclick=async()=>{if(await uiConfirm('Remover esta imagem?','Remover')){v[id].splice(+el.dataset.ifdel,1);saveSoon();rerender()}};return}
   if(el.dataset.imgpick){el.onclick=()=>{const i=el.parentNode.querySelector('input[data-img]');i.value='';i.click()};return}
   if(el.dataset.imgrot){el.onclick=async()=>{const x=v[id];if(!x||!x.data)return;v[id]=await rodarImg(x);saveSoon();rerender()};return}
   if(el.dataset.imgdel){el.onclick=async()=>{if(await uiConfirm('Remover esta imagem?','Remover')){v[id]=null;saveSoon();rerender()}};return}
@@ -2639,7 +2687,7 @@ async function outBlob(blob,kind='foto',key=''){const T=outTarget(kind);if(!T||!
 const tamCor=mb=>mb>20?'badbox':mb>8?'warnbox':'okbox';const fmtMB=mb=>mb<.1?'< 0,1 MB':`${mb.toFixed(mb<10?1:0).replace('.',',')} MB`;
 async function tamEstimar(pars){const red=(b,k)=>{const t=outTarget(k);return t&&b>t?t*.9:b};let img=0,fot=0,extra=0;
  for(const p of pars){for(const f of relFotos(p)){const r=await get('fotos',f.id);fot+=red(r?.blob?.size||0,'foto')}for(const f of resFotos(p)){const r=await get('fotos',f.id);extra+=red(r?.blob?.size||0,'foto')}
-  const v=p.rel?.v||{};for(const k of ['plantaImg','pdmOrdImg','pdmCondImg']){const im=v[k];if(im&&im.data){const b=red(im.data.length*.75,'doc');img+=b;extra+=b}}
+  const v=p.rel?.v||{};for(const im of [v.pdmOrdImg,v.pdmCondImg,v.plantaImg,...imgsF(v)]){if(im&&im.data){const b=red(im.data.length*.75,'doc');img+=b;extra+=b}}
   for(const x of (Array.isArray(v.anexosF)?v.anexosF:[])){for(const pg of x.pages||[])img+=red((pg.data||'').length*.75,'doc');extra+=(x.src||'').length*.75}}
  const M=1048576,base=.1*M+.35*M*Math.max(1,pars.length),word=(base+img+fot)/M,pdf=word*1.05,pasta=word+pdf+(fot+extra)/M;return {word,pdf,pasta,nF:pars.reduce((n,p)=>n+relFotos(p).length,0)}}
 async function tamRender(pars){const box=document.getElementById('tamPrev');if(!box)return;const sel=`<label>Resolução das imagens nos documentos</label><select id="tamKB">${OUT_KB.map(([k,t])=>`<option value="${k}" ${outKB()===k?'selected':''}>${t}</option>`).join('')}</select>`;
