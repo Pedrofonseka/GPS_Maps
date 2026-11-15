@@ -705,7 +705,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Regi Anomalias =====
-const VERSION='0.16.8';
+const VERSION='0.16.8';const VERSION_DATA='2026-11-15';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -927,7 +927,7 @@ function render(){
   document.title=`Regi Anomalias · ${VERSION}`;
   const p=cur();if(!p&&['proc','anom','rel'].includes(S.view))S.view='home';
   const crumbs=p&&S.view!=='home'&&S.view!=='defs'?`${esc(p.codigo||'(sem código)')}${S.sub==='ficha'&&curA()?' › '+anCode(p,curA()):''}`:'';
-  $('#hdr').innerHTML=`<h1 data-act="go" data-v="home">Regi Anomalias</h1><span class="ver">v${VERSION}</span><div class="crumbs">${crumbs}</div><button class="mini ${S.view==='home'?'on':''}" data-act="go" data-v="home">Processos</button><button class="mini ${S.view==='defs'?'on':''}" data-act="go" data-v="defs">Definições</button><button class="mini" data-act="help" aria-label="Ajuda">?</button>`;
+  $('#hdr').innerHTML=`<h1 data-act="go" data-v="home">Regi Anomalias</h1><span class="ver">v${VERSION} · ${VERSION_DATA.split('-').reverse().join('/')}</span><div class="crumbs">${crumbs}</div><button class="mini ${S.view==='home'?'on':''}" data-act="go" data-v="home">Processos</button><button class="mini ${S.view==='defs'?'on':''}" data-act="go" data-v="defs">Definições</button><button class="mini" data-act="help" aria-label="Ajuda">?</button>`;
   $('#steps').innerHTML=p&&['proc','anom','rel'].includes(S.view)?[['proc','Processo'],['anom','Anomalias'],['rel','Relatório']].map(([v,t])=>`<button class="${S.view===v?'on':''}" data-act="go" data-v="${v}">${t}</button>`).join(''):'';
   $('#steps').style.display=$('#steps').innerHTML?'':'none';
   let html;
@@ -1219,7 +1219,7 @@ function vDefs(){
   ${blk('D · Fotografias')}
   ${sec('dp','Resolução',`<label>Resolução das fotos</label><div class="seg">${[[50,'50 KB'],[150,'150 KB'],[300,'300 KB'],[500,'500 KB']].map(([v,t])=>`<button class="${settings.photoKB==v?'on':''}" data-act="setNum" data-k="photoKB" data-v="${v}">${t}</button>`).join('')}</div><p class="muted">50 mínima · 150 baixa (recomendada) · 300 razoável · 500 média. O número máximo de fotos por assunto escolhe-se em «Grelha e impressão».</p>`)}
   ${blk('E · Cópias de segurança')}${bkBarHTML()}
-  <p class="muted center">Regi Anomalias · v${VERSION}</p>`;
+  <p class="muted center">Regi Anomalias · v${VERSION} · ${VERSION_DATA.split('-').reverse().join('/')}</p>`;
 }
 
 

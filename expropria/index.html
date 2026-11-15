@@ -714,7 +714,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
 <script>
 'use strict';
-const VERSION='0.13.6';
+const VERSION='0.13.6';const VERSION_DATA='2026-11-15';/* data da release: atualizar sempre com VERSION */
 function growFit(t){if(!t||!t.classList?.contains('grow')||!t.offsetParent)return;t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px'}
 function growAll(root){(root||document).querySelectorAll('textarea.grow').forEach(growFit)}
 document.addEventListener('input',e=>growFit(e.target),true);
@@ -2813,7 +2813,7 @@ function renderSettings(M){crumbs();const s=settings;setTimeout(()=>lixoRender()
  <details class="sec" open><summary>5 · Modelos Word</summary><div class="body"><div class="muted">${TPL_FASES.map(f=>`${esc(EVENTOS[f].nome)}: <b>${esc(tplAtivo(f)?.name||'sem modelo')}</b>`).join('<br>')}</div><div class="btns"><button class="secondary" data-tplgo>Gerir modelos ▶</button></div></div></details>
  <details class="sec" open><summary>6 · Cópia de segurança</summary><div class="body"><div class="muted">O Backup OUT guarda processos, parcelas, fotografias e definições num único ficheiro .json. O Backup IN pergunta se acrescenta aos dados atuais ou substitui tudo.</div>${bkBarHTML()}</div></details>
  <details class="sec"><summary>7 · Cópias automáticas (${LIXO_DIAS} dias)</summary><div class="body"><div class="muted">Antes de eliminar um processo, ou de substituir tudo por um backup, a app guarda aqui uma cópia do processo (com as fotografias) durante ${LIXO_DIAS} dias. Pode repô-lo ou apagar a cópia.</div><div id="lixoL"><div class="muted">A carregar…</div></div></div></details>
- <div class="muted">ExPropria ${VERSION} · base de dados ${DB_NAME}</div>`;
+ <div class="muted">ExPropria ${VERSION} (${VERSION_DATA.split('-').reverse().join('/')}) · base de dados ${DB_NAME}</div>`;
  const sv=()=>saveSettings();
  $('#sNome').oninput=e=>{s.peritoNome=e.target.value;sv()};$('#sTit').oninput=e=>{s.peritoTitulo=e.target.value;sv()};
  $$('[data-gab]').forEach(el=>el.oninput=()=>{s.gabinetes[+el.dataset.gab].nome=el.value;sv()});
@@ -3008,7 +3008,7 @@ $('#btnHome').onclick=()=>{view='home';render()};
 $('#parPrev').onclick=()=>parGo(-1);$('#parNext').onclick=()=>parGo(1);
 $$('[data-nav]').forEach(b=>b.onclick=async()=>{clearTimeout(saveT);if(cur)await saveCur();const k=b.dataset.nav;if(k==='parcela'){curParcela=curParcela||parOrdList()[0];if(!curParcela)return;tab='rel'}view=k;render()});
 $('#btnSettings').onclick=()=>{view='settings';render()};$('#btnModelos').onclick=async()=>{clearTimeout(saveT);if(cur)await saveCur();view='modelos';render()};
-(async()=>{$('#appVer').textContent=VERSION;document.title=`ExPropria ${VERSION}`;
+(async()=>{$('#appVer').textContent='v'+VERSION+' · '+VERSION_DATA.split('-').reverse().join('/');document.title=`ExPropria ${VERSION}`;
  try{db=await dbReady();try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist().catch(()=>{})}catch(e){}settings=normSettings(await get('config','settings'));await saveSettings();await tplMigrar();processos=await getAll('processos');try{await lixoLimpa()}catch(e){}
   for(const p of processos){normProc(p);if(p._dirty){delete p._dirty;await put('processos',p)}}}
  catch(e){$('#main').innerHTML=`<div class="badbox">Não foi possível abrir a base de dados: ${esc(e.message)}</div>`;return}

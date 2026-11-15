@@ -12,3 +12,11 @@ Ao melhorar uma rotina numa app, atualizar o ficheiro respetivo e a tabela «Ond
 
 ### Imagens no Word — controlo de conteúdo
 Cada imagem gerada para Word vai dentro de um controlo de conteúdo de imagem (`<w:sdt><w:sdtPr><w:alias w:val="Imagem"/><w:id/><w:picture/></w:sdtPr><w:sdtContent>…run com w:drawing…</w:sdtContent></w:sdt>`), para que no Word um clique sobre a imagem permita trocá-la. Aplicado em: Relat_Anomalias 1.0.0; ExPropria 0.13.6 (passagem final `picSdtAll` antes de gravar: envolve todas as imagens inline sozinhas no parágrafo que ainda não estejam num controlo; id único por controlo).
+
+## Versão e data na régua
+
+Cada app mostra na régua (cabeçalho) a versão **e a data da release**, ex.: `v0.13.6 · 15/11/2026`.
+- No código: `const VERSION='x.y.z';const VERSION_DATA='AAAA-MM-DD';` (no X-Topics: `APP_VER` / `APP_VER_DATA`).
+- Sempre que se muda `VERSION`, muda-se também `VERSION_DATA` para a data do dia da publicação.
+- Mostrar em pt-PT: `VERSION_DATA.split('-').reverse().join('/')`.
+- Aplicado em: ExPropria 0.13.6, Relatório de Peritagem 1.3.2, Regi Anomalias 0.16.8, FullTopics 1.07, Revip 1.02, X-Topics 3.88.0.
