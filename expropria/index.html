@@ -1,5 +1,11 @@
 <!doctype html>
 <!--
+ExPropria v0.13.4 — resumo
+- Separadores: Processo (tijolo) e Parcela (verde) bem distintos; setas ◀ ▶ para passar de parcela em parcela, mantendo o separador.
+- Relatório: a hora da visita deixa de sair (só a data).
+- Nomes dos ficheiros sem espaços nem acentos (ex.: Trib_2645_Proc_…).
+- Novo processo: pergunta quantas parcelas tem e cria logo as fichas, com n.º de ordem interno (1…n); a designação oficial (ex.: P 703) preenche-se em cada parcela. O botão «+ Parcela» mantém-se.
+
 ExPropria v0.13.3 — resumo
 - Fotografias: máximo no relatório por parcela 2·4·6·8·9·10·sem limite (por defeito 6; Definições › 4); as excedentes ficam na reserva.
 - Resolução das imagens nos documentos (Original/300/200/150/100/60 KB) — fotos, plantas, extratos e anexos (estes nunca abaixo de 1600 px no lado maior); tamanho previsto do Word, PDF e Pasta junto aos botões do Relatório.
@@ -630,6 +636,8 @@ table.tb td.tddel{width:36px}
 #nav button{flex:1;background:#fff;color:var(--pri2);border:0;border-bottom:3px solid transparent;border-radius:0;padding:11px 4px;font-weight:600;font-size:14.5px}
 #nav button.on{color:var(--pri);border-bottom-color:var(--pri);background:#f6f8f3}
 #nav button:disabled{color:#b6c0ca}
+#nav .pnav{flex:0 0 40px;font-size:15px;padding:11px 0}#nav [data-nav="proc"].on{color:#8a3b1f;border-bottom-color:#a0522d;background:#fbf0ea}#nav [data-nav="parcela"].on{color:#1e6b34;border-bottom-color:#2e7d32;background:#eef7ee}#nav [data-nav="parcela"]{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1.4}
+h2.hProc{color:#8a3b1f}h2.hPar{color:#1e6b34}body[data-v="proc"] #main{box-shadow:inset 4px 0 0 #a0522d}body[data-v="parcela"] #main{box-shadow:inset 4px 0 0 #2e7d32}.parnav{display:flex;align-items:center;gap:8px;margin:4px 0 6px}.parnav span{flex:1;text-align:center;font-weight:600;font-size:13.5px}
 .relbtns{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:10px 0}
 .relbtns button{padding:16px 8px;font-size:16px;font-weight:700;background:var(--evc);border-color:var(--evc);color:#fff;border-radius:10px}
 .step{font-weight:700;color:var(--pri);margin:16px 0 6px}
@@ -672,7 +680,7 @@ button:not(.tiny):not([data-tldel]):not([data-del]){min-height:44px!important}
   <button class="mini" id="btnModelos">Modelos</button>
   <button class="mini" id="btnSettings">Definições</button>
 </header>
-<nav id="nav" class="hidden"><button data-nav="proc">Processo</button><button data-nav="parcela">Parcela</button><button data-nav="relatorio">Relatório</button></nav>
+<nav id="nav" class="hidden"><button data-nav="proc">📁 Processo</button><button class="pnav" id="parPrev" title="Parcela anterior">◀</button><button data-nav="parcela">📍 Parcela</button><button class="pnav" id="parNext" title="Parcela seguinte">▶</button><button data-nav="relatorio">📄 Relatório</button></nav>
 <main id="main"></main>
 <div id="modal" class="modal hidden"><div class="box" id="modalBox"></div></div>
 <div id="busy" class="hidden"></div>
@@ -696,7 +704,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
 <script>
 'use strict';
-const VERSION='0.13.3';
+const VERSION='0.13.4';
 function growFit(t){if(!t||!t.classList?.contains('grow')||!t.offsetParent)return;t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px'}
 function growAll(root){(root||document).querySelectorAll('textarea.grow').forEach(growFit)}
 document.addEventListener('input',e=>growFit(e.target),true);
@@ -887,7 +895,7 @@ function fillVAP(doc,v,c,p,P,team){
  val('Área a expropriar',`De acordo com a documentação, a área a expropriar / onerar é de ${m2(num(v.areaExp))}.`);
  lst('Proprietários Expropriados','De acordo com a informação processual:',[...parExpd(p).filter(x=>x&&x.nome).map(x=>`- ${x.nome}${x.qual?' – '+x.qual:''}`),...(v.interessados||[]).filter(x=>x&&x.nome).map(x=>`- ${x.nome}${x.dir?' – '+x.dir:''} (outro interessado)`)].concat(parExpd(p).some(x=>x&&x.nome)?[]:['- Desconhecido(s)']));
  {const vs=visOf(p);migPres(v);const rows=(v.presOutros||[]).filter(x=>x&&String(x.nome||'').trim());const isE=x=>/expropriante/i.test(`${x.qual||''} ${x.rep||''}`);const nm=x=>`${x.nome.trim()}${x.qual&&!/expropriante/i.test(x.qual)?' ('+x.qual.trim()+')':''}`;
-  lst('Data e presenças',`Às ${p.horaIni||'[hora]'} horas do dia ${vs&&vs.data?fmtDate(vs.data):'[data]'}, para acompanhamento do perito e reconhecimento das caraterísticas do local, compareceram:`,[`- Pela Expropriante: ${rows.filter(isE).map(nm).join('; ')||'ninguém compareceu'}`,`- Pelos proprietários e demais interessados: ${rows.filter(x=>!isE(x)).map(nm).join('; ')||'ninguém compareceu'}`])}
+  lst('Data e presenças',`No dia ${vs&&vs.data?fmtDate(vs.data):'[data]'}, para acompanhamento do perito e reconhecimento das caraterísticas do local, compareceram:`,[`- Pela Expropriante: ${rows.filter(isE).map(nm).join('; ')||'ninguém compareceu'}`,`- Pelos proprietários e demais interessados: ${rows.filter(x=>!isE(x)).map(nm).join('; ')||'ninguém compareceu'}`])}
  val('Descrição sumária da envolvente',v.envDesc,'[por indicar]');val('Descrição da parcela',v.descParcela,'[por indicar]');
  {const ps=sec('Existência de infraestruturas');const t=ps&&ps.find(e=>e.localName==='tbl');if(t){const rs=kids(t,'tr');const L0=Array.isArray(v.infraVap)&&v.infraVap.length?v.infraVap:VAP_INFRA.map(x=>({tipo:x,on:false}));const L=L0.filter(r=>r&&String(r.tipo||'').trim());
    L.forEach((r,i)=>{const row=rs[0].cloneNode(true);const cs=kids(row,'tc');setCellText(cs[0],`${String.fromCharCode(97+i)}) ${r.tipo.trim()}`);setCellText(cs[1],`${r.on?'Sim':'Não'}${r.on&&String(r.txt||'').trim()?' – '+String(r.txt).trim():''}`);t.insertBefore(row,rs[0])});rs.forEach(remove)}}
@@ -1107,7 +1115,7 @@ async function buildWordARB(ask=true,pp=null,opt={}){try{await avaFontesCalibri(
     const ch=VAP?f.o.filter(o=>o!=='Outros'||sel.includes(o)):f.o.filter(o=>sel.includes(o));(ch.length?ch:[null]).forEach(o=>{const q=tpl.cloneNode(true);setParaText(q,o===null?'Nenhum elemento assinalado.':`${VAP?(sel.includes(o)?'☒':'☐'):'-'} ${o}${o==='Outros'&&v.elemOutros?': '+v.elemOutros:''}`);last.parentNode.insertBefore(q,last.nextSibling);last=q});ps.forEach(remove)}}
   // 4.5
   {const tVis=tblAfter(doc,findHeading(doc,'Visita ao local'))||findTable(doc,'Vistoria ao local');if(tVis){const vs=visOf(p);const pres=(v.presencas||[]).map(i=>nomes[i]||ev.equipa[i]).filter(Boolean);const ol=presLinhas(v);const presT=`${VAP||cur.fase==='BV'?'O perito':cur.fase==='PER'?'Os peritos':'Os árbitros'}: ${pres.join(', ')||'—'}${ol.length?'\nEstiveram ainda presentes:\n'+ol.map(x=>'- '+x).join('\n'):'\nNão compareceram outros intervenientes.'}`;
-   if(rowBy(tVis,'Hora')){setRow(tVis,'Data',vs&&vs.data?fmtDate(vs.data):'');setRow(tVis,'Hora',p.horaIni?`${p.horaIni}${p.horaFim&&p.horaFim!==p.horaIni?' – '+p.horaFim:''}`:'');setRow(tVis,'Presenças',presT)}
+   if(rowBy(tVis,'Hora')){setRow(tVis,'Data',vs&&vs.data?fmtDate(vs.data):'');{const hr=rowBy(tVis,'Hora');if(hr&&hr.parentNode)hr.parentNode.removeChild(hr)}setRow(tVis,'Presenças',presT)}
    else{setRow(tVis,'Vistoria ao local',visTxt(p));setRow(tVis,'Compareceram',presT)}}}
   // 5
   {const hP=hParc(doc);if(hP){const suf=txt(hP).split('–').slice(1).join('–').trim()||'Análise específica';setParaText(hP,`Parcela “${v.nPar||p.nome}” – ${suf}`)}}
@@ -1871,7 +1879,7 @@ const CE25={
  n3:'Art. 25.º, n.º 3 — Considera-se solo para outros fins o que não se encontra em qualquer das situações previstas no número anterior.'};
 /* Dados próprios de cada parcela (comuns a todas as fases) */
 const PAR_SECTION={id:'parcela',t:'Parcela – identificação e interessados',f:[
- {id:'nPar',l:'N.º da parcela (como consta no processo)',t:'text',r:1,h:'Ex.: 235 · 121-A'},
+ {id:'nPar',l:'Designação oficial da parcela (como consta no processo)',t:'text',r:1,h:'Ex.: P 703 · P 1234 · P AS24 · 235 — o n.º 1, 2, 3… da ficha é só de ordem interna'},
  {id:'concelho',l:'Concelho',t:'concelho',r:1},
  {id:'freguesia',l:'Freguesia',t:'freguesia',dep:'concelho',r:1},
  {id:'expropriados',l:'Expropriado(s)',t:'table',r:1,cols:[{id:'nome',l:'Nome'},{id:'qual',l:'Qualidade'}]},
@@ -2235,7 +2243,7 @@ function visOf(p,P=cur){return (P.visitas||[]).find(v=>v.id===p.visitaId)||null}
 function visNova(P=cur,iso=hojeISO()){visNorm(P);const n=[1,2,3,4,5,6,7,8,9].find(k=>!P.visitas.some(x=>x.n===k));if(!n){alert('Limite de visitas atingido.');return null}const v={id:uid(),n,data:iso};P.visitas.push(v);return v}
 /* capa: só a data da visita (a hora fica no quadro da visita, em 6.2) */
 function visData(p,P=cur){const v=visOf(p,P);return v&&v.data?fmtDate(v.data):''}
-function visTxt(p,P=cur){const v=visOf(p,P);if(!v||!v.data)return '';return fmtDate(v.data)+(p.horaIni?`, das ${p.horaIni}${p.horaFim&&p.horaFim!==p.horaIni?` às ${p.horaFim}`:''}`:'')}
+function visTxt(p,P=cur){const v=visOf(p,P);if(!v||!v.data)return '';return fmtDate(v.data)} /* no relatório só sai a data da visita (a hora fica apenas na app) */
 function visRegistoLocal(p){/* foto/GPS no local: liga a parcela à visita de hoje e regista a hora (AVA_Input 2.83) */
  const iso=hojeISO(),h=horaAgora();let v=visOf(p);if(!v){v=(cur.visitas||[]).find(x=>x.data===iso)||visNova(cur,iso);if(!v)return;p.visitaId=v.id}
  if(v.data!==iso)return;if(!p.horaIni)p.horaIni=h;if(!p.horaFim||(p.fimAuto&&h>p.horaFim)){p.horaFim=h;p.fimAuto=1}}
@@ -2249,7 +2257,11 @@ function refInfo(p){const P=cur.v,own=p?.rel?.v?.dataRef;const sel=x=>String(stv
 const refFrase=p=>{const r=refInfo(p),d=r.d?fmtDate(r.d):'[data por indicar]';if(r.dup)return `${d} - DUP`;if(r.par)return d;return `${d} – ${r.txt||'[documento por indicar]'}`};
 function parDate(p,k,P=cur){const x=p.rel?.v?.[k]||P.v[k]||'';return x==='NA'||x==='NE'?'':x}
 const isDate=x=>!!x&&x!=='NA'&&x!=='NE';
-const parNome=n=>String(n||'').trim()?`Parcela ${String(n).trim()}`:'Parcela (n.º por definir)';
+const parNome=(n,ord)=>{const t=String(n||'').trim();if(t)return /^P\s?[0-9A-Z]/i.test(t)&&!/^parcela/i.test(t)?t:`Parcela ${t}`;return ord?`Parcela ${ord} (designação por definir)`:'Parcela (designação por definir)'};
+/* parcelas pela ordem interna (1…n): é a ordem das setas de navegação */
+const parOrdList=()=>{(cur?.parcelas||[]).forEach((p,i)=>{if(!p.ord)p.ord=i+1});return (cur?.parcelas||[]).slice().sort((a,b)=>(a.ord||0)-(b.ord||0))};
+function mkParcela(ord,nPar=''){const last=cur.parcelas.at(-1);const p={id:uid(),ord,nome:parNome(nPar,ord),fotos:[],rel:{tipo:cur.fase,v:{nPar:String(nPar||'').trim(),expropriados:[],interessados:[],concelho:last?.rel?.v?.concelho||'',freguesia:last?.rel?.v?.freguesia||''}}};defaults(allArbFields(),p.rel.v);return p}
+async function parGo(d){const L=parOrdList();if(!L.length)return;clearTimeout(saveT);await saveCur();let i=curParcela&&view==='parcela'?L.indexOf(curParcela):-1;let j=i<0?(d<0?L.length-1:0):i+d;if(j<0||j>=L.length)return;curParcela=L[j];if(view!=='parcela'){view='parcela';tab='rel'}render()}
 const parSortKey=p=>{const m=String(p.rel?.v?.nPar||'').match(/\d+/);return m?+m[0]:1e9};
 function parInfoHTML(p){visNorm();const v=visOf(p),vs=cur.visitas.slice().sort((a,b)=>a.n-b.n),own=Array.isArray(p.expropriados);
  const opts=vs.map(x=>`<option value="${x.id}" ${v&&v.id===x.id?'selected':''}>V${x.n}${x.data?' · '+fmtDate(x.data):''}</option>`).join('');
@@ -2408,7 +2420,7 @@ function migProc(p){(p.parcelas||[]).forEach(x=>x.rel?.v&&(migPar711(x.rel.v),mi
  if(!v.drPub&&(v.drN||v.pubDup)){v.drPub=v.drN?`Diário da República n.º ${v.drN}, ${v.drSerie||'2.ª'} série${v.drData?', de '+fmtDate(v.drData):''}`:v.pubDup}
  ['drN','drSerie','drData'].forEach(k=>delete v[k])}
 function navState(){const n=$('#nav');if(!n)return;n.classList.toggle('hidden',!cur||view==='settings'||view==='home');if(!cur)return;
- const pb=n.querySelector('[data-nav="parcela"]');const pp=curParcela||cur.parcelas.slice().sort((a,b)=>parSortKey(a)-parSortKey(b))[0];pb.textContent=pp?pp.nome:'Parcela';pb.disabled=!pp;
+ const pb=n.querySelector('[data-nav="parcela"]');const L=parOrdList(),pp=curParcela||L[0];const ix=pp?L.indexOf(pp)+1:0;pb.textContent=pp?`📍 ${pp.nome.replace(/ \(designação por definir\)$/,'')} · ${ix}/${L.length}`:'📍 Parcela';pb.disabled=!pp;const inP=view==='parcela'&&curParcela;$('#parPrev').disabled=!L.length||(inP&&ix<=1);$('#parNext').disabled=!L.length||(inP&&ix>=L.length);document.body.dataset.v=view;
  n.querySelectorAll('[data-nav]').forEach(b=>b.classList.toggle('on',b.dataset.nav===view));
  const h=document.querySelector('header');if(h)document.documentElement.style.setProperty('--hh',h.offsetHeight+'px')}
 async function render(){if(cur){migProc(cur);migProc713(cur)}crumbs();bkPill();navState();const M=$('#main');const vk=view+'|'+(cur?.id||'')+'|'+(curParcela?.id||'');if(vk!==lastViewKey){lastViewKey=vk;setTimeout(()=>window.scrollTo(0,0),0)}
@@ -2422,11 +2434,11 @@ function renderHome(M){view='home';cur=null;curParcela=null;crumbs();
  const list=processos.slice().sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''));
  M.innerHTML=`<h2>Processos (${list.length})</h2>${list.length?'':`<div class="card" style="border:2px solid #e0a800;background:#fff8e1"><b>Sem processos nesta cópia da aplicação.</b><br>Os dados ficam guardados no navegador, ligados ao ficheiro que se abre: uma versão nova aberta como outro ficheiro (por exemplo, pela app Ficheiros do iPhone) começa vazia. Para trazer os seus processos: abra a versão anterior, faça «Exportar backup» e importe-o aqui.<div class="btns" style="margin-top:8px"><button class="green" id="impVazio">⬆ Importar backup</button></div></div>`}${bkBarHTML()}<div class="btns"><button class="green" id="newProc">+ Novo processo</button><button class="secondary" id="impHome">⬆ Importar processo / parcela</button></div><div class="list">${list.map(p=>`<div class="card" data-open="${p.id}"><span class="pill evpill ev-${p.fase}">${esc(EVENTOS[p.fase]?.nome||'')}</span><br><b>${esc(p.v.nref||'(sem N_Ref)')}</b> · ${esc(p.v.proc||'')}<div class="muted">${esc(p.v.intervencao||'')}${p.v.tag?` <span class="pill">🏷 ${esc(p.v.tag)}</span>`:''}</div><div>${(p.parcelas||[]).map(x=>`<span class="pill">${esc(x.nome)}</span>`).join('')||'<span class="muted">Sem parcelas</span>'}</div></div>`).join('')||'<div class="muted">Ainda não há processos.</div>'}</div>`;
  bindBkBar();$('#impHome').onclick=()=>pickIO('home');if($('#impVazio'))$('#impVazio').onclick=()=>pickIO('home');
- $('#newProc').onclick=()=>chooseFase(null,async k=>{const p={id:uid(),createdAt:stamp(),updatedAt:stamp(),fase:k,equipa:[],v:{},parcelas:[]};faseDefaults(p);defaults(PROC_FIELDS,p.v);processos.push(p);cur=p;await saveCur();view='proc';render()});
+ $('#newProc').onclick=()=>chooseFase(null,async k=>{const p={id:uid(),createdAt:stamp(),updatedAt:stamp(),fase:k,equipa:[],v:{},parcelas:[]};faseDefaults(p);defaults(PROC_FIELDS,p.v);processos.push(p);cur=p;const q=await uiPrompt('Quantas parcelas tem este processo? As fichas são criadas já, numeradas 1, 2, 3… (n.º de ordem interno). A designação oficial de cada uma (ex.: P 703) preenche-se depois na própria parcela. Pode sempre acrescentar mais com «+ Parcela».','1');const nq=Math.max(0,Math.min(200,parseInt(q,10)||0));for(let i=1;i<=nq;i++)cur.parcelas.push(mkParcela(i));await saveCur();view='proc';render()});
  $$('[data-open]').forEach(el=>el.onclick=()=>{cur=processos.find(p=>p.id===el.dataset.open);view='proc';render()})}
 function renderProc(M){curParcela=null;crumbs();const v=cur.v;const req=PROC_FIELDS.filter(f=>f.r&&(!f.show||f.show(v))&&isEmpty(v[f.id])).length;
  const ev=EVENTOS[cur.fase];const teamReq=(cur.equipa||[]).filter(m=>m&&m.nome).length<ev.equipa.length||(FASE_REL(cur.fase)&&!cur.relacao);
- M.innerHTML=`<h2>Processo</h2>
+ M.innerHTML=`<h2 class="hProc">📁 Processo <span class="muted" style="font-size:14px;font-weight:600">— dados comuns a todas as parcelas</span></h2>
  <div class="blk">A · Caracterização geral do processo<small>Fase, dados e datas do processo, entidade expropriante, equipa e regras comuns a todas as parcelas</small></div>
  <div class="fasebox ev-${cur.fase}"><div class="faselab">1 · Fase do processo (contexto)</div><div class="fasename">${esc(ev.nome)}</div><div class="muted">${esc(ev.ref)} · ${ev.equipa.length} ${ev.equipa.length>1?'peritos':'perito'} · ${ev.modelo?'✓ modelo disponível':'modelo em estabilização'}</div><button class="secondary mini" id="chgFase">Alterar fase</button></div>
  <details class="sec" open><summary>2 · Dados do processo<span class="pill ${req?'warn':'ok'} cnt">${req?req+' por preencher':'✓'}</span></summary><div class="body"><div class="row">${PROC_FIELDS.map(f=>fieldHTML(f,v,'proc')).join('')}</div></div></details>
@@ -2441,7 +2453,7 @@ function renderProc(M){curParcela=null;crumbs();const v=cur.v;const req=PROC_FIE
  $$('[data-grp]').forEach(el=>el.onchange=()=>{cur.layout=cur.layout||{};const S=new Set(Array.isArray(cur.layout.grupo)?cur.layout.grupo:cur.parcelas.map(p=>p.id));el.checked?S.add(el.dataset.grp):S.delete(el.dataset.grp);cur.layout.grupo=cur.parcelas.map(p=>p.id).filter(id=>S.has(id));saveSoon()});
  $('#goRelP')&&($('#goRelP').onclick=async()=>{clearTimeout(saveT);await saveCur();view='relatorio';render()});$$('[data-lay]').forEach(el=>el.onchange=()=>{cur.layout=cur.layout||{};cur.layout[el.dataset.lay]=el.value;saveSoon();render()});
  $('#chgFase').onclick=()=>chooseFase(cur.fase,async k=>{if(k===cur.fase)return;if(!await uiConfirm(`Mudar a fase do processo para «${EVENTOS[k].nome}»? Os dados já introduzidos mantêm-se guardados; a equipa passa a ter ${EVENTOS[k].equipa.length} elemento(s).`))return;cur.fase=k;faseDefaults(cur);cur.parcelas.forEach(p=>p.rel.tipo=k);await saveCur();render()});
- $('#newPar').onclick=async()=>{const n=await uiPrompt('N.º da parcela, como consta no processo (ex.: 235):','');if(n===null)return;if(n.trim()&&cur.parcelas.some(x=>String(x.rel?.v?.nPar||'').trim()===n.trim())&&!await uiConfirm(`Já existe a parcela ${n.trim()} neste processo. Criar outra com o mesmo número?`))return;const p={id:uid(),nome:parNome(n),fotos:[],rel:{tipo:cur.fase,v:{nPar:n.trim(),expropriados:[],interessados:[],concelho:cur.parcelas.at(-1)?.rel?.v?.concelho||'',freguesia:cur.parcelas.at(-1)?.rel?.v?.freguesia||''}}};defaults(allArbFields(),p.rel.v);cur.parcelas.push(p);await saveCur();curParcela=p;view='parcela';tab='rel';render()};
+ $('#newPar').onclick=async()=>{const n=await uiPrompt('Designação oficial da nova parcela, como consta no processo (ex.: P 703). Pode deixar vazio e preencher depois:','');if(n===null)return;if(n.trim()&&cur.parcelas.some(x=>String(x.rel?.v?.nPar||'').trim()===n.trim())&&!await uiConfirm(`Já existe a parcela ${n.trim()} neste processo. Criar outra com a mesma designação?`))return;const p=mkParcela(Math.max(0,...parOrdList().map(x=>x.ord||0))+1,n);cur.parcelas.push(p);await saveCur();curParcela=p;view='parcela';tab='rel';render()};
  $$('[data-par]').forEach(el=>el.onclick=()=>{curParcela=cur.parcelas.find(p=>p.id===el.dataset.par);view='parcela';tab='rel';render()});
  $('#expProc').onclick=exportProcesso;$('#impPar').onclick=()=>pickIO('proc');
  $('#delProc').onclick=async()=>{if(!await uiConfirm(`Eliminar o processo «${v.nref||v.proc||''}» e todas as suas parcelas e fotografias?\n\nFica uma cópia automática durante ${LIXO_DIAS} dias (Definições › 7), para o poder repor.`))return;clearTimeout(saveT);await saveCur();await lixoAdd([cur],'Processo eliminado');await del('processos',cur.id);processos=processos.filter(x=>x.id!==cur.id);cur=null;view='home';render()}}
@@ -2459,7 +2471,7 @@ function renderParcela(M){const p=curParcela,r=p.rel;crumbs();r.tipo=cur.fase;co
   else body=`<div class="warnbox">O modelo de <b>${esc(ev.nome)}</b> está em estabilização. Os campos próprios desta fase entram numa próxima versão; as fotografias já podem ser registadas (a equipa${cur.fase==='PER'?' e os mandatários':''} define-se no processo).</div>`}
  if(tab==='rel')body=`<datalist id="dlFreg">${fregOf(r.v.concelho).map(o=>`<option value="${esc(o)}"></option>`).join('')}</datalist>`+sectionHTML(PAR_SECTION,r.v,'rel',true)+parInfoHTML(p)+body;
  else body=photosHTML();
- M.innerHTML=`<h2 id="parH">${esc(p.nome)}</h2><div class="blk" style="margin-top:6px">B · Análise da parcela<small>Processo ${esc(cur.v.proc||cur.v.nref||'')} — os dados abaixo são próprios desta parcela; os gerais estão no processo (bloco A)</small></div>
+ M.innerHTML=`<h2 id="parH" class="hPar">📍 ${esc(p.nome)}</h2><div class="parnav"><button class="secondary mini" id="pPrev" ${parOrdList().indexOf(p)>0?'':'disabled'}>◀ Anterior</button><span>Parcela ${parOrdList().indexOf(p)+1} de ${cur.parcelas.length} <span class="muted">(n.º interno)</span></span><button class="secondary mini" id="pNext" ${parOrdList().indexOf(p)<cur.parcelas.length-1?'':'disabled'}>Seguinte ▶</button></div><div class="blk" style="margin-top:6px">B · Dados da parcela<small>Processo ${esc(cur.v.proc||cur.v.nref||'')} — os dados abaixo são próprios desta parcela; os gerais estão no processo (bloco A)</small></div>
  <div style="margin:8px 0"><span class="fasepill ev-${cur.fase}" style="background:var(--evc)">Fase: ${esc(ev.nome)}</span> <span class="muted">(definida no processo)</span></div>
 ${ev.modelo&&cur.fase!=='VAPRM'?'<div id="totBar"></div>':''}<div class="tabs"><button data-tab="rel" class="${tab==='rel'?'on':''}">Dados</button><button data-tab="fotos" class="${tab==='fotos'?'on':''}">📷 Fotografias ${relFotos(p).length}${maxF()?'/'+maxF():''}${resFotos(p).length?' +'+resFotos(p).length:''}</button></div>${tab==='rel'?`<button type="button" class="fotoLink" data-tab="fotos">📷 <b>Fotografias da parcela</b> — ${relFotos(p).length}${maxF()?` de ${maxF()}`:''} no relatório${resFotos(p).length?` · ${resFotos(p).length} em reserva`:''}<span>Carregar / editar ›</span></button>`:''}${body}
  <div class="btns" style="margin-top:24px"><button class="secondary" id="backProc">◀ Processo</button>${ev.modelo?`<button id="goRel">Gerar relatório ▶</button>`:''}${cur.parcelas.length>1?'<button class="secondary" id="copyPar">⧉ Copiar dados de outra parcela</button>':''}<button class="secondary" id="expPar">⬇ Exportar parcela</button><button class="del" id="delPar">Eliminar parcela</button></div>`;
@@ -2472,9 +2484,10 @@ ${ev.modelo&&cur.fase!=='VAPRM'?'<div id="totBar"></div>':''}<div class="tabs"><
  $('#backProc').onclick=()=>{view='proc';render()};$('#goRel')&&($('#goRel').onclick=async()=>{clearTimeout(saveT);await saveCur();view='relatorio';render()});
  $('#expPar').onclick=()=>exportParcela(p);
  $('#delPar').onclick=async()=>{if(!await uiConfirm(`Eliminar «${p.nome}» e as suas fotografias?`))return;for(const f of (p.fotos||[]))await del('fotos',f.id);cur.parcelas=cur.parcelas.filter(x=>x!==p);await saveCur();view='proc';render()};
- if(tab==='rel'){
+ $('#pPrev')&&($('#pPrev').onclick=()=>parGo(-1));$('#pNext')&&($('#pNext').onclick=()=>parGo(1));
+  if(tab==='rel'){
   bindParInfo(p);bindFields('rel',r.v,()=>render());
-  {const el=$('[data-scope="rel"][data-f="nPar"]');if(el){const o=el.oninput;el.oninput=e=>{o&&o(e);p.nome=parNome(r.v.nPar);$('#parH').textContent=p.nome;crumbs()}}}
+  {const el=$('[data-scope="rel"][data-f="nPar"]');if(el){const o=el.oninput;el.oninput=e=>{o&&o(e);p.nome=parNome(r.v.nPar,p.ord);$('#parH').textContent='📍 '+p.nome;crumbs();navState()}}}
   if(EVENTOS[cur.fase].modelo)bindGps(r.v)
   $('#showPend')&&($('#showPend').onclick=e=>{e.preventDefault();$('#pendList').classList.toggle('hidden')});
   $('#openAll')&&($('#openAll').onclick=()=>$$('details.sec').forEach(d=>d.open=true));
@@ -2572,7 +2585,8 @@ async function gpsObterAuto(v){const st=$('#gpsStatus'),btn=$('#gpsAuto');const 
 function kmlContent(lat,lng,name){return `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><Placemark><name>${esc(name)}</name><Point><coordinates>${lng},${lat},0</coordinates></Point></Placemark></Document></kml>`}
 /* Nomes de ficheiro compatíveis com o Windows: < > : " / \ | ? * e carateres de controlo passam a «_»;
    sem ponto / espaço no fim; nomes reservados (CON, PRN, AUX, NUL, COM1…9, LPT1…9) levam «_» no início */
-const winName=s=>{let x=String(s||'').replace(/[<>:"\/\\|?*\u0000-\u001F]/g,'_').replace(/\s+/g,' ').trim().replace(/[. ]+$/,'');if(/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.|$)/i.test(x))x='_'+x;return x};
+/* nomes de ficheiros: sem espaços, acentos nem carateres proibidos (biblioteca de regras) */
+const winName=s=>{let x=String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z0-9._-]+/g,'_').replace(/_+/g,'_').replace(/^[_.]+|[_.]+$/g,'');if(/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.|$)/i.test(x))x='_'+x;return x};
 /* Tribunais da Relação (Portugal: Coimbra, Évora, Guimarães, Lisboa, Porto) – por defeito o de Coimbra */
 const RELACOES=['Tribunal da Relação de Coimbra','Tribunal da Relação de Évora','Tribunal da Relação de Guimarães','Tribunal da Relação de Lisboa','Tribunal da Relação do Porto'];
 const relFull=x=>{const t=String(x||'').trim();if(!t)return RELACOES[0];if(/^tribunal/i.test(t))return t;const f=RELACOES.find(r=>r.toLowerCase().endsWith(' '+t.toLowerCase()));return f||('Tribunal da Relação de '+t)};
@@ -2584,7 +2598,7 @@ const relNum=v=>{const t=String(v?.relN||'').trim();const d=t.match(/\d+/);retur
 const relVer=v=>{const L=(v?.versoes||[]).filter(x=>x&&String(x.ver||'').trim());if(!L.length)return 'V01';const t=String(L[L.length-1].ver).trim();if(/final/i.test(t))return 'Final';const d=t.match(/\d+/);return d?'V'+String(+d[0]).padStart(2,'0'):t};
 /* [N_Ref]_Proc_[processo]-Exp_[fase]_[parcela]_Relatorio_[n.º]_[versão]
    ex.: Trib 2645_Proc_213_26_5_T8LSA-Exp_Arbitragem_P1_Relatorio_01_V02 (no processo só letras, algarismos e «_») */
-const procFich=x=>String(x||'').normalize('NFC').replace(/[^0-9A-Za-zÀ-ÿ]+/g,'_').replace(/^_+|_+$/g,'');
+const procFich=x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^0-9A-Za-z]+/g,'_').replace(/^_+|_+$/g,'');
 const relBase=(pars,P=cur.v,fase=cur.fase,ver='')=>{const ps=Array.isArray(pars)?pars:[pars];const tag=ps.length>1?'P'+ps.map(p=>parTag(p).replace(/^P(?=\d)/,'')).join('-'):parTag(ps[0]);
  const pr=procFich(P.proc);const cab=[winName(P.nref),pr?'Proc_'+pr:''].filter(Boolean).join('_');
  return [cab?cab+'-Exp':'Exp',winName(FASE_FICH[fase]||fase),winName(tag),'Relatorio',relNum(ps[0]?.rel?.v),ver||relVer(ps[0]?.rel?.v)].filter(Boolean).join('_').slice(0,180)};
@@ -2929,7 +2943,8 @@ function renderModelos(M){curParcela=null;cur=null;crumbs();navState();
  $$('[data-tplrad]').forEach(el=>el.onchange=async()=>{tplCfg(el.dataset.tplrad).ativo=el.value;await saveSettings()});bindTpl()}
 /* ---------- Arranque ---------- */
 $('#btnHome').onclick=()=>{view='home';render()};
-$$('[data-nav]').forEach(b=>b.onclick=async()=>{clearTimeout(saveT);if(cur)await saveCur();const k=b.dataset.nav;if(k==='parcela'){curParcela=curParcela||cur.parcelas.slice().sort((a,b)=>parSortKey(a)-parSortKey(b))[0];if(!curParcela)return;tab='rel'}view=k;render()});
+$('#parPrev').onclick=()=>parGo(-1);$('#parNext').onclick=()=>parGo(1);
+$$('[data-nav]').forEach(b=>b.onclick=async()=>{clearTimeout(saveT);if(cur)await saveCur();const k=b.dataset.nav;if(k==='parcela'){curParcela=curParcela||parOrdList()[0];if(!curParcela)return;tab='rel'}view=k;render()});
 $('#btnSettings').onclick=()=>{view='settings';render()};$('#btnModelos').onclick=async()=>{clearTimeout(saveT);if(cur)await saveCur();view='modelos';render()};
 (async()=>{$('#appVer').textContent=VERSION;document.title=`ExPropria ${VERSION}`;
  try{db=await dbReady();try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist().catch(()=>{})}catch(e){}settings=normSettings(await get('config','settings'));await saveSettings();await tplMigrar();processos=await getAll('processos');try{await lixoLimpa()}catch(e){}
