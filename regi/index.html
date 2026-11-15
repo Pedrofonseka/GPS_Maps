@@ -705,17 +705,18 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Regi Anomalias =====
-const VERSION='0.16.6';
-const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'}];
+const VERSION='0.16.7';
+const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
+const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
 const parteNome=(p,n)=>(p.partes||[]).find(x=>x.n==n)?.nome||'';
 const zonaTxt=a=>[a.zona,a.piso,a.local].filter(Boolean).filter((v,i,r)=>r.indexOf(v)===i).join(' · ');
-const anCode=(p,a)=>`${parteOf(p,a)}.${String(numOf(p,a)).padStart(3,'0')}`;
+const anCode=(p,a)=>`${parteSig(p,parteOf(p,a))}.${String(numOf(p,a)).padStart(3,'0')}`;
 const imgCode=(p,a,i)=>`IMG ${anCode(p,a)}.${i+1}`;
 const DB_NAME='RegiAnomalias_DB';
 const DEF_CATALOG=['Humidade', 'Infiltrações', 'Impermeabilizações', 'Fissuração', 'Desgaste', 'Desagregação', 'Por concluir', 'Fratura', 'Riscado', 'Picado', 'Erro de medidas', 'Erro de geometria', 'Condensações', 'Bolores', 'Eflorescências', 'Corrosão', 'Destacamento', 'Deformação', 'Assentamento', 'Falta de estanquidade', 'Mau funcionamento', 'Vetustez'];
 const DEF_FIELDS=[
-  {id:'conf',label:'Status',type:'choice',opts:[['NID','Situação não identificada'],['CFM','Confirmado'],['NCF','Não confirmado'],['RES','Resolvido'],['EEX','Em execução'],['STB','Em stand-by'],['APR','Aparentemente resolvido']],on:true,print:true},
+  {id:'conf',label:'Status',type:'choice',opts:[['NID','Situação não identificada'],['CFM','Confirmado'],['NCF','Não confirmado'],['RES','Resolvido'],['NIN','Não iniciado'],['ECU','Em curso'],['STB','Em stand-by'],['APR','Aparentemente resolvido']],on:true,print:true},
   {id:'tipo',label:'Tipo de anomalia',type:'catalog',on:true,print:true},
   {id:'estado',label:'Evolução de estado',type:'choice',opts:[['Ativo','Ativo'],['Desconhecido','Desconhecido']],on:true,print:true},
   {id:'cons',label:'Gravidade',type:'multi',opts:[['1-ENR','Estético não relevante'],['2-EPR','Estético pouco relevante'],['3-ERV','Estético relevante'],['6-FNR','Funcional não relevante'],['7-FPR','Funcional pouco relevante'],['8-FRV','Funcional relevante'],['OUT','Outras']],free:'OUT',excl:true,on:true,print:true},
@@ -846,6 +847,7 @@ function migrateSettings(s){
     s.fields=s.fields.filter(f=>!['prej','cEst','cFun','cons'].includes(f.id));
     const at=k>=0?k:(s.fields.findIndex(f=>f.id==='estado')+1||s.fields.length);s.fields.splice(at,0,nf);
     s.removed=(s.removed||[]).filter(x=>x!=='cons');s.mig062=s.mig061=true}
+  if(!s.mig0167){const c=s.fields.find(f=>f.id==='conf');if(c&&Array.isArray(c.opts)){c.opts=c.opts.filter(o=>o[0]!=='EEX');const ks=c.opts.map(o=>o[0]);const at=ks.indexOf('STB');const add=[['NIN','Não iniciado'],['ECU','Em curso']].filter(o=>!ks.includes(o[0]));c.opts.splice(at>=0?at:c.opts.length,0,...add)}s.mig0167=true;s.mig0163=true;s.mig0165=true}
   if(!s.mig0165){const c=s.fields.find(f=>f.id==='conf');if(c&&Array.isArray(c.opts)&&!c.opts.some(o=>o[0]==='NCF')){const at=c.opts.findIndex(o=>o[0]==='CFM');c.opts.splice(at>=0?at+1:c.opts.length,0,['NCF','Não confirmado'])}s.mig0165=true}
   if(!s.mig0163){const c=s.fields.find(f=>f.id==='conf');if(c&&Array.isArray(c.opts)){const ks=c.opts.map(o=>o[0]);const add=[['EEX','Em execução'],['STB','Em stand-by']].filter(o=>!ks.includes(o[0]));if(add.length){const at=ks.indexOf('RES');c.opts.splice(at>=0?at+1:c.opts.length,0,...add)}}s.mig0163=true}
   if(!s.mig060){const c=s.fields.find(f=>f.id==='conf');if(c&&c.opts&&c.opts.map(o=>o[0]).join()==='CON,NID'){c.opts=clone(DEF_FIELDS[0].opts);if(c.label==='Confirmação')c.label='Status'}if(s.maxFotos===4)s.maxFotos=9;s.mig060=true}
@@ -976,10 +978,10 @@ function vProc(){
   ${sec('p2','2 · Vistoria',`<label>Data da vistoria</label><div class="inrow"><input data-bind="vis.data" value="${esc(v.data)}" placeholder="dd/mm/aaaa"><button class="secondary" data-act="visCal">📅</button></div>
     ${txt('vis.presencas','Presenças (nome – qualidade)',v.presencas,3)}${gpsBlock(p)}`,{cnt:falta(f2)})}
   ${blk('B · Pronúncia','O que vai ser apreciado em cada anomalia')}
-  ${sec('p6','Partes — prefixo da numeração',`<p class="muted">Cada pergunta ou situação é numerada pela parte que a coloca: <b>1.001, 1.002…</b> (parte 1), <b>2.001…</b> (parte 2), etc.</p>
+  ${sec('p6','Partes — prefixo da numeração',`<p class="muted">Cada pergunta ou situação é numerada pela sigla da parte que a coloca: <b>A.001</b> Autor · <b>R.001</b> Réu · <b>T.001</b> Tribunal · <b>S.001</b> Solicitante · <b>P.001</b> Perito (constatadas no local). A sigla vem da 1.ª letra do nome da parte; o número à esquerda só define a ordem.</p>
     <div class="rows">${p.partes.map((x,i)=>`<div class="rw"><input data-pn="${i}" value="${x.n}" inputmode="numeric" style="max-width:56px;text-align:center;font-weight:700"><input data-pnome="${i}" value="${esc(x.nome)}" placeholder="Nome da parte"><span class="muted" style="white-space:nowrap">${p.anomalias.filter(a=>parteOf(p,a)==x.n).length}</span><button class="del" data-act="delParte" data-i="${i}">✕</button></div>`).join('')}</div>
     <div class="btns"><button class="secondary mini" data-act="addParte">+ Acrescentar parte</button></div>
-    <label>Situações acrescentadas no local (pelo perito) ficam na parte</label><select data-act="parteLocal">${p.partes.map(x=>`<option value="${x.n}" ${x.n==(p.parteLocal??4)?'selected':''}>${x.n} – ${esc(x.nome)}</option>`).join('')}</select>`,{cnt:pill(p.partes.map(x=>x.n).join(' · ')),def:false})}
+    <label>Situações acrescentadas no local (pelo perito) ficam na parte</label><select data-act="parteLocal">${p.partes.map(x=>`<option value="${x.n}" ${x.n==(p.parteLocal??4)?'selected':''}>${parteSig(p,x.n)} – ${esc(x.nome)}</option>`).join('')}</select>`,{cnt:pill(p.partes.map(x=>parteSig(p,x.n)).join(' · ')),def:false})}
   ${sec('p5','Lógica da ficha',`<p class="muted">Escolha o par de títulos que sai em cada ficha do Word.</p>
     <div class="seg">${[['Situação','Análise'],['Questão','Resposta']].map(([d,c])=>`<button class="${lblD(p)===d&&lblC(p)===c?'on':''}" data-act="setPair" data-d="${d}" data-c="${c}">${d} / ${c}</button>`).join('')}</div>
     <p class="muted">Personalizar (opcional):</p><div class="grid2"><div><label>1.º título</label><input data-bind="p.lblDesc" value="${esc(p.lblDesc||'')}" placeholder="${esc(lblD(p))}"></div><div><label>2.º título</label><input data-bind="p.lblCom" value="${esc(p.lblCom||'')}" placeholder="${esc(lblC(p))}"></div></div>`,{cnt:pill(lblD(p)+' / '+lblC(p)),def:false})}
@@ -1029,7 +1031,7 @@ function vFicha(){
   const idMiss=[a.zona,a.local,a.elemento,a.descricao].filter(x=>!String(x||'').trim()).length;
   const fsC=fs.filter(f=>!(f.id==='conf'&&a.origem==='local'));const nFilled=fsC.filter(f=>{const v=a.vals?.[f.id];return Array.isArray(v)?v.length:v}).length;
   const idBody=`<div class="ancode">${anCode(p,a)} <span class="muted">— código pela ordem da lista</span></div>
-    <label>Parte que coloca a questão / situação</label><div class="tks">${p.partes.map(x=>tickBox('',parteOf(p,a)==x.n,`<b>${x.n}</b> – ${esc(x.nome)}`,`data-act="tkParte" data-v="${x.n}"`)).join('')}</div>
+    <label>Parte que coloca a questão / situação</label><div class="tks">${p.partes.map(x=>tickBox('',parteOf(p,a)==x.n,`<b>${parteSig(p,x.n)}</b> – ${esc(x.nome)}`,`data-act="tkParte" data-v="${x.n}"`)).join('')}</div>
     ${inp('a.ref','Item (n.º na lista fornecida)',a.ref,'ex.: 1a)')}${idPick(a,'zona','NUF – Núcleo Funcional','catZona')}${idPick(a,'piso','Piso','catPiso')}${idPick(a,'local','Local (compartimento)','catLocal')}${idPick(a,'elemento','Elemento','catElem')}
     ${txt('a.descricao',`${lblD(p)} (sai com o título «${lblD(p)}:»)`,a.descricao,3)}`;
   S.subNav=`<div class="fnav"><button class="secondary" data-act="backList">◀ Lista</button><b class="grow center">${anCode(p,a)} · ${idx+1}/${n}</b><button class="secondary" data-act="stepA" data-d="-1" ${idx?'':'disabled'}>◀</button><button class="secondary" data-act="stepA" data-d="1" ${idx<n-1?'':'disabled'}>▶</button></div>${a.descricao?`<div class="subdesc ${S.descFull?'full':''}" data-act="descFull"><b>${esc(lblD(p))}:</b> ${esc(a.descricao)}<span class="dmore">${S.descFull?'▲':'▼'}</span></div>`:''}`;
@@ -1178,7 +1180,7 @@ function vImport(){
     ${I.sheets&&I.sheets.length>1?`<label class="fld"><span>Folha</span><select data-act="impSheet">${I.sheets.map((s,i)=>`<option value="${i}" ${i===I.si?'selected':''}>${esc(s.name)}</option>`).join('')}</select></label>`:''}
     <label class="fld"><span>Linha de cabeçalho (os dados começam na seguinte)</span><select data-act="impHdr"><option value="-1" ${I.hdr<0?'selected':''}>Sem cabeçalho</option>${I.rows.slice(0,30).map((r,i)=>`<option value="${i}" ${I.hdr===i?'selected':''}>${i+1}: ${esc(r.filter(Boolean).join(' | ').slice(0,60))}</option>`).join('')}</select></label>
     <div class="grid2">${IMPORT_TARGETS.map(([k,l])=>`<label class="fld"><span>${l}</span>${opt(k)}</label>`).join('')}</div>
-    <label>Esta lista é da parte</label><select data-act="impParte">${p.partes.map(x=>`<option value="${x.n}" ${x.n==(S.impParte??1)?'selected':''}>${x.n} – ${esc(x.nome)} (numeração ${x.n}.001…)</option>`).join('')}</select>
+    <label>Esta lista é da parte</label><select data-act="impParte">${p.partes.map(x=>`<option value="${x.n}" ${x.n==(S.impParte??1)?'selected':''}>${parteSig(p,x.n)} – ${esc(x.nome)} (numeração ${parteSig(p,x.n)}.001…)</option>`).join('')}</select>
     <p><b>${items.length}</b> anomalia(s) encontradas. Primeiras:</p>
     <div class="scroll"><table class="prev"><tr>${IMPORT_TARGETS.map(t=>`<th>${t[1]}</th>`).join('')}</tr>${items.slice(0,5).map(o=>`<tr>${IMPORT_TARGETS.map(([k])=>`<td>${esc(o[k].slice(0,80))}</td>`).join('')}</tr>`).join('')}</table></div>
     <div class="row"><button class="pri" data-act="impDo" data-m="add" ${items.length?'':'disabled'}>Acrescentar ${items.length}</button>${p.anomalias.some(a=>a.origem!=='local')?`<button data-act="impDo" data-m="replace" ${items.length?'':'disabled'}>Substituir as da lista</button>`:''}</div></section>`;
@@ -1333,7 +1335,7 @@ function xlsxFor(p){const fs=settings.fields.filter(f=>p.use?.[f.id]);
   const rows=[['Código','Item','Parte','Origem','NUF','Piso','Local','Elemento','Descrição','Comentário',...fs.map(f=>f.label),'N.º fotos','Legendas']];
   for(const a of p.anomalias)rows.push([anCode(p,a),a.ref,parteNome(p,parteOf(p,a)),a.origem==='local'?'Constatada no local':'Da lista',a.zona,a.piso||'',a.local,a.elemento,a.descricao,a.comentario||'',...fs.map(f=>f.id==='conf'&&a.origem==='local'?'':fieldValueText(f,a.vals?.[f.id],settings,a.vals)),relF(a).length,relF(a).map((f,i)=>f.legenda?`${imgCode(p,a,i)}: ${f.legenda}`:'').filter(Boolean).join(' | ')]);
   return buildXlsx('Anomalias',rows,[9,8,14,14,8,12,18,18,60,40,...fs.map(f=>f.type==='long'?40:16),8,40])}
-function migrateProc(p){if(!p.modo)p.modo='misto';if(!p.ordem)p.ordem='lista';
+function migrateProc(p){(p.anomalias||[]).forEach(a=>{if(a.vals&&a.vals.conf==='EEX')a.vals.conf='ECU'});if(!p.modo)p.modo='misto';if(!p.ordem)p.ordem='lista';
   for(const k of ['use','print'])if(p[k]&&['prej','cEst','cFun'].some(x=>x in p[k])){if(!('cons' in p[k]))p[k].cons=!!(p[k].prej||p[k].cEst||p[k].cFun);delete p[k].prej;delete p[k].cEst;delete p[k].cFun}
   for(const a of p.anomalias||[]){if(!a.vals)continue;const arr=Array.isArray(a.vals.cons)?a.vals.cons:[];for(const x of ['prej','cEst','cFun']){if(a.vals[x]&&!arr.includes(a.vals[x]))arr.push(a.vals[x]);delete a.vals[x]}if(arr.length)a.vals.cons=arr}
   for(const a of p.anomalias||[])if(a.vals?.conf==='CON')a.vals.conf='CFM';

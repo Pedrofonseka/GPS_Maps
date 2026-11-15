@@ -710,7 +710,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.3.0';
+const VERSION='1.3.1';
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -853,6 +853,7 @@ function migrateSettings(s){
     s.fields=s.fields.filter(f=>!['prej','cEst','cFun','cons'].includes(f.id));
     const at=k>=0?k:(s.fields.findIndex(f=>f.id==='estado')+1||s.fields.length);s.fields.splice(at,0,nf);
     s.removed=(s.removed||[]).filter(x=>x!=='cons');s.mig062=s.mig061=true}
+  if(!s.mig0167){const c=s.fields.find(f=>f.id==='conf');if(c&&Array.isArray(c.opts)){c.opts=c.opts.filter(o=>o[0]!=='EEX');const ks=c.opts.map(o=>o[0]);const at=ks.indexOf('STB');const add=[['NIN','Não iniciado'],['ECU','Em curso']].filter(o=>!ks.includes(o[0]));c.opts.splice(at>=0?at:c.opts.length,0,...add)}s.mig0167=true;s.mig0163=true;s.mig0165=true}
   if(!s.migR130){s.catPiso=DEF_PISO.slice();const oldZ=['Edifício','Anexo','Garagem','Jardim','Piscina','Pavimentação','Redes técnicas','Cobertura','Logradouro','Muros e vedações','Acessos'];s.catZona=[...DEF_ZONA,...(s.catZona||[]).filter(z=>!oldZ.includes(z)&&!DEF_ZONA.includes(z))];s.catElem=[...new Set([...(s.catElem||[]),'Caixa de escada','Beirado','Chaminé','Platibanda','Soco'])];const c=s.fields.find(f=>f.id==='conf');if(c&&Array.isArray(c.opts)){c.opts=c.opts.filter(o=>o[0]!=='EEX');const ks=c.opts.map(o=>o[0]);const at=ks.indexOf('STB');const add=[['NIN','Não iniciado'],['ECU','Em curso']].filter(o=>!ks.includes(o[0]));c.opts.splice(at>=0?at:c.opts.length,0,...add)}s.migR130=true;s.mig0163=true;s.mig0165=true}
   if(!s.mig0165){const c=s.fields.find(f=>f.id==='conf');if(c&&Array.isArray(c.opts)&&!c.opts.some(o=>o[0]==='NCF')){const at=c.opts.findIndex(o=>o[0]==='CFM');c.opts.splice(at>=0?at+1:c.opts.length,0,['NCF','Não confirmado'])}s.mig0165=true}
   if(!s.mig0163){const c=s.fields.find(f=>f.id==='conf');if(c&&Array.isArray(c.opts)){const ks=c.opts.map(o=>o[0]);const add=[['EEX','Em execução'],['STB','Em stand-by']].filter(o=>!ks.includes(o[0]));if(add.length){const at=ks.indexOf('RES');c.opts.splice(at>=0?at+1:c.opts.length,0,...add)}}s.mig0163=true}
@@ -1345,7 +1346,7 @@ function xlsxFor(p){const fs=settings.fields.filter(f=>p.use?.[f.id]);
   const rows=[['Código','Item','Parte','Origem','NUF','Piso','Local','Elemento','Descrição','Comentário',...fs.map(f=>f.label),'N.º fotos','Legendas']];
   for(const a of p.anomalias)rows.push([anCode(p,a),a.ref,parteNome(p,parteOf(p,a)),a.origem==='local'?'Constatada no local':'Da lista',a.zona,a.piso||'',a.local,a.elemento,a.descricao,a.comentario||'',...fs.map(f=>f.id==='conf'&&a.origem==='local'?'':fieldValueText(f,a.vals?.[f.id],settings,a.vals)),relF(a).length,relF(a).map((f,i)=>f.legenda?`${imgCode(p,a,i)}: ${f.legenda}`:'').filter(Boolean).join(' | ')]);
   return buildXlsx('Anomalias',rows,[9,8,14,14,8,12,18,18,60,40,...fs.map(f=>f.type==='long'?40:16),8,40])}
-function migrateProc(p){if(!p.modo)p.modo='misto';if(!p.ordem)p.ordem='lista';
+function migrateProc(p){(p.anomalias||[]).forEach(a=>{if(a.vals&&a.vals.conf==='EEX')a.vals.conf='ECU'});if(!p.modo)p.modo='misto';if(!p.ordem)p.ordem='lista';
   for(const k of ['use','print'])if(p[k]&&['prej','cEst','cFun'].some(x=>x in p[k])){if(!('cons' in p[k]))p[k].cons=!!(p[k].prej||p[k].cEst||p[k].cFun);delete p[k].prej;delete p[k].cEst;delete p[k].cFun}
   for(const a of p.anomalias||[]){if(!a.vals)continue;const arr=Array.isArray(a.vals.cons)?a.vals.cons:[];for(const x of ['prej','cEst','cFun']){if(a.vals[x]&&!arr.includes(a.vals[x]))arr.push(a.vals[x]);delete a.vals[x]}if(arr.length)a.vals.cons=arr}
   for(const a of p.anomalias||[])if(a.vals?.conf==='CON')a.vals.conf='CFM';
