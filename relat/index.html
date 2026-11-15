@@ -710,7 +710,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.3.1';
+const VERSION='1.3.2';
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -812,8 +812,11 @@ async function enforceMax(){const m=maxF();let n=0;for(const p of procs){let ch=
 const inRel=f=>f.sel!==false;const relF=a=>a.fotos.filter(inRel);const resF=a=>a.fotos.filter(f=>!inRel(f));const MAXALL=40;
 function normFotos(a){a.fotos=[...relF(a),...resF(a)]}
 // ---------- ordenação da saída (Word, PDF, pré-visualização) ----------
-const ORDENS=[['lista','Ordem em que foram colocadas'],['hier','NUF › Piso › Local › Elemento'],['zona','NUF – Núcleo Funcional'],['local','Local (compartimento)'],['elemento','Elemento'],['tipo','Tipo de anomalia'],['grav','Gravidade'],['urg','Urgência'],['parte','Parte']];
-function ordAnoms(p,L){const o=p.ordem||'lista';if(o==='lista')return L.map(a=>({...a,_grp:''}));
+const ORDENS=[['lista','Por blocos — parte que coloca as questões (ordem da lista)'],['hier','NUF › Piso › Local › Elemento'],['zona','NUF – Núcleo Funcional'],['local','Local (compartimento)'],['elemento','Elemento'],['tipo','Tipo de anomalia'],['grav','Gravidade'],['urg','Urgência'],];
+// bloco de cada parte: as questões são tratadas por blocos (como no tribunal), com o título no início de cada bloco
+function blocoNome(p,n){const sg=parteSig(p,n),nm=String(parteNome(p,n)||'').replace(/\s*\(.*\)$/,'');return sg==='A'?'Questões do Autor':sg==='R'?'Questões do Réu':sg==='T'?'Questões do Tribunal':sg==='S'?'Questões do Solicitante':sg==='P'?'Situações constatadas no local pelo Perito':`Questões — ${nm||'Parte '+n}`}
+function ordAnoms(p,L){let o=p.ordem||'lista';if(o==='parte')o='lista';
+  if(o==='lista')return L.map((a,i)=>({a,i,n:parteOf(p,a)})).sort((x,y)=>{const ix=(p.partes||[]).findIndex(q=>q.n==x.n),iy=(p.partes||[]).findIndex(q=>q.n==y.n);return (ix-iy)||((x.a._n||0)-(y.a._n||0))||(x.i-y.i)}).map(x=>({...x.a,_grp:blocoNome(p,x.n)}));
   const ci=(cat,v)=>{if(!v)return 1e6;const i=(settings[cat]||[]).indexOf(v);return i<0?1e5:i};const fo=id=>settings.fields.find(f=>f.id===id);
   const optI=(id,v)=>{const f=fo(id);if(!v||!f)return 1e6;const i=(f.opts||[]).findIndex(x=>x[0]===v);return i<0?1e5:i};
   const optT=(id,v)=>{const f=fo(id);const x=(f?.opts||[]).find(x=>x[0]===v);return x?optText(x,settings.printStyle):v};
@@ -829,7 +832,7 @@ function ordAnoms(p,L){const o=p.ordem||'lista';if(o==='lista')return L.map(a=>(
     case 'parte':{const n=parteOf(p,a);return {k:[n],g:`Parte ${n} – ${parteNome(p,n)||''}`}}}};
   const cmp=(x,y)=>{for(let i=0;i<Math.max(x.length,y.length);i++){if(x[i]===y[i])continue;if(typeof x[i]==='number'&&typeof y[i]==='number')return x[i]-y[i];return String(x[i]).localeCompare(String(y[i]),'pt')}return 0};
   return L.map((a,i)=>({a,i,...K(a)})).sort((x,y)=>cmp(x.k,y.k)||x.i-y.i).map(x=>({...x.a,_grp:x.g}))}
-function hydrate(p){return ordAnoms(p,p.anomalias.map(a=>({...a,_n:numOf(p,a),_code:anCode(p,a),_parte:parteNome(p,parteOf(p,a)),fotos:relF(a).map(f=>({...f,data:fd(f)}))})))}
+function hydrate(p){return ordAnoms(p,p.anomalias.map(a=>({...a,_n:numOf(p,a),_code:anCode(p,a),_parte:'',fotos:relF(a).map(f=>({...f,data:fd(f)}))})))}
 
 function migrateSettings(s){
   s=Object.assign(clone(DEF_SETTINGS),s||{});
@@ -1570,7 +1573,7 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
   const o=await docOpts(p,'texto','.docx');
   const A=buildDocx({...o,bodyOnly:true,withIndex:false,stats:null,withResumo:false,withVistoria:false,mapImg:null,onePerPage:false,layout:'texto'});
   body+=H1('Situações a analisar')+H2('Tópicos')+E()+T('A análise segue os seguintes tópicos:');
-  for(const x of o.anoms){const z=zonaTxt(x);body+=P(R(`${x._code}  –  ${[x.ref?'Item '+x.ref:'',z,x.elemento].filter(Boolean).join(' · ')}`),{sp:[20,20],ind:284})}
+  let gPrev=null;for(const x of o.anoms){if(x._grp&&x._grp!==gPrev){gPrev=x._grp;body+=P(R(x._grp,{b:true}),{sp:[120,40],keep:1})}const z=zonaTxt(x);body+=P(R(`${x._code}  –  ${[x.ref?'Item '+x.ref:'',z,x.elemento].filter(Boolean).join(' · ')}`),{sp:[20,20],ind:284})}
   body+=E()+H2('Análise específica')+A.body;media.push(...A.media);
   // 6 — resumo
   {const hasS=!!(p.printStats&&o.stats?.length),hasN=!!String(r.nota||'').trim();
