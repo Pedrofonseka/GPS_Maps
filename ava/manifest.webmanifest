@@ -1,0 +1,16 @@
+{
+  "name": "AVA_Input",
+  "short_name": "AVA_Input",
+  "description": "Recolha de dados e fichas de ativos para avaliação, com relatório Word/PDF",
+  "lang": "pt-PT",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eef2f5",
+  "theme_color": "#1f3a5f",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

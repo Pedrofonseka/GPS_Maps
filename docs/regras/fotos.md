@@ -7,6 +7,7 @@
 | ExPropria | 0.13.2–0.13.3 | máximo por parcela desde 0.13.3 |
 | Relat_Anomalias | 1.0.0 | herdada do Regi 0.16.4 |
 | FullTopics | 1.06–1.07 | assinaturas guardadas no registo da foto (store 'fotos') |
+| AVA_Input | 2.88 | portada da FullTopics 1.07 (mesma base de código); fichas Word por verba e capa-mosaico usam só as fotos do relatório |
 
 ## 1. Fotografias em reserva
 - Campo `sel` na meta da foto: ausente = no relatório; `sel:false` = reserva. Fotos antigas ficam no relatório sem migração.
