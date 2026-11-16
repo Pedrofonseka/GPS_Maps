@@ -1,5 +1,10 @@
 <!doctype html>
 <!--
+ExPropria v0.13.7 — resumo
+- Trocar com outro aparelho (iPhone ↔ PC), no fim do separador Processo: enviar só as parcelas escolhidas, o processo inteiro, ou (no ecrã inicial) o backup geral.
+- Ao receber parcelas: a app mostra parcela a parcela se é nova, igual ou diferente e pergunta (acrescentar / substituir / manter a deste aparelho / manter as duas). As outras parcelas e os dados gerais do processo não mudam.
+- Antes de substituir, fica uma cópia automática do processo (Definições › 7) para repor.
+
 ExPropria v0.13.6 — resumo
 - Imagens fornecidas: botão «🔄 Substituir imagem» em cada uma (mantém o que mostra, a fonte e a posição).
 - Word: todas as imagens (fornecidas, mapa de localização, extratos, fotografias, anexos) dentro de um controlo de conteúdo de imagem (separador Programador), para trocar com um clique.
@@ -552,7 +557,7 @@ details.sec[open]>summary:before{transform:rotate(90deg)}
 details.sec>summary .cnt{margin-left:auto;font-weight:400}
 details.sec .body{padding:0 12px 12px}
 .calc{background:#f1f4f7;border:1px dashed #b8c4cf;border-radius:7px;padding:8px 9px;font-weight:700}
-.chk{display:flex;align-items:flex-start;gap:7px;margin:4px 0;font-size:14px}
+.chk{display:flex;align-items:flex-start;gap:7px;margin:4px 0;font-size:14px}.expList{max-height:280px;overflow:auto;border:1px solid #ddd;border-radius:10px;padding:4px 10px;margin:8px 0;background:#fff}.expList .chk{padding:6px 0;border-bottom:1px solid #eee}
 .chk input{width:auto;margin-top:3px}
 table.tb{width:100%;border-collapse:collapse;margin:4px 0;font-size:13.5px}
 table.tb th{background:#e8efe4;text-align:left;padding:5px;font-weight:600}
@@ -714,7 +719,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
 <script>
 'use strict';
-const VERSION='0.13.6';const VERSION_DATA='2026-11-15';/* data da release: atualizar sempre com VERSION */
+const VERSION='0.13.7';const VERSION_DATA='2026-11-16';/* data da release: atualizar sempre com VERSION */
 function growFit(t){if(!t||!t.classList?.contains('grow')||!t.offsetParent)return;t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px'}
 function growAll(root){(root||document).querySelectorAll('textarea.grow').forEach(growFit)}
 document.addEventListener('input',e=>growFit(e.target),true);
@@ -2502,14 +2507,15 @@ function renderProc(M){curParcela=null;crumbs();const v=cur.v;const req=PROC_FIE
  <div class="blk">B · Análise de cada parcela expropriada<small>Concelho e freguesia, expropriados, artigos, visita, presenças, caracterização, classificação e avaliação</small></div><h2>${cur.fase==='PER'?5:4} · Parcelas (${cur.parcelas.length})</h2><div class="muted">${cur.layout?.ambito==='varias'?`Relatório conjunto: os capítulos gerais saem uma vez e a análise de cada parcela segue em sequência.`:`Cada parcela dá origem a um relatório de ${esc(ev.nome)} (pode mudar em «Layout do relatório»).`} Expropriados, artigos, visita, presenças, conteúdos e avaliação são registados em cada parcela.</div><div class="btns"><button class="green" id="newPar">+ Nova parcela</button></div>
  ${cur.parcelas.length&&ev.modelo?`<div class="btns"><button id="goRelP">Gerar relatório ▶</button></div>`:''}
  <div class="list">${cur.parcelas.slice().sort((a,b)=>parSortKey(a)-parSortKey(b)).map((p,i)=>`<div class="card" data-par="${p.id}"><b>${esc(p.nome)}</b>${parExpd(p).length?` <span class="muted">${esc(parExpd(p).map(x=>x.nome).filter(Boolean).join('; '))}</span>`:''} <span class="pill">${(p.fotos||[]).length} fotos</span> <span class="pill ${visOf(p)?.data?'ok':'warn'}">${visOf(p)?.data?'V'+visOf(p).n+' · '+esc(visTxt(p)):'sem visita'}</span></div>`).join('')}</div>
- <div class="btns" style="margin-top:24px"><button class="secondary" id="expProc">⬇ Exportar processo</button><button class="secondary" id="impPar">⬆ Importar parcela</button><button class="del" id="delProc">Eliminar processo</button></div>`;
+ <details class="sec" style="margin-top:20px"><summary>⇄ Trocar com outro aparelho (iPhone ↔ PC)</summary><div class="body"><div class="muted">Envie <b>só as parcelas escolhidas</b> para continuar noutro aparelho. Ao receber, a app mostra parcela a parcela o que é novo, igual ou diferente e pergunta o que fazer: <b>as outras parcelas e os dados gerais do processo não são tocados</b>. Antes de alterar, fica uma cópia automática do processo (Definições › 7) para repor.</div>${cur.parcelas.length?`<div class="btns"><button type="button" class="secondary mini" id="expTodas">Todas</button><button type="button" class="secondary mini" id="expNenh">Nenhuma</button></div><div class="expList">${parOrdList().map(p=>`<label class="chk"><input type="checkbox" data-expsel="${p.id}"> <b>${esc(p.nome)}</b> <span class="muted">· ${(p.fotos||[]).length} fotos</span></label>`).join('')}</div>`:''}<div class="btns"><button class="green" id="expSel" ${cur.parcelas.length?'':'disabled'}>⬇ Enviar parcelas escolhidas</button><button class="secondary" id="impPar">⬆ Receber parcelas</button><button class="secondary" id="expProc">⬇ Enviar o processo inteiro</button></div></div></details>
+ <div class="btns" style="margin-top:16px"><button class="del" id="delProc">Eliminar processo</button></div>`;
  bindFields('proc',v,()=>renderProc(M));bindTeam();bindMand();
  $$('[data-grp]').forEach(el=>el.onchange=()=>{cur.layout=cur.layout||{};const S=new Set(Array.isArray(cur.layout.grupo)?cur.layout.grupo:cur.parcelas.map(p=>p.id));el.checked?S.add(el.dataset.grp):S.delete(el.dataset.grp);cur.layout.grupo=cur.parcelas.map(p=>p.id).filter(id=>S.has(id));saveSoon()});
  $('#goRelP')&&($('#goRelP').onclick=async()=>{clearTimeout(saveT);await saveCur();view='relatorio';render()});$$('[data-lay]').forEach(el=>el.onchange=()=>{cur.layout=cur.layout||{};cur.layout[el.dataset.lay]=el.value;saveSoon();render()});
  $('#chgFase').onclick=()=>chooseFase(cur.fase,async k=>{if(k===cur.fase)return;if(!await uiConfirm(`Mudar a fase do processo para «${EVENTOS[k].nome}»? Os dados já introduzidos mantêm-se guardados; a equipa passa a ter ${EVENTOS[k].equipa.length} elemento(s).`))return;cur.fase=k;faseDefaults(cur);cur.parcelas.forEach(p=>p.rel.tipo=k);await saveCur();render()});
  $('#newPar').onclick=async()=>{const n=await uiPrompt('Designação oficial da nova parcela, como consta no processo (ex.: P 703). Pode deixar vazio e preencher depois:','');if(n===null)return;if(n.trim()&&cur.parcelas.some(x=>String(x.rel?.v?.nPar||'').trim()===n.trim())&&!await uiConfirm(`Já existe a parcela ${n.trim()} neste processo. Criar outra com a mesma designação?`))return;const p=mkParcela(Math.max(0,...parOrdList().map(x=>x.ord||0))+1,n);cur.parcelas.push(p);await saveCur();curParcela=p;view='parcela';tab='rel';render()};
  $$('[data-par]').forEach(el=>el.onclick=()=>{curParcela=cur.parcelas.find(p=>p.id===el.dataset.par);view='parcela';tab='rel';render()});
- $('#expProc').onclick=exportProcesso;$('#impPar').onclick=()=>pickIO('proc');
+ $('#expProc').onclick=exportProcesso;$('#impPar').onclick=()=>pickIO('proc');$('#expTodas')&&($('#expTodas').onclick=()=>$$('[data-expsel]').forEach(c=>c.checked=true));$('#expNenh')&&($('#expNenh').onclick=()=>$$('[data-expsel]').forEach(c=>c.checked=false));$('#expSel')&&($('#expSel').onclick=()=>{const ids=$$('[data-expsel]').filter(c=>c.checked).map(c=>c.dataset.expsel);if(!ids.length)return alert('Escolha pelo menos uma parcela.');exportParcelas(cur.parcelas.filter(p=>ids.includes(p.id)))});
  $('#delProc').onclick=async()=>{if(!await uiConfirm(`Eliminar o processo «${v.nref||v.proc||''}» e todas as suas parcelas e fotografias?\n\nFica uma cópia automática durante ${LIXO_DIAS} dias (Definições › 7), para o poder repor.`))return;clearTimeout(saveT);await saveCur();await lixoAdd([cur],'Processo eliminado');await del('processos',cur.id);processos=processos.filter(x=>x.id!==cur.id);cur=null;view='home';render()}}
 function allArbFields(){return [...PAR_SECTION.f,...SECS().flatMap(s=>s.f)]}
 function migPres(v){if(v.presOutros||!(v.presExp||v.presExpd))return;v.presOutros=[];if(v.presExp)v.presOutros.push({nome:v.presExp,qual:'Representante da Expropriante'});if(v.presExpd)v.presOutros.push({nome:v.presExpd,qual:'Expropriado'});delete v.presExp;delete v.presExpd;saveSoon()}
@@ -2851,8 +2857,30 @@ async function packFotos(pars){const out=[];for(const p of pars)for(const f of (
 async function exportProcesso(){clearTimeout(saveT);await saveCur();busy(true,'A preparar o processo…');try{const fotos=await packFotos(cur.parcelas);
  await saveJSON({app:'ExPropria',tipo:'processo',version:VERSION,date:stamp(),processo:cur,fotos},`Exprop_processo_${winName(cur.v.nref||cur.v.proc||'sem_ref')}_${dstamp()}.json`)}
  catch(e){alert('Erro ao exportar: '+e.message)}finally{busy(false)}}
+async function exportParcelas(L){clearTimeout(saveT);await saveCur();if(L.length===1)return exportParcela(L[0]);busy(true,'A preparar as parcelas…');try{const fotos=await packFotos(L);
+  await saveJSON({app:'ExPropria',tipo:'parcelas',version:VERSION,date:stamp(),origem:{id:cur.id,nref:cur.v.nref||'',proc:cur.v.proc||'',fase:cur.fase},parcelas:L,visitas:L.map(p=>visOf(p)),hashes:L.map(parHash),fotos},`Exprop_parcelas_${winName(cur.v.nref||cur.v.proc||'')}_${L.length<=3?L.map(parTag).join('-'):L.length+'_parcelas'}_${dstamp()}.json`)}
+ catch(e){alert('Erro ao exportar: '+e.message)}finally{busy(false)}}
+function parHash(p){const x=JSON.stringify({...p,fotos:(p.fotos||[]).map(f=>({...f}))});let h=2166136261;for(let i=0;i<x.length;i++){h^=x.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(36)+':'+x.length}
+/* receber parcelas: escolha parcela a parcela; só essas mudam; cópia automática do processo antes (Definições › 7) */
+async function importParcelas(P,j){const L=j.parcelas||[];if(!L.length)throw new Error('O ficheiro não tem parcelas.');
+ if(j.origem?.fase&&j.origem.fase!==P.fase&&!await uiConfirm(`As parcelas vêm de um processo de ${EVENTOS[j.origem.fase]?.nome||j.origem.fase}; este processo é de ${EVENTOS[P.fase].nome}. Receber na mesma?`))return null;
+ const linhas=L.map((p,k)=>{const nPar=String(p.rel?.v?.nPar||'').trim();const loc=P.parcelas.find(x=>x.id===p.id)||(nPar&&P.parcelas.find(x=>String(x.rel?.v?.nPar||'').trim()===nPar&&!L.some(o=>o.id===x.id)))||null;
+  if(!loc)return {k,p,loc,st:'nova',def:'add'};if(parHash(loc)===parHash(p))return {k,p,loc,st:'igual',def:'skip'};return {k,p,loc,st:'dif',def:'subst'}});
+ const op=l=>l.st==='nova'?[['add','Acrescentar'],['skip','Não acrescentar']]:l.st==='igual'?[['skip','Igual — nada a fazer']]:[['subst','Substituir pela recebida'],['keep','Manter a deste aparelho'],['both','Manter as duas']];
+ const ds=l=>l.st==='nova'?`Nova neste processo · ${(l.p.fotos||[]).length} fotos`:l.st==='igual'?'Igual à deste aparelho':`Diferente · recebida: ${(l.p.fotos||[]).length} fotos · neste aparelho: ${(l.loc.fotos||[]).length} fotos`;
+ const esc2=await new Promise(ok=>{openModal(`<h3>Receber parcelas — ${esc(P.v.nref||P.v.proc||'')}</h3><div class="muted" style="margin:4px 0 10px">Só as parcelas abaixo são alteradas. Os dados gerais do processo e as outras parcelas ficam como estão.</div>${linhas.map(l=>`<div class="card" style="margin:6px 0"><b>${esc(l.p.nome)}</b><div class="muted" style="margin:2px 0 6px">${esc(ds(l))}</div><select data-rsel="${l.k}">${op(l).map(([v,t])=>`<option value="${v}" ${v===l.def?'selected':''}>${t}</option>`).join('')}</select></div>`).join('')}<div class="btns" style="flex-direction:column;align-items:stretch"><button class="green" data-rok>Aplicar</button><button class="secondary" data-rno>Cancelar</button></div>`);
+  $('#modalBox [data-rok]').onclick=()=>{const r={};$$('#modalBox [data-rsel]').forEach(x=>r[x.dataset.rsel]=x.value);closeModal();ok(r)};$('#modalBox [data-rno]').onclick=()=>{closeModal();ok(null)}});
+ if(!esc2)return null;const acts=linhas.map(l=>({...l,a:esc2[l.k]||l.def})).filter(l=>['add','subst','both'].includes(l.a));if(!acts.length){alert('Nada foi alterado.');return null}
+ busy(true,'A receber as parcelas…');try{
+  if(acts.some(l=>l.a==='subst'))await lixoAdd([P],`Antes de receber parcelas (${acts.filter(l=>l.a==='subst').map(l=>l.loc.nome).join(', ')})`);
+  let ult=null;for(const l of acts){const keep=l.a==='subst'?(l.loc.id===l.p.id):(l.a==='add'&&!P.parcelas.some(x=>x.id===l.p.id));const np=await putParcela(P,l.p,j.fotos||[],keep);
+   const vi=(j.visitas||[])[l.k];if(vi?.data){let vv=(P.visitas||[]).find(x=>x.data===vi.data)||visNova(P,vi.data);np.visitaId=vv?vv.id:null}else np.visitaId=null;
+   if(l.a==='subst'){const k=P.parcelas.indexOf(l.loc);np.ord=l.loc.ord;P.parcelas[k]=np;if(Array.isArray(P.layout?.grupo))P.layout.grupo=P.layout.grupo.map(x=>x===l.loc.id?np.id:x)}
+   else{if(l.a==='both')np.nome+=' (cópia recebida)';np.ord=Math.max(0,...P.parcelas.map(x=>x.ord||0))+1;P.parcelas.push(np)}ult=np}
+  P.updatedAt=stamp();await put('processos',P);
+  alert(`Parcelas recebidas — ${acts.map(l=>`${l.p.nome}: ${({add:'acrescentada',subst:'substituída',both:'acrescentada como cópia'})[l.a]}`).join(' · ')}.${acts.some(l=>l.a==='subst')?'\n\nSe precisar de voltar atrás: Definições › 7 · Cópias automáticas › Repor.':''}`);return ult}finally{busy(false)}}
 async function exportParcela(p){clearTimeout(saveT);await saveCur();busy(true,'A preparar a parcela…');try{const fotos=await packFotos([p]);
- await saveJSON({app:'ExPropria',tipo:'parcela',version:VERSION,date:stamp(),origem:{nref:cur.v.nref||'',proc:cur.v.proc||'',fase:cur.fase},visita:visOf(p),parcela:p,fotos},`Exprop_parcela_${winName(cur.v.nref||cur.v.proc||'')}_${parTag(p)}_${dstamp()}.json`)}
+ await saveJSON({app:'ExPropria',tipo:'parcela',version:VERSION,date:stamp(),origem:{id:cur.id,nref:cur.v.nref||'',proc:cur.v.proc||'',fase:cur.fase},visita:visOf(p),parcela:p,fotos},`Exprop_parcela_${winName(cur.v.nref||cur.v.proc||'')}_${parTag(p)}_${dstamp()}.json`)}
  catch(e){alert('Erro ao exportar: '+e.message)}finally{busy(false)}}
 /* Janelas da própria aplicação (as nativas – confirm / prompt / alert – são bloqueadas em visualizadores e
    pré-visualizações, sobretudo no iPhone, e aí contam como «Cancelar») */
@@ -2906,10 +2934,11 @@ $('#fileIO').onchange=async e=>{const f=e.target.files[0];if(!f)return;let j;try
   if(j.tipo==='backup'||(!j.tipo&&j.processos))return restoreBackup(j);if(ioCtx==='backup')throw new Error('Este ficheiro não é um backup geral: é um ficheiro de '+(j.tipo||'?')+'. Use «⬆ Importar processo / parcela».');
   if(j.tipo==='processo'){if(ioCtx==='proc'&&!await uiConfirm('O ficheiro contém um processo completo (não uma parcela). Importá-lo como processo?'))return;const P=await importProcesso(j);if(!P)return;
    cur=P;view='proc';render();alert(`Processo importado: ${P.parcelas.length} parcela(s), ${(j.fotos||[]).length} fotografia(s).`);return}
-  if(j.tipo==='parcela'){let P=ioCtx==='proc'?cur:null;
+  if(j.tipo==='parcela')j={...j,tipo:'parcelas',parcelas:[j.parcela],visitas:[j.visita]};
+   if(j.tipo==='parcelas'){let P=processos.find(x=>j.origem?.id&&x.id===j.origem.id)||(ioCtx==='proc'?cur:null);if(P&&ioCtx==='proc'&&cur&&P!==cur&&!await uiConfirm(`As parcelas vêm do processo «${P.v.nref||P.v.proc||''}», que existe neste aparelho. Receber nesse processo (e não no que está aberto)?`))P=cur;
    if(!P){if(!processos.length)throw new Error('Crie primeiro o processo de destino e importe a parcela dentro dele.');
-    const k=await askChoice('Importar parcela para que processo?',`Parcela «${esc(j.parcela?.nome||'')}»${j.origem?.nref?` (do processo ${esc(j.origem.nref)})`:''}.`,processos.slice().sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||'')).map(p=>[p.id,`${p.v.nref||p.v.proc||'(sem N_Ref)'} · ${EVENTOS[p.fase]?.nome||''}`]));if(!k)return;P=processos.find(x=>x.id===k)}
-   const np=await importParcela(P,j);if(!np)return;cur=P;curParcela=np;view='parcela';tab='rel';render();return}
+    const k=await askChoice('Receber parcelas em que processo?',`${j.parcelas.length===1?'Parcela':'Parcelas'} «${esc(j.parcelas.map(p=>p?.nome||'').join(', '))}»${j.origem?.nref?` (do processo ${esc(j.origem.nref)})`:''}.`,processos.slice().sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||'')).map(p=>[p.id,`${p.v.nref||p.v.proc||'(sem N_Ref)'} · ${EVENTOS[p.fase]?.nome||''}`]));if(!k)return;P=processos.find(x=>x.id===k)}
+   const np=await importParcelas(P,j);if(!np)return;cur=P;curParcela=null;view='proc';render();return}
   throw new Error('Tipo de ficheiro desconhecido.')}catch(err){alert(err.message)}};
 /* ---------- Backup geral ---------- */
 const blobToDataURL=b=>new Promise((ok,no)=>{const r=new FileReader;r.onload=()=>ok(r.result);r.onerror=no;r.readAsDataURL(b)});

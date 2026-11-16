@@ -7,6 +7,7 @@ Ao melhorar uma rotina numa app, atualizar o ficheiro respetivo e a tabela «Ond
 | Rotina | Ficheiro | Versão |
 |---|---|---|
 | Fotografias (reserva, substituir, repetidas) | [fotos.md](fotos.md) | 1.0 |
+| Backup e troca entre aparelhos em 3 níveis (geral / processo / unidade) | [sync.md](sync.md) | 1.0 |
 | Máximo de fotos e tamanho previsto / resolução de saída | [tamanho.md](tamanho.md) | 1.0 |
 | Imagens no Word: controlo de conteúdo «Imagem» (troca com um clique) | ver abaixo | 1.0 |
 | Word válido: ordem do `w:pPr` e ZIP sem entradas de pasta | ver abaixo | 1.0 |
