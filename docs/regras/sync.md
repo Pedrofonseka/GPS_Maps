@@ -28,6 +28,7 @@
 | App | Versão | Unidade | Onde |
 |---|---|---|---|
 | AVA_Input | 2.91 | verba | Mais › Backup › «Por verba» (+ atalho «⇄ Enviar / receber verbas» no ecrã das verbas); «Receber processo» aceita também ficheiros de verbas |
+| AvaLias | 1.0 | verba | Verbas › «⇄ Enviar / receber verbas»; ficheiro `<Código>_Verbas_VB_001….json`; «Desfazer» |
 | ExPropria | 0.13.7 | parcela | separador Processo › «⇄ Trocar com outro aparelho»; importação de parcela isolada usa o mesmo caminho |
 
 ## Testes mínimos
