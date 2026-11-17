@@ -1,5 +1,8 @@
 <!doctype html>
 <!--
+ExPropria v0.13.9 — resumo
+- Verificação de gralhas e coerência, ao gerar o Word e ao importar o relatório para a versão final (só avisa, nunca altera o texto): número de outra parcela no texto, áreas que não existem no formulário, montante diferente do calculado, valor por extenso que não corresponde ao número, palavras repetidas, espaços duplos ou antes de pontuação, texto por preencher ([…], [FOTOS], xxx) e gralhas frequentes do vocabulário das expropriações. Ortografia geral: corretor do Word, em Português (Portugal).
+
 ExPropria v0.13.8 — resumo
 - 8 · Preços unitários: «🧮 Calcular» em cada finalidade do solo para outros fins – eucaliptal (valor atual dos cortes, desconto contínuo), pinhal (plano de gestão, desconto discreto) e rotação de culturas (rendimento fundiário capitalizado). Vem com os valores dos relatórios de exemplo; «Usar este valor» põe o V_Un e a fundamentação, que continuam editáveis. O cálculo só sai no relatório se o V_Un adotado for o calculado.
 - 8.10 Ocupação temporária: área × anos × rendimento fundiário (€/m²/ano, com 🧮 rotação de culturas). Entra no quadro na linha 8 e no texto da interrupção da atividade.
@@ -725,7 +728,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
 <script>
 'use strict';
-const VERSION='0.13.8';const VERSION_DATA='2026-11-17';/* data da release: atualizar sempre com VERSION */
+const VERSION='0.13.9';const VERSION_DATA='2026-11-17';/* data da release: atualizar sempre com VERSION */
 function growFit(t){if(!t||!t.classList?.contains('grow')||!t.offsetParent)return;t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px'}
 function growAll(root){(root||document).querySelectorAll('textarea.grow').forEach(growFit)}
 document.addEventListener('input',e=>growFit(e.target),true);
@@ -1125,7 +1128,7 @@ async function replaceOle(zip,rels,ctDoc,p,xlsxFn,imgFn){const ole=p.getElements
  const {sh,w,h}=shapeSize(p);const imd=sh&&sh.getElementsByTagNameNS('urn:schemas-microsoft-com:vml','imagedata')[0];if(!imd)return;const png=await imgFn(w,h);if(!png)return;const nid=addImagePart(zip,rels,ctDoc,png,'png');imd.setAttributeNS(RNS,'r:id',nid)}
 
 /* ---------- Geração ---------- */
-async function exportWordARB(pp,opt={}){const r=await buildWordARB(!pp,pp,opt);if(!r)return;busy(false);if(r.warns.length)alert('Word gerado com avisos:\n\n- '+r.warns.join('\n- '));await deliverFile(new File([r.blob],r.nome,{type:r.blob.type}))}
+async function exportWordARB(pp,opt={}){const r=await buildWordARB(!pp,pp,opt);if(!r)return;busy(false);if(r.warns.length)alert('Word gerado com avisos (verifique antes de enviar):\n\n- '+r.warns.join('\n- '));await deliverFile(new File([r.blob],r.nome,{type:r.blob.type}))}
 async function buildWordARB(ask=true,pp=null,opt={}){try{await avaFontesCalibri()}catch(e){}const p=pp||curParcela,r=p.rel,v=r.v,P=cur.v,c=compute(v),ev=EVENTOS[cur.fase];
  const pend=SECS().flatMap(s=>s.f.filter(f=>f.r&&(!f.show||f.show(v))&&isEmpty(v[f.id]))).length+PROC_FIELDS.filter(f=>f.r&&(!f.show||f.show(P))&&isEmpty(P[f.id])).length+ev.equipa.filter((x,i)=>!cur.equipa?.[i]?.nome).length+(FASE_REL(cur.fase)&&!cur.relacao?1:0)+(visOf(p)?.data?0:1)+PAR_SECTION.f.filter(f=>f.r&&isEmpty(v[f.id])).length;
  if(ask&&pend&&!await uiConfirm(`Há ${pend} campo(s) obrigatório(s) por preencher (processo + relatório). Gerar o documento mesmo assim?`))return null;
@@ -1360,6 +1363,7 @@ async function buildWordARB(ask=true,pp=null,opt={}){try{await avaFontesCalibri(
   const pEx=findPara(doc,t=>norm(t)==='(extenso)');if(pEx)setParaText(pEx,`(${lc(c.extenso)})`);
   if(VAP){fillVAP(doc,v,c,p,P,team);await imgsFornVap(doc,zip,rels,ctDoc,v)}else assinaturas(doc,team);
   if(opt.raw)return {zip,doc,rels,ctDoc,warns,c,outName,p};
+  try{warns.push(...verificarDoc(doc,p,v,c,{semValor:VAP}))}catch(e){console.error(e)}
   await fillHeaders(zip,P,p.nome);
   const blob=await finishDocx(zip,doc,rels,ctDoc,outName);
   return {nome:outName,blob,warns}}
@@ -1571,7 +1575,7 @@ function renderRelatorio(M){curParcela=curParcela||null;const ev=EVENTOS[cur.fas
   if(!multi||incl.length===1){const p=incl[0];if(kind==='word')return exportWordARB(p,opt);if(kind==='pdf')return exportPdfARB(p,opt);return exportPastaARB(p,opt)}
   const r=await buildWordARBMulti(incl,false,opt);if(!r)return;
   try{if(kind==='pdf'){busy(true,'A preparar o PDF…');const x=await avaFxPdfBlob({pronto:{nome:r.nome,blob:r.blob}});busy(false);if(r.warns.length)alert('PDF gerado com avisos:\n\n- '+r.warns.join('\n- '));await deliverFile(new File([x.blob],x.nome,{type:'application/pdf'}))}
-   else{if(r.warns.length)alert('Word gerado com avisos:\n\n- '+r.warns.join('\n- '));await deliverFile(new File([r.blob],r.nome,{type:r.blob.type}))}}catch(e){busy(false);alert('Não foi possível preparar o ficheiro: '+(e.message||e))}};
+   else{if(r.warns.length)alert('Word gerado com avisos (verifique antes de enviar):\n\n- '+r.warns.join('\n- '));await deliverFile(new File([r.blob],r.nome,{type:r.blob.type}))}}catch(e){busy(false);alert('Não foi possível preparar o ficheiro: '+(e.message||e))}};
  $('#rlWord')&&($('#rlWord').onclick=()=>go('word'));if($('#tamPrev'))tamRender(incl);
  $('#rlPrev')&&($('#rlPrev').onclick=async()=>{clearTimeout(saveT);await saveCur();if(!incl.length){alert('Assinale pelo menos uma parcela.');return}try{const r=multi&&incl.length>1?await buildWordARBMulti(incl,false,{draft:true}):await buildWordARB(false,incl[0],{draft:true});busy(false);if(r)await previewDocx(r.blob,r.nome,r.warns)}catch(e){busy(false);alert('Não foi possível pré-visualizar: '+(e.message||e))}});
  $$('[data-fx]').forEach(b=>b.onclick=()=>{L.fx=b.dataset.fx;saveSoon();render()});
@@ -1819,7 +1823,7 @@ async function importarFinal(p,file){clearTimeout(saveT);await saveCur();const v
    await fotosNoDoc(doc,zip,rels,ctDoc,p,{tbls})}
   else warns.push('A parcela não tem fotografias na fototeca: o Word final segue sem fotografias novas.');
   /* montante: confere com o formulário */
-  {const m=txt(doc.documentElement).match(/valor de justa indemnização (?:é )?de:?\s*([\d.]+,\d{2})\s*€/i);if(m&&EVENTOS[cur.fase].modelo&&cur.fase!=='VAPRM'){const w=num(m[1].replace(/\./g,'').replace(',','.'));if(Math.abs(w-c.total)>0.005)warns.push(`O montante no Word final (${m[1]} €) é diferente do calculado no formulário (${fmt(c.total)} €). Se a discussão mudou valores, corrija-os no formulário.`)}}
+  try{warns.push(...verificarDoc(doc,p,v,c,{semValor:!EVENTOS[cur.fase].modelo||cur.fase==='VAPRM'}))}catch(e){console.error(e)}
   const nome=`${relBase(p)}.docx`;
   for(const fp of Object.keys(zip.files).filter(n=>/^word\/(footer|header)\d*\.xml$/.test(n))){const x=await zip.file(fp).async('string');const y=setFilenameField(x,nome);if(y!==x)zip.file(fp,y)}
   zip.file('word/document.xml',Sz.serializeToString(doc));zip.file('word/_rels/document.xml.rels',Sz.serializeToString(rels));zip.file('[Content_Types].xml',Sz.serializeToString(ctDoc));
@@ -2062,7 +2066,7 @@ function arvTabela(doc,anchor,rows){const W=(n,at={},ch=[])=>{const e=doc.create
  const pc=[0.30,0.10,0.14,0.14,0.32];const ws=pc.map(x=>Math.floor(TW*x));ws[4]=TW-ws.slice(0,4).reduce((a,b)=>a+b,0);
  const rPr0=firstRPr(anchor);const pPr0=kids(anchor,'pPr')[0];
  const para=(t,jc,b)=>{const pp=pPr0?pPr0.cloneNode(true):W('pPr');['numPr','ind','spacing','jc','keepNext','pageBreakBefore'].forEach(k=>kids(pp,k).forEach(x=>pp.removeChild(x)));
-  const after=[...pp.childNodes].find(n=>n.nodeType===1&&['rPr','sectPr','pPrChange'].includes(n.localName))||null;pp.insertBefore(W('spacing',{before:30,after:30}),after);pp.insertBefore(W('jc',{val:jc}),after);
+  const ORD=['pStyle','keepNext','keepLines','pageBreakBefore','framePr','widowControl','numPr','suppressLineNumbers','pBdr','shd','tabs','suppressAutoHyphens','kinsoku','wordWrap','overflowPunct','topLinePunct','autoSpaceDE','autoSpaceDN','bidi','adjustRightInd','snapToGrid','spacing','ind','contextualSpacing','mirrorIndents','suppressOverlap','jc','textDirection','textAlignment','textboxTightWrap','outlineLvl','divId','cnfStyle','rPr','sectPr','pPrChange'];const ins=e=>{const k=ORD.indexOf(e.localName);pp.insertBefore(e,[...pp.childNodes].find(n=>n.nodeType===1&&ORD.indexOf(n.localName)>k)||null)};ins(W('spacing',{before:30,after:30}));ins(W('jc',{val:jc}));
   const r=mkRun(doc,rPr0,t);if(b){let rp=kids(r,'rPr')[0];if(!rp){rp=W('rPr');r.insertBefore(rp,r.firstChild)}kids(rp,'b').forEach(x=>rp.removeChild(x));rp.insertBefore(W('b'),rp.firstChild)}return W('p',{},[pp,r])};
  const cell=(t,w,jc,hdr)=>W('tc',{},[W('tcPr',{},[W('tcW',{w,type:'dxa'}),hdr?W('tcBorders',{},[W('bottom',{val:'single',sz:6,space:0,color:'auto'})]):null,W('vAlign',{val:'center'})]),...String(t||'').split('\n').map(x=>x.trim()).filter(Boolean).map(x=>para(x,jc,hdr))].concat(String(t||'').trim()?[]:[para('',jc,hdr)]));
  const row=(cs,hdr)=>W('tr',{},[W('trPr',{},[W('cantSplit'),hdr?W('tblHeader'):null]),...cs.map((t,k)=>cell(t,ws[k],k===0||k===4?'left':'center',hdr))]);
@@ -2502,6 +2506,32 @@ function paintCalcs(){if(!curParcela||!EVENTOS[cur.fase].modelo)return;const v=c
   el.textContent=typeof x==='number'?`${fmt(x,k==='ifPct'?1:2)}${u?' '+u:''}`:(x||'—')});
  $$('[data-check]').forEach(el=>{const x=c[el.dataset.check];el.innerHTML=x?`<div class="${x.ok?'okbox':'warnbox'}">${esc(x.msg)}</div>`:''});
  $$('[data-calc="total"]').forEach(el=>{const z=EVENTOS[cur.fase].modelo&&cur.fase!=='VAPRM'&&!(c.total>0);el.classList.toggle('zero',z);let w=el.parentNode.querySelector('.zerobox');if(z&&!w){w=document.createElement('div');w.className='zerobox';w.textContent='⚠ O valor de justa indemnização é nulo. Verifique os preços unitários (V_Un) e as áreas / quantidades.';el.parentNode.appendChild(w)}else if(!z&&w)w.remove()})}
+
+/* ---- biblioteca: verificacao.md — verificação de gralhas e coerência no Word (gerado ou importado para a versão final). Só avisa; nunca altera o texto. ---- */
+const VERIF_GRALHAS=[[/\bbenfeitoras\b/gi,'benfeitorias'],[/\bexpropia(ção|ções|nte|ntes|do|dos|da|das|r)\b/gi,'expropria…'],[/\bindeminiza\w*/gi,'indemniza…'],[/\bidemniza\w*/gi,'indemniza…'],[/\bremanecente\w*/gi,'remanescente'],[/\bjusta indeminiza\w*/gi,'justa indemnização'],[/\bperícial\b/gi,'pericial'],[/\bacordão\b/gi,'acórdão']];
+function verificarDoc(doc,p,v,c,opt={}){const out=[],ps=W_(doc,'p').map(e=>txt(e)).filter(t=>t.trim());const all=ps.join('\n');
+ const ctx=(t,i,n=38)=>'«…'+t.slice(Math.max(0,i-n),i+n).replace(/\s+/g,' ').trim()+'…»';const nrm=x=>String(x||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+ const P='Verificação · ';
+ /* 1. número da parcela */
+ {const own=String(v.nPar||p.nome||'').trim().toUpperCase().replace(/^P(?=\d)/,'');const ok=new Set([own]);(Array.isArray(v.ocTemp)?v.ocTemp:[]).forEach(r=>{const m=String(r.tipo||'').match(/(\d+[A-Za-z]?)/);if(m)ok.add(m[1].toUpperCase())});
+  if(own){const seen=new Map();for(const t of ps){for(const m of t.matchAll(/\bparcelas?\s+(?:n\.?\s*[ºo°]\s*)?[«"“]?(\d+[A-Za-z]?(?:[.\-]\d+)?)/gi)){const n=m[1].toUpperCase();if(!ok.has(n)&&!n.startsWith(own+'.')&&!n.startsWith(own+'-')&&!/^\d+T$/.test(n)&&!seen.has(n))seen.set(n,ctx(t,m.index))}}
+   seen.forEach((cx,n)=>out.push(`${P}aparece a Parcela ${n} (este relatório é da ${own}) – confirmar se é cópia de outro relatório: ${cx}`))}}
+ /* 2. áreas da parcela */
+ {const K=[v.areaExp,v.areaPredio,...['artigos','sobrantes','docsArea','sofTipos','edifTipos','ocTemp'].flatMap(k=>(Array.isArray(v[k])?v[k]:[]).map(r=>r&&r.area)),c.sacTotal,c.sofTotal,c.areaSobrante,c.areaArtigos].map(num).filter(x=>x>0);
+  if(num(v.areaExp)>0)for(const t of ps)for(const m of t.matchAll(/(?:com (?:uma )?área de|área (?:a |total )?expropriada(?: de| é de| de:|:)?)\s*([\d.]+(?:,\d+)?)\s*m/gi)){const a=num(m[1].replace(/\./g,''));if(a>0&&!K.some(k=>Math.abs(k-a)<0.005))out.push(`${P}área de ${m[1]} m² não corresponde a nenhuma área do formulário (área expropriada: ${fmt(num(v.areaExp))} m²): ${ctx(t,m.index)}`)}}
+ /* 3. montante e extenso */
+ if(!opt.semValor)for(const t of ps)for(const m of t.matchAll(/justa indemniza[çc][ãa]o[^€\d]{0,70}?(?:€\s*([\d.]+,\d{2})|([\d.]+,\d{2})\s*€)/gi)){const s=m[1]||m[2],w=num(s.replace(/\./g,'').replace(',','.'));
+   if(c.total>0&&Math.abs(w-c.total)>0.005)out.push(`${P}o montante no Word (${s} €) é diferente do calculado no formulário (${fmt(c.total)} €). Se a discussão mudou valores, corrija-os no formulário.`);
+   const rest=all.slice(all.indexOf(t)+m.index+m[0].length,all.indexOf(t)+m.index+m[0].length+260);const ex=rest.match(/\(([^()]*\beuros?\b[^()]*)\)/i);
+   if(ex){const k=x=>nrm(x).replace(/[^a-z ]/g,' ').split(/\s+/).filter(z=>z&&z!=='e'&&z!=='de').join(' ');if(k(ex[1])!==k(extenso(w)))out.push(`${P}o valor por extenso «${ex[1].trim()}» não corresponde a ${s} € (${lc(extenso(w))}).`)}}
+ /* 4. palavras repetidas, espaços duplos, espaço antes de pontuação */
+ {const rep=[];for(const t of ps)for(const m of t.matchAll(/(^|[^\p{L}])(\p{L}{2,})\s+\2(?=[^\p{L}]|$)/giu))if(rep.length<8)rep.push(ctx(t,m.index+m[1].length));if(rep.length)out.push(`${P}palavra repetida: ${rep.join(' · ')}`);
+  let n2=0,ex2=[];for(const t of ps){const m=[...t.matchAll(/\S( {2,})(?=\S)/g)];n2+=m.length;m.slice(0,1).forEach(x=>{if(ex2.length<3)ex2.push(ctx(t,x.index))})}if(n2)out.push(`${P}${n2} ${n2===1?'ocorrência':'ocorrências'} de espaços duplos: ${ex2.join(' · ')}`);
+  let n3=0,ex3=[];for(const t of ps){const m=[...t.matchAll(/\S( +)[,;:!?](?!\d)/g)];n3+=m.length;m.slice(0,1).forEach(x=>{if(ex3.length<3)ex3.push(ctx(t,x.index))})}if(n3)out.push(`${P}${n3} ${n3===1?'espaço':'espaços'} antes de vírgula / ponto e vírgula / dois pontos: ${ex3.join(' · ')}`)}
+ /* 5. marcadores por preencher e gralhas frequentes */
+ {const ph=[];for(const t of ps)for(const m of t.matchAll(/\[(?:…|\.\.\.|[^\]]{0,40}(?:por indicar|preencher|a definir)[^\]]{0,40})\]|\[\s*fotos?\s*\]|\bx{3,}\b/gi))if(ph.length<8)ph.push(ctx(t,m.index));if(ph.length)out.push(`${P}texto por preencher: ${ph.join(' · ')}`);
+  const g=[];for(const [re,ok] of VERIF_GRALHAS)for(const t of ps)for(const m of t.matchAll(re))if(g.length<10)g.push(`«${m[0]}» → ${ok}`);if(g.length)out.push(`${P}gralhas: ${[...new Set(g)].join('; ')}`)}
+ return out}
 
 /* número por extenso (PT-PT) */
 function extenso(v){const U=['zero','um','dois','três','quatro','cinco','seis','sete','oito','nove','dez','onze','doze','treze','catorze','quinze','dezasseis','dezassete','dezoito','dezanove'],D=['','','vinte','trinta','quarenta','cinquenta','sessenta','setenta','oitenta','noventa'],C=['','cento','duzentos','trezentos','quatrocentos','quinhentos','seiscentos','setecentos','oitocentos','novecentos'];
