@@ -1,5 +1,11 @@
 <!doctype html>
 <!--
+ExPropria v0.13.8 — resumo
+- 8 · Preços unitários: «🧮 Calcular» em cada finalidade do solo para outros fins – eucaliptal (valor atual dos cortes, desconto contínuo), pinhal (plano de gestão, desconto discreto) e rotação de culturas (rendimento fundiário capitalizado). Vem com os valores dos relatórios de exemplo; «Usar este valor» põe o V_Un e a fundamentação, que continuam editáveis. O cálculo só sai no relatório se o V_Un adotado for o calculado.
+- 8.10 Ocupação temporária: área × anos × rendimento fundiário (€/m²/ano, com 🧮 rotação de culturas). Entra no quadro na linha 8 e no texto da interrupção da atividade.
+- Arvoredo: DAP, idade e observações por espécie; no Word sai em quadro sem limites de células, só com a linha inferior da linha de títulos. Na VAPRM, DAP e idade vão na linha da espécie.
+- Lista de transações recebida mas não utilizável: o motivo vem preenchido com o texto-tipo das listas da Autoridade Tributária e sai no relatório antes do critério supletivo do art. 27.º, n.º 3.
+
 ExPropria v0.13.7 — resumo
 - Trocar com outro aparelho (iPhone ↔ PC), no fim do separador Processo: enviar só as parcelas escolhidas, o processo inteiro, ou (no ecrã inicial) o backup geral.
 - Ao receber parcelas: a app mostra parcela a parcela se é nova, igual ou diferente e pergunta (acrescentar / substituir / manter a deste aparelho / manter as duas). As outras parcelas e os dados gerais do processo não mudam.
@@ -574,7 +580,7 @@ table.tb td input,table.tb td textarea{padding:5px 6px;min-height:0}
 .zerobox{margin-top:8px;padding:10px 12px;border:2px solid #c62828;border-radius:10px;background:#fdecea;color:#b71c1c;font-weight:700}
 .calc.zero{border-color:#c62828;color:#b71c1c;background:#fdecea}.imgf img{max-width:100%;max-height:220px;border:1px solid var(--line,#dfe5ec);border-radius:8px;display:block;margin:4px 0}.imgbtns{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}.fluxo .seg{display:flex;gap:0;margin:6px 0 12px;border:1px solid var(--line,#d5ddcf);border-radius:12px;overflow:hidden}.fluxo .seg button{flex:1;min-height:48px;border:0;border-radius:0;background:#fff;color:#2f5d3a;font-weight:600}.fluxo .seg button.on{background:#2f5d3a;color:#fff}.fluxo .fx-ol{padding-left:20px;margin:6px 0}.fluxo .fx-ol li{margin:0 0 14px}
 .tlr:last-child{border-bottom:0}.tlr .chk{margin:0}.tlr input:not([type=checkbox]){margin:0;padding:6px 8px}.tlr input:disabled{opacity:.35}
-.tlr select{grid-column:1/-1;margin:0 0 4px 26px;padding:5px 8px;font-size:13px}.tlr .del{padding:2px 7px}.tlr.vun{grid-template-columns:1fr 110px}
+.tlr select{grid-column:1/-1;margin:0 0 4px 26px;padding:5px 8px;font-size:13px}.tlr .del{padding:2px 7px}.tlr.vun{grid-template-columns:1fr 110px}.cmrow{grid-column:1/-1;display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:2px 0 4px}.cmnote{font-size:12px;color:#2f5d3a}.cmnote.dif{color:#a15c00}.arvx{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:8px}.cmgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}@media(max-width:520px){.cmgrid{grid-template-columns:1fr}}.cmf{display:flex;flex-direction:column;gap:3px;font-size:13px}.cmf input,.cmf select{width:100%}.cmt input{width:100%;min-width:60px}.cmres{margin-top:12px;padding:10px;border-radius:10px;background:#f3f6f4;font-size:13px;line-height:1.45}.cmv{margin-top:6px;font-size:15px}
 .tlr .q{font-size:12px;color:var(--muted,#667)}
 .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));column-gap:12px}
 .blk{margin:18px 0 6px;padding:8px 12px;border-radius:9px;background:var(--pri);color:#fff;font-weight:700;letter-spacing:.2px}
@@ -719,7 +725,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
 <script>
 'use strict';
-const VERSION='0.13.7';const VERSION_DATA='2026-11-16';/* data da release: atualizar sempre com VERSION */
+const VERSION='0.13.8';const VERSION_DATA='2026-11-17';/* data da release: atualizar sempre com VERSION */
 function growFit(t){if(!t||!t.classList?.contains('grow')||!t.offsetParent)return;t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px'}
 function growAll(root){(root||document).querySelectorAll('textarea.grow').forEach(growFit)}
 document.addEventListener('input',e=>growFit(e.target),true);
@@ -802,14 +808,16 @@ function fill73(doc,v,c){const body=h=>{const ps=[];let e=h.nextSibling;while(e)
      else{setParaText(ps[0],'Nada a considerar');ps.slice(1).forEach(remove)}}
    else put('Solo para outras finalidades',c.sofTotal>0?[`De acordo com a análise de enquadramento: ${m2t(c.sofTotal)}, cujo melhor destino efetivo ou possível se considera nos seguintes termos:`,...(L.length?L:['- [finalidade por indicar]'])]:[])}}
  put('Edificações e construções',T('edifTipos').filter(r=>num(r.area)>0).map(r=>`- ${r.tipo.trim()}: ${m2t(r.area)}${r.obs?` – ${r.obs}`:''}${ab('edifTipos',r)}`));
- put('Arvoredo',T('arvTipos').filter(r=>num(r.qtd)>0).map(r=>`- ${r.tipo.trim()}: ${fmt(num(r.qtd),0)} un.${r.dap?` (DAP / idade: ${r.dap})`:''}${ab('arvTipos',r)}`));
+ {const AR=T('arvTipos').filter(r=>num(r.qtd)>0);const h=findHeading(doc,'Arvoredo');const ps=h?body(h):[];
+  if(h&&ps.length&&AR.length){const tb=arvTabela(doc,ps[0],AR.map(r=>[r.tipo.trim(),fmt(num(r.qtd),0),arvCm(r.dap)||'—',arvAnos(r.idade)||'—',[String(r.obs||'').trim(),ab('arvTipos',r).replace(/^ – /,'')].filter(Boolean).join(' – ')||'—']));ps[0].parentNode.insertBefore(tb,ps[0]);ps.forEach(remove)}
+  else put('Arvoredo',[])}
  put('Outras benfeitorias',T('benfTipos').filter(r=>num(r.qtd)>0).map(r=>`- ${r.tipo.trim()}: ${fmt(num(r.qtd))} ${r.un||'un.'}${r.obs?` – ${r.obs}`:''}${ab('benfTipos',r)}`));
  put('Depreciação da sobrante',T('depTipos').filter(r=>num(r.qtd)>0).map(r=>`- ${r.tipo.trim()}${r.obs?` – ${r.obs}`:''}${ab('depTipos',r)}`));
  put('Indemnização por arrendamento',T('arrTipos').filter(r=>num(r.qtd)>0).map(r=>`- ${r.tipo.trim()}: ${fmt(num(r.qtd),0)} rendas${r.obs?` – ${r.obs}`:''}${ab('arrTipos',r)}`));
  put('Situações com reflexo na parte sobrante',T('depTipos').filter(r=>num(r.qtd)>0||String(r.obs||'').trim()).map(r=>`- ${r.tipo.trim()}${r.obs?` – ${r.obs}`:''}`));
   put('Arrendamentos e outros direitos',T('arrTipos').filter(r=>num(r.qtd)>0||String(r.obs||'').trim()).map(r=>`- ${r.tipo.trim()}${r.obs?` – ${r.obs}`:''}`));
   put('Atividades económicas exercidas',T('intTipos').filter(r=>num(r.qtd)>0||String(r.obs||'').trim()).map(r=>`- ${r.tipo.trim()}${r.obs?` – ${r.obs}`:''}`));
- put('Interrupção da atividade',T('intTipos').filter(r=>num(r.qtd)>0).map(r=>`- ${r.tipo.trim()}${r.obs?` – ${r.obs}`:''}${ab('intTipos',r)}`))}
+ put('Interrupção da atividade',[...T('intTipos').filter(r=>num(r.qtd)>0).map(r=>`- ${r.tipo.trim()}${r.obs?` – ${r.obs}`:''}${ab('intTipos',r)}`),...ocTempRows(v).flatMap(([r])=>[`- Ocupação temporária – ${String(r.tipo).trim()}${String(r.obs||'').trim()?` (${String(r.obs).trim()})`:''}: ${fmt(num(r.area))} m² × ${fmt(num(r.vun),4)} €/m²/ano × ${fmt(num(r.anos),num(r.anos)%1?1:0)} ${num(r.anos)===1?'ano':'anos'} = ${fmt(num(r.area)*num(r.anos)*num(r.vun))} €${String(r.fund||'').trim()?` (${String(r.fund).trim().replace(/[.\s]+$/,'')})`:''}.`,...(calcUsado('ocTemp',r)?r.calcTxt.map(x=>'   '+x):[])])])}
 /* epígrafe do acórdão: Processo · Finalidade · Parcela · Expropriante · Expropriado(s) */
 function acEpigrafe(doc,P,pars){const h=findPara(doc,t=>/^processo:/.test(norm(t)));if(!h)return;
  setParaText(h,`Processo: ${P.proc||'[…]'}`);const ps=nextParas(doc,h,8);const put=(re,val)=>{const q=ps.find(q=>re.test(norm(txt(q))));if(q)setParaText(q,val)};
@@ -955,7 +963,7 @@ function fillVAP(doc,v,c,p,P,team){
  {const L=T('sofTipos').filter(r=>num(r.area)>0);val('Ocupação atual',String(v.ocupTxt||'').trim()||(L.length?L.map(r=>`${r.tipo.trim()}: ${m2(num(r.area))}`).join('\n'):'—'));const ps=sec('Ocupação atual');const q=ps&&ps.find(e=>e.localName==='p'&&/^\(\*\)/.test(txt(e).trim()));if(q)setParaText(q,`(*) Mato / Terra nua / Pastagem, com indícios de melhor utilização nos últimos 10 anos: ${String(v.agMelhor||'').trim()||'Não aplicável'}`)}
  val('Disponibilidade de água',ag(v.agAgua));val('Disponibilidade de fontes de energia',ag(v.agEnerg));val('Qualidade das práticas',ag(v.agCond));val('Densidade de povoamento',ag(v.agDens));val('Eucaliptal',stx(v.agEuc)||'Não aplicável');
  const lin=(k,q,u)=>T(k).filter(r=>num(r[q])>0||String(r.obs||'').trim()).map(r=>`- ${r.tipo.trim()}${num(r[q])>0?`: ${q==='area'?m2(num(r[q])):(num(r[q])%1?fmt(num(r[q])):String(num(r[q])))+(u?' '+u:'')}`:''}${String(r.obs||'').trim()?' – '+String(r.obs).trim():''}`);
- val('Edificações',lin('edifTipos','area').join('\n'));val('Muros / vedações',lin('murosTipos','qtd','m').join('\n'));val('Outras benfeitorias',[...lin('benfTipos','qtd','un.'),...lin('arvTipos','qtd','un.')].join('\n'));
+ val('Edificações',lin('edifTipos','area').join('\n'));val('Muros / vedações',lin('murosTipos','qtd','m').join('\n'));val('Outras benfeitorias',[...lin('benfTipos','qtd','un.'),...T('arvTipos').filter(r=>num(r.qtd)>0||String(r.obs||'').trim()).map(r=>`- ${r.tipo.trim()}${num(r.qtd)>0?`: ${fmt(num(r.qtd),0)} un.`:''}${[arvCm(r.dap)?'DAP '+arvCm(r.dap):'',arvAnos(r.idade)?'idade '+arvAnos(r.idade):''].filter(Boolean).length?` (${[arvCm(r.dap)?'DAP '+arvCm(r.dap):'',arvAnos(r.idade)?'idade '+arvAnos(r.idade):''].filter(Boolean).join('; ')})`:''}${String(r.obs||'').trim()?' – '+String(r.obs).trim():''}`)].join('\n'));
  val('Servidões / restrições',v.servidoes,'Não identificadas');val('Da rede primária',stx(v.fgcPrim));val('Da rede secundária',stx(v.fgcSec));
  lst('Nas cartas dos IGT',null,[`- de Ordenamento: ${String(v.classPdm||'').trim()||stx(v.categoria)||'[por indicar]'}`,`- de Condicionantes: ${String(v.igtCond||'').trim()||'Nada a considerar'}`]);
  val('Aptidão do solo',`De acordo com a análise: ${stx(v.aptidao)||'TOF – Solo para outros fins'}`);
@@ -1293,8 +1301,10 @@ async function buildWordARB(ask=true,pp=null,opt={}){try{await avaFontesCalibri(
     else{if(pP)setParaText(pP,'- Nada a considerar');if(t)remove(t)}}}
   {/* 8.3: fundamentação do V_Un de cada finalidade do solo para outros fins */const FL=(Array.isArray(v.sofTipos)?v.sofTipos:[]).filter(r=>elegivel(v,'sofTipos',r,'area')&&String(r.fund||'').trim());
    if(FL.length){const h=findHeading(doc,'Solo para outros fins - parametriza')||findHeading(doc,'Solo para outros fins');if(h){let q=null,e=h.nextSibling;while(e){if(e.nodeType===1){if(e.localName==='p'){const st=e.getElementsByTagNameNS(WNS,'pStyle')[0];if(st&&/Cabealho/.test(st.getAttributeNS(WNS,'val'))&&txt(e).trim())break;q=e;if(txt(e).trim())break}}e=e.nextSibling}
-    if(q){const L=FL.map(r=>`- ${String(r.tipo).trim()}: V_Un ${fmt(num(r.vun))} €/m² – ${String(r.fund).trim().replace(/[.\s]+$/,'')}.`);if(/^-?\s*nada a considerar/i.test(txt(q).trim())||!txt(q).trim())setParaText(q,L.join('\n'));else{const n=q.cloneNode(true);q.parentNode.insertBefore(n,q.nextSibling);setParaText(n,L.join('\n'))}}}}}
+    if(q){const L=FL.flatMap(r=>[`- ${String(r.tipo).trim()}: V_Un ${fmt(num(r.vun))} €/m² – ${String(r.fund).trim().replace(/[.\s]+$/,'')}.`,...(calcUsado('sofTipos',r)?r.calcTxt.map(x=>'   '+x):[])]);if(/^-?\s*nada a considerar/i.test(txt(q).trim())||!txt(q).trim())setParaText(q,L.join('\n'));else{const n=q.cloneNode(true);q.parentNode.insertBefore(n,q.nextSibling);setParaText(n,L.join('\n'))}}}}}
   {if(listaUtil(v)&&c.trTOF>0&&c.sofTotal>0){const h=findHeading(doc,'Solo para outros fins - parametriza')||findHeading(doc,'Solo para outros fins');if(h){const q=nextParas(doc,h,2).find(x=>!txt(x).trim());const tx=`Método comparativo (art. 27.º, n.º 1): média aritmética atualizada dos preços unitários das transações de prédios com características idênticas (${c.trTOFw}): ${fmt(c.trTOF)} €/m².`;if(q)setParaText(q,tx)}}}
+  /* 5.3.1: lista de transações recebida mas não utilizável – motivo (texto supletivo) antes do art. 27.º, n.º 3 */
+  {const mot=String(v.listaMot||'').trim();if(v.listaTr==='Recebida – não utilizável'&&mot){const p3=findPara(doc,t=>/^não sendo possível aplicar aquele critério/i.test(t.trim()));if(p3){mot.split(/\n\s*\n/).map(x=>x.trim()).filter(Boolean).forEach(x=>{const n=p3.cloneNode(true);p3.parentNode.insertBefore(n,p3);setParaText(n,x)})}}}
   /* 7.9 Caraterização do solo apto para construção */
   {const h=findHeading(doc,'Caraterização do solo apto para construção');if(h){const sec=[];let e=h.nextSibling;while(e){if(e.nodeType===1){if(e.localName!=='p')break;const st=e.getElementsByTagNameNS(WNS,'pStyle')[0];if(st&&/Cabealho[12]/.test(st.getAttributeNS(WNS,'val'))&&txt(e).trim())break;if(e.getElementsByTagNameNS(WNS,'br').length&&[...e.getElementsByTagNameNS(WNS,'br')].some(b=>b.getAttributeNS(WNS,'type')==='page'))break;sec.push(e)}e=e.nextSibling}
     const pVal=sec.find(q=>/^-/.test(txt(q).trim()));if(c.sacTotal>0){if(pVal)setParaText(pVal,` - ${m2(c.sacTotal)}`)}
@@ -1490,7 +1500,7 @@ function coerencia(p){const v=p.rel.v,out=[];const P=cur.v;const D=k=>{const x=p
  ord(nt,'a notificação da resolução de expropriar',dup,'a DUP / data de referência');ord(dup,'a DUP / data de referência',vis,'a visita ao local');ord(dup,'a DUP',posse,'a posse administrativa');ord(vis,'a visita ao local',rel,'a data do relatório');
  if(cur.fase==='PER'){ord(dup,'a DUP',ac,'o acórdão arbitral');ord(ac,'o acórdão arbitral',vis,'a visita dos peritos')}
  if(cur.fase!=='VAPRM'){const c=compute(v);if(!(c.total>0))out.push('Valor de justa indemnização nulo – verificar áreas, quantidades e V_Un');
-  const semVun=GRUPOS.flatMap(([k,,l,tb,q])=>(Array.isArray(v[tb])?v[tb]:[]).filter(r=>elegivel(v,tb,r,q)&&!(num(r.vun)>0)).map(r=>`${l} › ${r.tipo}`));if(semVun.length)out.push(`Situações com área / quantidade mas sem V_Un: ${semVun.join('; ')}`);
+  const semVun=[...GRUPOS.flatMap(([k,,l,tb,q])=>(Array.isArray(v[tb])?v[tb]:[]).filter(r=>elegivel(v,tb,r,q)&&!(num(r.vun)>0)).map(r=>`${l} › ${r.tipo}`)),...ocTempRows(v).filter(([r])=>!(num(r.vun)>0)).map(([r])=>`Ocupação temporária › ${r.tipo}`)];if(semVun.length)out.push(`Situações com área / quantidade mas sem V_Un: ${semVun.join('; ')}`);
   regrasCE(v).forEach(x=>out.push('CE: '+x))}
  const F=relFotos(p);if(!F.length)out.push((p.fotos||[]).length?'Nenhuma fotografia escolhida para o relatório (estão todas em reserva)':'Parcela sem fotografias');else{const sl=F.filter(f=>!String(f.caption||'').trim()).length;if(sl)out.push(`${sl} fotografia(s) sem legenda`)}
  {const DG=dupGroups(p);if(DG.length)out.push(`Fotografias repetidas: ${DG.slice(0,4).map(g=>g.map(x=>x.code).join(' = ')).join(' · ')}${DG.length>4?'…':''}`)}
@@ -1971,7 +1981,97 @@ const iusTxt=v=>{const x=iusOf(v);return x>0?`${fmt(x)} m²/m²`:(String(v.ius||
 /* art. 23.º, n.º 2, c): benfeitorias voluptuárias ou úteis feitas após a notificação da resolução de expropriar (art. 10.º, n.º 5) não se consideram */
 const A23C='Posterior à notificação da resolução de expropriar – voluptuária ou útil';
 const elegivel=(v,tb,r,q)=>r&&r.a23!==A23C&&r&&String(r.tipo||'').trim()&&r.on!==false&&num(r[q])>0&&!(ABS_TB.includes(tb)&&sacOn(v)&&r.abs===ABS_OPT);
-const calcLines=v=>Object.fromEntries(GRUPOS.map(([k,,,tb,q])=>[k,(Array.isArray(v[tb])?v[tb]:[]).filter(r=>elegivel(v,tb,r,q)).map(r=>({desig:String(r.tipo).trim(),qtd:num(r[q]),vun:num(r.vun)}))]));
+const calcLines=v=>{const o=Object.fromEntries(GRUPOS.map(([k,,,tb,q])=>[k,(Array.isArray(v[tb])?v[tb]:[]).filter(r=>elegivel(v,tb,r,q)).map(r=>({desig:String(r.tipo).trim(),qtd:num(r[q]),vun:num(r.vun)}))]));o.l8=[...o.l8,...ocTempRows(v).map(([r])=>({desig:ocTempDesig(r),qtd:num(r.area)*num(r.anos),vun:num(r.vun)}))];return o};
+/* ---- 0.13.8 · Calculadoras do V_Un (eucaliptal, pinhal, rotação de culturas) e ocupação temporária ----
+   Os valores por defeito são os dos relatórios de arbitragem que serviram de exemplo; o perito aceita o valor calculado ou adota outro (o V_Un continua editável). */
+const CALC_MET={euc:'Eucaliptal – valor atual dos cortes (desconto contínuo)',pin:'Pinhal – plano de gestão (desconto discreto)',rot:'Rotação de culturas – rendimento fundiário'};
+const CALC_DEF={
+ euc:()=>({r:'4',P:'25',n:'10',V:'130; 150; 130',C:'1500',idade:'3',d:'',tn:'3000'}),
+ pin:()=>({q:'4',pr:'40',man:'10',C:'1500',idade:'15',tn:'0',plano:[{l:'Desbaste',t:'15',v:'7,20'},{l:'Desbaste',t:'25',v:'36,31'},{l:'Desbaste',t:'35',v:'120,66'},{l:'Corte final',t:'40',v:'268,00'}]}),
+ rot:()=>({anos:'2',taxa:'4',cult:[{n:'Couve-lombarda',ano:'1',prod:'30000',pr:'0,15',de:'85'},{n:'Feijão-verde',ano:'1',prod:'15000',pr:'0,40',de:'90'},{n:'Alho francês',ano:'2',prod:'6000',pr:'0,75',de:'85'},{n:'Tomate',ano:'2',prod:'60000',pr:'0,10',de:'90'}]})};
+const calcMetOf=(tb,r)=>tb==='ocTemp'?'rot':/eucal/i.test(r.tipo||'')?'euc':/pinh|pinheir/i.test(r.tipo||'')?'pin':'rot';
+const pctTxt=x=>{const n=num(x);return `${fmt(n,n%1?2:0)} %`};
+function calcRun(m,p,temp){const L=[];let vun=0,ok=true;
+ if(m==='euc'){const r=num(p.r)/100,P=num(p.P),n=num(p.n),V=String(p.V||'').split(/[;\/]+/).map(num).filter(x=>x>0),C=num(p.C),a=num(p.idade),tn=num(p.tn);
+  const k=V.length,T=n*k,d=String(p.d??'').trim()===''?Math.max(0,T-a):num(p.d);ok=r>0&&P>0&&n>0&&k>0;if(!ok)return {ok,L:['Indique a taxa, o preço, o intervalo entre cortes e os volumes.']};
+  const cortes=V.map((v,i)=>({t:n*(i+1),v})).filter(x=>x.t>=a);const val1=cortes.reduce((s,x)=>s+P*x.v*Math.exp(-r*(x.t-a)),0);
+  const Vm=V.reduce((s,x)=>s+x,0)/k;const val2=(P*Vm/(Math.exp(r*n)-1)-C*Math.exp(r*T)/(Math.exp(r*T)-1))*Math.exp(-r*d);const tot=val1+val2+tn;vun=tot/10000;
+  L.push(`Povoamento com cerca de ${fmt(a,a%1?1:0)} anos; P = ${fmt(P)} €/m³ (madeira em pé); cortes de ${V.map(x=>fmt(x,x%1?2:0)).join(' / ')} m³/ha, de ${fmt(n,0)} em ${fmt(n,0)} anos (ciclo de ${fmt(T,0)} anos); C = ${fmt(C)} €/ha (instalação); r = ${pctTxt(p.r)}.`,
+   `VAL do ciclo em curso = Σ P × Vᵢ / e^(r × (tᵢ − ${fmt(a,a%1?1:0)})) = ${cortes.map(x=>`${fmt(P)} × ${fmt(x.v,x.v%1?2:0)} / e^(${fmt(r,2)} × ${fmt(x.t-a,(x.t-a)%1?1:0)})`).join(' + ')||'0'} = ${fmt(val1)} €/ha.`,
+   `VAL dos ciclos seguintes = [P × V̄ / (e^(r × ${fmt(n,0)}) − 1) − C × e^(r × ${fmt(T,0)}) / (e^(r × ${fmt(T,0)}) − 1)] × e^(−r × ${fmt(d,d%1?1:0)}), com V̄ = ${fmt(Vm)} m³/ha, = ${fmt(val2)} €/ha.`,
+   ...(tn?[`Terra nua: ${fmt(tn)} €/ha.`]:[]),
+   `Total: ${fmt(val1)} + ${fmt(val2)}${tn?` + ${fmt(tn)}`:''} = ${fmt(tot)} €/ha, ou seja, ${fmt(vun,4)} €/m².`);
+  return {ok,L,vun:Math.round(vun*100)/100,fund:`eucaliptal com cerca de ${fmt(a,a%1?1:0)} anos – valor atual dos cortes futuros (r = ${pctTxt(p.r)}, ${fmt(P)} €/m³)${tn?` acrescido da terra nua (${fmt(tn)} €/ha)`:''}: ${fmt(tot)} €/ha`}}
+ if(m==='pin'){const q=1+num(p.q)/100,pr=num(p.pr),man=num(p.man)/100,C=num(p.C),a=num(p.idade),tn=num(p.tn);
+  const PL=(Array.isArray(p.plano)?p.plano:[]).map(x=>({l:String(x.l||'').trim()||'Corte',t:num(x.t),v:num(x.v)})).filter(x=>x.t>0).sort((x,y)=>x.t-y.t);ok=q>1&&pr>0&&PL.length>0;if(!ok)return {ok,L:['Indique a taxa, o preço e o plano de cortes.']};
+  const T=PL[PL.length-1].t;PL.forEach(x=>{x.rf=x.v*pr*(1-man);x.at=x.rf/Math.pow(q,x.t)});const VAL=PL.reduce((s,x)=>s+x.at,0)-C;
+  const fut=PL.filter(x=>x.t>=a);const vf=fut.reduce((s,x)=>s+x.rf/Math.pow(q,x.t-a),0);const vs=VAL*Math.pow(q,T)/(Math.pow(q,T)-1)/Math.pow(q,T-a);const tot=vf+vs+tn;vun=tot/10000;
+  L.push(`Plano de gestão (preço ${fmt(pr)} €/m³; despesas de manutenção ${pctTxt(p.man)} do rendimento bruto; q = ${fmt(q,2)}):`,
+   ...PL.map(x=>`- ${x.l} aos ${fmt(x.t,0)} anos: ${fmt(x.v)} m³/ha → RF ${fmt(x.rf)} €/ha; atualizado ao ano 0: ${fmt(x.at)} €/ha.`),
+   `VAL da rotação = Σ RF atualizados − investimento (${fmt(C)} €/ha) = ${fmt(VAL)} €/ha.`,
+   `Valor aos ${fmt(a,0)} anos = Σ RF(t ≥ ${fmt(a,0)}) / q^(t − ${fmt(a,0)}) + VAL × q^${fmt(T,0)} / (q^${fmt(T,0)} − 1) / q^${fmt(T-a,0)} = ${fmt(vf)} + ${fmt(vs)} = ${fmt(vf+vs)} €/ha.`,
+   ...(tn?[`Terra nua: ${fmt(tn)} €/ha.`]:[]),
+   `Total: ${fmt(tot)} €/ha, ou seja, ${fmt(vun,4)} €/m².`);
+  return {ok,L,vun:Math.round(vun*100)/100,fund:`pinhal com cerca de ${fmt(a,0)} anos – plano de gestão (q = ${fmt(q,2)}, ${fmt(pr)} €/m³)${tn?` acrescido da terra nua (${fmt(tn)} €/ha)`:''}: ${fmt(tot)} €/ha`}}
+ if(m==='rot'){const an=Math.max(1,num(p.anos)),tx=num(p.taxa)/100;const CU=(Array.isArray(p.cult)?p.cult:[]).map(x=>({n:String(x.n||'').trim()||'Cultura',ano:String(x.ano||'').trim(),prod:num(x.prod),pr:num(x.pr),de:num(x.de)})).filter(x=>x.prod>0);
+  ok=CU.length>0&&(temp||tx>0);if(!ok)return {ok,L:[temp?'Indique as culturas.':'Indique as culturas e a taxa de capitalização.']};
+  CU.forEach(x=>{x.rb=x.prod*x.pr;x.dep=x.rb*x.de/100;x.rf=x.rb-x.dep});const RFt=CU.reduce((s,x)=>s+x.rf,0),RFa=RFt/an,RFm=RFa/10000;
+  L.push(`Rotação de ${fmt(an,0)} ${an===1?'ano':'anos'}:`,...CU.map(x=>`- ${x.n}${x.ano?` (${x.ano}.º ano)`:''}: RB = ${fmt(x.prod,0)} kg/ha × ${fmt(x.pr)} €/kg = ${fmt(x.rb)} €; DE (${pctTxt(x.de)}) = ${fmt(x.dep)} €; RF = ${fmt(x.rf)} €/ha.`),
+   `Rendimento fundiário médio anual = ${fmt(RFt)} / ${fmt(an,0)} = ${fmt(RFa)} €/ha/ano, ou seja, ${fmt(RFm,4)} €/m²/ano.`);
+  if(temp){vun=Math.round(RFm*10000)/10000;return {ok,L,vun,fund:`perda do rendimento fundiário da rotação de culturas (${fmt(RFa)} €/ha/ano)`}}
+  vun=RFm/tx;L.push(`Valor do solo = RF / taxa de capitalização = ${fmt(RFm,4)} / ${fmt(tx,4)} = ${fmt(vun,4)} €/m².`);
+  return {ok,L,vun:Math.round(vun*100)/100,fund:`rendimento fundiário da rotação de culturas (${fmt(RFa)} €/ha/ano), capitalizado à taxa de ${pctTxt(p.taxa)}`}}
+ return {ok:false,L:[]}}
+/* linhas da ocupação temporária (entram na linha 8 do quadro: área × anos × RF €/m²/ano) */
+const ocTempRows=v=>(Array.isArray(v.ocTemp)?v.ocTemp:[]).map((r,i)=>[r,i]).filter(([r])=>r&&String(r.tipo||'').trim()&&num(r.area)>0&&num(r.anos)>0);
+const ocTempDesig=r=>`Ocupação temporária – ${String(r.tipo).trim()} (${fmt(num(r.area))} m² × ${fmt(num(r.anos),num(r.anos)%1?1:0)} ${num(r.anos)===1?'ano':'anos'})`;
+function calcModalHTML(st){const {m,p,temp,tipo}=st;const R=calcRun(m,p,temp);const inp=(k,l,h)=>`<label class="cmf"><span>${l}</span><input data-cp="${k}" inputmode="decimal" value="${esc(p[k]??'')}">${h?`<small class="muted">${h}</small>`:''}</label>`;
+ let f='';
+ if(m==='euc')f=inp('r','Taxa de atualização r (%)')+inp('P','Preço da madeira em pé (€/m³)')+inp('n','Intervalo entre cortes (anos)')+`<label class="cmf" style="grid-column:1/-1"><span>Volumes de cada corte do ciclo (m³/ha), separados por «;»</span><input data-cp="V" value="${esc(p.V||'')}"></label>`+inp('C','Custo de instalação C (€/ha)')+inp('idade','Idade atual do povoamento (anos)')+inp('d','Anos até ao início dos ciclos seguintes','Em branco = fim do ciclo em curso (ciclo − idade)')+inp('tn','Terra nua a somar (€/ha)','0 = não somar');
+ if(m==='pin')f=inp('q','Taxa de atualização (%)')+inp('pr','Preço da madeira (€/m³)')+inp('man','Despesas de manutenção (% do RB)')+inp('C','Investimento inicial (€/ha)')+inp('idade','Idade atual do povoamento (anos)')+inp('tn','Terra nua a somar (€/ha)','0 = não somar')+
+  `<div style="grid-column:1/-1"><div class="muted" style="margin:6px 0 4px">Plano de cortes</div><table class="tb cmt"><tr><th>Operação</th><th>Idade (anos)</th><th>Volume (m³/ha)</th><th></th></tr>${(p.plano||[]).map((x,i)=>`<tr><td><input data-cr="plano" data-i="${i}" data-c="l" value="${esc(x.l||'')}"></td><td><input data-cr="plano" data-i="${i}" data-c="t" inputmode="decimal" value="${esc(x.t||'')}"></td><td><input data-cr="plano" data-i="${i}" data-c="v" inputmode="decimal" value="${esc(x.v||'')}"></td><td><button class="del" data-crdel="plano" data-i="${i}">✕</button></td></tr>`).join('')}</table><button class="secondary mini" data-cradd="plano">+ Corte</button></div>`;
+ if(m==='rot')f=inp('anos','Duração da rotação (anos)')+(temp?'':inp('taxa','Taxa de capitalização (%)','Por defeito 4 % (a taxa dos exemplos florestais) – fundamente a taxa adotada'))+
+  `<div style="grid-column:1/-1"><div class="muted" style="margin:6px 0 4px">Culturas da rotação</div><table class="tb cmt"><tr><th>Cultura</th><th>Ano</th><th>Produção (kg/ha)</th><th>Preço (€/kg)</th><th>DE (%)</th><th></th></tr>${(p.cult||[]).map((x,i)=>`<tr>${[['n',''],['ano','d'],['prod','d'],['pr','d'],['de','d']].map(([c,d])=>`<td><input data-cr="cult" data-i="${i}" data-c="${c}" ${d?'inputmode="decimal"':''} value="${esc(x[c]??'')}"></td>`).join('')}<td><button class="del" data-crdel="cult" data-i="${i}">✕</button></td></tr>`).join('')}</table><button class="secondary mini" data-cradd="cult">+ Cultura</button></div>`;
+ const un=temp?'€/m²/ano':'€/m²';
+ return `<h3>🧮 ${esc(tipo)}</h3>${temp?'':`<label class="cmf" style="display:block;margin-bottom:8px"><span>Método</span><select id="cmMet">${Object.entries(CALC_MET).map(([k,l])=>`<option value="${k}" ${k===m?'selected':''}>${esc(l)}</option>`).join('')}</select></label>`}
+  <div class="muted" style="margin-bottom:8px">Valores por defeito: os dos relatórios de exemplo. Corrija o que não se aplicar a esta parcela.</div>
+  <div class="cmgrid">${f}</div>
+  <div class="cmres" id="cmRes">${R.L.map(x=>`<div>${esc(x)}</div>`).join('')}${R.ok?`<div class="cmv">Valor calculado: <b>${fmt(R.vun,temp?4:2)} ${un}</b></div>`:''}</div>
+  <div class="btns" style="margin-top:12px;flex-wrap:wrap"><button id="cmUse" ${R.ok?'':'disabled'}>Usar este valor</button><button class="secondary" id="cmDef">Repor valores por defeito</button><button class="secondary" id="cmCancel">Cancelar</button></div>`}
+function calcOpen(v,tb,i,rerender){const r=(v[tb]||[])[i];if(!r)return;const temp=tb==='ocTemp';
+ const sv=r.calc&&r.calc.m?structuredClone(r.calc):null;const st={temp,tipo:temp?ocTempDesig(r):`${r.tipo} · ${fmt(num(r.area))} m²`,m:sv?sv.m:calcMetOf(tb,r),p:null,keep:{}};
+ st.keep[st.m]=sv?sv.p:CALC_DEF[st.m]();st.p=st.keep[st.m];
+ const draw=()=>{openModal(calcModalHTML(st));const box=$('#modalBox');const res=()=>{const R=calcRun(st.m,st.p,temp);$('#cmRes').innerHTML=R.L.map(x=>`<div>${esc(x)}</div>`).join('')+(R.ok?`<div class="cmv">Valor calculado: <b>${fmt(R.vun,temp?4:2)} ${temp?'€/m²/ano':'€/m²'}</b></div>`:'');$('#cmUse').disabled=!R.ok};
+  box.querySelectorAll('[data-cp]').forEach(el=>el.oninput=()=>{st.p[el.dataset.cp]=el.value;res()});
+  box.querySelectorAll('[data-cr]').forEach(el=>el.oninput=()=>{st.p[el.dataset.cr][+el.dataset.i][el.dataset.c]=el.value;res()});
+  box.querySelectorAll('[data-crdel]').forEach(el=>el.onclick=()=>{st.p[el.dataset.crdel].splice(+el.dataset.i,1);draw()});
+  box.querySelectorAll('[data-cradd]').forEach(el=>el.onclick=()=>{(st.p[el.dataset.cradd]=st.p[el.dataset.cradd]||[]).push({});draw()});
+  const ms=$('#cmMet');if(ms)ms.onchange=()=>{st.m=ms.value;st.p=st.keep[st.m]||(st.keep[st.m]=CALC_DEF[st.m]());draw()};
+  $('#cmDef').onclick=()=>{st.p=st.keep[st.m]=CALC_DEF[st.m]();draw()};$('#cmCancel').onclick=closeModal;
+  $('#cmUse').onclick=()=>{const R=calcRun(st.m,st.p,temp);if(!R.ok)return;r.calc={m:st.m,p:structuredClone(st.p),vun:R.vun};r.vun=String(R.vun).replace('.',',');r.fund=R.fund;r.calcTxt=R.L;closeModal();saveSoon();rerender()}};
+ draw()}
+/* nota na lista do V_Un: valor adotado ≠ calculado */
+function calcNota(tb,r){if(!r.calc||!r.calc.m)return '';const vc=num(r.calc.vun),va=num(r.vun),d=tb==='ocTemp'?4:2;
+ return `<span class="cmnote ${Math.abs(vc-va)>1e-9?'dif':''}">Calculado: ${fmt(vc,d)}${Math.abs(vc-va)>1e-9?' · adotado outro valor (o cálculo não sai no relatório)':' · adotado'}</span>`}
+/* o cálculo só sai no relatório se o V_Un adotado for o calculado */
+const calcUsado=(tb,r)=>!!(r&&r.calc&&r.calc.m&&Array.isArray(r.calcTxt)&&Math.abs(num(r.calc.vun)-num(r.vun))<1e-9);
+const LISTA_AT_TXT='As listas de transações e de avaliações fiscais habitualmente disponibilizadas pela Autoridade Tributária indicam apenas o ano, o número da declaração, o tipo, os códigos do distrito, do concelho e da freguesia, o artigo e a secção, a área do prédio e o valor, sendo omissas quanto às possibilidades de uso consagradas em instrumento de planeamento territorial e às características dos prédios.\n\nA aplicação do método comparativo implica a homogeneização dos prédios transacionados com o prédio de que a parcela é destacada, para a qual seria necessário conhecer as respetivas características, tais como: localização; área; condições de acesso; tipo de construções permitidas; benfeitorias existentes; topografia; classificação no Plano Diretor Municipal; proximidade de núcleos habitacionais.\n\nCom os elementos que a Autoridade Tributária habitualmente fornece não é, pois, possível utilizar o critério principal previsto nos n.ºs 1 e 2 do art. 27.º do CE, pelo que se recorre ao critério supletivo do n.º 3 do mesmo artigo.';
+/* arvoredo em quadro: sem limites de células, só a linha inferior da linha de títulos */
+function arvTabela(doc,anchor,rows){const W=(n,at={},ch=[])=>{const e=doc.createElementNS(WNS,'w:'+n);Object.entries(at).forEach(([k,x])=>e.setAttributeNS(WNS,'w:'+k,String(x)));ch.forEach(c=>c&&e.appendChild(c));return e};
+ const sp=W_(doc,'sectPr').pop();const pg=sp&&kids(sp,'pgSz')[0],mg=sp&&kids(sp,'pgMar')[0];const TW=pg&&mg?num(pg.getAttributeNS(WNS,'w'))-num(mg.getAttributeNS(WNS,'left'))-num(mg.getAttributeNS(WNS,'right')):9638;
+ const pc=[0.30,0.10,0.14,0.14,0.32];const ws=pc.map(x=>Math.floor(TW*x));ws[4]=TW-ws.slice(0,4).reduce((a,b)=>a+b,0);
+ const rPr0=firstRPr(anchor);const pPr0=kids(anchor,'pPr')[0];
+ const para=(t,jc,b)=>{const pp=pPr0?pPr0.cloneNode(true):W('pPr');['numPr','ind','spacing','jc','keepNext','pageBreakBefore'].forEach(k=>kids(pp,k).forEach(x=>pp.removeChild(x)));
+  const after=[...pp.childNodes].find(n=>n.nodeType===1&&['rPr','sectPr','pPrChange'].includes(n.localName))||null;pp.insertBefore(W('spacing',{before:30,after:30}),after);pp.insertBefore(W('jc',{val:jc}),after);
+  const r=mkRun(doc,rPr0,t);if(b){let rp=kids(r,'rPr')[0];if(!rp){rp=W('rPr');r.insertBefore(rp,r.firstChild)}kids(rp,'b').forEach(x=>rp.removeChild(x));rp.insertBefore(W('b'),rp.firstChild)}return W('p',{},[pp,r])};
+ const cell=(t,w,jc,hdr)=>W('tc',{},[W('tcPr',{},[W('tcW',{w,type:'dxa'}),hdr?W('tcBorders',{},[W('bottom',{val:'single',sz:6,space:0,color:'auto'})]):null,W('vAlign',{val:'center'})]),...String(t||'').split('\n').map(x=>x.trim()).filter(Boolean).map(x=>para(x,jc,hdr))].concat(String(t||'').trim()?[]:[para('',jc,hdr)]));
+ const row=(cs,hdr)=>W('tr',{},[W('trPr',{},[W('cantSplit'),hdr?W('tblHeader'):null]),...cs.map((t,k)=>cell(t,ws[k],k===0||k===4?'left':'center',hdr))]);
+ const nil=['top','left','bottom','right','insideH','insideV'].map(k=>W(k,{val:'nil'}));
+ const tbl=W('tbl',{},[W('tblPr',{},[W('tblW',{w:TW,type:'dxa'}),W('tblBorders',{},nil),W('tblLayout',{type:'fixed'}),W('tblCellMar',{},[W('left',{w:60,type:'dxa'}),W('right',{w:60,type:'dxa'})]),W('tblLook',{val:'0000'})]),W('tblGrid',{},ws.map(w=>W('gridCol',{w})))]);
+ tbl.appendChild(row(['Espécie','N.º','DAP','Idade','Observações'],true));rows.forEach(x=>tbl.appendChild(row(x)));return tbl}
+const arvCm=x=>{const t=String(x||'').trim();return /^\d+([.,]\d+)?$/.test(t)?`${t} cm`:t};
+const arvAnos=x=>{const t=String(x||'').trim();return /^\d+([.,]\d+)?$/.test(t)?`${t} anos`:t};
+
 /* 7.3 – situações tipificadas (lista de sugestões; aceita-se qualquer outra) */
 const TITULOS=['Eng.º','Arq.º','Economista','Perito-avaliador','Perito da lista oficial do Tribunal da Relação'];
 const PLANOS=['PDM – Plano Diretor Municipal','PU – Plano de Urbanização','PP – Plano de Pormenor','AL – Alvará de loteamento','UE – Unidade de execução'];
@@ -2093,7 +2193,7 @@ const ARB_SECTIONS=[
  {id:'lista',t:'4 · Lista de transações (arts. 26.º, n.ºs 2 e 3; 27.º, n.ºs 1 e 2)',f:[
   {id:'_hdLista',t:'head',l:'A lista é pedida pela entidade expropriante aos serviços de Finanças (arts. 26.º, n.º 3, e 27.º, n.º 2). Se for utilizável, o valor do solo segue o método comparativo; caso contrário, o método referencial (TAC, art. 26.º, n.º 4) ou o rendimento (TOF, art. 27.º, n.º 3).'},
   {id:'listaTr',l:'Lista de transações / avaliações fiscais',t:'select',r:1,o:['Não recebida','Recebida – utilizável','Recebida – não utilizável'],d:'Não recebida'},
-  {id:'listaMot',l:'Motivo por que não é utilizável',t:'textarea',show:v=>v.listaTr==='Recebida – não utilizável',h:'Ex.: não inclui prédios com características idênticas'},
+  {id:'listaMot',l:'Motivo por que não é utilizável (sai no relatório, antes do critério do art. 27.º, n.º 3)',t:'textarea',d:LISTA_AT_TXT,show:v=>v.listaTr==='Recebida – não utilizável',h:'Vem preenchido com o texto-tipo das listas da Autoridade Tributária sem as características dos prédios. Aceite, corrija ou substitua.'},
   {id:'trans',l:'Transações (aquisições ou avaliações fiscais que corrijam os valores declarados)',t:'table',show:v=>v.listaTr==='Recebida – utilizável',cols:[{id:'solo',l:'Solo (TAC / TOF)',opts:['TAC','TOF']},{id:'ano',l:'Ano',num:1},{id:'freg',l:'Freguesia',list:'dlFreg'},{id:'area',l:'Área (m²)',num:1},{id:'preco',l:'Valor (€)',num:1},{id:'coef',l:'Coef. de atualização',num:1}],h:'Mesma freguesia e freguesias limítrofes; prédios com características idênticas. Coef. vazio = 1. A app usa os 5 anos mais recentes com transações e, destes, os 3 com média anual mais elevada.'},
   {id:'trTACc',l:'Média TAC – 3 anos com média anual mais elevada',t:'calc',k:'trTAC',u:'€/m²',show:v=>v.listaTr==='Recebida – utilizável'},
   {id:'trTACa',l:'Anos considerados (TAC)',t:'calc',k:'trTACanos',show:v=>v.listaTr==='Recebida – utilizável'},
@@ -2141,7 +2241,7 @@ const ARB_SECTIONS=[
   {id:'_h733',t:'head',l:'8.4 Edificações e construções'},
   {id:'edifTipos',l:'Edificações e construções',t:'ticklist',dl:'Tipo',ql:'Área (m²)',q:'area',opts:SIT73.edif,abs:1},
   {id:'_h734',t:'head',l:'8.5 Arvoredo de valorização autónoma'},
-  {id:'arvTipos',l:'Arvoredo',t:'ticklist',dl:'Espécie (pode indicar DAP / idade na designação)',ql:'Quantidade',q:'qtd',opts:SIT73.arv,abs:1},
+  {id:'arvTipos',l:'Arvoredo',t:'ticklist',dl:'Espécie',ql:'Quantidade',q:'qtd',opts:SIT73.arv,abs:1,arv:1,h:'Para cada espécie: DAP (cm), idade estimada (anos) e observações. No relatório sai em quadro.'},
   {id:'_h735',t:'head',l:'8.6 Outras benfeitorias'},
   {id:'benfTipos',l:'Outras benfeitorias',t:'ticklist',dl:'Tipo',ql:'Quantidade',q:'qtd',opts:SIT73.benf,abs:1},
   {id:'_h736',t:'head',l:'8.7 Depreciação da sobrante'},
@@ -2149,7 +2249,9 @@ const ARB_SECTIONS=[
   {id:'_h737',t:'head',l:'8.8 Indemnização por arrendamento'},
   {id:'arrTipos',l:'Indemnização por arrendamento',t:'ticklist',dl:'Situação',ql:'N.º de rendas',q:'qtd',opts:SIT73.arr},
   {id:'_h738',t:'head',l:'8.9 Interrupção da atividade'},
-  {id:'intTipos',l:'Interrupção da atividade',t:'ticklist',dl:'Situação',ql:'Qtd (meses / un.)',q:'qtd',opts:SIT73.int}]},
+  {id:'intTipos',l:'Interrupção da atividade',t:'ticklist',dl:'Situação',ql:'Qtd (meses / un.)',q:'qtd',opts:SIT73.int},
+  {id:'_h739',t:'head',l:'8.10 Ocupação temporária'},
+  {id:'ocTemp',l:'Áreas de ocupação temporária (perda de rendimento durante a obra)',t:'table',cols:[{id:'tipo',l:'Designação (ex.: Parcela 5T)'},{id:'area',l:'Área (m²)',num:1},{id:'anos',l:'Duração (anos)',num:1},{id:'obs',l:'Ocupação / rendimento afetado'}],h:'Indemnização = área × anos × rendimento fundiário (€/m²/ano). O rendimento indica-se em «8 · Preços unitários» (🧮 rotação de culturas). Entra no quadro de cálculo na linha 8.'}]},
  {id:'calculos',t:'8 · Preços unitários e resumo de avaliação (→ 9)',f:[
   {id:'_vun',t:'vunlist'},
   {id:'s2',l:'2 · Solo para outros fins (8.3)',t:'calc',k:'sub:l2',u:'€'},
@@ -2197,7 +2299,7 @@ const VAP_SECTIONS=(()=>{const AF=id=>{const f=ARB_SECTIONS.flatMap(s=>s.f).find
    {id:'agMelhor',l:'(*) Mato / Terra nua / Pastagem – indícios de melhor utilização nos últimos 10 anos',t:'textarea',d:'Não aplicável'},AF('agAgua'),AF('agEnerg'),
    {id:'_h39',t:'head',l:'3.9 Povoamento florestal ou exploração instalada'},AF('agCond'),AF('agDens'),{id:'agEuc',l:'Eucaliptal – idade / rotação',t:'selecttext',o:['Não aplicável','1.ª rotação','2.ª rotação','3.ª rotação','4.ª rotação'],d:'Não aplicável',h:'Pode indicar a idade no campo ao lado'},
    {...AF('edifTipos'),l:'3.10 Edificações',obs:1,obsPh:'Caraterísticas, época de construção, estado de conservação, dimensões'},{id:'murosTipos',l:'3.11 Muros / vedações',t:'ticklist',dl:'Tipo',ql:'Extensão (m)',q:'qtd',opts:VAP_MUROS,obs:1,obsPh:'Material, altura, estado de conservação'},
-   {...AF('benfTipos'),l:'3.12 Outras benfeitorias',obs:1,obsPh:'Descrição'},{...AF('arvTipos'),l:'3.12 Outras benfeitorias – arvoredo',obs:1,obsPh:'Idade / DAP / estado'},
+   {...AF('benfTipos'),l:'3.12 Outras benfeitorias',obs:1,obsPh:'Descrição'},{...AF('arvTipos'),l:'3.12 Outras benfeitorias – arvoredo',obs:1,arv:1,obsPh:'Estado / observações'},
    {...AF('servidoes'),l:'3.13 Servidões / restrições / condicionantes identificadas',d:'Não identificadas'},{...AF('fgcPrim'),l:'3.14.1 Faixas de gestão de combustível – rede primária',h:''},{...AF('fgcSec'),l:'3.14.2 Faixas de gestão de combustível – rede secundária'}]},
   {id:'classif',t:'4 Classificação e aptidão do solo à data da DUP',f:[{...AF('classPdm'),l:'4.1 Carta de ordenamento – classificação',r:0,h:'Ex.: Espaço Florestal III'},{id:'igtCond',l:'4.1 Carta de condicionantes',t:'text',d:'Nada a considerar',h:'Ex.: Risco de erosão; cabeceiras de linhas de água'},AF('pdmOrdImg'),AF('pdmCondImg'),
    {id:'aptidao',l:'4.2 Aptidão do solo',t:'selecttext',o:['TOF – Solo para outros fins','SAC – Solo apto para construção','SAC e TOF – parte apta para construção e parte para outros fins'],d:'TOF – Solo para outros fins'}]},
@@ -2273,10 +2375,11 @@ function fieldHTML(f,v,scope){
  case 'table':return `<div style="flex-basis:100%">${lab}${tableHTML(f,v,scope)}${hint}</div>`;
  case 'ticklist':{const rows=Array.isArray(val)?val:[];const absOn=f.abs&&sacOn(v);const da=`data-scope="${scope}" data-tl="${f.id}"`;
   return `<div style="flex-basis:100%">${lab}<div class="tl"><div class="tlh"><span>${esc(f.dl||'Designação')}</span><span>${esc(f.ql||'Área / qtd')}</span><span></span></div>${rows.map((r,i)=>{const own=!(f.opts||[]).includes(r.tipo);
-   return `<div class="tlr"><label class="chk"><input type="checkbox" ${da} data-i="${i}" data-k="on" ${r.on?'checked':''}> ${esc(r.tipo||'')}</label><input ${da} data-i="${i}" data-k="${f.q}" ${f.qt==='text'?'':'inputmode="decimal"'} value="${esc(r[f.q]??'')}" ${r.on?'':'disabled'} placeholder="${r.on?esc(f.ql||''):''}"><span>${own?`<button class="del" data-scope="${scope}" data-tldel="${f.id}" data-i="${i}" title="Retirar">✕</button>`:''}</span>${f.obs&&r.on?`<input class="tlobs" ${da} data-i="${i}" data-k="obs" value="${esc(r.obs||'')}" placeholder="${esc(f.obsPh||'Observação')}">`:''}${f.abs&&r.on?`<select ${da} data-i="${i}" data-k="a23">${['',A23C].map(o=>`<option value="${o}" ${o===(r.a23||'')?'selected':''}>${o||'— anterior à notificação (considera-se) —'}</option>`).join('')}</select>`:''}${absOn&&r.on?`<select ${da} data-i="${i}" data-k="abs">${['','Elegível',ABS_OPT].map(o=>`<option value="${o}" ${o===(r.abs||'')?'selected':''}>${o||'— elegível ou absorvida pelo uso principal? —'}</option>`).join('')}</select>`:''}</div>`}).join('')}</div><button class="secondary mini" data-scope="${scope}" data-tladd="${f.id}">+ Outra situação</button>${hint}</div>`}
+   return `<div class="tlr"><label class="chk"><input type="checkbox" ${da} data-i="${i}" data-k="on" ${r.on?'checked':''}> ${esc(r.tipo||'')}</label><input ${da} data-i="${i}" data-k="${f.q}" ${f.qt==='text'?'':'inputmode="decimal"'} value="${esc(r[f.q]??'')}" ${r.on?'':'disabled'} placeholder="${r.on?esc(f.ql||''):''}"><span>${own?`<button class="del" data-scope="${scope}" data-tldel="${f.id}" data-i="${i}" title="Retirar">✕</button>`:''}</span>${f.arv&&r.on?`<div class="arvx"><input ${da} data-i="${i}" data-k="dap" value="${esc(r.dap||'')}" placeholder="DAP (cm)"><input ${da} data-i="${i}" data-k="idade" value="${esc(r.idade||'')}" placeholder="Idade (anos)"></div>`:''}${(f.obs||f.arv)&&r.on?`<input class="tlobs" ${da} data-i="${i}" data-k="obs" value="${esc(r.obs||'')}" placeholder="${esc(f.obsPh||'Observação')}">`:''}${f.abs&&r.on?`<select ${da} data-i="${i}" data-k="a23">${['',A23C].map(o=>`<option value="${o}" ${o===(r.a23||'')?'selected':''}>${o||'— anterior à notificação (considera-se) —'}</option>`).join('')}</select>`:''}${absOn&&r.on?`<select ${da} data-i="${i}" data-k="abs">${['','Elegível',ABS_OPT].map(o=>`<option value="${o}" ${o===(r.abs||'')?'selected':''}>${o||'— elegível ou absorvida pelo uso principal? —'}</option>`).join('')}</select>`:''}</div>`}).join('')}</div><button class="secondary mini" data-scope="${scope}" data-tladd="${f.id}">+ Outra situação</button>${hint}</div>`}
  case 'vunlist':{const parts=GRUPOS.map(([k,n,l,tb,q])=>{const rows=(Array.isArray(v[tb])?v[tb]:[]).map((r,i)=>[r,i]).filter(([r])=>elegivel(v,tb,r,q));if(!rows.length)return '';
-   return `<div class="tlh"><span><b>${n} · ${esc(l)}</b></span><span>V_Un (€)</span></div>${rows.map(([r,i])=>`<div class="tlr vun"><span>${esc(r.tipo)} <span class="q">· ${fmt(num(r[q]))} ${q==='area'?'m²':'un.'}</span></span><input data-scope="${scope}" data-tl="${tb}" data-i="${i}" data-k="vun" inputmode="decimal" value="${esc(r.vun??'')}" placeholder="€"><input class="tlobs" data-scope="${scope}" data-tl="${tb}" data-i="${i}" data-k="fund" value="${esc(r.fund||'')}" placeholder="Fundamentação do V_Un (sai no relatório)"></div>`).join('')}`}).join('');
-  return `<div class="vunbox"><div class="vunt">💶 Preços unitários (V_Un)</div><div class="muted" style="margin-bottom:8px">Indique aqui o valor unitário de cada situação valorizada (8.3 a 8.9). Valor = área / quantidade × V_Un.</div>${parts?`<div class="tl">${parts}</div>`:'<div class="muted">Ainda não há situações para valorizar: assinale-as e indique a área / quantidade em 8.3 a 8.9.</div>'}${hint}</div>`}
+   return `<div class="tlh"><span><b>${n} · ${esc(l)}</b></span><span>V_Un (€)</span></div>${rows.map(([r,i])=>`<div class="tlr vun"><span>${esc(r.tipo)} <span class="q">· ${fmt(num(r[q]))} ${q==='area'?'m²':'un.'}</span></span><input data-scope="${scope}" data-tl="${tb}" data-i="${i}" data-k="vun" inputmode="decimal" value="${esc(r.vun??'')}" placeholder="€"><input class="tlobs" data-scope="${scope}" data-tl="${tb}" data-i="${i}" data-k="fund" value="${esc(r.fund||'')}" placeholder="Fundamentação do V_Un (sai no relatório)">${tb==='sofTipos'?`<div class="cmrow"><button class="secondary mini" data-scope="${scope}" data-calcbtn data-tl="${tb}" data-i="${i}">🧮 Calcular</button>${calcNota(tb,r)}</div>`:''}</div>`).join('')}`}).join('')+(()=>{const R=ocTempRows(v);if(!R.length)return '';
+   return `<div class="tlh"><span><b>8 · Ocupação temporária (8.10)</b></span><span>RF (€/m²/ano)</span></div>${R.map(([r,i])=>`<div class="tlr vun"><span>${esc(ocTempDesig(r))}</span><input data-scope="${scope}" data-tl="ocTemp" data-i="${i}" data-k="vun" inputmode="decimal" value="${esc(r.vun??'')}" placeholder="€/m²/ano"><input class="tlobs" data-scope="${scope}" data-tl="ocTemp" data-i="${i}" data-k="fund" value="${esc(r.fund||'')}" placeholder="Fundamentação (sai no relatório)"><div class="cmrow"><button class="secondary mini" data-scope="${scope}" data-calcbtn data-tl="ocTemp" data-i="${i}">🧮 Calcular</button>${calcNota('ocTemp',r)}</div></div>`).join('')}`})();
+  return `<div class="vunbox"><div class="vunt">💶 Preços unitários (V_Un)</div><div class="muted" style="margin-bottom:8px">Indique aqui o valor unitário de cada situação valorizada (8.3 a 8.10). Valor = área / quantidade × V_Un. Com «🧮 Calcular» (eucaliptal, pinhal, rotação de culturas) a app propõe um valor, que pode aceitar ou substituir.</div>${parts?`<div class="tl">${parts}</div>`:'<div class="muted">Ainda não há situações para valorizar: assinale-as e indique a área / quantidade em 8.3 a 8.9.</div>'}${hint}</div>`}
  case 'calc':return `<div>${lab}<div class="calc" data-calc="${f.k}" data-u="${esc(f.u||'')}">—</div></div>`;
  case 'concelho':return `<div>${lab}<select ${a}><option value="">— escolher —</option>${Object.keys(PT_FREG).sort((x,y)=>x.localeCompare(y,'pt')).map(o=>`<option ${o===val?'selected':''}>${esc(o)}</option>`).join('')}</select>${hint}</div>`;
   case 'freguesia':{const conc=v[f.dep];const L=fregOf(conc);const inL=!val||L.includes(val);return `<div>${lab}<select ${a} ${conc?'':'disabled'}><option value="">${conc?'— escolher —':'(escolha primeiro o concelho)'}</option>${L.map(o=>`<option ${o===val?'selected':''}>${esc(o)}</option>`).join('')}${!inL?`<option selected>${esc(val)}</option>`:''}${conc?'<option value="_outra">Outra… (freguesia reposta / não listada)</option>':''}</select>${hint}</div>`}
@@ -2595,6 +2698,7 @@ function bindFields(scope,v,rerender){
  $$(`[data-scope="${scope}"][data-tl]`).forEach(el=>{const k=el.dataset.k;const h=()=>{const rows=v[el.dataset.tl]||(v[el.dataset.tl]=[]);const r=rows[+el.dataset.i];if(!r)return;
    if(k==='on'){r.on=el.checked;saveSoon();rerender();return}r[k]=el.value;saveSoon();paintCalcs();if(k==='abs'||k==='a23')rerender();else updatePending()};if(k==='on'||k==='abs'||k==='a23')el.onchange=h;else{el.oninput=h;el.onchange=()=>{h();rerender()}}});
  $$(`[data-scope="${scope}"][data-tladd]`).forEach(el=>el.onclick=async()=>{const k=el.dataset.tladd;const n=((await uiPrompt('Designação da nova situação:',''))||'').trim();if(!n)return;(v[k]=Array.isArray(v[k])?v[k]:[]).push({tipo:n,on:true});if(k==='sofTipos'&&!finList().some(x=>norm(x)===norm(n))){settings.finalidades.push(n);saveSettings()}if(k==='sofTipos')v[k].sort((a,b)=>ordPT(a.tipo||'',b.tipo||''));saveSoon();rerender()});
+ $$(`[data-scope="${scope}"][data-calcbtn]`).forEach(el=>el.onclick=()=>calcOpen(v,el.dataset.tl,+el.dataset.i,rerender));
  $$(`[data-scope="${scope}"][data-tldel]`).forEach(el=>el.onclick=async()=>{const k=el.dataset.tldel;if(!await uiConfirm('Retirar esta situação da lista?'))return;v[k].splice(+el.dataset.i,1);saveSoon();rerender()});
  $$(`[data-scope="${scope}"][data-tb]`).forEach(el=>{el.oninput=()=>{const rows=v[el.dataset.tb]||(v[el.dataset.tb]=[]);rows[+el.dataset.i][el.dataset.c]=el.value;saveSoon();paintCalcs()}});
  $$(`[data-scope="${scope}"][data-tbadd]`).forEach(el=>el.onclick=()=>{const k=el.dataset.tbadd;(v[k]=Array.isArray(v[k])?v[k]:[]).push(k==='artigos'&&v.freguesia?{freg:v.freguesia}:k==='sobrantes'?{desig:'Zona sobrante '+(v[k].length+1)}:k==='versoes'?{ver:'V'+String(v[k].length+1).padStart(2,'0'),data:fmtDate(hojeISO())}:{});saveSoon();rerender()});
