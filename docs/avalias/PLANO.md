@@ -1,0 +1,39 @@
+# AvaLias 1.0 — plano de construção (17/11/2026)
+
+App nova (sucessora do AVA_Input 2.91, que continua em `/ava/` até a AvaLias estar testada). Endereço previsto: `/avalias/`. Nome na régua: **AvaLias** · versão 1.0 · data.
+
+## Princípio
+Como no ExPropria: o formulário segue o **raciocínio da avaliação**, não o modelo Word. O Word é montado no fim a partir dos dados. Preenchimento fluido, transversal entre verbas (escritório / campo), em iPhone, iPad e PC.
+
+## Base de código
+- **Relatório de Peritagem** (`/relat/`, construído a partir do Regi + `relat_ext.js`): gabinetes (4, logótipo/cabeçalho), particular/institucional, singular/colegial com compromisso de honra e peritos com representação, N_Ref ≠ n.º de processo, questões ao(s) perito(s) (importar Word/Excel/manual; particular → «Pretende-se:»), documentos/anexos com visto, capa 3×3, quadro de identificação, índice, verificação antes de gerar, pré-visualização, PDF, ZIP, campo FILENAME no rodapé, GPS, fotos.
+- **ExPropria**: n.º de unidades ao criar o processo; setas entre unidades mantendo a secção; troca por unidade.
+- **AVA_Input**: tipos de ativo e características já levantadas (passar a Detalhado/Sucinto), fotos, quadro-resumo, BAD.
+- Não partir do código do AVA_Input (1,8 MB, várias camadas presas ao Word).
+
+## Estrutura
+**A · Processo** — enquadramento (gabinete, particular/institucional, singular/colegial, compromisso); N_Ref, n.º do processo; contexto e finalidade; solicitante e partes; questões ao(s) perito(s); BAD aplicável? (algum interveniente com interesse especial em adquirir); n.º de verbas (cria VB_001…VB_n).
+
+**B · Verba** (sempre esta ordem)
+1. Identificação — código, ID (artigo matricial / matrícula / n.º da sepultura…), descrição sumária
+2. Localização — morada, GPS
+3. Visita — data, presenças
+4. Tipo de ativo → Destino (lista dependente do tipo)
+5. Estado — características do tipo, modo **Detalhado** (caixas) ou **Sucinto** (texto livre) + fotos
+6. Utilidade
+7. Métodos elegíveis (reservado — a tratar depois)
+8. Valor calculado (+ renda mensal quando a base é renda de mercado; BAD «até %», defeito 10%)
+
+**C · Relatório** — texto geral do processo → **quadro-resumo** (Verba · Designação · Tipo · Valor estimado · Renda mensal* · BAD (até); Total apurado) → notas N1–N3 e texto BAD (se aplicável) → análise específica de cada verba (ficha + fotos). Texto de referência: `Ava_Context_Cjv_2611_1.docx` (parágrafos 140–180).
+
+## Tipos de ativo e destinos (proposta a validar no teste)
+1 Edifícios · 2 Moradias · 3 Construções anexas · 4 Garagens autónomas · 5 Frações → afetações CIMI art. 41.º (habitação, comércio, serviços, armazéns e atividade industrial, estacionamento coberto/não coberto, arrecadações e arrumos) + comércio e serviços, aviário, outro.
+6 Veículos → Código da Estrada art. 106.º e ss. (ligeiro de passageiros — particular / transporte de passageiros; ligeiro de mercadorias; ligeiro misto; pesado de passageiros; pesado de mercadorias; motociclo/ciclomotor; trator agrícola/florestal; máquina industrial; reboque/semirreboque).
+7 Conjuntos de mobiliário · 9 Sepulturas · 10 Outras situações → descrição livre.
+8 Terrenos → para construção; agroflorestal; outro.
+
+## Regras comuns obrigatórias
+`docs/regras/` — fotos (máximo por verba, reserva, substituir, repetidas), tamanho, imagens no Word em controlo de conteúdo, Word válido (ordem pPr, sem pastas no ZIP), nomes de ficheiros estritos, data na régua, service worker só apaga as suas reservas, n.º de unidades ao criar, navegação na mesma secção, FILENAME no rodapé, **troca em 3 níveis (sync.md)**, eliminar unidade visível no cartão com confirmação. Documentos em Calibri; rodapé «Reprodução proibida sem autorização expressa do autor» (Times New Roman itálico 7).
+
+## Depois do teste
+Validar destinos; perguntas de caracterização por tipo; métodos de avaliação; importar processos do AVA_Input 2.91.
