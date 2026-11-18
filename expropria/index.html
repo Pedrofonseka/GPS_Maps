@@ -1,6 +1,10 @@
 <!doctype html>
 <!--
+ExPropria v0.13.13 — resumo
+- 🧮 Em qualquer cálculo (rotação, eucaliptal, pinhal): botões «Somar outro rendimento neste terreno» – passa para a soma de rendimentos, mantendo o cálculo atual como bloco A.
+
 ExPropria v0.13.12 — resumo
+- 🧮 Em qualquer cálculo, «Somar outro rendimento neste terreno: + Rotação / + Eucaliptal / + Pinhal» passa para a soma de rendimentos, mantendo o cálculo atual como bloco A.
 - 🧮 «Soma de rendimentos»: blocos autónomos (rotação de culturas, eucaliptal, pinhal), cada um com o seu método; botões «+ Rotação de culturas», «+ Eucaliptal», «+ Pinhal» e «✕ Retirar bloco»; o valor final é a soma dos blocos (no Word, cada bloco com o seu quadro e subtotal).
 
 ExPropria v0.13.11 — resumo
@@ -741,7 +745,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
 <script>
 'use strict';
-const VERSION='0.13.12';const VERSION_DATA='2026-11-18';/* data da release: atualizar sempre com VERSION */
+const VERSION='0.13.13';const VERSION_DATA='2026-11-18';/* data da release: atualizar sempre com VERSION */
 function growFit(t){if(!t||!t.classList?.contains('grow')||!t.offsetParent)return;t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px'}
 function growAll(root){(root||document).querySelectorAll('textarea.grow').forEach(growFit)}
 document.addEventListener('input',e=>growFit(e.target),true);
@@ -2064,7 +2068,7 @@ function calcFields(m,p,temp,pre=''){const inp=(k,l,h)=>`<label class="cmf"><spa
   `<div style="grid-column:1/-1"><div class="muted" style="margin:6px 0 4px">Culturas da rotação</div><div class="cmtw"><table class="tb cmt"><tr><th>Cultura</th><th>Ano</th><th>Quota</th><th>kg/ha</th><th>€/kg</th><th>DE %</th><th></th></tr>${(p.cult||[]).map((x,i)=>`<tr>${[['n','',cmW(p.cult,'n')],['ano','d',2],['q','d',4],['prod','d',6],['pr','d',4],['de','d',3]].map(([c,d,w])=>`<td><input data-cr="${pre}cult" data-i="${i}" data-c="${c}" ${d?'inputmode="decimal"':''} style="width:${w}ch" value="${esc(x[c]??'')}"></td>`).join('')}<td><button class="del" data-crdel="${pre}cult" data-i="${i}">✕</button></td></tr>`).join('')}</table></div><button class="secondary mini" data-cradd="${pre}cult">+ Cultura</button></div>`;
  return f}
 function calcModalHTML(st){const {m,p,temp,tipo}=st;const R=calcRun(m,p,temp);
- const f=m==='comp'?(p.blocos||[]).map((b,k)=>`<div class="algrp cmblk" style="grid-column:1/-1"><span>${String.fromCharCode(65+k)}) ${esc(CALC_BLK[b.m]||b.m)}</span><button class="secondary mini" data-blkdel="${k}">✕ Retirar bloco</button></div>${calcFields(b.m,b.p,false,`blocos.${k}.p.`)}`).join('')+`<div style="grid-column:1/-1;margin-top:10px" class="btns"><span class="muted">Acrescentar bloco:</span>${Object.entries(CALC_BLK).map(([k,l])=>`<button class="secondary mini" data-blkadd="${k}">+ ${l}</button>`).join('')}</div><div class="muted" style="grid-column:1/-1">Cada bloco é calculado com o seu método; o valor final é a soma. Nas culturas entre as árvores, a quota deve refletir a parte do ano e da área efetivamente cultivável (fundamente-a).</div>`:calcFields(m,p,temp);
+ const f=m==='comp'?(p.blocos||[]).map((b,k)=>`<div class="algrp cmblk" style="grid-column:1/-1"><span>${String.fromCharCode(65+k)}) ${esc(CALC_BLK[b.m]||b.m)}</span><button class="secondary mini" data-blkdel="${k}">✕ Retirar bloco</button></div>${calcFields(b.m,b.p,false,`blocos.${k}.p.`)}`).join('')+`<div style="grid-column:1/-1;margin-top:10px" class="btns"><span class="muted">Acrescentar bloco:</span>${Object.entries(CALC_BLK).map(([k,l])=>`<button class="secondary mini" data-blkadd="${k}">+ ${l}</button>`).join('')}</div><div class="muted" style="grid-column:1/-1">Cada bloco é calculado com o seu método; o valor final é a soma. Nas culturas entre as árvores, a quota deve refletir a parte do ano e da área efetivamente cultivável (fundamente-a).</div>`:calcFields(m,p,temp)+(temp?'':`<div style="grid-column:1/-1;margin-top:10px" class="btns"><span class="muted">Somar outro rendimento neste terreno:</span>${Object.entries(CALC_BLK).map(([k,l])=>`<button class="secondary mini" data-blkadd="${k}">+ ${l}</button>`).join('')}</div>`);
  const un=temp?'€/m²/ano':'€/m²';
  return `<h3>🧮 ${esc(tipo)}</h3>${temp?'':`<label class="cmf" style="display:block;margin-bottom:8px"><span>Método</span><select id="cmMet">${Object.entries(CALC_MET).map(([k,l])=>`<option value="${k}" ${k===m?'selected':''}>${esc(l)}</option>`).join('')}</select></label>`}
   <div class="muted" style="margin-bottom:8px">Valores por defeito: os dos relatórios de exemplo. Corrija o que não se aplicar a esta parcela.</div>
@@ -2082,7 +2086,7 @@ function calcOpen(v,tb,i,rerender){const r=(v[tb]||[])[i];if(!r)return;const tem
   box.querySelectorAll('[data-crdel]').forEach(el=>el.onclick=()=>{gp(el.dataset.crdel).splice(+el.dataset.i,1);draw()});
   box.querySelectorAll('[data-cradd]').forEach(el=>el.onclick=()=>{let a=gp(el.dataset.cradd);if(!a){a=[];sp(el.dataset.cradd,a)}a.push({});draw()});
   box.querySelectorAll('[data-blkdel]').forEach(el=>el.onclick=()=>{st.p.blocos.splice(+el.dataset.blkdel,1);draw()});
-  box.querySelectorAll('[data-blkadd]').forEach(el=>el.onclick=()=>{(st.p.blocos=st.p.blocos||[]).push({m:el.dataset.blkadd,p:CALC_DEF[el.dataset.blkadd]()});draw()});
+  box.querySelectorAll('[data-blkadd]').forEach(el=>el.onclick=()=>{if(st.m!=='comp'){const cur={m:st.m,p:st.p};st.m='comp';st.p=st.keep.comp={blocos:[cur]}}(st.p.blocos=st.p.blocos||[]).push({m:el.dataset.blkadd,p:CALC_DEF[el.dataset.blkadd]()});draw()});
   const ms=$('#cmMet');if(ms)ms.onchange=()=>{st.m=ms.value;st.p=st.keep[st.m]||(st.keep[st.m]=CALC_DEF[st.m]());draw()};
   $('#cmDef').onclick=()=>{st.p=st.keep[st.m]=CALC_DEF[st.m]();draw()};$('#cmCancel').onclick=closeModal;
   $('#cmUse').onclick=()=>{const R=calcRun(st.m,st.p,temp);if(!R.ok)return;r.calc={m:st.m,p:structuredClone(st.p),vun:R.vun};r.vun=String(R.vun).replace('.',',');r.fund=R.fund;r.calcTxt=R.L;r.calcW=R.W;closeModal();saveSoon();rerender()}};
