@@ -29,7 +29,7 @@
 |---|---|---|---|
 | AVA_Input | 2.91 | verba | Mais › Backup › «Por verba» (+ atalho «⇄ Enviar / receber verbas» no ecrã das verbas); «Receber processo» aceita também ficheiros de verbas |
 | AvaLias | 1.0 | verba | Verbas › «⇄ Enviar / receber verbas»; ficheiro `<Código>_Verbas_VB_001….json`; «Desfazer» |
-| ExPropria | 0.13.7 | parcela | separador Processo › «⇄ Trocar com outro aparelho»; importação de parcela isolada usa o mesmo caminho |
+| ExPropria | 0.14.0 | parcela | botões com o nível escrito: ecrã inicial «Nível 1 · Backup OUT/IN»; separador Processo › «⇄ Cópias e trocas» com «Nível 2 · Processo inteiro», «Nível 3 · Parcelas escolhidas», «Receber (nível 2 ou 3)» |
 
 ## Testes mínimos
 Dois perfis de browser (A = iPhone, B = PC): A cria processo com 3 unidades e envia o processo a B; A altera as unidades 1 e 2, B altera a 3; A envia só 1 e 2; B recebe → 1 e 2 substituídas, a 3 de B intacta; repor → 1 e 2 voltam ao estado anterior, a 3 mantém-se.
