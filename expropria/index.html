@@ -1,5 +1,9 @@
 <!doctype html>
 <!--
+ExPropria v0.13.10 — resumo
+- Verificação: contas do próprio Word (área × V_Un = valor; «Total» = soma das parcelas; montante final = total) e áreas comparadas com a área a expropriar declarada no relatório quando o formulário não a tem.
+- 🧮 Rotação de culturas: coluna «Quota» (fração do ano / da área de cada cultura, RF = quota × RB × (1 − DE)), como na folha de cálculo do relatório da parcela 722; valores por defeito da versão final.
+
 ExPropria v0.13.9 — resumo
 - Verificação de gralhas e coerência, ao gerar o Word e ao importar o relatório para a versão final (só avisa, nunca altera o texto): número de outra parcela no texto, áreas que não existem no formulário, montante diferente do calculado, valor por extenso que não corresponde ao número, palavras repetidas, espaços duplos ou antes de pontuação, texto por preencher ([…], [FOTOS], xxx) e gralhas frequentes do vocabulário das expropriações. Ortografia geral: corretor do Word, em Português (Portugal).
 
@@ -728,7 +732,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
 <script>
 'use strict';
-const VERSION='0.13.9';const VERSION_DATA='2026-11-17';/* data da release: atualizar sempre com VERSION */
+const VERSION='0.13.10';const VERSION_DATA='2026-11-18';/* data da release: atualizar sempre com VERSION */
 function growFit(t){if(!t||!t.classList?.contains('grow')||!t.offsetParent)return;t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px'}
 function growAll(root){(root||document).querySelectorAll('textarea.grow').forEach(growFit)}
 document.addEventListener('input',e=>growFit(e.target),true);
@@ -1992,7 +1996,7 @@ const CALC_MET={euc:'Eucaliptal – valor atual dos cortes (desconto contínuo)'
 const CALC_DEF={
  euc:()=>({r:'4',P:'25',n:'10',V:'130; 150; 130',C:'1500',idade:'3',d:'',tn:'3000'}),
  pin:()=>({q:'4',pr:'40',man:'10',C:'1500',idade:'15',tn:'0',plano:[{l:'Desbaste',t:'15',v:'7,20'},{l:'Desbaste',t:'25',v:'36,31'},{l:'Desbaste',t:'35',v:'120,66'},{l:'Corte final',t:'40',v:'268,00'}]}),
- rot:()=>({anos:'2',taxa:'4',cult:[{n:'Couve-lombarda',ano:'1',prod:'30000',pr:'0,15',de:'85'},{n:'Feijão-verde',ano:'1',prod:'15000',pr:'0,40',de:'90'},{n:'Alho francês',ano:'2',prod:'6000',pr:'0,75',de:'85'},{n:'Tomate',ano:'2',prod:'60000',pr:'0,10',de:'90'}]})};
+ rot:()=>({anos:'2',taxa:'4',cult:[{n:'Couve-lombarda',ano:'1',q:'0,5',prod:'30000',pr:'0,15',de:'85'},{n:'Feijão-verde',ano:'1',q:'0,5',prod:'30000',pr:'0,40',de:'90'},{n:'Alho francês',ano:'2',q:'0,5',prod:'6000',pr:'0,85',de:'85'},{n:'Tomate',ano:'2',q:'0,5',prod:'60000',pr:'0,10',de:'90'}]})};
 const calcMetOf=(tb,r)=>tb==='ocTemp'?'rot':/eucal/i.test(r.tipo||'')?'euc':/pinh|pinheir/i.test(r.tipo||'')?'pin':'rot';
 const pctTxt=x=>{const n=num(x);return `${fmt(n,n%1?2:0)} %`};
 function calcRun(m,p,temp){const L=[];let vun=0,ok=true;
@@ -2017,11 +2021,11 @@ function calcRun(m,p,temp){const L=[];let vun=0,ok=true;
    ...(tn?[`Terra nua: ${fmt(tn)} €/ha.`]:[]),
    `Total: ${fmt(tot)} €/ha, ou seja, ${fmt(vun,4)} €/m².`);
   return {ok,L,vun:Math.round(vun*100)/100,fund:`pinhal com cerca de ${fmt(a,0)} anos – plano de gestão (q = ${fmt(q,2)}, ${fmt(pr)} €/m³)${tn?` acrescido da terra nua (${fmt(tn)} €/ha)`:''}: ${fmt(tot)} €/ha`}}
- if(m==='rot'){const an=Math.max(1,num(p.anos)),tx=num(p.taxa)/100;const CU=(Array.isArray(p.cult)?p.cult:[]).map(x=>({n:String(x.n||'').trim()||'Cultura',ano:String(x.ano||'').trim(),prod:num(x.prod),pr:num(x.pr),de:num(x.de)})).filter(x=>x.prod>0);
+ if(m==='rot'){const an=Math.max(1,num(p.anos)),tx=num(p.taxa)/100;const CU=(Array.isArray(p.cult)?p.cult:[]).map(x=>({n:String(x.n||'').trim()||'Cultura',ano:String(x.ano||'').trim(),q:String(x.q??'').trim()===''?1:num(x.q),prod:num(x.prod),pr:num(x.pr),de:num(x.de)})).filter(x=>x.prod>0);
   ok=CU.length>0&&(temp||tx>0);if(!ok)return {ok,L:[temp?'Indique as culturas.':'Indique as culturas e a taxa de capitalização.']};
-  CU.forEach(x=>{x.rb=x.prod*x.pr;x.dep=x.rb*x.de/100;x.rf=x.rb-x.dep});const RFt=CU.reduce((s,x)=>s+x.rf,0),RFa=RFt/an,RFm=RFa/10000;
-  L.push(`Rotação de ${fmt(an,0)} ${an===1?'ano':'anos'}:`,...CU.map(x=>`- ${x.n}${x.ano?` (${x.ano}.º ano)`:''}: RB = ${fmt(x.prod,0)} kg/ha × ${fmt(x.pr)} €/kg = ${fmt(x.rb)} €; DE (${pctTxt(x.de)}) = ${fmt(x.dep)} €; RF = ${fmt(x.rf)} €/ha.`),
-   `Rendimento fundiário médio anual = ${fmt(RFt)} / ${fmt(an,0)} = ${fmt(RFa)} €/ha/ano, ou seja, ${fmt(RFm,4)} €/m²/ano.`);
+  CU.forEach(x=>{x.rb=x.prod*x.pr;x.dep=x.rb*x.de/100;x.rf=x.q*(x.rb-x.dep)});const RFt=CU.reduce((s,x)=>s+x.rf,0),RFa=RFt/an,RFm=RFa/10000;
+  L.push(`Rotação de ${fmt(an,0)} ${an===1?'ano':'anos'}:`,...CU.map(x=>`- ${x.n}${x.ano?` (${x.ano}.º ano)`:''}: RB = ${fmt(x.prod,0)} kg/ha × ${fmt(x.pr)} €/kg = ${fmt(x.rb)} €; DE (${pctTxt(x.de)}) = ${fmt(x.dep)} €; RF = ${x.q!==1?`${fmt(x.q,2)} × `:''}(${fmt(x.rb)} − ${fmt(x.dep)}) = ${fmt(x.rf)} €/ha.`),
+   `Quota = fração do ano (ou da área) ocupada por cada cultura. Rendimento fundiário médio anual = ${fmt(RFt)} / ${fmt(an,0)} = ${fmt(RFa)} €/ha/ano, ou seja, ${fmt(RFm,4)} €/m²/ano.`);
   if(temp){vun=Math.round(RFm*10000)/10000;return {ok,L,vun,fund:`perda do rendimento fundiário da rotação de culturas (${fmt(RFa)} €/ha/ano)`}}
   vun=RFm/tx;L.push(`Valor do solo = RF / taxa de capitalização = ${fmt(RFm,4)} / ${fmt(tx,4)} = ${fmt(vun,4)} €/m².`);
   return {ok,L,vun:Math.round(vun*100)/100,fund:`rendimento fundiário da rotação de culturas (${fmt(RFa)} €/ha/ano), capitalizado à taxa de ${pctTxt(p.taxa)}`}}
@@ -2035,7 +2039,7 @@ function calcModalHTML(st){const {m,p,temp,tipo}=st;const R=calcRun(m,p,temp);co
  if(m==='pin')f=inp('q','Taxa de atualização (%)')+inp('pr','Preço da madeira (€/m³)')+inp('man','Despesas de manutenção (% do RB)')+inp('C','Investimento inicial (€/ha)')+inp('idade','Idade atual do povoamento (anos)')+inp('tn','Terra nua a somar (€/ha)','0 = não somar')+
   `<div style="grid-column:1/-1"><div class="muted" style="margin:6px 0 4px">Plano de cortes</div><table class="tb cmt"><tr><th>Operação</th><th>Idade (anos)</th><th>Volume (m³/ha)</th><th></th></tr>${(p.plano||[]).map((x,i)=>`<tr><td><input data-cr="plano" data-i="${i}" data-c="l" value="${esc(x.l||'')}"></td><td><input data-cr="plano" data-i="${i}" data-c="t" inputmode="decimal" value="${esc(x.t||'')}"></td><td><input data-cr="plano" data-i="${i}" data-c="v" inputmode="decimal" value="${esc(x.v||'')}"></td><td><button class="del" data-crdel="plano" data-i="${i}">✕</button></td></tr>`).join('')}</table><button class="secondary mini" data-cradd="plano">+ Corte</button></div>`;
  if(m==='rot')f=inp('anos','Duração da rotação (anos)')+(temp?'':inp('taxa','Taxa de capitalização (%)','Por defeito 4 % (a taxa dos exemplos florestais) – fundamente a taxa adotada'))+
-  `<div style="grid-column:1/-1"><div class="muted" style="margin:6px 0 4px">Culturas da rotação</div><table class="tb cmt"><tr><th>Cultura</th><th>Ano</th><th>Produção (kg/ha)</th><th>Preço (€/kg)</th><th>DE (%)</th><th></th></tr>${(p.cult||[]).map((x,i)=>`<tr>${[['n',''],['ano','d'],['prod','d'],['pr','d'],['de','d']].map(([c,d])=>`<td><input data-cr="cult" data-i="${i}" data-c="${c}" ${d?'inputmode="decimal"':''} value="${esc(x[c]??'')}"></td>`).join('')}<td><button class="del" data-crdel="cult" data-i="${i}">✕</button></td></tr>`).join('')}</table><button class="secondary mini" data-cradd="cult">+ Cultura</button></div>`;
+  `<div style="grid-column:1/-1"><div class="muted" style="margin:6px 0 4px">Culturas da rotação</div><table class="tb cmt"><tr><th>Cultura</th><th>Ano</th><th>Quota</th><th>Produção (kg/ha)</th><th>Preço (€/kg)</th><th>DE (%)</th><th></th></tr>${(p.cult||[]).map((x,i)=>`<tr>${[['n',''],['ano','d'],['q','d'],['prod','d'],['pr','d'],['de','d']].map(([c,d])=>`<td><input data-cr="cult" data-i="${i}" data-c="${c}" ${d?'inputmode="decimal"':''} value="${esc(x[c]??'')}"></td>`).join('')}<td><button class="del" data-crdel="cult" data-i="${i}">✕</button></td></tr>`).join('')}</table><button class="secondary mini" data-cradd="cult">+ Cultura</button></div>`;
  const un=temp?'€/m²/ano':'€/m²';
  return `<h3>🧮 ${esc(tipo)}</h3>${temp?'':`<label class="cmf" style="display:block;margin-bottom:8px"><span>Método</span><select id="cmMet">${Object.entries(CALC_MET).map(([k,l])=>`<option value="${k}" ${k===m?'selected':''}>${esc(l)}</option>`).join('')}</select></label>`}
   <div class="muted" style="margin-bottom:8px">Valores por defeito: os dos relatórios de exemplo. Corrija o que não se aplicar a esta parcela.</div>
@@ -2518,12 +2522,19 @@ function verificarDoc(doc,p,v,c,opt={}){const out=[],ps=W_(doc,'p').map(e=>txt(e
    seen.forEach((cx,n)=>out.push(`${P}aparece a Parcela ${n} (este relatório é da ${own}) – confirmar se é cópia de outro relatório: ${cx}`))}}
  /* 2. áreas da parcela */
  {const K=[v.areaExp,v.areaPredio,...['artigos','sobrantes','docsArea','sofTipos','edifTipos','ocTemp'].flatMap(k=>(Array.isArray(v[k])?v[k]:[]).map(r=>r&&r.area)),c.sacTotal,c.sofTotal,c.areaSobrante,c.areaArtigos].map(num).filter(x=>x>0);
-  if(num(v.areaExp)>0)for(const t of ps)for(const m of t.matchAll(/(?:com (?:uma )?área de|área (?:a |total )?expropriada(?: de| é de| de:|:)?)\s*([\d.]+(?:,\d+)?)\s*m/gi)){const a=num(m[1].replace(/\./g,''));if(a>0&&!K.some(k=>Math.abs(k-a)<0.005))out.push(`${P}área de ${m[1]} m² não corresponde a nenhuma área do formulário (área expropriada: ${fmt(num(v.areaExp))} m²): ${ctx(t,m.index)}`)}}
+  const decl=(all.match(/área a expropriar de\s*([\d.]+(?:,\d+)?)\s*m/i)||[])[1];const ref=num(v.areaExp)||(decl?num(decl.replace(/\.(?=\d{3})/g,'')):0);if(ref>0&&!num(v.areaExp))K.push(ref);
+  if(ref>0)for(const t of ps)for(const m of t.matchAll(/(?:com (?:uma )?área de|área (?:a |total )?expropriada(?: de| é de| de:|:)?)\s*([\d.]+(?:,\d+)?)\s*m/gi)){const a=num(m[1].replace(/\.(?=\d{3})/g,''));if(a>0&&!K.some(k=>Math.abs(k-a)<0.005))out.push(`${P}área de ${m[1]} m² não corresponde a nenhuma área ${num(v.areaExp)?'do formulário':'declarada no relatório'} (área a expropriar: ${fmt(ref)} m²): ${ctx(t,m.index)}`)}}
  /* 3. montante e extenso */
  if(!opt.semValor)for(const t of ps)for(const m of t.matchAll(/justa indemniza[çc][ãa]o[^€\d]{0,70}?(?:€\s*([\d.]+,\d{2})|([\d.]+,\d{2})\s*€)/gi)){const s=m[1]||m[2],w=num(s.replace(/\./g,'').replace(',','.'));
    if(c.total>0&&Math.abs(w-c.total)>0.005)out.push(`${P}o montante no Word (${s} €) é diferente do calculado no formulário (${fmt(c.total)} €). Se a discussão mudou valores, corrija-os no formulário.`);
    const rest=all.slice(all.indexOf(t)+m.index+m[0].length,all.indexOf(t)+m.index+m[0].length+260);const ex=rest.match(/\(([^()]*\beuros?\b[^()]*)\)/i);
    if(ex){const k=x=>nrm(x).replace(/[^a-z ]/g,' ').split(/\s+/).filter(z=>z&&z!=='e'&&z!=='de').join(' ');if(k(ex[1])!==k(extenso(w)))out.push(`${P}o valor por extenso «${ex[1].trim()}» não corresponde a ${s} € (${lc(extenso(w))}).`)}}
+ /* 3b. contas do próprio Word: «X m² × Y €/m² = Z €», «Total» e montante final */
+ {const N=x=>num(String(x).replace(/\.(?=\d{3})/g,''));const prods=[],areas=[];let tots=[];const decl2=(all.match(/área a expropriar de\s*([\d.]+(?:,\d+)?)\s*m/i)||[])[1];const aref=num(v.areaExp)||(decl2?N(decl2):0);const chkA=()=>{const sa=areas.reduce((x,y)=>x+y,0);if(aref>0&&areas.length&&Math.abs(sa-aref)>0.5)out.push(`${P}as áreas usadas no cálculo (${areas.map(x=>fmt(x,x%1?2:0)).join(' + ')} = ${fmt(sa)} m²) não somam a área a expropriar (${fmt(aref)} m²) – confirmar se falta alguma ocupação ou se há áreas trocadas.`)};
+  for(const t of ps){for(const m of t.matchAll(/(\d[\d.]*(?:,\d+)?)\s*m[2²]\s*[x×*]\s*(?:€\s*)?(\d+(?:,\d+)?)\s*(?:€\s*\/\s*m[2²]|€)?\s*=\s*(?:€\s*)?([\d.]+,\d{2})/gi)){const a=N(m[1]),u=N(m[2]),z=N(m[3]);prods.push(z);areas.push(a);if(Math.abs(a*u-z)>0.011)out.push(`${P}conta errada: ${m[1]} × ${m[2]} = ${fmt(a*u)}, e não ${m[3]}: ${ctx(t,m.index)}`)}
+   const tm=t.trim().match(/^total\s*:?\s*(?:€\s*)?([\d.]+,\d{2})\s*€?$/i);if(tm){const z=N(tm[1]),sm=prods.reduce((x,y)=>x+y,0);tots.push(z);if(prods.length>1&&Math.abs(sm-z)>0.011)out.push(`${P}o total ${tm[1]} € não é a soma das parcelas (${prods.map(x=>fmt(x)).join(' + ')} = ${fmt(sm)} €).`);chkA();prods.length=0;areas.length=0}}
+  if(!tots.length)chkA();const ref=tots.length?tots[tots.length-1]:null;
+  if(ref!=null)for(const t of ps)for(const m of t.matchAll(/justa indemniza[çc][ãa]o[^€\d]{0,70}?(?:€\s*([\d.]+,\d{2})|([\d.]+,\d{2})\s*€)/gi)){const w=N(m[1]||m[2]);if(Math.abs(w-ref)>0.005)out.push(`${P}o montante final (${m[1]||m[2]} €) é diferente do total apurado no relatório (${fmt(ref)} €).`)}}
  /* 4. palavras repetidas, espaços duplos, espaço antes de pontuação */
  {const rep=[];for(const t of ps)for(const m of t.matchAll(/(^|[^\p{L}])(\p{L}{2,})\s+\2(?=[^\p{L}]|$)/giu))if(rep.length<8)rep.push(ctx(t,m.index+m[1].length));if(rep.length)out.push(`${P}palavra repetida: ${rep.join(' · ')}`);
   let n2=0,ex2=[];for(const t of ps){const m=[...t.matchAll(/\S( {2,})(?=\S)/g)];n2+=m.length;m.slice(0,1).forEach(x=>{if(ex2.length<3)ex2.push(ctx(t,x.index))})}if(n2)out.push(`${P}${n2} ${n2===1?'ocorrência':'ocorrências'} de espaços duplos: ${ex2.join(' · ')}`);

@@ -7,8 +7,9 @@
 | Verificação | Regra |
 |---|---|
 | Número de outra unidade | «Parcela N» (ou verba) diferente da unidade do relatório. Não conta subparcelas da própria (`722.1`, `722-1`) nem ocupações temporárias com a forma `NT` (ex.: 5T). |
-| Áreas | «com área de X m²» / «área expropriada de X m²» com X que não existe em nenhuma área do formulário. |
+| Áreas | «com área de X m²» / «área expropriada de X m²» com X que não existe em nenhuma área do formulário (ou, sem formulário, diferente da «área a expropriar de …» declarada no próprio relatório). |
 | Montante | «justa indemnização … X €» (ou «€ X») diferente do total calculado no formulário. |
+| Contas do próprio Word | «X m² × Y €/m² = Z €» confere X × Y = Z; «Total» = soma das parcelas acima; montante final = último «Total»; soma das áreas usadas no cálculo = área a expropriar. Funciona mesmo sem formulário preenchido (relatórios importados). |
 | Valor por extenso | Texto entre parênteses com «euros» a seguir ao montante, comparado com o extenso do número que está no Word (ignora «e» e «de»). |
 | Palavras repetidas | «de de», «a a»… (até 8 exemplos). |
 | Espaços | Espaços duplos entre palavras; espaço antes de «,», «;», «:», «!» e «?». |
@@ -32,6 +33,8 @@ Os avisos juntam-se aos que a app já mostra ao gerar ou importar, com o prefixo
   - espaços duplos e espaço antes de «:».
 - O Word gerado pela app com dados de teste: 0 avisos, sem falsos positivos.
 
+Versões finais da Brisa (18/11/2026): na 1018, a verificação apanhou a área «79 m²» (179 × 1,03 = 184,37), o total errado e os 266 m² de pinhal copiados da 1017, cuja soma de áreas não dá os 652 m². Na 997 apanhou a área de 770 m², que é a da 808.
+
 ## Onde está aplicada
 
-- ExPropria 0.13.9: `verificarDoc(doc, parcela, v, c, {semValor})`, chamada em `buildWordARB` (Word, PDF, Pastas) e em `importarFinal`.
+- ExPropria 0.13.10 (contas e áreas internas ao Word); 0.13.9: `verificarDoc(doc, parcela, v, c, {semValor})`, chamada em `buildWordARB` (Word, PDF, Pastas) e em `importarFinal`.
