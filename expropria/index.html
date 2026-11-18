@@ -1,5 +1,10 @@
 <!doctype html>
 <!--
+ExPropria v0.14.1 — resumo
+- 8.3.3 Cálculos: com cálculo, sai só a finalidade e a área; o valor e a fundamentação ficam no fim do próprio cálculo.
+- Linha em branco entre blocos de culturas e depois de cada cálculo.
+- Soma de rendimentos: quadro-resumo opcional (sem coluna «Método»); por defeito sai só a frase «Valor total = A + B = …».
+
 ExPropria v0.14.0 — resumo
 - Modelo de Arbitragem sincronizado com Exp_Arbitragem_MM_261151: 6.1 numa só frase; Estado de realização antes do Contexto de localização; «Descrição sumária» com título próprio e fonte (AVAPRM / o que se constata / ambos); extratos do PDM à largura da página e mais baixos; 8.3 com Caraterísticas · Tipo de utilidade (Ocupação considerada) · Cálculos.
 - Percentagem da área expropriada na área do prédio: no formulário (Áreas) e no Word, antes das parcelas sobrantes.
@@ -762,7 +767,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
 <script>
 'use strict';
-const VERSION='0.14.0';const VERSION_DATA='2026-11-18';/* data da release: atualizar sempre com VERSION */
+const VERSION='0.14.1';const VERSION_DATA='2026-11-18';/* data da release: atualizar sempre com VERSION */
 function growFit(t){if(!t||!t.classList?.contains('grow')||!t.offsetParent)return;t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px'}
 function growAll(root){(root||document).querySelectorAll('textarea.grow').forEach(growFit)}
 document.addEventListener('input',e=>growFit(e.target),true);
@@ -1343,7 +1348,7 @@ async function buildWordARB(ask=true,pp=null,opt={}){try{await avaFontesCalibri(
       {const np=notasP();const L=[['CRC',jus.crc],['IUS',jus.ius],['Au/Ab',jus['au/ab']],['IFU',jus.ifu],['ETR',jus.etr],['INR',jus.inr],['AGU',jus.agu]].filter(x=>String(x[1]||'').trim()).map(([k,x])=>`- ${k}: ${String(x).trim().replace(/[.\s]+$/,'')}.`);if(np&&L.length){let at=np;L.forEach(x=>{const q=np.cloneNode(true);at.parentNode.insertBefore(q,at.nextSibling);setParaText(q,x);at=q})}}}
     else{if(pP)setParaText(pP,'- Nada a considerar');if(t)remove(t)}}}
   {/* 8.3: fundamentação do V_Un de cada finalidade do solo para outros fins */const hK=calcHead83(doc);const FL=(Array.isArray(v.sofTipos)?v.sofTipos:[]).filter(r=>elegivel(v,'sofTipos',r,'area')&&(String(r.fund||'').trim()||(hK&&num(r.vun)>0)));
-   if(hK){const q=nextParas(doc,hK,1)[0];const L=FL.flatMap(r=>[`- ${String(r.tipo).trim()}: V_Un ${fmt(num(r.vun))} €/m²${String(r.fund||'').trim()?` – ${String(r.fund).trim().replace(/[.\s]+$/,'')}`:''}.`,...(calcUsado('sofTipos',r)?calcTok(r):[])]);
+   if(hK){const q=nextParas(doc,hK,1)[0];const L=FL.flatMap(r=>calcUsado('sofTipos',r)?[`- ${String(r.tipo).trim()} (${m2(num(r.area))}):`,...calcTok(r)]:[`- ${String(r.tipo).trim()}: V_Un ${fmt(num(r.vun))} €/m²${String(r.fund||'').trim()?` – ${String(r.fund).trim().replace(/[.\s]+$/,'')}`:''}.`]);
     const tx=listaUtil(v)&&c.trTOF>0&&c.sofTotal>0?`Método comparativo (art. 27.º, n.º 1): média aritmética atualizada dos preços unitários das transações de prédios com características idênticas (${c.trTOFw}): ${fmt(c.trTOF)} €/m².`:'';const all=[...(tx?[tx]:[]),...L];
     if(q&&!txt(q).trim()&&!/Cabealho/.test((q.getElementsByTagNameNS(WNS,'pStyle')[0]||{getAttributeNS:()=>''}).getAttributeNS(WNS,'val'))){setParaText(q,all.length?all.join('\n'):'- [cálculos por indicar]');calcExpand(doc)}}
    else if(FL.length){const h=findHeading(doc,'Solo para outros fins - parametriza')||findHeading(doc,'Solo para outros fins');if(h){let q=null,e=h.nextSibling;while(e){if(e.nodeType===1){if(e.localName==='p'){const st=e.getElementsByTagNameNS(WNS,'pStyle')[0];if(st&&/Cabealho/.test(st.getAttributeNS(WNS,'val'))&&txt(e).trim())break;q=e;if(txt(e).trim())break}}e=e.nextSibling}
@@ -2066,8 +2071,8 @@ function calcRun0(m,p,temp){const L=[];let vun=0,ok=true;
   const RS=BL.map(b=>calcRun(b.m,b.p||{},false)),lt=k=>String.fromCharCode(65+k),nm=b=>String(b.nome||'').trim()||CALC_BLK[b.m];ok=RS.every(R=>R.ok);
   const L2=RS.flatMap((R,k)=>[`${lt(k)}) ${nm(BL[k])}`,...R.L,...(R.ok?[`Valor do bloco ${lt(k)}: ${fmt(R.vun)} €/m².`]:[])]);if(!ok)return {ok,L:L2};
   vun=Math.round(RS.reduce((x,R)=>x+R.vun,0)*100)/100;L2.push(`Valor total = ${RS.map(R=>fmt(R.vun)).join(' + ')} = ${fmt(vun)} €/m².`);
-  const RES={t:{h:['Bloco','Designação','Método','Valor (€/m²)'],pc:[.10,.38,.32,.20],jc:['center','left','left','right'],r:[...RS.map((R,k)=>[lt(k),nm(BL[k]),CALC_BLK[BL[k].m],fmt(R.vun)]),{c:['','Soma dos rendimentos','',fmt(vun)],b:1}]}};
-  return {ok,L:L2,W:[...RS.flatMap((R,k)=>[{p:`${lt(k)}) ${nm(BL[k])}`,h:1},...(R.W||[]),{p:`Valor do bloco ${lt(k)}: ${fmt(R.vun)} €/m².`}]),{p:'Resumo – soma dos rendimentos',h:1},RES],vun,blocos:RS.map((R,k)=>({l:lt(k),nome:nm(BL[k]),vun:R.vun})),fund:`soma dos rendimentos de ${(a=>a.length>1?a.slice(0,-1).join(', ')+' e '+a[a.length-1]:a[0])(BL.map((b,k)=>`${nm(b).toLowerCase()} (${fmt(RS[k].vun)} €/m²)`))}`}}
+  const RES={t:{h:['Bloco','Designação','Valor (€/m²)'],pc:[.12,.62,.26],jc:['center','left','right'],r:[...RS.map((R,k)=>[lt(k),nm(BL[k]),fmt(R.vun)]),{c:['','Soma dos rendimentos',fmt(vun)],b:1}]}};
+  return {ok,L:L2,W:[...RS.flatMap((R,k)=>[{p:`${lt(k)}) ${nm(BL[k])}`,h:1},...(R.W||[]),{p:`Valor do bloco ${lt(k)}: ${fmt(R.vun)} €/m².`}]),...(p.resumo?[{p:'Soma dos rendimentos',h:1},RES]:[{p:L2[L2.length-1],h:1}])],vun,blocos:RS.map((R,k)=>({l:lt(k),nome:nm(BL[k]),vun:R.vun})),fund:`soma dos rendimentos de ${(a=>a.length>1?a.slice(0,-1).join(', ')+' e '+a[a.length-1]:a[0])(BL.map((b,k)=>`${nm(b).toLowerCase()} (${fmt(RS[k].vun)} €/m²)`))}`}}
  return {ok:false,L:[]}}
 /* título 3 «Cálculos» do 8.3 (modelo MM_261151) */
 function calcHead83(doc){const h=findHeading(doc,'Solo para outros fins');if(!h)return null;let e=h.nextSibling;while(e){if(e.nodeType===1&&e.localName==='p'){const st=e.getElementsByTagNameNS(WNS,'pStyle')[0],sv=st?st.getAttributeNS(WNS,'val'):'';if(/Cabealho[12]$/.test(sv)&&txt(e).trim())return null;if(/Cabealho3/.test(sv)&&/^cálculos/i.test(txt(e).trim()))return e}e=e.nextSibling}return null}
@@ -2088,7 +2093,7 @@ function calcFields(m,p,temp,pre=''){const inp=(k,l,h)=>`<label class="cmf"><spa
   `<div style="grid-column:1/-1"><div class="muted" style="margin:6px 0 4px">Culturas da rotação</div><div class="cmtw"><table class="tb cmt"><tr><th>Cultura</th><th>Ano</th><th>Quota</th><th>kg/ha</th><th>€/kg</th><th>DE %</th><th></th></tr>${(p.cult||[]).map((x,i)=>`<tr>${[['n','',cmW(p.cult,'n')],['ano','d',2],['q','d',4],['prod','d',6],['pr','d',4],['de','d',3]].map(([c,d,w])=>`<td><input data-cr="${pre}cult" data-i="${i}" data-c="${c}" ${d?'inputmode="decimal"':''} style="width:${w}ch" value="${esc(x[c]??'')}"></td>`).join('')}<td><button class="del" data-crdel="${pre}cult" data-i="${i}">✕</button></td></tr>`).join('')}</table></div><button class="secondary mini" data-cradd="${pre}cult">+ Cultura</button></div>`;
  return f}
 function calcModalHTML(st){const {m,p,temp,tipo}=st;const R=calcRun(m,p,temp);
- const f=m==='comp'?(p.blocos||[]).map((b,k)=>`<div class="algrp cmblk" style="grid-column:1/-1"><span>${String.fromCharCode(65+k)}) ${esc(CALC_BLK[b.m]||b.m)}</span><button class="secondary mini" data-blkdel="${k}">✕ Retirar bloco</button></div><label class="cmf" style="grid-column:1/-1"><span>Designação do bloco ${String.fromCharCode(65+k)} (sai no título do quadro)</span><input data-blknome="${k}" value="${esc(b.nome||'')}" placeholder="${esc(CALC_BLK[b.m]||'')}"></label>${calcFields(b.m,b.p,false,`blocos.${k}.p.`)}`).join('')+`<div style="grid-column:1/-1;margin-top:10px" class="btns"><span class="muted">Acrescentar bloco:</span>${Object.entries(CALC_BLK).map(([k,l])=>`<button class="secondary mini" data-blkadd="${k}">+ ${l}</button>`).join('')}</div><div class="muted" style="grid-column:1/-1">Cada bloco é calculado com o seu método; o valor final é a soma. Nas culturas entre as árvores, a quota deve refletir a parte do ano e da área efetivamente cultivável (fundamente-a).</div>`:calcFields(m,p,temp)+(temp?'':`<div style="grid-column:1/-1;margin-top:10px" class="btns"><span class="muted">Somar outro rendimento neste terreno:</span>${Object.entries(CALC_BLK).map(([k,l])=>`<button class="secondary mini" data-blkadd="${k}">+ ${l}</button>`).join('')}</div>`);
+ const f=m==='comp'?(p.blocos||[]).map((b,k)=>`<div class="algrp cmblk" style="grid-column:1/-1"><span>${String.fromCharCode(65+k)}) ${esc(CALC_BLK[b.m]||b.m)}</span><button class="secondary mini" data-blkdel="${k}">✕ Retirar bloco</button></div><label class="cmf" style="grid-column:1/-1"><span>Designação do bloco ${String.fromCharCode(65+k)} (sai no título do quadro)</span><input data-blknome="${k}" value="${esc(b.nome||'')}" placeholder="${esc(CALC_BLK[b.m]||'')}"></label>${calcFields(b.m,b.p,false,`blocos.${k}.p.`)}`).join('')+`<div style="grid-column:1/-1;margin-top:10px" class="btns"><span class="muted">Acrescentar bloco:</span>${Object.entries(CALC_BLK).map(([k,l])=>`<button class="secondary mini" data-blkadd="${k}">+ ${l}</button>`).join('')}</div><label class="chk" style="grid-column:1/-1"><input type="checkbox" id="cmResumo" ${p.resumo?'checked':''}> Incluir quadro-resumo da soma dos rendimentos (opcional)</label><div class="muted" style="grid-column:1/-1">Cada bloco é calculado com o seu método; o valor final é a soma. Nas culturas entre as árvores, a quota deve refletir a parte do ano e da área efetivamente cultivável (fundamente-a).</div>`:calcFields(m,p,temp)+(temp?'':`<div style="grid-column:1/-1;margin-top:10px" class="btns"><span class="muted">Somar outro rendimento neste terreno:</span>${Object.entries(CALC_BLK).map(([k,l])=>`<button class="secondary mini" data-blkadd="${k}">+ ${l}</button>`).join('')}</div>`);
  const un=temp?'€/m²/ano':'€/m²';
  return `<h3>🧮 ${esc(tipo)}</h3>${temp?'':`<label class="cmf" style="display:block;margin-bottom:8px"><span>Método</span><select id="cmMet">${Object.entries(CALC_MET).map(([k,l])=>`<option value="${k}" ${k===m?'selected':''}>${esc(l)}</option>`).join('')}</select></label>`}
   <div class="muted" style="margin-bottom:8px">Valores por defeito: os dos relatórios de exemplo. Corrija o que não se aplicar a esta parcela.</div>
@@ -2108,6 +2113,7 @@ function calcOpen(v,tb,i,rerender){const r=(v[tb]||[])[i];if(!r)return;const tem
   box.querySelectorAll('[data-blknome]').forEach(el=>el.oninput=()=>{st.p.blocos[+el.dataset.blknome].nome=el.value;res()});
   box.querySelectorAll('[data-blkdel]').forEach(el=>el.onclick=()=>{st.p.blocos.splice(+el.dataset.blkdel,1);draw()});
   box.querySelectorAll('[data-blkadd]').forEach(el=>el.onclick=()=>{if(st.m!=='comp'){const cur={m:st.m,p:st.p};st.m='comp';st.p=st.keep.comp={blocos:[cur]}}(st.p.blocos=st.p.blocos||[]).push({m:el.dataset.blkadd,p:CALC_DEF[el.dataset.blkadd]()});draw()});
+  const cr=$('#cmResumo');if(cr)cr.onchange=()=>{st.p.resumo=cr.checked;res()};
   const ms=$('#cmMet');if(ms)ms.onchange=()=>{st.m=ms.value;st.p=st.keep[st.m]||(st.keep[st.m]=CALC_DEF[st.m]());draw()};
   $('#cmDef').onclick=()=>{st.p=st.keep[st.m]=CALC_DEF[st.m]();draw()};$('#cmCancel').onclick=closeModal;
   $('#cmUse').onclick=()=>{const R=calcRun(st.m,st.p,temp);if(!R.ok)return;r.calc={m:st.m,p:structuredClone(st.p),vun:R.vun};r.vun=String(R.vun).replace('.',',');r.fund=R.fund;r.calcTxt=R.L;r.calcW=R.W;r.calcBl=R.blocos||null;closeModal();saveSoon();rerender()}};
@@ -2136,7 +2142,7 @@ const arvTabela=(doc,anchor,rows)=>tabSimples(doc,anchor,['Espécie','N.º','DAP
 /* cálculo do V_Un no Word: marcador ⟦CALC:n⟧ → parágrafos + quadro */
 const CALCREG=[];const calcTok=(r,temp=false)=>{let W=r.calcW;try{if(r.calc&&r.calc.m){const R=calcRun(r.calc.m,r.calc.p||{},temp);if(R.ok&&Array.isArray(R.W)&&Math.abs(num(R.vun)-num(r.calc.vun))<1e-9)W=R.W}}catch(e){}return Array.isArray(W)&&W.length?[`⟦CALC:${CALCREG.push(W)-1}⟧`]:r.calcTxt.map(x=>'   '+x)};
 function calcExpand(doc){for(const p of W_(doc,'p')){const m=txt(p).trim().match(/^⟦CALC:(\d+)⟧$/);if(!m||!p.parentNode)continue;const B=CALCREG[+m[1]]||[];
-  for(const b of B){if(b.t&&b.x){const e0=p.cloneNode(true);p.parentNode.insertBefore(e0,p);setParaText(e0,`⟦XLS:${CALCXLS.push({x:b.x,t:b.t})-1}⟧`)}else if(b.t){p.parentNode.insertBefore(tabSimples(doc,p,b.t.h,b.t.r,b.t.pc,b.t.jc),p);const e=p.cloneNode(true);p.parentNode.insertBefore(e,p);setParaText(e,'')}else{const e=p.cloneNode(true);p.parentNode.insertBefore(e,p);setParaText(e,b.p);if(b.h)for(const r of W_(e,'r')){let rp=kids(r,'rPr')[0];if(!rp){rp=doc.createElementNS(WNS,'w:rPr');r.insertBefore(rp,r.firstChild)}if(!kids(rp,'b').length)rp.insertBefore(doc.createElementNS(WNS,'w:b'),rp.firstChild)}}}p.parentNode.removeChild(p)}}
+  let i0=0;for(const b of B){if(b.h&&i0++){const e1=p.cloneNode(true);p.parentNode.insertBefore(e1,p);setParaText(e1,'')}else if(!b.h)i0++;if(b.t&&b.x){const e0=p.cloneNode(true);p.parentNode.insertBefore(e0,p);setParaText(e0,`⟦XLS:${CALCXLS.push({x:b.x,t:b.t})-1}⟧`)}else if(b.t){p.parentNode.insertBefore(tabSimples(doc,p,b.t.h,b.t.r,b.t.pc,b.t.jc),p);const e=p.cloneNode(true);p.parentNode.insertBefore(e,p);setParaText(e,'')}else{const e=p.cloneNode(true);p.parentNode.insertBefore(e,p);setParaText(e,b.p);if(b.h)for(const r of W_(e,'r')){let rp=kids(r,'rPr')[0];if(!rp){rp=doc.createElementNS(WNS,'w:rPr');r.insertBefore(rp,r.firstChild)}if(!kids(rp,'b').length)rp.insertBefore(doc.createElementNS(WNS,'w:b'),rp.firstChild)}}}{const e2=p.cloneNode(true);p.parentNode.insertBefore(e2,p);setParaText(e2,'')}p.parentNode.removeChild(p)}}
 
 /* ---- 0.14.0 · Cálculos do V_Un no Word como folha de cálculo embutida (Excel) editável ---- */
 /* célula: null | texto | número | {v, f (fórmula), s (estilo)} ; estilos: 0 normal · 1 negrito · 2 cabeçalho · 3 #,##0.00 · 4 idem negrito · 5 0,00% · 6 #,##0.0000 · 7 #,##0 · 8 #,##0.0000 negrito · 9 0% */
@@ -2232,9 +2238,9 @@ function calcXls(m,p,temp,R){const tb=R.W.filter(b=>b&&b.t);if(!tb.length)return
   const b=rows.length+1;rows.push([`Valor aos ${fmt(a,0)} anos (€/ha)`,...E(4),{v:vf+vs,s:3}]);if(tn)rows.push(['Terra nua (€/ha)',...E(4),{v:tn,s:3}]);const e=rows.length;
   rows.push([{v:'Total (€/ha)',s:1},...E(4),{f:`SUM(F${b}:F${e})`,v:vf+vs+tn,s:4}]);rows.push([{v:'Valor unitário (€/m²)',s:1},...E(4),{f:`F${e+1}/10000`,v:(vf+vs+tn)/10000,s:8}]);
   tb[0].x={cols:[Math.max(18,...PL.map(x=>x.l.length))+2,10,12,11,11,15],rows};return}
- if(m==='comp'&&Array.isArray(R.blocos)){const res=tb[tb.length-1];const rows=[H(['Bloco','Designação','Método','Valor (€/m²)'])];const BL=(Array.isArray(p.blocos)?p.blocos:[]).filter(b=>b&&CALC_BLK[b.m]);
-  R.blocos.forEach((x,k)=>rows.push([x.l,x.nome,CALC_BLK[BL[k]?.m]||'',{v:x.vun,s:3}]));const n=rows.length;rows.push(['',{v:'Soma dos rendimentos',s:1},'',{f:`SUM(D2:D${n})`,v:R.vun,s:4}]);
-  res.x={cols:[7,Math.max(20,...R.blocos.map(x=>String(x.nome).length))+2,26,13],rows}}}
+ if(m==='comp'&&p.resumo&&Array.isArray(R.blocos)&&R.W[R.W.length-1]&&R.W[R.W.length-1].t){const res=R.W[R.W.length-1];const rows=[H(['Bloco','Designação','Valor (€/m²)'])];const BL=(Array.isArray(p.blocos)?p.blocos:[]).filter(b=>b&&CALC_BLK[b.m]);
+  R.blocos.forEach((x,k)=>rows.push([x.l,x.nome,{v:x.vun,s:3}]));const n=rows.length;rows.push(['',{v:'Soma dos rendimentos',s:1},{f:`SUM(C2:C${n})`,v:R.vun,s:4}]);
+  res.x={cols:[7,Math.max(20,...R.blocos.map(x=>String(x.nome).length))+2,13],rows}}}
 
 const arvCm=x=>{const t=String(x||'').trim();return /^\d+([.,]\d+)?$/.test(t)?`${t} cm`:t};
 const arvAnos=x=>{const t=String(x||'').trim();return /^\d+([.,]\d+)?$/.test(t)?`${t} anos`:t};
