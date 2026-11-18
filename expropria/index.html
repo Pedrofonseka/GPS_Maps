@@ -1,5 +1,8 @@
 <!doctype html>
 <!--
+ExPropria v0.13.14 — resumo
+- Ícone com as letras «Expro».
+
 ExPropria v0.13.13 — resumo
 - 🧮 Em qualquer cálculo (rotação, eucaliptal, pinhal): botões «Somar outro rendimento neste terreno» – passa para a soma de rendimentos, mantendo o cálculo atual como bloco A.
 
@@ -541,7 +544,7 @@ Exprop v0.6.0 — resumo
 <meta name="apple-mobile-web-app-title" content="ExPropria">
 <meta name="theme-color" content="#2f5d3a">
 <title>ExPropria</title>
-<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="apple-touch-icon" href="icon-180.png?v=expro">
 <link rel="manifest" href="manifest.webmanifest">
 <style>
 :root{--bg:#f4f5f0;--card:#fff;--ink:#1d2733;--mute:#5d6b7a;--line:#d6dde4;--pri:#2f5d3a;--pri2:#a8452c;--ok:#2e7d32;--okbg:#e8f5e9;--warn:#b26a00;--warnbg:#fff4e0;--bad:#c62828;--badbg:#fdecea;--safe:150px}
@@ -745,7 +748,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
 <script>
 'use strict';
-const VERSION='0.13.13';const VERSION_DATA='2026-11-18';/* data da release: atualizar sempre com VERSION */
+const VERSION='0.13.14';const VERSION_DATA='2026-11-18';/* data da release: atualizar sempre com VERSION */
 function growFit(t){if(!t||!t.classList?.contains('grow')||!t.offsetParent)return;t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px'}
 function growAll(root){(root||document).querySelectorAll('textarea.grow').forEach(growFit)}
 document.addEventListener('input',e=>growFit(e.target),true);
