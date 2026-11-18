@@ -1,5 +1,8 @@
 <!doctype html>
 <!--
+ExPropria v0.15.1 — resumo
+- Arbitragem: o acórdão arbitral integra o relatório – sai antes dos Anexos (último capítulo antes dos anexos), também no relatório de várias parcelas.
+
 ExPropria v0.15.0 — resumo (em teste)
 - 🧮 Novos cálculos por capitalização do rendimento: Olival / pomar sem fim de vida (classe 1; jovem: 5 + 1), Vinha / pomar com vida útil (classe 6, com a idade da plantação) e Rendas – as 6 classes (anual/periódica, constante/variável, perpétua/temporária).
 - A app propõe o cálculo pela cultura (olival → olival; vinha, pomares → ciclo; sobreiro → rendas) – o perito pode mudar.
@@ -773,7 +776,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
 <script>
 'use strict';
-const VERSION='0.15.0';const VERSION_DATA='2026-11-18';/* data da release: atualizar sempre com VERSION */
+const VERSION='0.15.1';const VERSION_DATA='2026-11-18';/* data da release: atualizar sempre com VERSION */
 function growFit(t){if(!t||!t.classList?.contains('grow')||!t.offsetParent)return;t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px'}
 function growAll(root){(root||document).querySelectorAll('textarea.grow').forEach(growFit)}
 document.addEventListener('input',e=>growFit(e.target),true);
@@ -1402,6 +1405,7 @@ async function buildWordARB(ask=true,pp=null,opt={}){try{await avaFontesCalibri(
   acEpigrafe(doc,P,[p]);setRelacaoTxt(doc);
   const pEx=findPara(doc,t=>norm(t)==='(extenso)');if(pEx)setParaText(pEx,`(${lc(c.extenso)})`);
   if(VAP){fillVAP(doc,v,c,p,P,team);await imgsFornVap(doc,zip,rels,ctDoc,v)}else assinaturas(doc,team);
+  if(!opt.raw)acordaoAntesAnexos(doc);
   try{await xlsEmbedAll(doc,zip,rels,ctDoc,!opt.raw)}catch(e){console.error(e);warns.push('Folhas de cálculo embutidas: '+e.message)}
   if(opt.raw)return {zip,doc,rels,ctDoc,warns,c,outName,p};
   try{warns.push(...verificarDoc(doc,p,v,c,{semValor:VAP}))}catch(e){console.error(e)}
@@ -1433,6 +1437,13 @@ function picSdtAll(doc){const WPD='http://schemas.openxmlformats.org/drawingml/2
   const pr=dr.getElementsByTagNameNS(WPD,'docPr')[0];const al=(pr&&pr.getAttribute('name'))||'Imagem';
   const sdt=doc.createElementNS(WNS,'w:sdt'),sp=doc.createElementNS(WNS,'w:sdtPr'),e1=doc.createElementNS(WNS,'w:alias'),e2=doc.createElementNS(WNS,'w:id'),e3=doc.createElementNS(WNS,'w:picture'),sc=doc.createElementNS(WNS,'w:sdtContent');
   e1.setAttributeNS(WNS,'w:val',al.slice(0,60));e2.setAttributeNS(WNS,'w:val',sdtId());sp.appendChild(e1);sp.appendChild(e2);sp.appendChild(e3);sdt.appendChild(sp);sdt.appendChild(sc);p.parentNode.insertBefore(sdt,p);sc.appendChild(p)}}
+/* o acórdão integra o relatório: sai antes dos Anexos (só é anexo se for documento autónomo) */
+function acordaoAntesAnexos(doc){const hA=findHeading(doc,'ACÓRDÃO ARBITRAL'),hX=findHeading(doc,'Anexos');if(!hA||!hX)return;const els=bodyEls(doc);const iA=els.indexOf(hA),iX=els.indexOf(hX);if(iA<0||iX<0||iA<iX)return;
+ let s0=els.findIndex((e,i)=>i>iX&&i<iA&&e.localName==='p'&&/^processo:/i.test(txt(e).trim()));if(s0<0)s0=iA;
+ while(s0-1>iX&&els[s0-1].localName==='p'&&!txt(els[s0-1]).trim()&&(W_(els[s0-1],'br').some(b=>b.getAttributeNS(WNS,'type')==='page')||W_(els[s0-1],'pageBreakBefore').length))s0--;
+ const out=[];for(let i=s0;i<els.length;i++){const x=els[i];if(x.localName==='sectPr')break;if(x.localName==='p'&&W_(x,'pageBreakBefore').length&&/^Anexo \d+ – /.test(txt(x).trim()))break;out.push(x)}
+ out.forEach(x=>hX.parentNode.insertBefore(x,hX));
+ if(!W_(hX,'pageBreakBefore').length&&!W_(hX,'br').some(b=>b.getAttributeNS(WNS,'type')==='page')){const pp=kids(hX,'pPr')[0];if(pp){const e=doc.createElementNS(WNS,'w:pageBreakBefore');const st=kids(pp,'pStyle')[0];pp.insertBefore(e,st?st.nextSibling:pp.firstChild)}}}
 async function finishDocx(zip,doc,rels,ctDoc,outName){capaAjusta(doc);picSdtAll(doc);const Sz=new XMLSerializer();await optimizeMedia(zip);
   zip.file('word/document.xml',Sz.serializeToString(doc));zip.file('word/_rels/document.xml.rels',Sz.serializeToString(rels));zip.file('[Content_Types].xml',Sz.serializeToString(ctDoc));
   for(const fp of Object.keys(zip.files).filter(n=>/^word\/(footer|header)\d*\.xml$/.test(n))){const s=await zip.file(fp).async('string');const s2=setFilenameField(s,outName);if(s2!==s)zip.file(fp,s2)}
@@ -1504,6 +1515,7 @@ async function buildWordARBMulti(pars,ask=false,opt={}){const P=cur.v,ev=EVENTOS
     blocos.forEach((b,i)=>{if(i!==k){if(!dflt(corpo(b))&&corpo(b)!==corpo(fica))warns.push(`${tit}: ${txt(b[0]).split('–').pop().trim()} tem texto próprio, diferente do que ficou no relatório (o de ${txt(fica[0]).split('–').pop().trim()}) – confirme e junte-o à mão, se necessário.`);b.forEach(remove)}});
     setParaText(fica[0],txt(fica[0]).replace(/\s*–\s*Parcela\s.*$/i,'').replace(/\s*–\s*[^–]*$/,m=>pars.some(p=>m.includes(p.nome))?'':m).trim());fica.forEach(e=>anc.parentNode.insertBefore(e,anc))}}
   const outName=`${relBase(pars,cur.v,cur.fase,opt.draft?'Draft_00':'')}.docx`;
+  acordaoAntesAnexos(doc);
   await fillHeaders(M.zip,P,pars.map(x=>x.nome).filter(Boolean).join(', '));
   const blob=await finishDocx(M.zip,doc,M.rels,M.ctDoc,outName);busy(false);return {nome:outName,blob,warns}}
  catch(e){busy(false);alert('Erro ao gerar o relatório conjunto: '+e.message);console.error(e);return null}}
