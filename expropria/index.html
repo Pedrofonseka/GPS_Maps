@@ -1,5 +1,8 @@
 <!doctype html>
 <!--
+ExPropria v0.15.2 — resumo
+- «Edificabilidade instalada» passa para depois de «Edificabilidade a considerar» (no Word e no formulário).
+
 ExPropria v0.15.1 — resumo
 - Arbitragem: o acórdão arbitral integra o relatório – sai antes dos Anexos (último capítulo antes dos anexos), também no relatório de várias parcelas.
 
@@ -776,7 +779,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
 <script>
 'use strict';
-const VERSION='0.15.1';const VERSION_DATA='2026-11-18';/* data da release: atualizar sempre com VERSION */
+const VERSION='0.15.2';const VERSION_DATA='2026-11-18';/* data da release: atualizar sempre com VERSION */
 function growFit(t){if(!t||!t.classList?.contains('grow')||!t.offsetParent)return;t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px'}
 function growAll(root){(root||document).querySelectorAll('textarea.grow').forEach(growFit)}
 document.addEventListener('input',e=>growFit(e.target),true);
@@ -1405,7 +1408,7 @@ async function buildWordARB(ask=true,pp=null,opt={}){try{await avaFontesCalibri(
   acEpigrafe(doc,P,[p]);setRelacaoTxt(doc);
   const pEx=findPara(doc,t=>norm(t)==='(extenso)');if(pEx)setParaText(pEx,`(${lc(c.extenso)})`);
   if(VAP){fillVAP(doc,v,c,p,P,team);await imgsFornVap(doc,zip,rels,ctDoc,v)}else assinaturas(doc,team);
-  if(!opt.raw)acordaoAntesAnexos(doc);
+  edifInstDepois(doc);if(!opt.raw)acordaoAntesAnexos(doc);
   try{await xlsEmbedAll(doc,zip,rels,ctDoc,!opt.raw)}catch(e){console.error(e);warns.push('Folhas de cálculo embutidas: '+e.message)}
   if(opt.raw)return {zip,doc,rels,ctDoc,warns,c,outName,p};
   try{warns.push(...verificarDoc(doc,p,v,c,{semValor:VAP}))}catch(e){console.error(e)}
@@ -1437,6 +1440,11 @@ function picSdtAll(doc){const WPD='http://schemas.openxmlformats.org/drawingml/2
   const pr=dr.getElementsByTagNameNS(WPD,'docPr')[0];const al=(pr&&pr.getAttribute('name'))||'Imagem';
   const sdt=doc.createElementNS(WNS,'w:sdt'),sp=doc.createElementNS(WNS,'w:sdtPr'),e1=doc.createElementNS(WNS,'w:alias'),e2=doc.createElementNS(WNS,'w:id'),e3=doc.createElementNS(WNS,'w:picture'),sc=doc.createElementNS(WNS,'w:sdtContent');
   e1.setAttributeNS(WNS,'w:val',al.slice(0,60));e2.setAttributeNS(WNS,'w:val',sdtId());sp.appendChild(e1);sp.appendChild(e2);sp.appendChild(e3);sdt.appendChild(sp);sdt.appendChild(sc);p.parentNode.insertBefore(sdt,p);sc.appendChild(p)}}
+/* 6.x: «Edificabilidade instalada» a seguir a «Edificabilidade a considerar» */
+function edifInstDepois(doc){const hI=findHeading(doc,'Edificabilidade instalada'),hC=findHeading(doc,'Edificabilidade a considerar');if(!hI||!hC)return;const els=bodyEls(doc);if(els.indexOf(hI)>els.indexOf(hC))return;
+ const isH=e=>e.localName==='p'&&/Cabealho/.test((e.getElementsByTagNameNS(WNS,'pStyle')[0]||{getAttributeNS:()=>''}).getAttributeNS(WNS,'val'));
+ const blk=[hI];let e=hI.nextSibling;while(e&&!(e.nodeType===1&&isH(e))){if(e.nodeType===1)blk.push(e);e=e.nextSibling}
+ let at=hC.nextSibling;while(at&&!(at.nodeType===1&&(isH(at)||at.localName==='sectPr')))at=at.nextSibling;blk.forEach(x=>hC.parentNode.insertBefore(x,at))}
 /* o acórdão integra o relatório: sai antes dos Anexos (só é anexo se for documento autónomo) */
 function acordaoAntesAnexos(doc){const hA=findHeading(doc,'ACÓRDÃO ARBITRAL'),hX=findHeading(doc,'Anexos');if(!hA||!hX)return;const els=bodyEls(doc);const iA=els.indexOf(hA),iX=els.indexOf(hX);if(iA<0||iX<0||iA<iX)return;
  let s0=els.findIndex((e,i)=>i>iX&&i<iA&&e.localName==='p'&&/^processo:/i.test(txt(e).trim()));if(s0<0)s0=iA;
@@ -2435,8 +2443,7 @@ const ARB_SECTIONS=[
   {id:'morfologia',l:'Morfologia',t:'multi',r:1,o:['Plana','Declive suave','Declive acentuado','Talude','Socalcos','Linha de água','Outros']},
   {id:'morfTxt',l:'Morfologia – descrição',t:'text',h:'Se preenchida, é esta frase que sai no relatório (ex.: Com declive acentuado, configurando parte do talude da estrada)'},
   {id:'regEdif',l:'Regime de edificabilidade (sai em 6.8.2)',t:'text',h:'Ex.: Não edificável; ou: edificação de apoio agrícola até 200 m². Vazio = «Nada a considerar»'},
-   {id:'edifInst',l:'Edificabilidade instalada no prédio (sai em 6.8.3)',t:'table',cols:[{id:'tipo',l:'Construção / uso',opts:['Habitação','Anexo / arrumos','Garagem','Armazém','Comércio / serviços','Indústria','Apoio agrícola','Muro / vedação','Outra']},{id:'ai',l:'Área de implantação (m²)',num:1},{id:'abc',l:'Área bruta de construção (m²)',num:1},{id:'pisos',l:'N.º de pisos',num:1},{id:'obs',l:'Observações',ta:1}],h:'Construções já existentes no prédio. Vazio = «Sem edificabilidade instalada»',show:()=>!!cur&&['ARB','PER'].includes(cur.fase)},
-   {id:'_hdEdif',t:'head',l:'Edificabilidade a considerar (→ 6.8.4)'},
+   {id:'_hdEdif',t:'head',l:'Edificabilidade a considerar (→ 6.8.3)'},
    {id:'iusIgt',l:'Índice adotado – IGT e artigo do regulamento',t:'textarea',h:'Ex.: PDM de …, art. …º do regulamento: índice de utilização máximo 0,50 m²/m²'},
    {id:'iusN',l:'IUS – índice de utilização do solo (m²/m²)',t:'number',h:'2 casas decimais; contextualmente entre 0,05 e 5,00. Vazio = IUS de 2.6, se numérico'},
    {id:'jIUS',l:'IUS – justificação (sai nas Notas do 8.2)',t:'textarea'},
@@ -2447,9 +2454,10 @@ const ARB_SECTIONS=[
    {id:'edInst',l:'Área de construção já instalada (2.6 – edificabilidade instalada)',t:'calc',k:'edInst',u:'m²'},
    {id:'edFolga',l:'Folga = permitida − instalada',t:'calc',k:'edFolga',u:'m²'},
    {id:'edOpt',l:'No relatório, indicar também a área já instalada e a área a considerar',t:'select',o:['Não','Sim'],d:'Não'},
+   {id:'edifInst',l:'Edificabilidade instalada no prédio (sai em 6.8.4)',t:'table',cols:[{id:'tipo',l:'Construção / uso',opts:['Habitação','Anexo / arrumos','Garagem','Armazém','Comércio / serviços','Indústria','Apoio agrícola','Muro / vedação','Outra']},{id:'ai',l:'Área de implantação (m²)',num:1},{id:'abc',l:'Área bruta de construção (m²)',num:1},{id:'pisos',l:'N.º de pisos',num:1},{id:'obs',l:'Observações',ta:1}],h:'Construções já existentes no prédio. Vazio = «Sem edificabilidade instalada»',show:()=>!!cur&&['ARB','PER'].includes(cur.fase)},
   {id:'pdmOrdImg',l:'Extrato da carta de ordenamento',t:'img',h:'Imagem ou PDF (1.ª página). Sai na grelha do Word ajustada a 14,3 × 10,0 cm (sem limites); no Word pode trocá-la depois (clique na imagem › Alterar imagem).'},
   {id:'pdmCondImg',l:'Extrato da carta de condicionantes',t:'img',h:'Imagem ou PDF (1.ª página). Vazio = grelha vazia no Word, com o controlo para inserir a imagem mais tarde.'},
-  {id:'outrasConsid',l:'Comentários (opcional; saem a seguir à edificabilidade a considerar, em 6.8.4)',t:'textarea'}]},
+  {id:'outrasConsid',l:'Comentários (opcional; saem a seguir à edificabilidade a considerar, em 6.8.3)',t:'textarea'}]},
  {id:'aptidao',t:'3 · Classificação do solo: TAC / TOF (art. 25.º) (→ 7)',f:[
   {id:'_docs25',t:'info',m:()=>'Suporte de cada alínea – a) acesso rodoviário e redes de água, energia e saneamento assinalados em 2.2; b) integração em núcleo urbano existente; c) extrato e regulamento do IGT (passos 1 e 2.6); d) alvará de loteamento ou licença de construção em vigor à data da DUP, com processo iniciado antes da notificação do art. 10.º, n.º 5.'},
   {id:'_ranren',t:'warn',show:v=>sacOn(v)&&(rrOn(v.ran)||rrOn(v.ren)),m:v=>`Possível conflito: há área classificada como apta para construção e a parcela tem incidência em ${[rrOn(v.ran)?'RAN':'',rrOn(v.ren)?'REN':''].filter(Boolean).join(' e ')}. RAN/REN: o Acórdão do STJ n.º 6/2011 (uniformização de jurisprudência) entende que solo integrado em RAN ou REN não pode ser classificado como apto para construção, ainda que preencha o art. 25.º, n.º 2. Confirme que a área apta não está em RAN/REN, ou fundamente a classificação.`},
