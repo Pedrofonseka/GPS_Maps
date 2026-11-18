@@ -1,5 +1,8 @@
 <!doctype html>
 <!--
+ExPropria v0.15.3 — resumo
+- Soma de rendimentos com um só bloco: sai como cálculo simples (sem «A)», «Valor do bloco» nem «Valor total = x = x»).
+
 ExPropria v0.15.2 — resumo
 - «Edificabilidade instalada» passa para depois de «Edificabilidade a considerar» (no Word e no formulário).
 
@@ -779,7 +782,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
 <script>
 'use strict';
-const VERSION='0.15.2';const VERSION_DATA='2026-11-18';/* data da release: atualizar sempre com VERSION */
+const VERSION='0.15.3';const VERSION_DATA='2026-11-18';/* data da release: atualizar sempre com VERSION */
 function growFit(t){if(!t||!t.classList?.contains('grow')||!t.offsetParent)return;t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px'}
 function growAll(root){(root||document).querySelectorAll('textarea.grow').forEach(growFit)}
 document.addEventListener('input',e=>growFit(e.target),true);
@@ -2158,6 +2161,7 @@ function calcRun0(m,p,temp){if(CALC_X[m])return CALC_X[m].run(p||{},temp);const 
  if(m==='cons')return calcRun('comp',{blocos:[{m:'euc',p:p.euc||{}},{m:'rot',p:p.rot||{}}]},temp);
  if(m==='comp'){const BL=(Array.isArray(p.blocos)?p.blocos:[]).filter(b=>b&&CALC_BLK[b.m]);if(!BL.length)return {ok:false,L:['Acrescente pelo menos um bloco.']};
   const RS=BL.map(b=>calcRun(b.m,b.p||{},false)),lt=k=>String.fromCharCode(65+k),nm=b=>String(b.nome||'').trim()||CALC_BLK[b.m];ok=RS.every(R=>R.ok);
+  if(BL.length===1){const R=RS[0];return R.ok?{...R,blocos:[{l:'A',nome:nm(BL[0]),vun:R.vun}]}:R}
   const L2=RS.flatMap((R,k)=>[`${lt(k)}) ${nm(BL[k])}`,...R.L,...(R.ok?[`Valor do bloco ${lt(k)}: ${fmt(R.vun)} €/m².`]:[])]);if(!ok)return {ok,L:L2};
   vun=Math.round(RS.reduce((x,R)=>x+R.vun,0)*100)/100;L2.push(`Valor total = ${RS.map(R=>fmt(R.vun)).join(' + ')} = ${fmt(vun)} €/m².`);
   const RES={t:{h:['Bloco','Designação','Valor (€/m²)'],pc:[.12,.62,.26],jc:['center','left','right'],r:[...RS.map((R,k)=>[lt(k),nm(BL[k]),fmt(R.vun)]),{c:['','Soma dos rendimentos',fmt(vun)],b:1}]}};
