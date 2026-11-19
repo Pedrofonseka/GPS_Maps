@@ -705,7 +705,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Regi Anomalias =====
-const VERSION='0.16.8';const VERSION_DATA='2026-11-15';/* data da release: atualizar sempre com VERSION */
+const VERSION='0.17.0';const VERSION_DATA='2026-11-19';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -728,12 +728,15 @@ const DEF_FIELDS=[
   {id:'medidas',label:'Medidas de reparação propostas',type:'long',on:false,print:true},
   {id:'obs',label:'Observações / outras anomalias',type:'long',on:true,print:true},
 ];
-const DEF_ZONA=['Edifício', 'Anexo', 'Garagem', 'Jardim', 'Piscina', 'Pavimentação', 'Redes técnicas', 'Cobertura', 'Logradouro', 'Muros e vedações', 'Acessos'];
+const DEF_ZONA=['Edifício', 'Fração', 'Anexo', 'Garagem', 'Jardim', 'Piscina', 'Pavimentação', 'Redes técnicas', 'Cobertura', 'Logradouro', 'Muros e vedações', 'Acessos'];
 const DEF_PISO=['Cv', 'Rc', '1A', '2A', '3A', 'St', '4A', 'Sb', 'Cb'];
 const DEF_LOCAL=['Cozinha', 'Sala de estar', 'Sala de jantar', 'Sala comum', 'Escritório', 'Despensa', 'Zona técnica', 'Arrumo', 'Garagem', 'Mezanino', 'I. Sanitária 01', 'I. Sanitária 02', 'I. Sanitária 03', 'I. Sanitária 04', 'I. Sanitária 05', 'Quarto 01', 'Quarto 02', 'Quarto 03', 'Quarto 04', 'Quarto 05', 'Varanda 01', 'Varanda 02', 'Varanda 03', 'Varanda 04', 'Varanda 05', 'Terraço', 'Alpendre', 'Átrio', 'Corredor', 'Hall de entrada', 'Lavandaria', 'Closet', 'Escadas', 'Patamar', 'Sótão', 'Cave', 'Telheiro', 'Logradouro'];
 const DEF_ELEM=['Parede exterior', 'Parede interior', 'Teto', 'Pavimento', 'Orlas e rodapés', 'Mobiliário', 'Mob. cozinha', 'Eletrodoméstico', 'Equip. sanitário', 'Porta interior', 'Porta exterior', 'Janela', 'Vidros', 'Cantaria', 'Rd água', 'Rd esgoto', 'Rd elétrica', 'Rd telecom', 'Rd gás', 'Rd incêndio', 'Rd intrusão', 'Rd AVAC', 'AQS', 'Cobertura', 'Telhas', 'Caleiras e tubos de queda', 'Rufos', 'Chaminé', 'Rd pluviais', 'Rd ventilação', 'Revestimento', 'Pintura', 'Teto falso', 'Escadas', 'Guardas e corrimãos', 'Estores e caixas', 'Portão', 'Muro'];
-const CATS=[['catZona','NUF – Núcleo Funcional','zona'],['catPiso','Piso','piso'],['catLocal','Local (compartimento)','local'],['catElem','Elemento','elemento'],['catalog','Tipo de anomalia',null]];
-const DEF_SETTINGS={fields:DEF_FIELDS,catalog:DEF_CATALOG,catZona:DEF_ZONA,catPiso:DEF_PISO,catLocal:DEF_LOCAL,catElem:DEF_ELEM,printStyle:'both',photoKB:150,maxFotos:6,outKB:0,photoCols:2,onePerPage:true,fitPage:true,dateCom:true,layout:'grelha',txtPhotos:true};
+const DEF_LOCAL_ESC=['Gabinete 1', 'Gabinete 2', 'Gabinete 3', 'Sala de reuniões', 'Átrio', 'Corredor', 'Receção', 'I. Sanitária 01', 'Arrumos 01', 'Varandas', 'Terraços'];
+/* tipo de uso do local → lista de compartimentos */
+const USOS=[['hab','Habitação','catLocal'],['esc','Escritório','catLocalEsc']];const usoOf=(p,a)=>USOS.find(u=>u[0]===((a&&a.uso)||(p&&p.uso)||'hab'))||USOS[0];
+const CATS=[['catZona','NUF – Núcleo Funcional','zona'],['catPiso','Piso','piso'],['catLocal','Local – habitação (compartimento)','local'],['catLocalEsc','Local – escritório (compartimento)','local'],['catElem','Elemento','elemento'],['catalog','Tipo de anomalia',null]];
+const DEF_SETTINGS={fields:DEF_FIELDS,catalog:DEF_CATALOG,catZona:DEF_ZONA,catPiso:DEF_PISO,catLocal:DEF_LOCAL,catLocalEsc:DEF_LOCAL_ESC,catElem:DEF_ELEM,printStyle:'both',photoKB:150,maxFotos:6,outKB:0,photoCols:2,onePerPage:true,fitPage:true,dateCom:true,layout:'grelha',txtPhotos:true};
 
 let db,settings,procs=[];
 const S={view:'home',open:{},sub:null,filt:{st:'all',zona:''},openId:false,gpsMsg:'',pid:null,aid:null,imp:null,camShots:[],openCfg:false};
@@ -830,6 +833,7 @@ function hydrate(p){return ordAnoms(p,p.anomalias.map(a=>({...a,_n:numOf(p,a),_c
 
 function migrateSettings(s){
   s=Object.assign(clone(DEF_SETTINGS),s||{});
+  if(!s.migFracao){if(Array.isArray(s.catZona)&&!s.catZona.includes('Fração'))s.catZona.splice(1,0,'Fração');s.migFracao=true}
   for(const df of DEF_FIELDS)if(!s.fields.find(f=>f.id===df.id)&&!(s.removed||[]).includes(df.id))s.fields.push(clone(df));
   if(!s.mig0110){s.catalog=clone(DEF_CATALOG);s.catZona=clone(DEF_ZONA);s.catPiso=clone(DEF_PISO);s.catLocal=clone(DEF_LOCAL);s.catElem=clone(DEF_ELEM);s.mig0110=true}
   if(!s.mig092){const c=s.fields.find(f=>f.id==='conf');if(c&&c.opts)c.opts=c.opts.map(([k,t])=>k==='CON'?['CFM',t==='Confirma-se'?'Confirmado':t]:[k,t]);s.mig092=true}
@@ -1015,12 +1019,13 @@ function vAnoms(){
   <div class="card"><div class="muted" style="margin-bottom:6px">Tipo de trabalho: <b>${(MODOS.find(m=>m[0]===(p.modo||'misto'))||MODOS[2])[1]}</b> <button class="secondary mini" data-act="go" data-v="proc">alterar</button></div>
   <div class="steps3">${p.modo==='livre'?'<span><b>1</b> Nova situação</span><span><b>2</b> Descrever e classificar</span><span><b>3</b> Fotografar</span>':'<span><b>1</b> Criar a lista</span><span><b>2</b> Tocar numa situação</span><span><b>3</b> Confirmar, comentar e fotografar</span>'}</div>
   ${addBtns(p)}
+  <div class="inrow" style="margin-top:6px"><input id="nSit" type="number" inputmode="numeric" min="1" value="${p.nSit||''}" placeholder="N.º de situações a analisar"><button class="secondary mini" data-act="mkN">Criar situações</button></div>${p.nSit?`<div class="muted" style="font-size:.85em">Previstas: ${p.nSit} · na lista: ${an.length}${an.length<p.nSit?` · faltam ${p.nSit-an.length}`:''}</div>`:''}
   ${an.length?`<div class="muted">${nl} da lista · ${nc} acrescentada${nc===1?'':'s'} no local</div><div class="bar"><i style="width:${Math.round(100*done/an.length)}%"></i></div><b>${done}/${an.length}</b> analisadas
   <div class="lockrow">${p.lockNum?`<span>🔒 <b>Numeração fixa</b> — os códigos AN não mudam ao reordenar ou eliminar</span><button class="secondary mini" data-act="lockNum" data-v="0">Desbloquear</button>${seqOk(p)?'':`<span style="color:#a15c00;font-weight:600">⚠ Há números fora de sequência ou em falta.</span><button class="mini green" data-act="renumSeq">Renumerar por ordem (1.001, 1.002…)</button>`}`:`<span class="muted">Numeração pela ordem da lista (muda ao reordenar ou eliminar)</span><button class="secondary mini" data-act="lockNum" data-v="1">🔒 Fixar numeração</button>`}</div>`:''}</div>
   ${an.length>4?`<div class="search"><input id="fq" data-act="filtQ" value="${esc(F.q||'')}" placeholder="🔍 Pesquisar código, item, local ou texto…">${F.q?'<button class="secondary mini" data-act="filtQClear">✕</button>':''}</div>`:''}
   ${an.length?`<div class="seg">${[['all','Todas',an.length],['todo','Por analisar',an.length-done],['done','Analisadas',done]].map(([k,t,n])=>`<button class="${F.st===k?'on':''}" data-act="filt" data-v="${k}">${t} (${n})</button>`).join('')}</div>
   ${usedP.length>1?`<select data-act="filtParte"><option value="">Todas as partes</option>${usedP.map(n=>`<option value="${n}" ${F.parte==n?'selected':''}>${n} – ${esc(parteNome(p,n))}</option>`).join('')}</select>`:''}
-  ${usedP.length>1&&an.some((a,i)=>i&&parteOf(p,an[i-1])>parteOf(p,a))?'<div class="btns"><button class="secondary mini" data-act="sortParte">⇅ Ordenar a lista por código</button></div>':''}
+  ${an.length>1?`<div class="inrow"><select data-act="sortBy"><option value="">⇅ Ordenar a lista…</option><option value="num">Pelo número sequencial (código)</option><option value="ref">Pelo item (n.º na lista fornecida)</option><option value="hier">Por NUF › Piso › Local › Elemento</option></select></div><div class="muted" style="font-size:.85em">Ou a ordem que quiser: mova cada situação com ▲▼.</div>`:''}
   ${zonas.length>1?`<select data-act="filtZona"><option value="">Todas as zonas</option>${zonas.map(z=>`<option ${F.zona===z?'selected':''}>${esc(z)}</option>`).join('')}</select>`:''}`:''}
   <div class="list">${vis.map(a=>anomCard(a,an.indexOf(a),an.length,'analise')).join('')||(an.length?'<p class="muted">Nenhuma anomalia com este filtro.</p>':'<p class="muted">Sem anomalias. Importe a lista fornecida ou acrescente-as uma a uma.</p>')}</div>
   ${an.length>3?addBtns(p,true):''}
@@ -1035,7 +1040,7 @@ function vFicha(){
   const fsC=fs.filter(f=>!(f.id==='conf'&&a.origem==='local'));const nFilled=fsC.filter(f=>{const v=a.vals?.[f.id];return Array.isArray(v)?v.length:v}).length;
   const idBody=`<div class="ancode">${anCode(p,a)} <span class="muted">— código pela ordem da lista</span></div>
     <label>Parte que coloca a questão / situação</label><div class="tks">${p.partes.map(x=>tickBox('',parteOf(p,a)==x.n,`<b>${parteSig(p,x.n)}</b> – ${esc(x.nome)}`,`data-act="tkParte" data-v="${x.n}"`)).join('')}</div>
-    ${inp('a.ref','Item (n.º na lista fornecida)',a.ref,'ex.: 1a)')}${idPick(a,'zona','NUF – Núcleo Funcional','catZona')}${idPick(a,'piso','Piso','catPiso')}${idPick(a,'local','Local (compartimento)','catLocal')}${idPick(a,'elemento','Elemento','catElem')}
+    ${inp('a.ref','Item (n.º na lista fornecida)',a.ref,'ex.: 1a)')}${idPick(a,'zona','NUF – Núcleo Funcional','catZona')}${idPick(a,'piso','Piso','catPiso')}<div class="muted" style="margin:8px 0 2px">Tipo de uso do local (define os compartimentos)</div><div class="btns">${USOS.map(u=>`<button class="${usoOf(p,a)[0]===u[0]?'green':'secondary'} mini" data-act="setUso" data-v="${u[0]}">${u[1]}</button>`).join('')}</div>${idPick(a,'local',`Local (compartimento – ${usoOf(p,a)[1].toLowerCase()})`,usoOf(p,a)[2])}${idPick(a,'elemento','Elemento','catElem')}
     ${txt('a.descricao',`${lblD(p)} (sai com o título «${lblD(p)}:»)`,a.descricao,3)}`;
   S.subNav=`<div class="fnav"><button class="secondary" data-act="backList">◀ Lista</button><b class="grow center">${anCode(p,a)} · ${idx+1}/${n}</b><button class="secondary" data-act="stepA" data-d="-1" ${idx?'':'disabled'}>◀</button><button class="secondary" data-act="stepA" data-d="1" ${idx<n-1?'':'disabled'}>▶</button></div>${a.descricao?`<div class="subdesc ${S.descFull?'full':''}" data-act="descFull"><b>${esc(lblD(p))}:</b> ${esc(a.descricao)}<span class="dmore">${S.descFull?'▲':'▼'}</span></div>`:''}`;
   let h='';
@@ -1354,7 +1359,7 @@ const nextNum=(p,pt)=>Math.max(0,...p.anomalias.filter(a=>parteOf(p,a)==pt).map(
 function renumParte(p,pt){if(!p.lockNum)return;let k=0;for(const x of p.anomalias)if(parteOf(p,x)==pt)x.num=++k}
 function seqOk(p){if(!p.lockNum)return true;const c={};for(const x of p.anomalias){const pt=parteOf(p,x);c[pt]=(c[pt]||0)+1;if(x.num!==c[pt])return false}return true}
 function newAnom(origem,parte){const p=cur();const pt=parte??(origem==='local'?(p.parteLocal??4):1);
-  return {id:uid(),parte:pt,num:p&&p.lockNum?nextNum(p,pt):undefined,ref:'',zona:'',local:'',elemento:'',descricao:'',origem,vals:{},fotos:[],createdAt:Date.now()}}
+  return {id:uid(),parte:pt,num:p&&p.lockNum?nextNum(p,pt):undefined,ref:'',zona:'',local:'',uso:(p&&p.uso)||'hab',elemento:'',descricao:'',origem,vals:{},fotos:[],createdAt:Date.now()}}
 
 document.addEventListener('click',async e=>{
   const el=e.target.closest('[data-act]');if(!el||el.tagName==='INPUT'&&el.type!=='button'||el.tagName==='SELECT')return;
@@ -1426,6 +1431,8 @@ document.addEventListener('click',async e=>{
     case 'idToCat':{const k=el.dataset.k,ck=el.dataset.c,v=(a[k]||'').trim();if(!v)return toast('Escreva primeiro o valor.',1);if(!settings[ck].includes(v)){settings[ck].push(v);await saveSettings();toast(`"${v}" acrescentado ao catálogo.`)}S.scrollTop=window.scrollY;break}
     case 'newAnom':{const na=newAnom(el.dataset.o||'local');p.anomalias.push(na);S.aid=na.id;S.view='anom';S.sub='ficha';S.openId=true;S.scrollTop=0;await saveProc();break}
     case 'openAnom':S.listScroll=window.scrollY;S.aid=el.dataset.id;S.sub='ficha';S.openId=false;S.camShots=[];S.scrollTop=0;break;
+    case 'setUso':{a.uso=el.dataset.v;p.uso=el.dataset.v;S.scrollTop=window.scrollY;await saveProc();break}
+    case 'mkN':{const n=parseInt((document.getElementById('nSit')||{}).value,10);if(!(n>0))return toast('Indique o número de situações a analisar.',1);p.nSit=n;const k=n-p.anomalias.length;if(k<=0){await saveProc();toast(`O processo já tem ${p.anomalias.length} situações.`);break}const o=p.modo==='livre'?'local':'lista';for(let i=0;i<k;i++)p.anomalias.push(newAnom(o));S.scrollTop=window.scrollY;await saveProc();toast(`${k} situação(ões) criada(s) – total ${n}. Pode ainda acrescentar ou duplicar.`);break}
     case 'mvA':{const i=p.anomalias.findIndex(x=>x.id===el.dataset.id),j=i+ +el.dataset.d;[p.anomalias[i],p.anomalias[j]]=[p.anomalias[j],p.anomalias[i]];S.scrollTop=window.scrollY;await saveProc();break}
     case 'stepA':{if(dirty)await saveProc();const i=p.anomalias.indexOf(a)+ +el.dataset.d;if(p.anomalias[i]){S.aid=p.anomalias[i].id;S.camShots=[];S.scrollTop=0}break}
     case 'origem':a.origem=el.dataset.v;await saveProc();S.scrollTop=window.scrollY;break;
@@ -1487,6 +1494,9 @@ document.addEventListener('change',async e=>{
   if(act==='tkCharts'){p.printCharts=el.checked;await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='tkParte'){const n=+el.dataset.v;if(parteOf(p,a)!=n){const old=anCode(p,a),po=parteOf(p,a);a.parte=n;a.origem=n==(p.parteLocal??4)?'local':'lista';const L=p.anomalias;L.splice(L.indexOf(a),1);let at=-1;L.forEach((x,i)=>{if(parteOf(p,x)==n)at=i});if(at<0)L.forEach((x,i)=>{if(parteOf(p,x)<n)at=i});L.splice(at+1,0,a);renumParte(p,po);renumParte(p,n);toast(`${old} passa a ${anCode(p,a)} — as partes ${po} e ${n} foram renumeradas por ordem.`)}await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='impParte'){S.impParte=+el.value;return}
+  if(act==='sortBy'){const o=el.value;if(!o)return;const pos=new Map(p.anomalias.map((x,i)=>[x,i]));const ix=(ck,v)=>{const i=(settings[ck]||[]).indexOf(v||'');return i<0?9999:i};const nat=(x,y)=>String(x||'￿').localeCompare(String(y||'￿'),'pt',{numeric:true,sensitivity:'base'});
+   const C={num:(x,y)=>parteOf(p,x)-parteOf(p,y)||((x.num||0)-(y.num||0))||pos.get(x)-pos.get(y),ref:(x,y)=>nat(x.ref,y.ref)||pos.get(x)-pos.get(y),hier:(x,y)=>ix('catZona',x.zona)-ix('catZona',y.zona)||nat(x.zona,y.zona)||ix('catPiso',x.piso)-ix('catPiso',y.piso)||nat(x.piso,y.piso)||ix(usoOf(p,x)[2],x.local)-ix(usoOf(p,y)[2],y.local)||nat(x.local,y.local)||nat(x.elemento,y.elemento)||pos.get(x)-pos.get(y)}[o];
+   if(C){p.anomalias.sort(C);await saveProc();toast('Lista ordenada. Pode ainda mover uma a uma com ▲▼.')}S.scrollTop=window.scrollY;render();return}
   if(act==='filtParte'){S.filt.parte=el.value?+el.value:0;S.scrollTop=window.scrollY;render();return}
   if(act==='parteLocal'){p.parteLocal=+el.value;for(const x of p.anomalias)x.origem=parteOf(p,x)==p.parteLocal?'local':'lista';await saveProc();return}
   if(el.dataset.pn!==undefined){const i=+el.dataset.pn,old=p.partes[i].n,n=parseInt(el.value,10);if(!(n>0)||p.partes.some((x,j)=>j!==i&&x.n==n)){el.value=old;return toast('Número de parte inválido ou repetido.',1)}for(const x of p.anomalias)if(parteOf(p,x)==old)x.parte=n;if(p.parteLocal==old)p.parteLocal=n;p.partes[i].n=n;await saveProc();S.scrollTop=window.scrollY;render();return}
