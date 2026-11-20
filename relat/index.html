@@ -303,7 +303,12 @@ const jcFor=t=>String(t||'').length>=JMIN?'both':'left';
 const lblD=p=>(String(p?.lblDesc||'').trim()||'Situação').replace(/:+$/,''),lblC=p=>(String(p?.lblCom||'').trim()||'Análise').replace(/:+$/,'');
 function b64ToU8(d){const b=atob(d.slice(d.indexOf(',')+1));const u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u}
 function optText(o,style){const [c,t]=o;if(!c||c===t||style==='text')return t||c;if(style==='code')return c;return `${c} (${t})`}
+// ---- Prioridade GUT (Gravidade × Urgência × Tendência, 1–5 cada; produto 1–125) ----
+const GUT_K=[['g','Gravidade',['Sem gravidade','Pouco grave','Grave','Muito grave','Extremamente grave']],['u','Urgência',['Pode esperar','Pouco urgente','Urgente — a curto prazo','Muito urgente','Ação imediata']],['t','Tendência',['Não vai piorar','Piora a longo prazo','Piora a médio prazo','Piora a curto prazo','Piora rapidamente']]];
+const gutScore=v=>v&&+v.g&&+v.u&&+v.t?(+v.g)*(+v.u)*(+v.t):0;
+const gutClass=n=>n>=64?'muito alta':n>=27?'alta':n>=8?'média':'baixa'; // limites nos cubos 2³, 3³, 4³
 function fieldValueText(f,v,settings,vals){
+  if(f.type==='gut'){const n=gutScore(v);if(!n)return '';return `G${v.g} × U${v.u} × T${v.t} = ${n} (prioridade ${gutClass(n)})`}
   if(v===undefined||v===null||v===''||(Array.isArray(v)&&!v.length))return '';
   if(f.type==='choice'){const o=(f.opts||[]).find(o=>o[0]===v);return o?optText(o,settings.printStyle):String(v)}
   if(f.type==='multi'){const free=String(vals?.[f.id+'__txt']||'').trim();return (Array.isArray(v)?v:[v]).map(c=>{const o=(f.opts||[]).find(o=>o[0]===c)||[c,c];return optText(c===f.free&&free?[o[0],free]:o,settings.printStyle)}).join(', ')}
@@ -712,7 +717,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.6.1';const VERSION_DATA='2026-11-19';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.7.0';const VERSION_DATA='2026-11-20';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -729,6 +734,7 @@ const DEF_FIELDS=[
   {id:'cons',label:'Gravidade',type:'multi',opts:[['1-ENR','Estético não relevante'],['2-EPR','Estético pouco relevante'],['3-ERV','Estético relevante'],['6-FNR','Funcional não relevante'],['7-FPR','Funcional pouco relevante'],['8-FRV','Funcional relevante'],['OUT','Outras']],free:'OUT',excl:true,on:true,print:true},
   {id:'tend',label:'Tendência',type:'choice',opts:[['Estável','Estável'],['Em agravamento','Em agravamento'],['Desconhecida','Desconhecida']],on:true,print:true},
   {id:'urg',label:'Urgência',type:'choice',opts:[['Baixa','Baixa'],['Média','Média'],['Alta','Alta'],['Imediata','Imediata']],on:true,print:true},
+  {id:'gut',label:'Prioridade GUT',type:'gut',on:false,print:true},
   {id:'rep',label:'Indícios de reparação',type:'choice',opts:[['Sim','Sim'],['Não','Não'],['Parcial','Parcial']],on:true,print:true},
   {id:'repData',label:'Data de reparação',type:'text',ph:'mm/aaaa',on:true,print:true},
   {id:'causas',label:'Causas hipotéticas',type:'long',on:false,print:true},
@@ -880,9 +886,9 @@ async function enforceMax(){const m=maxF();let n=0;for(const p of procs){let ch=
 const inRel=f=>f.sel!==false;const relF=a=>a.fotos.filter(inRel);const resF=a=>a.fotos.filter(f=>!inRel(f));const MAXALL=40;
 function normFotos(a){a.fotos=[...relF(a),...resF(a)]}
 // ---------- ordenação da saída (Word, PDF, pré-visualização) ----------
-const ORDENS=[['lista','Por blocos — parte que coloca as questões (ordem da lista)'],['hier','NUF › Piso › Local › Elemento'],['zona','NUF – Núcleo Funcional'],['local','Local (compartimento)'],['elemento','Elemento'],['tipo','Tipo de anomalia'],['grav','Gravidade'],['urg','Urgência'],];
+const ORDENS=[['lista','Por blocos — parte que coloca as questões (ordem da lista)'],['hier','NUF › Piso › Local › Elemento'],['zona','NUF – Núcleo Funcional'],['local','Local (compartimento)'],['elemento','Elemento'],['tipo','Tipo de anomalia'],['grav','Gravidade'],['urg','Urgência'],['gut','Prioridade GUT (maior primeiro)'],];
 // bloco de cada parte: as questões são tratadas por blocos (como no tribunal), com o título no início de cada bloco
-function blocoNome(p,n){const sg=parteSig(p,n),nm=String(parteNome(p,n)||'').replace(/\s*\(.*\)$/,'');return sg==='A'?'Questões do Autor':sg==='R'?'Questões do Réu':sg==='T'?'Questões do Tribunal':sg==='S'?'Questões do Solicitante':sg==='P'?'Situações constatadas no local pelo Perito':`Questões — ${nm||'Parte '+n}`}
+function blocoNome(p,n){const sg=parteSig(p,n),nm=String(parteNome(p,n)||'').replace(/\s*\(.*\)$/,'');if(p.rel?.ambito==='particular'&&sg!=='P')return 'Questões do solicitante';return sg==='A'?'Questões do Autor':sg==='R'?'Questões do Réu':sg==='T'?'Questões do Tribunal':sg==='S'?'Questões do Solicitante':sg==='P'?'Situações constatadas no local pelo Perito':`Questões — ${nm||'Parte '+n}`}
 function ordAnoms(p,L){let o=p.ordem||'lista';if(o==='parte')o='lista';
   if(o==='lista')return L.map((a,i)=>({a,i,n:parteOf(p,a)})).sort((x,y)=>{const ix=(p.partes||[]).findIndex(q=>q.n==x.n),iy=(p.partes||[]).findIndex(q=>q.n==y.n);return (ix-iy)||((x.a._n||0)-(y.a._n||0))||(x.i-y.i)}).map(x=>({...x.a,_grp:blocoNome(p,x.n)}));
   const ci=(cat,v)=>{if(!v)return 1e6;const i=(settings[cat]||[]).indexOf(v);return i<0?1e5:i};const fo=id=>settings.fields.find(f=>f.id===id);
@@ -897,7 +903,8 @@ function ordAnoms(p,L){let o=p.ordem||'lista';if(o==='parte')o='lista';
     case 'tipo':{const t=(a.vals?.tipo||[])[0]||'';return {k:[ci('catalog',t),t],g:(fo('tipo')?.label||'Tipo')+': '+(t||'(sem tipo)')}}
     case 'grav':{const v=firstOpt('cons',a.vals?.cons);return {k:[optI('cons',v)],g:(fo('cons')?.label||'Gravidade')+': '+(v?optT('cons',v):'(sem classificação)')}}
     case 'urg':{const v=a.vals?.urg;return {k:[optI('urg',v)],g:(fo('urg')?.label||'Urgência')+': '+(v?optT('urg',v):'(sem classificação)')}}
-    case 'parte':{const n=parteOf(p,a);return {k:[n],g:`Parte ${n} – ${parteNome(p,n)||''}`}}}};
+    case 'parte':{const n=parteOf(p,a);return {k:[n],g:`Parte ${n} – ${parteNome(p,n)||''}`}}
+    case 'gut':{const n=gutScore(a.vals?.gut);return {k:[-n],g:n?`Prioridade GUT ${gutClass(n)}`:'Prioridade GUT por classificar'}}}};
   const cmp=(x,y)=>{for(let i=0;i<Math.max(x.length,y.length);i++){if(x[i]===y[i])continue;if(typeof x[i]==='number'&&typeof y[i]==='number')return x[i]-y[i];return String(x[i]).localeCompare(String(y[i]),'pt')}return 0};
   return L.map((a,i)=>({a,i,...K(a)})).sort((x,y)=>cmp(x.k,y.k)||x.i-y.i).map(x=>({...x.a,_grp:x.g}))}
 function hydrate(p){return ordAnoms(p,p.anomalias.map(a=>({...a,_n:numOf(p,a),_code:anCode(p,a),_parte:'',fotos:relF(a).map(f=>({...f,data:fdOut(f)}))})))}
@@ -1145,6 +1152,8 @@ function fieldUI(f,a){
     return `<label>${esc(f.label)} <span class="muted">(${f.excl?'uma estética e/ou uma funcional':'pode marcar várias'})</span></label><div class="tks">${(f.opts||[]).map(([c,t])=>tickBox('',arr.includes(c),esc(c&&c!==t?c+' – '+t:t),`data-act="tkMulti" data-f="${f.id}" data-v="${esc(c)}"`)).join('')}</div>${f.free&&arr.includes(f.free)?`<input data-bind="v.${f.id}__txt" value="${esc(a.vals?.[f.id+'__txt']||'')}" placeholder="Rótulo de «${esc((f.opts.find(o=>o[0]===f.free)||[])[1]||'Outras')}» (ex.: Segurança, Salubridade…)">`:''}`}
   if(f.type==='catalog'){const arr=Array.isArray(v)?v:[];const all=[...settings.catalog,...arr.filter(c=>!settings.catalog.includes(c))];
     return dd('f_'+f.id,f.label,arr.join(', '),`<span class="muted" style="font-size:12px">(pode marcar vários)</span><div class="tks">${all.map(c=>tickBox('',arr.includes(c),esc(c),`data-act="tkCat" data-f="${f.id}" data-v="${esc(c)}"`)).join('')}</div><div class="inrow"><input id="newCat" placeholder="Outro tipo… (fica no catálogo)"><button class="secondary mini" data-act="addCat" data-f="${f.id}">+</button></div>`)}
+  if(f.type==='gut'){const g=v||{};const n=gutScore(g);
+    return `<label>${esc(f.label)} <span class="muted">(1 a 5 em cada; prioridade = G × U × T)</span></label>${GUT_K.map(([k,lb,ds])=>`<div class="muted" style="margin:6px 0 2px">${lb}</div><div class="tks sm">${ds.map((d,i)=>tickBox('',+g[k]===i+1,`${i+1} – ${esc(d)}`,`data-act="tkGut" data-f="${f.id}" data-k="${k}" data-v="${i+1}"`)).join('')}</div>`).join('')}<p style="margin:6px 0 0">${n?`<b>${n}</b> — prioridade ${gutClass(n)}`:'<span class="muted">Marque G, U e T para obter a prioridade.</span>'}</p>`}
   if(f.type==='long')return txt('v.'+f.id,f.label,v,3);
   return inp('v.'+f.id,f.label,v,f.ph||'');
 }
@@ -1160,6 +1169,7 @@ function computeStats(p){
   const mp=new Map();for(const a of an){const n=parteOf(p,a);cnt(mp,`${n} – ${parteNome(p,n)||'?'}`)}if(mp.size)T.push({key:'parte',title:'Parte',rows:[...mp].sort()});
   const mz=new Map();for(const a of an)cnt(mz,a.zona||'(sem NUF)');const mpi=new Map();for(const a of an)if(a.piso)cnt(mpi,a.piso);if(mz.size)T.push({key:'zona',title:'NUF – Núcleo Funcional',rows:[...mz].sort((x,y)=>y[1]-x[1])});if(mpi.size)T.push({key:'piso',title:'Piso',rows:[...mpi].sort((x,y)=>y[1]-x[1])});
   const ml=new Map();for(const a of an)if(a.local)cnt(ml,a.local);if(ml.size)T.push({key:'local',title:'Local (compartimento)',rows:[...ml].sort((x,y)=>y[1]-x[1]).slice(0,15)});
+  if(fo('gut')){const L=an.map(a=>[a,gutScore(a.vals?.gut)]).filter(x=>x[1]).sort((x,y)=>y[1]-x[1]);if(L.length)T.push({key:'gut',title:'Prioridade GUT (G × U × T)',rows:L.slice(0,20).map(([a,n])=>[`${anCode(p,a)} · ${[a.local||a.zona,a.elemento].filter(Boolean).join(' · ')}`.slice(0,60),n])})}
   const me=new Map();for(const a of an)if(a.elemento)cnt(me,a.elemento);if(me.size)T.push({key:'elemento',title:'Elemento',rows:[...me].sort((x,y)=>y[1]-x[1]).slice(0,15)});
   // texto de síntese automático (pode ser copiado e ajustado no Resumo de apreciação)
   const nl=an.filter(a=>a.origem!=='local').length,nc=an.length-nl;const top=(t,k=2)=>{const x=T.find(z=>z.title===t||z.title.startsWith(t));if(!x)return '';return [...x.rows].sort((a,b)=>b[1]-a[1]).slice(0,k).filter(r=>r[1]).map(([l,n])=>`${l} (${n})`).join(', ')};
@@ -1452,6 +1462,14 @@ const RELAT_HDRS={"proficis": {"xml": "<?xml version=\"1.0\" encoding=\"UTF-8\" 
 const GABS_R=[['proficis','Proficis'],['peritava','Peritava'],['pfk','pfk'],['nid','NID']];
 const AMB_GAB={institucional:['proficis','nid'],particular:['peritava','pfk']};
 const QUAL_R=['Pelo Tribunal','Pela Parte 1','Pela Parte 2'];
+// frases comuns de articulação (editáveis por processo) e listas de opções cumulativas
+const CONSEQ_INTRO='Sob pena de outras considerações que possam vir a suceder na sequência desta análise ou subsequentes trabalhos de reparação, as situações agora constatadas, configuram:';
+const CONSEQ_R=['Insalubridade','Afetação das condições de salubridade','Insegurança estrutural','Afetação das condições estruturais','Insegurança à intrusão','Insegurança ao incêndio','Risco de queda de materiais','Afetação das condições de uso normal','Impossibilidade de uso, em condições de normalidade','Degradação precoce de materiais e sistemas','Outros prejuízos'];
+const PASSOS_INTRO='Sem prejuízo de outras recomendações que venham a decorrer de constatações subsequentes, em função do que se percebe nesta fase, sugere-se:';
+const RESUMO_INTRO='De acordo com a análise específica, temos:';
+const RECURSOS_INTRO='Na inspeção, foram utilizados os seguintes recursos:';
+const RECURSOS_R=['Inspeção visual','Registo fotográfico','Fita métrica / medidor laser','Nível e/ou prumo','Humidímetro','Câmara termográfica','Endoscópio / câmara de inspeção','Fissurómetro','Escada','Drone','Outros'];
+const ANEXT_R=['Caderneta predial','Certidão de registo predial','Planta','Lista de assuntos','Outros'];
 const DOCS_R=['Lista de quesitos','Relatório de situações','Cadernetas prediais','Certidões de registo','Levantamento topográfico','Plantas','Projetos','Caderno de encargos','Lista de trabalhos a realizar','Orçamento','Lista de alterações','Lista de queixas','Conjunto de fotos','Outros'];
 const ANEX_R=['Plantas','Medições e orçamento','Análise de anomalias','Levantamento topográfico','Lista de trabalhos a realizar','Outros elementos de base'];
 const COMP_SINGULAR='Pedro Jorge Fernandes Fonseca, engenheiro, perito-avaliador da Lista Oficial do Ministério da Justiça e do Ministério das Finanças, com formação em avaliação imobiliária e expropriações pelo Centro de Estudos Judiciários do Ministério da Justiça, inscrito na Associação Nacional de Avaliadores Imobiliários sob o número 336 e na CMVM sob o registo PAI 2011 0005, ao serviço da empresa Proficis serviços de engenharia Lda, pessoa coletiva com o número 503 759 813, jura por sua honra desempenhar as funções que lhe foram atribuídas, com lealdade e proficiência.';
@@ -1485,7 +1503,7 @@ Não é pressuposto deste trabalho:
 - realizar análise de projeto ou averiguar a legalidade das edificações, em termos de uso ou licenciamento;
 - atestar sobre a qualidade ambiental.`;
 const MESES_R=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
-function ensureRel(p){const r=p.rel=p.rel||{};const d={ambito:'institucional',modo:'singular',gab:'proficis',peritos:[],procJud:'',entidade:'',funcao:'Peritagem',contexto:'',parte1:'',parte2:'',objeto:'',versao:'1.00',h1:'',h3:'',h4a:'',h4b:'',despacho:'',objIntro:'De acordo com o solicitado, pretende-se:',capa:'fotosLoc',quesitos:[],docs:{},docsOutros:'',docsCom:'',hora:'',interv:'',decurso:'',constrang:'',nota:'',incReservas:true,incAmbiente:true,reservas:'',ambiente:'',unan:true,discord:'',dataEnc:'',anexos:{},anexosOutros:'',incComp:true};
+function ensureRel(p){const r=p.rel=p.rel||{};const d={ambito:'institucional',modo:'singular',gab:'proficis',peritos:[],procJud:'',entidade:'',funcao:'Peritagem',contexto:'',parte1:'',parte2:'',objeto:'',versao:'1.00',h1:'',h3:'',h4a:'',h4b:'',despacho:'',objIntro:'De acordo com o solicitado, pretende-se:',capa:'fotosLoc',quesitos:[],docs:{},docsOutros:'',docsCom:'',hora:'',interv:'',decurso:'',constrang:'',nota:'',incReservas:true,incAmbiente:true,reservas:'',ambiente:'',unan:true,discord:'',dataEnc:'',anexos:{},anexosOutros:'',incComp:true,visitas:[],recursos:{},recursosOutros:'',recursosIntro:RECURSOS_INTRO,conseq:{},conseqOutros:'',conseqTxt:'',conseqIntro:CONSEQ_INTRO,causasG:'',passosIntro:PASSOS_INTRO,resumoIntro:RESUMO_INTRO,outrasTxt:''};
   if(p.printStats===undefined)p.printStats=true;
   if(r.despacho==='De acordo com o despacho:')r.despacho='';if(r.objIntro==='Constitui objeto da perícia determinar:'||r.objIntro==='Pretende-se:')r.objIntro='De acordo com o solicitado, pretende-se:';
   if(r.docs&&r.docs['Outros elementos de base']){r.docs['Outros']=true;delete r.docs['Outros elementos de base']}
@@ -1498,6 +1516,8 @@ function relFileName(p){const r=ensureRel(p);const cl=t=>String(t||'').normalize
   const proc=cl(r.procJud).replace(/(\d)(T\d)/g,'$1_$2').replace(/[^A-Za-z0-9]+/g,'_').replace(/^_|_$/g,'');
   const ver=cl(r.versao).replace(/\s+/g,'').replace(/[^A-Za-z0-9.]+/g,'_')||'1.00';
   return [nref,proc?'Proc_'+proc:''].filter(Boolean).join('_')+(nref||proc?'-':'')+'Relatorio_'+ver+'.docx'}
+// visitas ao local: a 1.ª vem de «2 · Vistoria» (data, presenças); as seguintes do Processo › R5
+function visList(p){const r=ensureRel(p),v0=p.visita||{};return [{data:v0.data||'',hora:r.hora||'',presencas:v0.presencas||''},...(r.visitas||[])].filter((v,i)=>i===0||v.data||v.presencas||v.obs)}
 function relCheck(p){const r=ensureRel(p),col=isCol(r),part=isPart(r),w=[];const v=x=>String(x||'').trim();
   if(!v(p.codigo))w.push('N_Ref (código interno) por preencher — Processo › 1');
   if(!v(r.objeto))w.push('«Objeto de análise» por preencher — Processo › R2');
@@ -1546,7 +1566,9 @@ function relProcHTML(p){const r=ensureRel(p),col=isCol(r),part=isPart(r),hd=hdrD
     <p class="muted">Word: cada alínea (a), b)…, 1., 2.…) ou parágrafo passa a um quesito. Excel: 1.ª coluna da 1.ª folha (ignora a linha de títulos se disser «quesito»). Pode editar e reordenar depois.</p>`;
   const nd=DOCS_R.filter(d=>r.docs[d]).length;
   const t4=`<div class="tks col">${DOCS_R.map(d=>tickBox('',!!r.docs[d],d,`data-act="rDoc" data-k="${esc(d)}"`)).join('')}</div>${RT('docsOutros','Outros elementos',r.docsOutros,2,'-')}${RT('docsCom','Comentários',r.docsCom,2)}`;
-  const t5=`${RL('hora','Hora',r.hora,'ex.: 14:30')}<p class="muted">Data e «Compareceram» vêm de «2 · Vistoria».</p>${RT('interv','Outros intervenientes e suas funções',r.interv,2,'Não houve.')}${RT('decurso','Decurso da diligência',r.decurso,3,'Com o acompanhamento dos presentes, foi visitado o interior e exterior do edifício, para analisar as situações que vinham definidas.')}${RT('constrang','Constrangimentos, impedimentos ou dúvidas relevantes',r.constrang,2,'Nada a considerar.')}`;
+  const t5=`${RL('hora','Hora (1.ª visita)',r.hora,'ex.: 14:30')}<p class="muted">A data e «Compareceram» da 1.ª visita vêm de «2 · Vistoria». Uma peritagem pode ter várias visitas: acrescente as seguintes aqui.</p>
+    <label>Outras visitas</label><div class="rows">${(r.visitas||[]).map((v,i)=>`<div class="qbox"><div class="qhd"><b>${i+2}.ª visita</b><span class="grow"></span><button class="del" data-act="rDelVis" data-i="${i}">✕</button></div><div class="grid2"><div><label>Data</label><input data-bind="vx.${i}.data" value="${esc(v.data||'')}" placeholder="dd/mm/aaaa"></div><div><label>Hora</label><input data-bind="vx.${i}.hora" value="${esc(v.hora||'')}" placeholder="ex.: 10:00"></div></div><label>Compareceram</label><textarea data-bind="vx.${i}.presencas" rows="2">${esc(v.presencas||'')}</textarea><label>Notas desta visita (opcional)</label><textarea data-bind="vx.${i}.obs" rows="2">${esc(v.obs||'')}</textarea></div>`).join('')||'<p class="muted">Só a 1.ª visita.</p>'}</div><div class="btns"><button class="secondary mini" data-act="rAddVis">+ Visita</button></div>
+    <label>Recursos utilizados na inspeção <span class="muted">(cumulativos)</span></label>${RL('recursosIntro','Frase de abertura',r.recursosIntro,RECURSOS_INTRO)}<div class="tks col">${RECURSOS_R.map(d=>tickBox('',!!r.recursos?.[d],d,`data-act="rRec" data-k="${esc(d)}"`)).join('')}</div>${r.recursos?.Outros?RT('recursosOutros','Outros recursos (um por linha)',r.recursosOutros,2):''}${RT('interv','Outros intervenientes e suas funções',r.interv,2,'Não houve.')}${RT('decurso','Decurso da diligência',r.decurso,3,'Com o acompanhamento dos presentes, foi visitado o interior e exterior do edifício, para analisar as situações que vinham definidas.')}${RT('constrang','Constrangimentos, impedimentos ou dúvidas relevantes',r.constrang,2,'Nada a considerar.')}`;
   return `${blk('R · Relatório','Tipo de peritagem, capa, objeto, documentos e visita')}
   ${sec('rp1','R1 · Tipo de relatório e gabinete',t1,{cnt:pill((r.ambito==='particular'?'Particular':'Institucional')+' · '+(col?'Colegial':'Singular')+' · '+(GABS_R.find(g=>g[0]===r.gab)||['',''])[1].split(' ')[0])})}
   ${sec('rp2','R2 · Capa — identificação',t2,{cnt:falta([r.entidade,r.parte1].filter(x=>!String(x||'').trim()).length),def:false})}
@@ -1562,10 +1584,15 @@ function relRelHTML(p){const r=ensureRel(p),col=isCol(r);
     ${RL('dataEnc','Concluído em',r.dataEnc,mesAno())}<p class="muted">${col?'Assinam os peritos do colégio.':'Assina o perito (nome em Definições).'}</p>`;
   const anex=`<div class="tks col">${ANEX_R.map(d=>tickBox('',!!r.anexos[d],d,`data-act="rAnex" data-k="${esc(d)}"`)).join('')}</div>${RT('anexosOutros','Outros anexos (um por linha)',r.anexosOutros,2)}${anexFilesHTML(p)}`;
   return `${sec('rr1',isPart(r)?'Apreciação das queixas':'Resposta ao solicitado (quesitos)',qs,{cnt:pill(`${nr}/${r.quesitos.length}`,nr&&nr===r.quesitos.length?'ok':'warn')})}
-  ${sec('rrC','Nota de contextualização (antes da análise específica)',RT('ctxNota','Sai em «Situações a analisar», antes dos tópicos e da análise específica',r.ctxNota,5,'Enquadramento do imóvel, do pedido e das circunstâncias relevantes para a análise…'),{cnt:String(r.ctxNota||'').trim()?pill('✓','ok'):pill('por preencher','warn'),def:false})}
-  ${sec('rrA','Apreciação geral (opcional, a seguir à análise específica)',`${tickBox('',r.incApr===true,'Incluir «Apreciação geral»','data-act="rTkB" data-k="incApr"')}${RT('apreciacao','Comentários de resumo e conclusões (texto livre)',r.apreciacao,6)}<label>Documentos a juntar nesta apreciação (saem também em «Em anexo»)</label>${(r.anexF||[]).length?`<div class="tks col">${(r.anexF||[]).map((x,i)=>tickBox('',!!(r.aprDocs||{})[x.id],`Anexo ${String(i+1).padStart(2,'0')} – ${esc(x.nome)}`,`data-act="rAprDoc" data-k="${x.id}"`)).join('')}</div>`:'<p class="muted">Ainda não há ficheiros juntos.</p>'}<div class="btns"><label class="btn secondary mini">📎 Juntar ficheiros<input type="file" multiple data-act="rAddAnexF" hidden></label></div>`,{cnt:r.incApr===true?pill('incluída','ok'):pill('não incluída'),def:false})}
-  ${sec('rrP','Passos seguintes',`${tickBox('',r.incPassos!==false,'Incluir o capítulo «Passos seguintes» (a seguir à resposta ao solicitado)','data-act="rTk" data-k="incPassos"')}${RT('passos','',r.passos,5,'Ex.: diligências complementares, ensaios, reparações a acompanhar, nova vistoria…')}`,{cnt:r.incPassos===false?pill('não incluído'):String(r.passos||'').trim()?pill('✓','ok'):pill('por preencher','warn'),def:false})}
-  ${sec('rr2','Resumo de análise — nota',RT('nota','Nota (sai a seguir aos gráficos)',r.nota,3)+'<p class="muted">Os quadros e gráficos vêm do «Resumo estatístico» (abaixo). Sem estatística e sem nota, a secção não sai no relatório.</p>',{def:false})}
+  ${sec('rrC',isPart(r)?'Contextualizando e outras questões':'Nota de contextualização (antes da análise específica)',RT('ctxNota',isPart(r)?'Contextualizando — sai em «Apreciação geral»':'Sai em «Situações a analisar», antes dos tópicos e da análise específica',r.ctxNota,5,'Enquadramento do imóvel, do pedido e das circunstâncias relevantes para a análise…')+(isPart(r)?RT('outrasTxt','«Outras questões» — texto quando o perito não acrescentou situações',r.outrasTxt,2,'Nada a acrescentar.'):''),{cnt:String(r.ctxNota||'').trim()?pill('✓','ok'):pill('por preencher','warn'),def:false})}
+  ${sec('rrA','Apreciação geral (contextualizando · causas · consequências · conclusões)',`<p class="muted">Sai como capítulo próprio, a seguir ao «Resumo de análise». Só saem os subtítulos preenchidos.${isPart(r)?' «Contextualizando» é a nota de contextualização (acima).':''}</p>
+    ${RT('causasG','Possíveis causas',r.causasG,4,'Interpretação das causas prováveis, a partir dos locais, configuração e alinhamentos das anomalias…')}
+    <label>Consequências</label>${RT('conseqTxt','',r.conseqTxt,2,'Ex.: Os danos são graves e exigem reparação urgente.')}
+    ${RL('conseqIntro','Frase de abertura da lista',r.conseqIntro,CONSEQ_INTRO)}
+    <div class="tks col">${CONSEQ_R.map(d=>tickBox('',!!r.conseq?.[d],d,`data-act="rCons" data-k="${esc(d)}"`)).join('')}</div>${r.conseq?.['Outros prejuízos']?RT('conseqOutros','Outros prejuízos (um por linha)',r.conseqOutros,2):''}
+    ${tickBox('',r.incApr===true,'Incluir comentários e conclusões (texto livre)','data-act="rTkB" data-k="incApr"')}${r.incApr===true?RT('apreciacao','',r.apreciacao,6):''}<label>Documentos a juntar nesta apreciação (saem também em «Em anexo»)</label>${(r.anexF||[]).length?`<div class="tks col">${(r.anexF||[]).map((x,i)=>tickBox('',!!(r.aprDocs||{})[x.id],anexLbl(x,i),`data-act="rAprDoc" data-k="${x.id}"`)).join('')}</div>`:'<p class="muted">Ainda não há ficheiros juntos.</p>'}<div class="btns"><label class="btn secondary mini">📎 Juntar ficheiros<input type="file" multiple data-act="rAddAnexF" hidden></label></div>`,{cnt:(()=>{const n=[isPart(r)&&String(r.ctxNota||'').trim(),String(r.causasG||'').trim(),String(r.conseqTxt||'').trim()||CONSEQ_R.some(d=>r.conseq?.[d]),r.incApr===true&&String(r.apreciacao||'').trim()].filter(Boolean).length;return n?pill(n+' ✓','ok'):pill('vazia')})(),def:false})}
+  ${sec('rrP','Passos seguintes',`${tickBox('',r.incPassos!==false,'Incluir o capítulo «Passos seguintes» (a seguir à resposta ao solicitado)','data-act="rTk" data-k="incPassos"')}${RL('passosIntro','Frase de abertura',r.passosIntro,PASSOS_INTRO)}${RT('passos','',r.passos,5,'Ex.: diligências complementares, ensaios, reparações a acompanhar, nova vistoria…')}`,{cnt:r.incPassos===false?pill('não incluído'):String(r.passos||'').trim()?pill('✓','ok'):pill('por preencher','warn'),def:false})}
+  ${sec('rr2','Resumo de análise — nota',RL('resumoIntro','Frase de abertura',r.resumoIntro,RESUMO_INTRO)+RT('nota','Nota (sai a seguir aos gráficos)',r.nota,3)+'<p class="muted">Os quadros e gráficos vêm do «Resumo estatístico» (abaixo). Sem estatística e sem nota, a secção não sai no relatório.</p>',{def:false})}
   ${sec('rr3','Reservas e ambiente',`${tickBox('',r.incReservas!==false,'Incluir «Âmbito de utilização – reservas de análise»','data-act="rTk" data-k="incReservas"')}${RT('reservas','',r.reservas||RESERVAS_R,6)}${tickBox('',r.incAmbiente!==false,'Incluir «Ambiente, sustentabilidade e conformidade de licenciamento»','data-act="rTk" data-k="incAmbiente"')}${RT('ambiente','',r.ambiente||AMBIENTE_R,6)}`,{def:false})}
   ${sec('rr4','Termo de encerramento',termo,{cnt:col?pill(r.unan?'unanimidade':'discordâncias',r.unan?'ok':'warn'):'',def:false})}
   ${sec('rr5','Em anexo',anex,{cnt:pill(ANEX_R.filter(d=>r.anexos[d]).length+(r.anexF||[]).length+' ✓'),def:false})}
@@ -1581,6 +1608,12 @@ async function importQuesitos(p,kind,file){const r=ensureRel(p);const u8=new Uin
 // ---------- capa: grelha 3×3 (mapa + fotos aleatórias) ----------
 async function cropTo(data,ar,maxW=1200){const im=await loadImg(data);const W=im.naturalWidth,H=im.naturalHeight;let sw=W,sh=Math.round(W/ar);if(sh>H){sh=H;sw=Math.round(H*ar)}const sx=Math.round((W-sw)/2),sy=Math.round((H-sh)/2);const ow=Math.min(maxW,sw),oh=Math.round(ow/ar);const c=document.createElement('canvas');c.width=ow;c.height=oh;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,ow,oh);g.drawImage(im,sx,sy,sw,sh,0,0,ow,oh);return c.toDataURL('image/jpeg',.82)}
 function shuffleR(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+// parágrafos sem estilo (corpo da análise e do resumo vindos do Regi) passam a usar o estilo de texto do gabinete,
+// para manterem as fontes definidas no modelo; dentro de tabelas, retira-se o fundo branco do estilo (shd nil)
+function gabStyle(xml){const ORD=['tabs','suppressAutoHyphens','kinsoku','wordWrap','overflowPunct','topLinePunct','autoSpaceDE','autoSpaceDN','bidi','adjustRightInd','snapToGrid','spacing','ind','contextualSpacing','mirrorIndents','suppressOverlap','jc','textDirection','textAlignment','textboxTightWrap','outlineLvl','divId','cnfStyle','rPr','sectPr','pPrChange'];
+  let depth=0;return xml.replace(/<w:tbl>|<\/w:tbl>|<w:p>(?:<w:pPr>((?:(?!<\/w:pPr>)[\s\S])*)<\/w:pPr>)?/g,(m,pp)=>{if(m==='<w:tbl>'){depth++;return m}if(m==='</w:tbl>'){depth--;return m}
+    if(pp!==undefined&&/<w:pStyle /.test(pp))return m;let inner=pp||'';if(depth>0&&!/<w:shd /.test(inner)){let at=inner.length;for(const t of ORD){const k=inner.indexOf('<w:'+t);if(k>=0&&k<at)at=k}inner=inner.slice(0,at)+'<w:shd w:val="clear" w:color="auto" w:fill="auto"/>'+inner.slice(at)}
+    return `<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/>${inner}</w:pPr>`})}
 // ---------- construção do Word ----------
 async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart(r);await loadFotos(p);
   const X=xesc,media=[];let mid=9000;
@@ -1590,8 +1623,9 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
   const E=()=>P('');
   const toc=[];let n1=0,n2=0;const BMS=[];let bmi=100;
   const BL='<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/></w:pPr></w:p>';
-  const H1=t=>{n1++;n2=0;const nm='_Rel'+(++bmi);toc.push([1,`${n1}.`,t,nm]);return BL+`<w:p><w:pPr><w:pStyle w:val="Cabealho1"/></w:pPr><w:bookmarkStart w:id="${bmi}" w:name="${nm}"/>${R(t)}<w:bookmarkEnd w:id="${bmi}"/></w:p>`};
-  const H2=t=>{n2++;const nm='_Rel'+(++bmi);toc.push([2,`${n1}.${n2}`,t,nm]);return BL+`<w:p><w:pPr><w:pStyle w:val="Cabealho2"/></w:pPr><w:bookmarkStart w:id="${bmi}" w:name="${nm}"/>${R(t)}<w:bookmarkEnd w:id="${bmi}"/></w:p>`};
+  const HIND='<w:tabs><w:tab w:val="left" w:pos="567"/></w:tabs><w:ind w:left="0" w:firstLine="0"/>'; // títulos de nível 1–3 sem avanço (regra)
+  const H1=t=>{n1++;n2=0;const nm='_Rel'+(++bmi);toc.push([1,`${n1}.`,t,nm]);return BL+`<w:p><w:pPr><w:pStyle w:val="Cabealho1"/>${HIND}</w:pPr><w:bookmarkStart w:id="${bmi}" w:name="${nm}"/>${R(t)}<w:bookmarkEnd w:id="${bmi}"/></w:p>`};
+  const H2=t=>{n2++;const nm='_Rel'+(++bmi);toc.push([2,`${n1}.${n2}`,t,nm]);return BL+`<w:p><w:pPr><w:pStyle w:val="Cabealho2"/>${HIND}</w:pPr><w:bookmarkStart w:id="${bmi}" w:name="${nm}"/>${R(t)}<w:bookmarkEnd w:id="${bmi}"/></w:p>`};
   const CHK=(on,t)=>`<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:spacing w:before="20" w:after="20"/></w:pPr><w:sdt><w:sdtPr><w:id w:val="${1000+(++bmi)}"/><w14:checkbox><w14:checked w14:val="${on?1:0}"/><w14:checkedState w14:val="2612" w14:font="MS Gothic"/><w14:uncheckedState w14:val="2610" w14:font="MS Gothic"/></w14:checkbox></w:sdtPr><w:sdtContent><w:r><w:rPr><w:rFonts w:ascii="MS Gothic" w:eastAsia="MS Gothic" w:hAnsi="MS Gothic" w:hint="eastAsia"/></w:rPr><w:t>${on?'☒':'☐'}</w:t></w:r></w:sdtContent></w:sdt><w:r><w:t xml:space="preserve"> ${X(t)}</w:t></w:r></w:p>`;
   const BRK='<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
   const imgRun=(data,cxCm,cyCm,name)=>{const id=++mid;media.push({name:`word/media/relat_${id}.jpeg`,data:b64ToU8(data),rid:`rRel${id}`});const cx=Math.round(cxCm*360000),cy=Math.round(cyCm*360000);
@@ -1612,21 +1646,21 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
   let body=!rows?'':`<w:tbl><w:tblPr><w:tblW w:w="${TW}" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders>${noB}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="20" w:type="dxa"/><w:left w:w="20" w:type="dxa"/><w:bottom w:w="20" w:type="dxa"/><w:right w:w="20" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${CW}"/><w:gridCol w:w="${CW}"/><w:gridCol w:w="${TW-2*CW}"/></w:tblGrid>${rows}</w:tbl>`;
   if(rows)body+=P(R(g?`${g.lat.toFixed(6)}°, ${g.lon.toFixed(6)}°`:'',{sz:8,color:'404040'}),{sp:[20,0]})+P('',{sp:[0,0]})+P('',{sp:[0,0]});
   // quadro de identificação
-  const part0=isPart(r);const LBL=[`N_Ref: ${p.codigo||''}`,part0?'Proc. / Solicitante':'Proc. / Entidade','Objeto de análise',p.local?'Local':'',r.contexto?'Contexto/ finalidade':'',part0?'':'Parte 1',part0?'':'Parte 2',p.visita?.data?'Data da visita':'','Versões/ datas'].filter(Boolean);
+  const part0=isPart(r);const LBL=[String(p.codigo||''),part0?'Solicitante / Proc.':'Entidade / Proc.','Objeto de análise',p.local?'Local':'',r.contexto?'Contexto/ finalidade':'',part0?'':'Parte 1',part0?'':'Parte 2',p.visita?.data?'Datas das visitas':'','Versões/ datas'].filter(Boolean);
   const L1=Math.max(1300,Math.min(3400,Math.round((Math.max(...LBL.map(l=>l.length))+4)*100))),L2=TW-L1;const bd=(t,b)=>`<w:tcBorders>${t?'<w:top w:val="single" w:sz="6" w:space="0" w:color="404040"/>':''}${b?'<w:bottom w:val="single" w:sz="6" w:space="0" w:color="404040"/>':''}</w:tcBorders>`;
   const ip=(runs,jc)=>`<w:p><w:pPr><w:spacing w:before="30" w:after="30"/>${jc?`<w:jc w:val="${jc}"/>`:''}</w:pPr>${runs}</w:p>`;
   const irow=(lbl,val,o={})=>`<w:tr><w:trPr><w:cantSplit/></w:trPr><w:tc><w:tcPr><w:tcW w:w="${L1}" w:type="dxa"/>${bd(o.t,o.b)}<w:vAlign w:val="center"/></w:tcPr>${ip(R(lbl,{b:true,sz:9}))}</w:tc><w:tc><w:tcPr><w:tcW w:w="${L2}" w:type="dxa"/>${bd(o.t,o.b)}<w:vAlign w:val="center"/></w:tcPr>${val}</w:tc></w:tr>`;
   const vi=(t,o={})=>ip(R(t||'',{i:true,sz:o.sz||10,b:o.b,color:o.color}),o.jc);
   const titulo=`${r.funcao||'Peritagem'} – Relatório`;
-  const dl=p.visita?.data||'';
-  let id=irow(`N_Ref: ${p.codigo||''}`,vi(titulo,{b:true,sz:13}),{b:1});
+  const dl=p.visita?.data||'';const VIS=visList(p);const dlAll=VIS.map(v=>v.data).filter(Boolean).join('; ');
+  let id=irow(String(p.codigo||''),vi(titulo,{b:true,sz:13}),{b:1});
   {const pt=r.procJud?`Proc. ${r.procJud}`:'',et=String(r.entidade||'');const CH=95;let pw=Math.min(L2-1200,Math.max(1400,pt.length*CH+240)),ew=L2-pw;let esz=10;if(et.length*CH>ew){const need=et.length*CH;if(need-ew<pw-(pt.length*CH+120)){pw=Math.max(pt.length*CH+120,1200);ew=L2-pw}if(et.length*CH>ew)esz=Math.max(7,Math.floor(10*ew/(et.length*CH)*2)/2)}
-   id+=irow(part?'Proc. / Solicitante':'Proc. / Entidade',`<w:tbl><w:tblPr><w:tblW w:w="${L2}" w:type="dxa"/><w:tblBorders>${noB}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${pw}"/><w:gridCol w:w="${ew}"/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:w="${pw}" w:type="dxa"/><w:noWrap/></w:tcPr>${vi(pt)}</w:tc><w:tc><w:tcPr><w:tcW w:w="${ew}" w:type="dxa"/><w:noWrap/></w:tcPr>${vi(et,{jc:'right',sz:esz})}</w:tc></w:tr></w:tbl>${ip('')}`)}
+   id+=irow(part?'Solicitante / Proc.':'Entidade / Proc.',`<w:tbl><w:tblPr><w:tblW w:w="${L2}" w:type="dxa"/><w:tblBorders>${noB}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${ew}"/><w:gridCol w:w="${pw}"/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:w="${ew}" w:type="dxa"/><w:noWrap/></w:tcPr>${vi(et,{sz:esz})}</w:tc><w:tc><w:tcPr><w:tcW w:w="${pw}" w:type="dxa"/><w:noWrap/></w:tcPr>${vi(pt,{jc:'right'})}</w:tc></w:tr></w:tbl>${ip('')}`)}
   id+=irow('Objeto de análise',vi(r.objeto,{b:true,sz:13,color:'000000'}));
   if(p.local)id+=irow('Local',vi(p.local));
   if(r.contexto)id+=irow('Contexto/ finalidade',vi(r.contexto));
   if(!part){id+=irow('Parte 1',vi(r.parte1));id+=irow('Parte 2',vi(r.parte2))}
-  if(dl)id+=irow('Data da visita',vi(dl));
+  if(dlAll)id+=irow(VIS.filter(v=>v.data).length>1?'Datas das visitas':'Data da visita',vi(dlAll));
   id+=irow('Versões/ datas',vi(`${r.versao||'1.00'} – ${new Date().toLocaleDateString('pt-PT')}`,{color:'808080',sz:9}),{t:1});
   body+=`<w:tbl><w:tblPr><w:tblW w:w="${TW}" w:type="dxa"/><w:tblBorders>${noB}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="60" w:type="dxa"/><w:right w:w="60" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${L1}"/><w:gridCol w:w="${L2}"/></w:tblGrid>${id}</w:tbl>`+BRK;
   const coverXml=body;body='';
@@ -1640,37 +1674,57 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
   body+=H2('Outros elementos')+T(String(r.docsOutros||'').trim()||'-');
   if(String(r.docsCom||'').trim())body+=H2('Comentários')+T(r.docsCom);
   body+=E()+H1('Da visita ao local')+H2('Data e presenças')+E();
-  body+=P(R('Data:')+'<w:r><w:tab/></w:r>'+R(dl||'—'))+(r.hora?P(R('Hora:')+'<w:r><w:tab/></w:r>'+R(r.hora)):'');
-  const pres=String(p.visita?.presencas||'').trim();if(pres)body+=P(R('Compareceram:'))+T(pres);
+  VIS.forEach((v,k)=>{if(VIS.length>1)body+=P(R(`${k+1}.ª visita`,{b:true}),{sp:[k?160:40,40],keep:1});
+    body+=P(R('Data:')+'<w:r><w:tab/></w:r>'+R(v.data||'—'))+(v.hora?P(R('Hora:')+'<w:r><w:tab/></w:r>'+R(v.hora)):'');
+    const pres=String(v.presencas||'').trim();if(pres)body+=P(R('Compareceram:'))+T(pres);if(String(v.obs||'').trim())body+=T(v.obs,{jc:'both'})});
   body+=H2('Outros intervenientes e suas funções')+T(String(r.interv||'').trim()||'Não houve.');
   body+=H2('Decurso da diligência')+T(String(r.decurso||'').trim()||'Com o acompanhamento dos presentes, foi visitado o interior e exterior do edifício, para analisar as situações que vinham definidas.',{jc:'both'});
+  {const rc=RECURSOS_R.filter(x=>x!=='Outros'&&r.recursos?.[x]).concat(String(r.recursosOutros||'').split('\n').map(x=>x.trim()).filter(Boolean));
+   if(rc.length)body+=H2('Recursos utilizados na inspeção')+(String(r.recursosIntro||'').trim()?T(r.recursosIntro):'')+rc.map((x,k)=>T(`- ${x}${k<rc.length-1?';':'.'}`)).join('')}
   body+=H2('Constrangimentos, impedimentos ou dúvidas relevantes')+T(String(r.constrang||'').trim()||'Nada a considerar.')+E();
   // 5 — situações (corpo do Regi, texto corrido, sem índice próprio)
   const o=await docOpts(p,'texto','.docx');
   const A=buildDocx({...o,bodyOnly:true,withIndex:false,stats:null,withResumo:false,withVistoria:false,mapImg:null,onePerPage:false,layout:'texto'});
-  body+=H1('Situações a analisar')+H2('Nota de contextualização')+E()+(String(r.ctxNota||'').trim()?T(r.ctxNota,{jc:'both'}):T('[Nota de contextualização por preencher — separador Relatório]',{i:true,color:'C00000'}))+E()+H2('Tópicos')+E()+T('A análise segue os seguintes tópicos:');
-  let gPrev=null;for(const x of o.anoms){if(x._grp&&x._grp!==gPrev){gPrev=x._grp;body+=P(R(x._grp,{b:true}),{sp:[120,40],keep:1})}const z=zonaTxt(x);body+=P(R(`${x._code}  –  ${[x.ref?'Item '+x.ref:'',z,x.elemento].filter(Boolean).join(' · ')}`),{sp:[20,20],ind:284})}
-  body+=E()+H2('Análise específica')+A.body;media.push(...A.media);
-  if(r.incApr===true){const ad=(r.anexF||[]).map((x,i)=>[x,i]).filter(([x])=>(r.aprDocs||{})[x.id]);body+=E()+H2('Apreciação geral')+E()+(String(r.apreciacao||'').trim()?T(r.apreciacao,{jc:'both'}):T('—'));
-   if(ad.length)body+=E()+P(R('Documentos juntos (em anexo):',{b:true}))+ad.map(([x,i])=>CHK(true,`Anexo ${String(i+1).padStart(2,'0')} – ${x.nome.replace(/\.[A-Za-z0-9]{1,5}$/,'')}`)).join('');body+=E()}
+  const topLine=x=>{const z=zonaTxt(x);return P(R(`${x._code}  –  ${[x.ref?'Item '+x.ref:'',z,x.elemento].filter(Boolean).join(' · ')}`),{sp:[20,20]})};
+  if(part){ // particular: questões do solicitante (alegadas) e outras questões (constatadas pelo perito)
+    const AL=o.anoms.filter(x=>x.origem!=='local'),OU=o.anoms.filter(x=>x.origem==='local');
+    body+=H1('Situações a analisar')+H2('Questões do solicitante')+E()+(AL.map(topLine).join('')||T('Não foram apresentadas.'))+E();
+    body+=H2('Outras questões')+(OU.length?T('Constatadas no local pelo perito:')+OU.map(topLine).join(''):T(String(r.outrasTxt||'').trim()||'Nada a acrescentar.'))+E();
+  }else{
+    body+=H1('Situações a analisar')+H2('Nota de contextualização')+E()+(String(r.ctxNota||'').trim()?T(r.ctxNota,{jc:'both'}):T('[Nota de contextualização por preencher — separador Relatório]',{i:true,color:'C00000'}))+E()+H2('Tópicos')+E()+T('A análise segue os seguintes tópicos:');
+    let gPrev=null;for(const x of o.anoms){if(x._grp&&x._grp!==gPrev){gPrev=x._grp;body+=P(R(x._grp,{b:true}),{sp:[120,40],keep:1})}body+=topLine(x)}body+=E();
+  }
+  body+=H1('Análise específica')+gabStyle(A.body);media.push(...A.media);
   // 6 — resumo
   {const hasS=!!(p.printStats&&o.stats?.length),hasN=!!String(r.nota||'').trim();
    if(hasS||hasN){body+=H1('Resumo de análise')+E();
-    if(hasS){body+=T('De acordo com a análise, temos:');const B=buildDocx({...o,anoms:[],bodyOnly:true,withIndex:false,withResumo:false,withVistoria:false,mapImg:null,onePerPage:false,layout:'texto'});
+    if(hasS){body+=T(String(r.resumoIntro||'').trim()||RESUMO_INTRO);const B=buildDocx({...o,anoms:[],bodyOnly:true,withIndex:false,withResumo:false,withVistoria:false,mapImg:null,onePerPage:false,layout:'texto'});
      let sb=B.body.replace(/rRegi(\d+)/g,'rRegiS$1').replace(/regi_img(\d+)/g,'regi_imgS$1').replace(/(wp:docPr id=")(\d+)/g,(m,a,n)=>a+(+n+5000)).replace(/(pic:cNvPr id=")(\d+)/g,(m,a,n)=>a+(+n+5000));
      sb=sb.replace(/<w:p>(?:(?!<\/w:p>)[\s\S])*?Resumo estatístico[\s\S]*?<\/w:p>/,'');
-     body+=sb;media.push(...B.media.map(m=>({...m,rid:m.rid.replace('rRegi','rRegiS'),name:m.name.replace('regi_img','regi_imgS')})))}
+     body+=gabStyle(sb);media.push(...B.media.map(m=>({...m,rid:m.rid.replace('rRegi','rRegiS'),name:m.name.replace('regi_img','regi_imgS')})))}
     if(hasN)body+=E()+P(R('Nota:',{b:true}),{bdrT:1})+T(r.nota)}}
-  // 7 — resposta ao solicitado
-  body+=E()+H1(part?'Apreciação das queixas':'Resposta ao solicitado');
+  // Apreciação geral (H1): contextualizando · possíveis causas · consequências · outras considerações
+  {const ctx=part?String(r.ctxNota||'').trim():'',cau=String(r.causasG||'').trim(),apr=r.incApr===true?String(r.apreciacao||'').trim():'';
+   const co=String(r.conseqOutros||'').split('\n').map(x=>x.trim()).filter(Boolean);
+   const cs=CONSEQ_R.filter(x=>x!=='Outros prejuízos'&&r.conseq?.[x]).concat(r.conseq?.['Outros prejuízos']?(co.length?co:['Outros prejuízos']):[]);
+   const ct=String(r.conseqTxt||'').trim();const ad=r.incApr===true?(r.anexF||[]).map((x,i)=>[x,i]).filter(([x])=>(r.aprDocs||{})[x.id]):[];
+   if(ctx||cau||ct||cs.length||apr||ad.length){body+=E()+H1('Apreciação geral');
+    if(ctx)body+=H2('Contextualizando')+T(ctx,{jc:'both'})+E();
+    if(cau)body+=H2('Possíveis causas')+T(cau,{jc:'both'})+E();
+    if(ct||cs.length){body+=H2('Consequências')+(ct?T(ct,{jc:'both'}):'');if(cs.length)body+=(String(r.conseqIntro||'').trim()?T(r.conseqIntro,{jc:'both'}):'')+cs.map((x,k)=>T(`- ${x}${k<cs.length-1?';':'.'}`)).join('');body+=E()}
+    if(apr)body+=H2(ctx||cau||ct||cs.length?'Outras considerações':'Comentários e conclusões')+T(apr,{jc:'both'})+E();
+    if(ad.length)body+=P(R('Documentos juntos (em anexo):',{b:true}))+ad.map(([x,i])=>CHK(true,anexLbl(x,i))).join('')+E()}}
+  // 7 — resposta ao solicitado (particular: só se houver alguma apreciação escrita)
+  const temResp=r.quesitos.some(q=>String(q.resp||'').trim()||Object.values(q.rp||{}).some(t=>String(t||'').trim()));
+  if(!part||temResp){body+=E()+H1(part?'Apreciação das queixas':'Resposta ao solicitado');
   r.quesitos.forEach((q,i)=>{body+=H2(`${part?'Queixa':'Quesito'} ${qCode(i)}`)+E()+T(q.txt,{jc:'both'})+E();
     const cons=String(q.resp||'').trim();
     if(cons||!col)body+=P(R('Resposta:',{b:true,i:true}))+T(cons||'—',{jc:'both'})+E();
     else{r.peritos.forEach((pe,j)=>{const t=String(q.rp?.[j]||'').trim();body+=P(R(`Resposta — ${pe.nome||'Perito '+(j+1)} (${represR(r,pe).replace(/^Perito /,'').replace(/^n/,'n')}):`,{b:true,i:true}))+T(t||'—',{jc:'both'})+E()})}});
-  if(!r.quesitos.length)body+=T('—');
-  if(r.incPassos!==false){body+=E()+H1('Passos seguintes')+E()+(String(r.passos||'').trim()?T(r.passos,{jc:'both'}):T('[Passos seguintes por preencher — ou retire o capítulo no separador Relatório]',{i:true,color:'C00000'}))+E()}
+  if(!r.quesitos.length)body+=T('—')}
+  if(r.incPassos!==false){body+=E()+H1('Passos seguintes')+E()+(String(r.passosIntro||'').trim()&&String(r.passos||'').trim()?T(r.passosIntro,{jc:'both'}):'')+(String(r.passos||'').trim()?T(r.passos,{jc:'both'}):T('[Passos seguintes por preencher — ou retire o capítulo no separador Relatório]',{i:true,color:'C00000'}))+E()}
   // 8, 9
-  if(r.incReservas!==false){body+=H1('Âmbito de utilização – reservas de análise');for(const l of String(r.reservas||RESERVAS_R).split('\n'))body+=/^\d+\.\s/.test(l)?P(R(l,{b:true}),{sp:[160,60]}):T(l,{jc:'both'})}
+  if(r.incReservas!==false){body+=H1('Âmbito de utilização – reservas de análise');for(const l of String(r.reservas||RESERVAS_R).split('\n'))body+=/^\d+\.\s/.test(l)?H2(l.replace(/^\d+\.\s*/,'')):T(l,{jc:'both'})}
   if(r.incAmbiente!==false){body+=H1('Ambiente, sustentabilidade e conformidade de licenciamento')+T(String(r.ambiente||AMBIENTE_R),{jc:'both'})}
   // 10 termo
   body+=H1('Termo de encerramento')+E()+T('Em face do exposto, o relatório dá-se por concluído em:')+T(String(r.dataEnc||'').trim()||mesAno())+E();
@@ -1678,7 +1732,7 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
     for(const pe of r.peritos)body+=P('',{sp:[360,0]})+P(R('_______________________________________'))+P(R(pe.nome||'',{b:true}))+P(R(represR(r,pe),{i:true,sz:9}))}
   else body+=P('',{sp:[360,0]})+P(R('_______________________________________'))+P(R(String(settings.peritoNome||'').trim()||'Pedro Fonseca, Eng.',{b:true}));
   // 11, 12
-  const ax=ANEX_R.filter(d=>r.anexos[d]).map(d=>CHK(true,d)).join('')+String(r.anexosOutros||'').split('\n').filter(x=>x.trim()).map(x=>CHK(true,x.trim())).join('')+(r.anexF||[]).map((a,i)=>CHK(true,`Anexo ${String(i+1).padStart(2,'0')} – ${a.nome.replace(/\.[A-Za-z0-9]{1,5}$/,'')}`)).join('');
+  const ax=ANEX_R.filter(d=>r.anexos[d]).map(d=>CHK(true,d)).join('')+String(r.anexosOutros||'').split('\n').filter(x=>x.trim()).map(x=>CHK(true,x.trim())).join('')+(r.anexF||[]).map((a,i)=>CHK(true,anexLbl(a,i))).join('');
   if(ax)body+=H1('Em anexo')+ax;
   // ---- índice (campo TOC pré-preenchido; o Word atualiza os n.os de página) ----
   const tocE=toc.map(([lv,nm,t,bm])=>`<w:p><w:pPr><w:pStyle w:val="ndice${lv}"/><w:tabs><w:tab w:val="left" w:pos="${lv===1?440:880}"/><w:tab w:val="right" w:leader="dot" w:pos="9628"/></w:tabs></w:pPr><w:hyperlink w:anchor="${bm}" w:history="1"><w:r><w:t xml:space="preserve">${X(nm)}</w:t></w:r><w:r><w:tab/></w:r><w:r><w:t xml:space="preserve">${X(t)}</w:t></w:r><w:r><w:tab/></w:r><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> PAGEREF ${bm} \\h </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t></w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:hyperlink></w:p>`);
@@ -1695,6 +1749,9 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
   const hd=hdrDefaults(p);const HV={H1:r.h1||hd.h1,H3:r.h3||hd.h3,H4A:r.h4a||hd.h4a,H4B:r.h4b||hd.h4b};
   const H=RELAT_HDRS[r.gab]||RELAT_HDRS.nid;
   let doc=TX(F('word/document.xml'));
+  doc=doc.replace(/(<w:pgMar [^>]*w:header=")\d+"/,'$1397"'); // margem: limite superior da folha → cabeçalho = 0,7 cm (todos os gabinetes)
+  {const st=F('word/styles.xml');st.data=_enc.encode(TX(st).replace(/(<w:style [^>]*w:styleId="Cabealho[123]"[\s\S]*?<\/w:style>)/g,m=>m.replace(/<w:ind [^>]*\/>/,'').replace('</w:pPr>','<w:ind w:left="0" w:firstLine="0"/></w:pPr>').replace(/(<w:jc [^>]*\/>)?(<w:outlineLvl [^>]*\/>)?<w:ind w:left="0" w:firstLine="0"\/><\/w:pPr>/,(x,jc,ol)=>'<w:ind w:left="0" w:firstLine="0"/>'+(jc||'')+(ol||'')+'</w:pPr>')));
+   const nb=F('word/numbering.xml');if(nb)nb.data=_enc.encode(TX(nb).replace(/<w:lvl w:ilvl="[012]"[^>]*>(?:(?!<\/w:lvl>)[\s\S])*?<w:pStyle w:val="Cabealho[123]"\/>[\s\S]*?<\/w:lvl>/g,m=>m.replace(/<w:tabs>[\s\S]*?<\/w:tabs>/,'').replace(/<w:ind [^>]*\/>/,'<w:tabs><w:tab w:val="left" w:pos="567"/></w:tabs><w:ind w:left="0" w:firstLine="0"/>')))}
   for(const [k,u] of Object.entries({wp:'http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing',a:'http://schemas.openxmlformats.org/drawingml/2006/main',pic:'http://schemas.openxmlformats.org/drawingml/2006/picture',r:'http://schemas.openxmlformats.org/officeDocument/2006/relationships',w14:'http://schemas.microsoft.com/office/word/2010/wordml'}))if(!new RegExp('xmlns:'+k+'=').test(doc.slice(0,3000)))doc=doc.replace(/<w:document\b/,`<w:document xmlns:${k}="${u}"`);
   doc=doc.replace(/<w:p><w:r><w:t>\{\{CORPO\}\}<\/w:t><\/w:r><\/w:p>/,()=>full);
   F('word/document.xml').data=_enc.encode(doc);
@@ -1715,12 +1772,17 @@ async function relPdf(p){const d=await relBuildBlob(p);busy(true,'A preparar o P
 const fileToDataURL=f=>new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=()=>no(r.error);r.readAsDataURL(f)});
 const fmtKB=b=>b>1048576?(b/1048576).toFixed(1).replace('.',',')+' MB':Math.max(1,Math.round(b/1024))+' KB';
 async function addAnexFiles(p,files){const r=ensureRel(p);r.anexF=r.anexF||[];let n=0;for(const f of files){const id='anx_'+uid();await fotoPut(id,await fileToDataURL(f));r.anexF.push({id,nome:f.name,tipo:f.type||'',tam:f.size});n++}return n}
+// anexo em ficheiro: «Anexo 01 – Planta: descrição do conteúdo» (tipo-padrão + descrição; sem tipo, usa o nome do ficheiro)
+function anexLbl(a,i){const n=`Anexo ${String(i+1).padStart(2,'0')}`;const tp=a.tipo2&&a.tipo2!=='Outros'?a.tipo2:'';const d=String(a.desc||'').trim();const nm=String(a.nome||'').replace(/\.[A-Za-z0-9]{1,5}$/,'');
+  return tp?`${n} – ${tp}${d?': '+d:''}`:d?`${n} – ${d}`:`${n} – ${nm}`}
 const anexData=async a=>fotoCache.get(a.id)||(await fotoGet(a.id))?.data||'';
 async function relZip(p){const r=ensureRel(p);const x=await relPdf(p);busy(true,'A preparar a pasta…');try{const base=x.docx.name.replace(/\.docx$/i,'');const files=[{name:`${base}/${x.docx.name}`,data:new Uint8Array(await x.docx.blob.arrayBuffer())},{name:`${base}/${x.name}`,data:new Uint8Array(await x.blob.arrayBuffer())}];
   for(const [i,a] of (r.anexF||[]).entries()){const d=await anexData(a);if(!d)continue;files.push({name:`${base}/Anexos/${String(i+1).padStart(2,'0')}_${safeName(a.nome.replace(/\.[^.]+$/,''))}${(a.nome.match(/\.[A-Za-z0-9]{1,5}$/)||[''])[0].toLowerCase()}`,data:b64ToU8(d)})}
   return {blob:new Blob([zipStore(files)],{type:'application/zip'}),name:base+'.zip'}}finally{busy(false)}}
 function anexFilesHTML(p){const r=ensureRel(p),L=r.anexF||[];return `<label>Ficheiros anexos <span class="muted">(PDF, imagens… — saem na lista «Em anexo» e dentro da pasta ZIP)</span></label>
-  ${L.map((a,i)=>`<div class="rw" style="align-items:center"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📎 ${esc(a.nome)} <span class="muted">· ${fmtKB(a.tam||0)}</span></span><button class="del" data-act="rDelAnexF" data-i="${i}">✕</button></div>`).join('')}
+  ${L.map((a,i)=>`<div class="qbox"><div class="rw" style="align-items:center"><b>Anexo ${String(i+1).padStart(2,'0')}</b><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📎 ${esc(a.nome)} <span class="muted">· ${fmtKB(a.tam||0)}</span></span><button class="del" data-act="rDelAnexF" data-i="${i}">✕</button></div>
+    <label>Conteúdo</label><select data-act="rAnexTipo" data-i="${i}"><option value="">— escolher —</option>${ANEXT_R.map(t=>`<option ${a.tipo2===t?'selected':''}>${t}</option>`).join('')}</select>
+    <input data-bind="ax.${i}.desc" value="${esc(a.desc||'')}" placeholder="${a.tipo2==='Outros'?'Descreva o conteúdo':'Descrição do conteúdo (opcional), ex.: artigo 1234 urbano'}"><p class="muted" style="margin:2px 0 0">No relatório: ${esc(anexLbl(a,i))}</p></div>`).join('')}
   <div class="btns"><label class="btn secondary mini">📎 Juntar ficheiros<input type="file" multiple data-act="rAddAnexF" hidden></label></div>`}
 // modelos de quesitos e de respostas (guardados no aparelho, em Definições)
 function qModHTML(){const M=settings.qModelos||[];return `<div class="btns">${M.length?`<select data-act="rLoadQMod" style="flex:1;min-width:0"><option value="">📚 Carregar modelo de quesitos…</option>${M.map((m,i)=>`<option value="${i}">${esc(m.nome)} (${m.quesitos.length})</option>`).join('')}</select>`:''}<button class="secondary mini" data-act="rSaveQMod">💾 Guardar como modelo</button></div>`}
@@ -1945,7 +2007,9 @@ document.addEventListener('click',async e=>{
     case 'rDelQ':{if(!await ask('Retirar este quesito (e as respostas)?',['Cancelar','Retirar'],1))return;ensureRel(p).quesitos.splice(+el.dataset.i,1);await saveProc();S.scrollTop=window.scrollY;break}
     case 'rMvQ':{const Q=ensureRel(p).quesitos,i=+el.dataset.i,j=i+(+el.dataset.d);if(j<0||j>=Q.length)return;[Q[i],Q[j]]=[Q[j],Q[i]];await saveProc();S.scrollTop=window.scrollY;break}
     case 'rPasteQ':{const t=prompt('Cole aqui os quesitos (uma alínea por linha: a), b)… ou 1., 2.…):');if(!t)return;const q=splitQuesitos(t.split('\n'));q.forEach(x=>ensureRel(p).quesitos.push({id:uid(),txt:x,resp:'',rp:{}}));await saveProc();toast(q.length+' quesito(s) acrescentado(s).');S.scrollTop=window.scrollY;break}
-    case 'rDoc':case 'rAnex':{const r=ensureRel(p),o=act==='rDoc'?r.docs:r.anexos,k=el.dataset.k;o[k]=!o[k];await saveProc();S.scrollTop=window.scrollY;break}
+    case 'rDoc':case 'rAnex':case 'rRec':case 'rCons':{const r=ensureRel(p),o=act==='rDoc'?r.docs:act==='rAnex'?r.anexos:act==='rRec'?(r.recursos=r.recursos||{}):(r.conseq=r.conseq||{}),k=el.dataset.k;o[k]=!o[k];await saveProc();S.scrollTop=window.scrollY;break}
+    case 'rAddVis':{const r=ensureRel(p);(r.visitas=r.visitas||[]).push({data:'',hora:'',presencas:'',obs:''});await saveProc();S.scrollTop=window.scrollY;break}
+    case 'rDelVis':{const r=ensureRel(p);const i=+el.dataset.i;if(!await ask(`Retirar a ${i+2}.ª visita?`,['Cancelar','Retirar'],true))return;r.visitas.splice(i,1);await saveProc();S.scrollTop=window.scrollY;break}
     case 'rTkB':{const r=ensureRel(p),k=el.dataset.k;r[k]=!r[k];await saveProc();S.scrollTop=window.scrollY;break}
     case 'rAprDoc':{const r=ensureRel(p);r.aprDocs=r.aprDocs||{};r.aprDocs[el.dataset.k]=!r.aprDocs[el.dataset.k];await saveProc();S.scrollTop=window.scrollY;break}
     case 'rTk':{const r=ensureRel(p),k=el.dataset.k;r[k]=r[k]===false;await saveProc();S.scrollTop=window.scrollY;break}
@@ -2066,7 +2130,8 @@ document.addEventListener('change',async e=>{
   const el=e.target,act=el.dataset.act,p=cur(),a=curA();
   if(el.id==='gps'){const t=el.value.trim();if(!t){p.visita.gps=null;await saveProc();setGpsStatus('');return}if(!parseGpsTxt(t)){setGpsStatus('Não reconheço estas coordenadas. Aceito, por exemplo: 41.1579, -8.6291 · 41°09\'28"N 8°37\'45"W · ou um link do Google Maps / Apple Maps.');return}await gpsSet(p,t);return}
   if(act==='rTk'||act==='rTkB'){const r=ensureRel(p);r[el.dataset.k]=el.checked;await saveProc();S.scrollTop=window.scrollY;render();return}
-  if(act==='rDoc'||act==='rAnex'){const r=ensureRel(p),ob=act==='rDoc'?r.docs:r.anexos;ob[el.dataset.k]=el.checked;await saveProc();S.scrollTop=window.scrollY;render();return}
+  if(act==='rAnexTipo'){const r=ensureRel(p);r.anexF[+el.dataset.i].tipo2=el.value;await saveProc();S.scrollTop=window.scrollY;render();return}
+  if(act==='rDoc'||act==='rAnex'||act==='rRec'||act==='rCons'){const r=ensureRel(p),ob=act==='rDoc'?r.docs:act==='rAnex'?r.anexos:act==='rRec'?(r.recursos=r.recursos||{}):(r.conseq=r.conseq||{});ob[el.dataset.k]=el.checked;await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='rAprDoc'){const r=ensureRel(p);r.aprDocs=r.aprDocs||{};r.aprDocs[el.dataset.k]=el.checked;await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='tickTpl'){settings.useTpl=el.checked;await saveSettings();S.scrollTop=window.scrollY;render();return}
   if(act==='tplIn'){const f=el.files[0];el.value='';if(!f)return;try{const u=new Uint8Array(await f.arrayBuffer());const z=await unzip(u);if(!(await z.text('word/document.xml')))throw new Error('não é um .docx');tplBytes=u;settings.tplName=f.name;settings.useTpl=true;await kvSet('tpl',u);await saveSettings();toast('Modelo carregado e ativo.');render()}catch(err){toast('Modelo inválido: '+err.message,1)}return}
@@ -2101,6 +2166,7 @@ document.addEventListener('change',async e=>{
   if(act==='tkCols'){settings.photoCols=+el.dataset.v;await saveSettings();S.scrollTop=window.scrollY;render();return}
   if(act==='tkOrig'){a.origem=el.dataset.v;await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='tkId'){const k=el.dataset.k;a[k]=el.checked?el.dataset.v:'';if(el.checked&&S.dd)S.dd[k]=false;await saveProc();S.scrollTop=window.scrollY;render();return}
+  if(act==='tkGut'){a.vals=a.vals||{};const g={...(a.vals[el.dataset.f]||{})};g[el.dataset.k]=el.checked?+el.dataset.v:0;a.vals[el.dataset.f]=g;await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='tkPick'){a.vals=a.vals||{};a.vals[el.dataset.f]=el.checked?el.dataset.v:'';await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='tkMulti'){a.vals=a.vals||{};const f=el.dataset.f,v=el.dataset.v;const fd=settings.fields.find(x=>x.id===f);const grp=c=>(/^\d+-([A-Z])/.exec(c)||[])[1];let arr=Array.isArray(a.vals[f])?a.vals[f]:[];if(el.checked&&fd?.excl&&grp(v))arr=arr.filter(x=>grp(x)!==grp(v));a.vals[f]=el.checked?[...arr.filter(x=>x!==v),v].sort((x,y)=>(fd.opts.findIndex(o=>o[0]===x))-(fd.opts.findIndex(o=>o[0]===y))):arr.filter(x=>x!==v);await saveProc();S.scrollTop=window.scrollY;render();if(el.checked&&v===settings.fields.find(x=>x.id===f)?.free)setTimeout(()=>$(`[data-bind="v.${f}__txt"]`)?.focus(),50);return}
   if(act==='tkCat'){a.vals=a.vals||{};const f=el.dataset.f,v=el.dataset.v;const arr=Array.isArray(a.vals[f])?a.vals[f]:[];a.vals[f]=el.checked?[...arr.filter(x=>x!==v),v]:arr.filter(x=>x!==v);await saveProc();S.scrollTop=window.scrollY;render();return}
@@ -2148,7 +2214,7 @@ document.addEventListener('input',e=>{
   autosize(e.target);if(e.target.id==='fq'){S.filt.q=e.target.value;const pos=e.target.selectionStart;S.scrollTop=window.scrollY;render();const f=$('#fq');if(f){f.focus();try{f.setSelectionRange(pos,pos)}catch(_){}}return}const el=e.target,b=el.dataset.bind;if(!b)return;const p=cur(),a=curA();
   const [scope,k,k2]=b.split('.');
   if(scope==='p')p[k]=el.value;else if(scope==='vis')p.visita[k]=el.value;else if(scope==='a')a[k]=el.value;else if(scope==='v'){a.vals=a.vals||{};a.vals[k]=el.value}else if(scope==='f')a.fotos[+k][k2]=el.value;
-  else if(scope==='r'){ensureRel(p)[k]=el.value}else if(scope==='q'){ensureRel(p).quesitos[+k][k2]=el.value}else if(scope==='qp'){const q=ensureRel(p).quesitos[+k];q.rp=q.rp||{};q.rp[k2]=el.value}else if(scope==='pe'){ensureRel(p).peritos[+k][k2]=el.value}else if(scope==='s'){settings[k]=el.value;saveSettings();return}
+  else if(scope==='r'){ensureRel(p)[k]=el.value}else if(scope==='q'){ensureRel(p).quesitos[+k][k2]=el.value}else if(scope==='qp'){const q=ensureRel(p).quesitos[+k];q.rp=q.rp||{};q.rp[k2]=el.value}else if(scope==='pe'){ensureRel(p).peritos[+k][k2]=el.value}else if(scope==='vx'){ensureRel(p).visitas[+k][k2]=el.value}else if(scope==='ax'){ensureRel(p).anexF[+k][k2]=el.value}else if(scope==='s'){settings[k]=el.value;saveSettings();return}
   saveProcSoon();
 });
 document.addEventListener('toggle',e=>{const d=e.target;if(!d.dataset||!d.dataset.key)return;S.open[d.dataset.key]=d.open;if(d.dataset.key==='r3'&&d.open&&!S.prevSimple){if(S.prevNode&&S.prevPid===S.pid){const box=$('#docxPrev');if(box){box.innerHTML='';box.appendChild(S.prevNode);fitDocxPreview()}}else renderDocxPreview()}},true);

@@ -18,6 +18,8 @@ Ao melhorar uma rotina numa app, atualizar o ficheiro respetivo e a tabela «Ond
 | Verificação de gralhas e coerência (Word gerado e importado) | [verificacao.md](verificacao.md) | 1.0 |
 | Cálculos no Word como folha de cálculo embutida (editável) | [folhas_word.md](folhas_word.md) | 1.0 |
 | Marcas nas fotografias (setas, círculos, letras, texto, balões) | [marcas_fotos.md](marcas_fotos.md) | 1.0 |
+| Relatórios Word dos gabinetes: cabeçalho a 0,7 cm, fontes do gabinete, títulos sem avanço | ver abaixo | 1.0 |
+| Prioridade GUT (Gravidade × Urgência × Tendência) | ver abaixo | 1.0 |
 
 ### Imagens no Word — controlo de conteúdo
 Cada imagem gerada para Word vai dentro de um controlo de conteúdo de imagem (`<w:sdt><w:sdtPr><w:alias w:val="Imagem"/><w:id/><w:picture/></w:sdtPr><w:sdtContent>…run com w:drawing…</w:sdtContent></w:sdt>`), para que no Word um clique sobre a imagem permita trocá-la. Aplicado em: Relat_Anomalias 1.0.0; AVA_Input 2.88 (no `JSZip.generateAsync`, para todos os .docx); ExPropria 0.13.6 (passagem final `picSdtAll` antes de gravar: envolve todas as imagens inline sozinhas no parágrafo que ainda não estejam num controlo; id único por controlo).
@@ -60,3 +62,19 @@ Cada app mostra na régua (cabeçalho) a versão **e a data da release**, ex.: `
 - No Word, o nome do ficheiro no rodapé é o campo `FILENAME` (com o nome no resultado guardado), para se atualizar sozinho se o ficheiro for renomeado (ex.: …_1.01VF.docx).
 - Não envolver duas vezes: ignorar parágrafos que já têm um `instrText` FILENAME (o mesmo .docx pode passar mais de uma vez pelo pós-processamento).
 - Aplicado em: Relatório de Peritagem 1.0, AVA_Input 2.89.
+
+## Relatórios Word dos gabinetes — página, fontes e títulos
+
+- **Margem do limite superior da folha ao cabeçalho = 0,7 cm** (`w:pgMar w:header="397"`), igual para todos os gabinetes (Proficis, Peritava, pfk, NID). Restantes margens do modelo: sup. 4 cm, inf. 1,5 cm, esq. 2,5 cm, dir. 1,5 cm, rodapé 0,5 cm.
+- **Não alterar as fontes definidas para os gabinetes** (regra geral). Texto gerado pela app que entre no corpo do relatório sem estilo próprio (ex.: análise específica e resumo estatístico vindos do Regi) recebe o estilo de texto do modelo (`1-periTextogeral`), para herdar a fonte do gabinete; dentro de tabelas acrescenta-se `w:shd` sem preenchimento, para não tapar o fundo das células.
+- **Títulos de nível 1, 2 e 3 sem avanço**: começam na margem esquerda (`w:ind w:left="0" w:firstLine="0"`), com o texto depois do número numa tabulação a 1 cm. Aplica-se no parágrafo, no estilo (Cabeçalho 1–3) e nos níveis de numeração ligados a esses estilos.
+- Frases comuns de articulação (ex.: «De acordo com o solicitado, pretende-se:», «De acordo com a análise específica, temos:», «Sob pena de outras considerações…, configuram:», «Sem prejuízo de outras recomendações…, sugere-se:») ficam como texto predefinido **editável por processo**.
+- Aplicado em: Relatório de Peritagem 1.7.0.
+
+## Prioridade GUT (Gravidade × Urgência × Tendência)
+
+- Campo da grelha (`type:'gut'`), desligado por defeito: só entra se for marcado em «Campos a atender».
+- Cada fator de 1 a 5. G: sem gravidade … extremamente grave; U: pode esperar … ação imediata; T: não vai piorar … piora rapidamente.
+- Prioridade = G × U × T (1–125). Classes nos cubos: ≥ 64 muito alta; 27–63 alta; 8–26 média; < 8 baixa.
+- Saídas: linha de caracterização («G5 × U5 × T4 = 100 (prioridade muito alta)»), ordenação «Prioridade GUT (maior primeiro)» e quadro/gráfico no resumo estatístico (as 20 maiores).
+- Aplicado em: Relatório de Peritagem 1.7.0.
