@@ -717,7 +717,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.7.2';const VERSION_DATA='2026-11-20';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.7.3';const VERSION_DATA='2026-11-20';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1468,7 +1468,7 @@ const CONSEQ_R=['Insalubridade','Afetação das condições de salubridade','Ins
 const PASSOS_INTRO='Sem prejuízo de outras recomendações que venham a decorrer de constatações subsequentes, em função do que se percebe nesta fase, sugere-se:';
 const RESUMO_INTRO='De acordo com a análise específica, temos:';
 const RECURSOS_INTRO='Na inspeção, foram utilizados os seguintes recursos:';
-const RECURSOS_R=['Análise visual e sensitiva','Levantamento fotográfico','Levantamento de medidas e dimensões','Utilização de Termografia','Utilização de Humidímetro','Utilização de câmara 360°','Utilização de drone','Utilização de endoscópio (câmara de inspeção)','Utilização de fissurómetro','Utilização de nível e/ou prumo','Utilização de escada / meios de acesso','Outros'];
+const RECURSOS_R=['Análise visual e sensitiva','Levantamento fotográfico','Levantamento de medidas e dimensões','Termografia','Humidímetro','Câmara 360°','Drone','Endoscópio (câmara de inspeção)','Fissurómetro','Nível e/ou prumo','Escada / meios de acesso','Outros'];
 const ANEXT_R=['Caderneta predial','Certidão de registo predial','Planta','Lista de assuntos','Outros'];
 const DOCS_R=['Lista de quesitos','Relatório de situações','Cadernetas prediais','Certidões de registo','Levantamento topográfico','Plantas','Projetos','Caderno de encargos','Lista de trabalhos a realizar','Orçamento','Lista de alterações','Lista de queixas','Conjunto de fotos','Outros'];
 const ANEX_R=['Plantas','Medições e orçamento','Análise de anomalias','Levantamento topográfico','Lista de trabalhos a realizar','Outros elementos de base'];
@@ -1509,6 +1509,7 @@ function ensureRel(p){const r=p.rel=p.rel||{};const d={ambito:'institucional',mo
   if(r.docs&&r.docs['Outros elementos de base']){r.docs['Outros']=true;delete r.docs['Outros elementos de base']}
   (p.anomalias||[]).forEach(a=>{if(a.vals&&a.vals.conf==='EEX')a.vals.conf='ECU'});
   if(r.nref!==undefined){if(String(r.nref).trim()){if(!r.procJud&&/\//.test(p.codigo||''))r.procJud=p.codigo;p.codigo=r.nref}delete r.nref}
+  if(r.recursos)for(const k of Object.keys(r.recursos)){const n=k.replace(/^Utilização de /,'').replace(/^./,c=>c.toUpperCase()).replace('Câmara 360°','Câmara 360°').replace('Endoscópio (câmara de inspeção)','Endoscópio (câmara de inspeção)');if(n!==k){if(r.recursos[k])r.recursos[n]=true;delete r.recursos[k]}}
   for(const k in d)if(r[k]===undefined)r[k]=clone(d[k]);r.quesitos.forEach(q=>{if(!q.id)q.id=uid();if(!q.rp)q.rp={}});return r}
 // nome do ficheiro: <N_Ref>_Proc_<processo>-Relatorio_<versão>.docx  (ex.: Trib_2630_Proc_1407_25_6_T8CBR-Relatorio_1.01VF.docx)
 function relFileName(p){const r=ensureRel(p);const cl=t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
@@ -1680,7 +1681,7 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
   body+=H2('Outros intervenientes e suas funções')+T(String(r.interv||'').trim()||'Não houve.');
   body+=H2('Decurso da diligência')+T(String(r.decurso||'').trim()||'Com o acompanhamento dos presentes, foi visitado o interior e exterior do edifício, para analisar as situações que vinham definidas.',{jc:'both'});
   {const rc=RECURSOS_R.filter(x=>x!=='Outros'&&r.recursos?.[x]).concat(String(r.recursosOutros||'').split('\n').map(x=>x.trim()).filter(Boolean));
-   if(rc.length)body+=H2('Recursos utilizados na inspeção')+(String(r.recursosIntro||'').trim()?T(r.recursosIntro):'')+rc.map((x,k)=>T(`- ${x}${k<rc.length-1?';':'.'}`)).join('')}
+   if(rc.length)body+=H2('Recursos utilizados na inspeção')+(String(r.recursosIntro||'').trim()?T(r.recursosIntro):'')+rc.map(x=>CHK(true,x)).join('')}
   body+=H2('Constrangimentos, impedimentos ou dúvidas relevantes')+T(String(r.constrang||'').trim()||'Nada a considerar.')+E();
   // 5 — situações (corpo do Regi, texto corrido, sem índice próprio)
   const o=await docOpts(p,'texto','.docx');
