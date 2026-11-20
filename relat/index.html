@@ -717,7 +717,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.7.0';const VERSION_DATA='2026-11-20';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.7.1';const VERSION_DATA='2026-11-20';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1468,7 +1468,7 @@ const CONSEQ_R=['Insalubridade','Afetação das condições de salubridade','Ins
 const PASSOS_INTRO='Sem prejuízo de outras recomendações que venham a decorrer de constatações subsequentes, em função do que se percebe nesta fase, sugere-se:';
 const RESUMO_INTRO='De acordo com a análise específica, temos:';
 const RECURSOS_INTRO='Na inspeção, foram utilizados os seguintes recursos:';
-const RECURSOS_R=['Inspeção visual','Registo fotográfico','Fita métrica / medidor laser','Nível e/ou prumo','Humidímetro','Câmara termográfica','Endoscópio / câmara de inspeção','Fissurómetro','Escada','Drone','Outros'];
+const RECURSOS_R=['Análise visual e sensitiva','Levantamento fotográfico','Levantamento de medidas e dimensões','Utilização de Termografia','Utilização de Humidímetro','Outros'];
 const ANEXT_R=['Caderneta predial','Certidão de registo predial','Planta','Lista de assuntos','Outros'];
 const DOCS_R=['Lista de quesitos','Relatório de situações','Cadernetas prediais','Certidões de registo','Levantamento topográfico','Plantas','Projetos','Caderno de encargos','Lista de trabalhos a realizar','Orçamento','Lista de alterações','Lista de queixas','Conjunto de fotos','Outros'];
 const ANEX_R=['Plantas','Medições e orçamento','Análise de anomalias','Levantamento topográfico','Lista de trabalhos a realizar','Outros elementos de base'];
