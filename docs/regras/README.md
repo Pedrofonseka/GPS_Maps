@@ -21,7 +21,7 @@ Ao melhorar uma rotina numa app, atualizar o ficheiro respetivo e a tabela «Ond
 | Relatórios Word dos gabinetes: cabeçalho a 0,7 cm, fontes do gabinete, títulos sem avanço | ver abaixo | 1.0 |
 | Prioridade GUT (Gravidade × Urgência × Tendência) | ver abaixo | 1.0 |
 | Revisão do texto antes de exportar (gralhas, ortografia pt-PT, redundâncias, coerência) | ver abaixo | 1.0 |
-| Apoio de análise de fotografias por IA (sugestão, opcional) | ver abaixo | 1.0 |
+| Apoio de análise de fotografias por IA (sugestão, opcional) | ver abaixo | 1.1 |
 
 ### Imagens no Word — controlo de conteúdo
 Cada imagem gerada para Word vai dentro de um controlo de conteúdo de imagem (`<w:sdt><w:sdtPr><w:alias w:val="Imagem"/><w:id/><w:picture/></w:sdtPr><w:sdtContent>…run com w:drawing…</w:sdtContent></w:sdt>`), para que no Word um clique sobre a imagem permita trocá-la. Aplicado em: Relat_Anomalias 1.0.0; AVA_Input 2.88 (no `JSZip.generateAsync`, para todos os .docx); ExPropria 0.13.6 (passagem final `picSdtAll` antes de gravar: envolve todas as imagens inline sozinhas no parágrafo que ainda não estejam num controlo; id único por controlo).
@@ -99,3 +99,4 @@ Cada app mostra na régua (cabeçalho) a versão **e a data da release**, ex.: `
 - A sugestão fica guardada na situação (`a.ia`) até ser descartada; o Relatório mostra um resumo por situação.
 - Modelo: o das Definições, senão `claude-sonnet-5-5` → `claude-sonnet-5` → `claude-sonnet-4-6` (passa ao seguinte se o modelo não existir).
 - Aplicado em: Relatório de Peritagem 1.13.0.
+- **Custo visível** (v1.1): cada análise guarda os tokens que o serviço indica (`usage`) e mostra o custo estimado (tabela de preços por modelo na app, USD); a ficha soma o total da situação (reanálises incluídas) e o cartão do Relatório soma o gasto do processo. O valor faturado é o da consola do fornecedor.
