@@ -729,7 +729,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.13.1';const VERSION_DATA='2026-11-21';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.13.2';const VERSION_DATA='2026-11-21';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1498,7 +1498,11 @@ const AMB_GAB={institucional:['proficis','nid'],particular:['peritava','pfk']};
 const QUAL_R=['Pelo Tribunal','Pela Parte 1','Pela Parte 2'];
 // frases comuns de articulação (editáveis por processo) e listas de opções cumulativas
 const CONSEQ_INTRO='Sob pena de outras considerações que possam vir a suceder na sequência desta análise ou subsequentes trabalhos de reparação, as situações agora constatadas, configuram:';
-const CONSEQ_R=['Insalubridade','Afetação das condições de salubridade','Insegurança estrutural','Afetação das condições estruturais','Insegurança à intrusão','Insegurança ao incêndio','Risco de queda de materiais','Afetação das condições de uso normal','Impossibilidade de uso, em condições de normalidade','Degradação precoce de materiais e sistemas','Outros prejuízos'];
+const CONSEQ_R=[/* saúde */'Insalubridade','Afetação das condições de salubridade',
+  /* segurança */'Insegurança estrutural','Afetação das condições estruturais','Risco de queda de materiais','Queda de revestimentos ou artefactos','Perigo de escorregamento','Risco elétrico (contacto de água com a instalação elétrica)','Risco de fugas ou roturas nas redes prediais (água, esgotos, gás)','Insegurança à intrusão','Insegurança ao incêndio',
+  /* uso e conforto */'Afetação das condições de uso normal','Impossibilidade de uso, em condições de normalidade','Afetação da circulação e da acessibilidade','Afetação do conforto térmico','Afetação do conforto acústico','Perda de estanquidade (entrada de água ou ar)','Aumento dos consumos de energia',
+  /* danos e valor */'Danificação de recheio','Dano elétrico (instalação e equipamentos)','Afetação de frações ou espaços contíguos','Degradação precoce de materiais e sistemas','Agravamento e propagação das anomalias, se não houver intervenção','Afetação estética (aspeto e imagem)','Desvalorização do imóvel',
+  'Outros prejuízos'];
 const PASSOS_INTRO='Sem prejuízo de outras recomendações que venham a decorrer de constatações subsequentes, em função do que se percebe nesta fase, sugere-se:';
 const RESUMO_INTRO='De acordo com a análise específica, temos:';
 const RECURSOS_INTRO='com recurso a:';
