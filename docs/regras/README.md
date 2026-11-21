@@ -20,6 +20,7 @@ Ao melhorar uma rotina numa app, atualizar o ficheiro respetivo e a tabela «Ond
 | Marcas nas fotografias (setas, círculos, letras, texto, balões) | [marcas_fotos.md](marcas_fotos.md) | 1.0 |
 | Relatórios Word dos gabinetes: cabeçalho a 0,7 cm, fontes do gabinete, títulos sem avanço | ver abaixo | 1.0 |
 | Prioridade GUT (Gravidade × Urgência × Tendência) | ver abaixo | 1.0 |
+| Revisão do texto antes de exportar (gralhas, ortografia pt-PT, redundâncias, coerência) | ver abaixo | 1.0 |
 
 ### Imagens no Word — controlo de conteúdo
 Cada imagem gerada para Word vai dentro de um controlo de conteúdo de imagem (`<w:sdt><w:sdtPr><w:alias w:val="Imagem"/><w:id/><w:picture/></w:sdtPr><w:sdtContent>…run com w:drawing…</w:sdtContent></w:sdt>`), para que no Word um clique sobre a imagem permita trocá-la. Aplicado em: Relat_Anomalias 1.0.0; AVA_Input 2.88 (no `JSZip.generateAsync`, para todos os .docx); ExPropria 0.13.6 (passagem final `picSdtAll` antes de gravar: envolve todas as imagens inline sozinhas no parágrafo que ainda não estejam num controlo; id único por controlo).
@@ -79,3 +80,11 @@ Cada app mostra na régua (cabeçalho) a versão **e a data da release**, ex.: `
 - Prioridade = G × U × T (1–125). Classes nos cubos: ≥ 64 muito alta; 27–63 alta; 8–26 média; < 8 baixa.
 - Saídas: linha de caracterização («G5 × U5 × T4 = 100 (prioridade muito alta)»), ordenação «Prioridade GUT (maior primeiro)» e quadro/gráfico no resumo estatístico (as 20 maiores).
 - Aplicado em: Relatório de Peritagem 1.7.0.
+
+## Revisão do texto antes de exportar
+
+- Lê os textos **pela ordem em que saem no relatório** e assinala, em quatro grupos: **Gralha** (palavra repetida, espaços a mais, espaço antes da pontuação, falta de espaço depois de vírgula/ponto e vírgula, frase a começar com minúscula, parêntesis/aspas desequilibrados, texto longo sem ponto final), **Ortografia**, **Redundância** (frase igual noutro sítio, frases seguidas quase iguais, comentários de situações diferentes ≥ 85 % iguais) e **Coerência** (situação sem comentário, alegada sem Status, campos obrigatórios).
+- Ortografia com Hunspell em WebAssembly e o dicionário **pt-PT (Acordo Ortográfico de 1990)** — pacote `dictionary-pt-pt` (não usar `dictionary-pt`, que é do Brasil). Ficheiros à parte (`spell/spell.js`, `spell/pt_PT.aff`, `spell/pt_PT.dic`, ≈ 2,3 MB), carregados **só quando se revê**; o service worker guarda-os na 1.ª utilização e depois funcionam sem internet. A página da app não aumenta.
+- Não são assinalados: siglas em maiúsculas, palavras com algarismos, nomes próprios a meio da frase, termos técnicos da lista interna, valores das bases de dados (zonas, locais, elementos, tipos) e palavras «aceites sempre» pelo utilizador (`settings.spellOk`).
+- Ao exportar (Word, PDF, pasta), se houver avisos, pergunta «Exportar mesmo assim / Rever agora». Cada aviso tem «Ir ▶», que abre o campo e realça o texto.
+- Aplicado em: Relatório de Peritagem 1.11.0.

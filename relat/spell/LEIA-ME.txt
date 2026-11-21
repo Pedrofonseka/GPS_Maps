@@ -1,0 +1,4 @@
+Revisão ortográfica do Relatório de Peritagem (funciona sem internet depois da 1.ª utilização).
+- spell.js: Hunspell compilado para WebAssembly (projeto hunspell-asm 4.0.2; Hunspell sob MPL 1.1 / GPL 2 / LGPL 2.1).
+- pt_PT.aff / pt_PT.dic: dicionário de português europeu (Acordo Ortográfico de 1990), pacote dictionary-pt-pt 2.0.0,
+  derivado dos dicionários do LibreOffice (licença GPL-2.0 / LGPL-2.1 / MPL-1.1).

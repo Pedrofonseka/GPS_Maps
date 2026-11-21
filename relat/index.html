@@ -134,6 +134,8 @@ table.pg{width:100%;border-collapse:collapse;table-layout:fixed}table.pg td{bord
 .mgrp{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:#777;margin:12px 4px 4px}
 .mitem{display:flex;align-items:center;justify-content:flex-start;gap:12px;width:100%;text-align:left;background:#fff;border:1px solid #ddd;border-radius:12px;padding:10px 12px;margin:6px 0;color:#222;min-height:52px}
 .mitem .mic{font-size:22px;width:30px;text-align:center}.mitem .mtx{display:flex;flex-direction:column}.mitem small{color:#777;font-size:12px}.mitem.warn{border-color:#e0a800;background:#fff8e1}
+.rvit{border-top:1px solid #eee;padding:8px 0}.rvhd{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px}.rvex{font-size:13px;background:#f7f7f7;border-radius:6px;padding:4px 8px;margin:4px 0;color:#333}
+.rvhl{outline:3px solid #e0a800!important;outline-offset:2px}
 </style>
 </head>
 <body>
@@ -723,7 +725,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.10.1';const VERSION_DATA='2026-11-20';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.11.0';const VERSION_DATA='2026-11-20';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1544,6 +1546,88 @@ function relFileName(p){const r=ensureRel(p);const cl=t=>String(t||'').normalize
   return [nref,proc?'Proc_'+proc:''].filter(Boolean).join('_')+(nref||proc?'-':'')+'Relatorio_'+ver+'.docx'}
 // visitas ao local: a 1.ª vem de «2 · Vistoria» (data, presenças); as seguintes do Processo › R5
 function visList(p){const r=ensureRel(p),v0=p.visita||{};return [{data:v0.data||'',hora:r.hora||'',presencas:v0.presencas||''},...(r.visitas||[])].filter((v,i)=>i===0||v.data||v.presencas||v.obs)}
+// ====================== Revisão do texto (antes de exportar) ======================
+// Lê o relatório de cima para baixo, pela ordem em que sai, e assinala: gralhas mecânicas, ortografia (dicionário pt-PT, AO90),
+// redundâncias (frases repetidas, comentários quase iguais) e coerência (textos em falta). Tudo no aparelho, sem internet.
+let SPELL=null,SPELLP=null;
+function loadSpell(){if(SPELL)return Promise.resolve(SPELL);if(SPELLP)return SPELLP;
+  SPELLP=(async()=>{if(!window.SpellPT)await new Promise((res,rej)=>{const s=document.createElement('script');s.src='spell/spell.js';s.onload=res;s.onerror=()=>rej(new Error('dicionário indisponível'));document.head.appendChild(s)});
+    const [a,d]=await Promise.all(['spell/pt_PT.aff','spell/pt_PT.dic'].map(u=>fetch(u).then(r=>{if(!r.ok)throw new Error('dicionário indisponível');return r.arrayBuffer()}).then(b=>new Uint8Array(b))));
+    SPELL=await window.SpellPT.init(a,d);return SPELL})().catch(e=>{SPELLP=null;throw e});return SPELLP}
+const SPELL_TECH='rufo rufos eflorescência eflorescências termografia termográfica termográfico termográficas humidímetro humidímetros fissurómetro fissurómetros endoscópio betonilha betonilhas platibanda platibandas lambrim lambrins abobadilha abobadilhas fendilhação fendilhações vigota vigotas capoto ETICS AQS NUF in loco perit Peritava Proficis pfk logradouro alpendre cumeeira cumeeiras algeroz algerozes rufagem soletos telha-canudo tela telas geotêxtil pladur gesso-cartonado azulejaria sancas pingadeiras murete muretes alvenarias tijolo tijolos';
+function reviewTexts(p){const r=ensureRel(p),part=isPart(r),L=[];const add=(sec,lbl,t,go)=>{if(String(t||'').trim())L.push({sec,lbl,t:String(t),go})};
+  const RP=(k,s)=>({view:'proc',open:s,bind:'r.'+k}),RR=(k,s)=>({view:'rel',open:s,bind:'r.'+k});
+  add('Capa','Objeto de análise',r.objeto,RP('objeto','rp2'));add('Capa','Contexto/ finalidade',r.contexto,RP('contexto','rp2'));
+  add('1. Objeto da perícia','Frase de abertura',r.objIntro,RP('objIntro','rp3'));add('1. Objeto da perícia','Objetivo do relatório',r.objetivo,RP('objetivo','rp3'));
+  r.quesitos.forEach((q,i)=>add('1. Objeto da perícia',`Questão ${i+1}`,q.txt,{view:'proc',open:'rp3',bind:`q.${i}.txt`}));
+  add('2. Elementos de apoio','Outros elementos',r.docsOutros,RP('docsOutros','rp4'));add('2. Elementos de apoio','Comentários',r.docsCom,RP('docsCom','rp4'));
+  (r.visitas||[]).forEach((v,i)=>{add('3. Da visita ao local',`${i+2}.ª visita — presenças`,v.presencas,{view:'proc',open:'rp5',bind:`vx.${i}.presencas`});add('3. Da visita ao local',`${i+2}.ª visita — notas`,v.obs,{view:'proc',open:'rp5',bind:`vx.${i}.obs`})});
+  add('3. Da visita ao local','Outros intervenientes',r.interv,RP('interv','rp5'));add('3. Da visita ao local','Decurso da inspeção',r.decurso,RP('decurso','rp5'));add('3. Da visita ao local','Constrangimentos',r.constrang,RP('constrang','rp5'));
+  if(part)add('4. Situações a analisar','Outras questões ou situações',r.outrasTxt,RR('outrasTxt','rrC'));else add('4. Situações a analisar','Nota de contextualização',r.ctxNota,RR('ctxNota','rrC'));
+  const lF=printFields(p,settings).filter(f=>f.type==='long');
+  for(const a of hydrate(p)){const c=a._code,go=b=>({aid:a.id,bind:b});add('5. Análise específica',`${c} — ${lblD(p)}`,a.descricao,go('a.descricao'));add('5. Análise específica',`${c} — ${lblC(p)}`,a.comentario,go('a.comentario'));
+    for(const f of lF)add('5. Análise específica',`${c} — ${f.label}`,a.vals?.[f.id],go('v.'+f.id));(a.fotos||[]).forEach((f,i)=>add('5. Análise específica',`${imgCode(p,a,i)} — legenda`,f.legenda,{aid:a.id,foto:i}))}
+  add('6. Resumo de análise','Frase de abertura',r.resumoIntro,RR('resumoIntro','rr2'));add('6. Resumo de análise','Nota',r.nota,RR('nota','rr2'));
+  if(part)add('7. Apreciação geral','Contextualizando',r.ctxNota,RR('ctxNota','rrC'));add('7. Apreciação geral','Possíveis causas',r.causasG,RR('causasG','rrA'));
+  add('7. Apreciação geral','Consequências',r.conseqTxt,RR('conseqTxt','rrA'));add('7. Apreciação geral','Consequências — texto complementar',r.conseqComp,RR('conseqComp','rrA'));
+  if(r.incApr===true)add('7. Apreciação geral','Comentários e conclusões',r.apreciacao,RR('apreciacao','rrA'));
+  r.quesitos.forEach((q,i)=>add(part?'Apreciação das queixas':'Resposta ao solicitado',`Resposta à questão ${i+1}`,q.resp,{view:'rel',open:'rr1',bind:`q.${i}.resp`}));
+  add('Passos seguintes','Frase de abertura',r.passosIntro,RR('passosIntro','rrP'));add('Passos seguintes','Texto',r.passos,RR('passos','rrP'));
+  return L}
+const RV_ABBR=/(?:^|\s)(?:ex|n\.º|art|arts|p|pág|págs|sr|sra|dr|dra|eng|arq|cf|etc|aprox|nº|n|al|v|vs|fl|fls|proc|ref|tel|séc|av|lda|s\.a|cód)\.$/i;
+async function relReview(p){const L=reviewTexts(p),out=[];const okSet=new Set();
+  const addW=t=>String(t||'').split(/[^\p{L}\-']+/u).forEach(w=>w&&okSet.add(w.toLowerCase()));
+  SPELL_TECH.split(' ').forEach(addW);(settings.spellOk||[]).forEach(addW);['catZona','catPiso','catLocal','catElem','catalog'].forEach(k=>(settings[k]||[]).forEach(addW));(p.partes||[]).forEach(x=>addW(x.nome||x));
+  addW(p.codigo);addW(ensureRel(p).entidade);addW(p.local);addW(p.designacao);
+  let sp=null,spErr='';try{sp=await loadSpell()}catch(e){spErr='Sem dicionário neste momento (é preciso abrir a app uma vez com internet). A ortografia não foi verificada.'}
+  const iss=(x,kind,msg,ex,extra={})=>out.push({sec:x.sec,lbl:x.lbl,go:x.go,kind,msg,ex,...extra});
+  const ctx=(t,i,n)=>{const a=Math.max(0,i-25),b=Math.min(t.length,i+n+25);return (a?'…':'')+t.slice(a,b).replace(/\s+/g,' ')+(b<t.length?'…':'')};
+  const seenSent=new Map(),norm=s=>s.toLowerCase().replace(/[^\p{L}\p{N} ]+/gu,' ').replace(/\s+/g,' ').trim();
+  for(const x of L){const t=x.t;let m;
+    // 1) gralhas mecânicas
+    const RX=[[/(?<![\p{L}])(\p{L}+)\s+\1(?![\p{L}])/giu,'Palavra repetida'],[/\S {2,}\S/g,'Espaços a mais'],[/ +[,.;:!?](?![\d])/g,'Espaço antes da pontuação'],[/[,;](?=\p{L})/gu,'Falta espaço depois da pontuação'],[/[!?]{2,}|,{2,}|;{2,}/g,'Pontuação repetida']];
+    for(const [rx,msg] of RX){rx.lastIndex=0;while((m=rx.exec(t))){if(msg==='Palavra repetida'&&/^(nós|se|que)$/i.test(m[1]))continue;iss(x,'Gralha',msg,ctx(t,m.index,m[0].length))}}
+    { const rx=/([.!?])\s+(\p{Ll})/gu;while((m=rx.exec(t))){const before=t.slice(Math.max(0,m.index-8),m.index+1);if(RV_ABBR.test(' '+before))continue;iss(x,'Gralha','Frase a começar com minúscula',ctx(t,m.index,3))}}
+    { const o=(t.match(/\(/g)||[]).length,c=(t.match(/\)/g)||[]).length,ao=(t.match(/«/g)||[]).length,ac=(t.match(/»/g)||[]).length,q=(t.match(/"/g)||[]).length;
+      if(o!==c)iss(x,'Gralha','Parêntesis por fechar ou a mais','');if(ao!==ac)iss(x,'Gralha','Aspas « » desequilibradas','');if(q%2)iss(x,'Gralha','Aspas " por fechar','')}
+    { const last=t.trim().split('\n').pop().trim();if(t.trim().length>60&&/[\p{L}\d)]$/u.test(last)&&!/^[-–•]/.test(last))iss(x,'Gralha','Texto sem ponto final',ctx(t,t.trimEnd().length-20,20))}
+    // 2) ortografia
+    if(sp){const rx=/[\p{L}]+(?:[-'’][\p{L}]+)*/gu;let prevEnd=-1;while((m=rx.exec(t))){const w=m[0];const lw=w.toLowerCase();
+        if(w.length<2||okSet.has(lw)||/\d/.test(w))continue;if(w.length>1&&w===w.toUpperCase())continue; // siglas
+        const start=/(^|[.!?:\n]\s*|^\s*[-–•]\s*)$/.test(t.slice(0,m.index));if(/^\p{Lu}/u.test(w)&&!start)continue; // nomes próprios a meio da frase
+        if(sp.spell(w)||sp.spell(lw)||(w.includes('-')&&w.split('-').every(z=>!z||sp.spell(z)||okSet.has(z.toLowerCase()))))continue;
+        iss(x,'Ortografia',`«${w}»`,ctx(t,m.index,w.length),{word:w,sug:sp.suggest(w).slice(0,3)})}}
+    // 3) redundâncias: frase igual noutro sítio; frases seguidas muito parecidas
+    const sents=t.split(/(?<=[.!?])\s+|\n+/).map(s=>s.trim()).filter(s=>s.split(/\s+/).length>=6);let prevW=null;
+    for(const s of sents){const k=norm(s);const ws=new Set(k.split(' ').filter(z=>z.length>3));
+      if(seenSent.has(k)&&seenSent.get(k)!==x)iss(x,'Redundância',`Frase repetida (também em ${seenSent.get(k).sec} › ${seenSent.get(k).lbl})`,s.length>110?s.slice(0,110)+'…':s);else seenSent.set(k,x);
+      if(prevW&&ws.size>=5){const inter=[...ws].filter(z=>prevW.has(z)).length;if(inter/Math.max(ws.size,prevW.size)>=0.8)iss(x,'Redundância','Duas frases seguidas a dizer quase o mesmo',s.length>110?s.slice(0,110)+'…':s)}prevW=ws}}
+  // comentários de situações diferentes quase iguais (cópia não adaptada?)
+  const CM=L.filter(x=>x.go?.aid&&x.go.bind==='a.comentario').map(x=>({x,ws:new Set(norm(x.t).split(' ').filter(z=>z.length>3))})).filter(o=>o.ws.size>=8);
+  for(let i=0;i<CM.length;i++)for(let j=i+1;j<CM.length;j++){const A=CM[i].ws,B=CM[j].ws;const inter=[...A].filter(z=>B.has(z)).length;const jac=inter/(A.size+B.size-inter);
+    if(jac>=0.85)iss(CM[j].x,'Redundância',`Comentário quase igual ao de ${CM[i].x.lbl.split(' — ')[0]} (${Math.round(jac*100)}%) — confirme se foi adaptado`,'')}
+  // 4) coerência
+  const r=ensureRel(p);
+  for(const a of hydrate(p)){if(!String(a.comentario||'').trim())out.push({sec:'5. Análise específica',lbl:`${a._code} — ${lblC(p)}`,go:{aid:a.id,bind:'a.comentario'},kind:'Coerência',msg:'Situação sem comentário/análise',ex:''});
+    if(a.origem!=='local'&&p.use?.conf&&!a.vals?.conf)out.push({sec:'5. Análise específica',lbl:`${a._code} — Status`,go:{aid:a.id},kind:'Coerência',msg:'Situação alegada sem Status (confirmada ou não)',ex:''})}
+  if(CONSEQ_R.some(d=>r.conseq?.[d])&&!String(r.conseqComp||'').trim()&&!String(r.conseqTxt||'').trim())out.push({sec:'7. Apreciação geral',lbl:'Consequências',go:{view:'rel',open:'rrA',bind:'r.conseqComp'},kind:'Coerência',msg:'Consequências marcadas sem texto complementar',ex:''});
+  for(const w of relCheck(p))out.push({sec:'Dados do relatório',lbl:'',go:null,kind:'Coerência',msg:w,ex:''});
+  return {issues:out,spellErr:spErr,at:Date.now(),n:L.length}}
+async function reviewGo(i){const x=S.review?.issues?.[i];if(!x||!x.go)return;const g=x.go;
+  if(g.aid){S.view='anom';S.aid=g.aid;S.sub='ficha';S.open.f2=true;S.open.f1=true}else{S.view=g.view;S.sub=null;S.open[g.open]=true}
+  render();if(g.foto!=null&&typeof openPhotoModal==='function'){openPhotoModal(g.foto);return}
+  setTimeout(()=>{const el=g.bind&&document.querySelector(`[data-bind="${g.bind}"]`);if(el){el.scrollIntoView({block:'center'});el.classList.add('rvhl');try{el.focus({preventScroll:true});if(x.word&&el.setSelectionRange){const k=el.value.indexOf(x.word);if(k>=0)el.setSelectionRange(k,k+x.word.length)}}catch(e){}setTimeout(()=>el.classList.remove('rvhl'),2500)}},60)}
+function reviewHTML(p){const R=S.review&&S.review.pid===p.id?S.review:null;const stale=R&&(p.updatedAt||0)>R.at;
+  if(!R)return `<div class="card"><b>Revisão do texto</b><p class="muted">Lê o relatório de cima para baixo e assinala gralhas, erros ortográficos (português europeu, Acordo Ortográfico), redundâncias e textos em falta. É feita antes de exportar.</p><div class="btns"><button class="green" data-act="relReview">🔍 Rever o texto</button></div></div>`;
+  const K=['Gralha','Ortografia','Redundância','Coerência'],I=R.issues;
+  return `<div class="card"><b>Revisão do texto</b> ${I.length?pill(I.length+' aviso(s)','warn'):pill('sem avisos','ok')} ${stale?'<span class="red" style="font-size:12px">· houve alterações desde a revisão</span>':''}
+   ${R.spellErr?`<p class="red" style="font-size:13px">${esc(R.spellErr)}</p>`:''}
+   ${K.map(k=>{const G=I.map((x,i)=>[x,i]).filter(([x])=>x.kind===k);if(!G.length)return '';return `<details class="sec" ${G.length<=8?'open':''}><summary>${k} <span class="cnt">${pill(G.length+'')}</span></summary><div class="body">${G.map(([x,i])=>`<div class="rvit"><div class="rvhd"><span class="muted">${esc(x.sec)}${x.lbl?' › '+esc(x.lbl):''}</span>${x.go?`<button class="secondary mini" data-act="rvGo" data-i="${i}">Ir ▶</button>`:''}</div><div><b>${esc(x.msg)}</b>${x.sug?.length?` <span class="muted">→ ${x.sug.map(esc).join(', ')}</span>`:''}</div>${x.ex?`<div class="rvex">${esc(x.ex)}</div>`:''}${x.word?`<button class="secondary mini" data-act="rvOk" data-w="${esc(x.word)}">✓ Aceitar sempre «${esc(x.word)}»</button>`:''}</div>`).join('')}</div></details>`}).join('')}
+   <div class="btns"><button class="${stale?'green':'secondary'}" data-act="relReview">🔍 Rever de novo</button></div></div>`}
+async function exportGate(p){const R=S.review&&S.review.pid===p.id?S.review:null;if(R&&(p.updatedAt||0)<=R.at&&!R.issues.length)return true;
+  busy(true,'A rever o texto…');let res;try{res=await relReview(p)}finally{busy(false)}S.review={...res,pid:p.id};
+  if(!res.issues.length)return true;const c=await ask(`A revisão do texto encontrou ${res.issues.length} aviso(s) (gralhas, ortografia, redundâncias ou textos em falta). Quer rever antes de exportar?`,['Exportar mesmo assim','Rever agora']);
+  if(c===1||c===true){S.view='rel';S.sub=null;S.scrollTop=undefined;render();setTimeout(()=>document.getElementById('rvCard')?.scrollIntoView({block:'start'}),60);return false}return true}
 function relCheck(p){const r=ensureRel(p),col=isCol(r),part=isPart(r),w=[];const v=x=>String(x||'').trim();
   if(!v(p.codigo))w.push('N_Ref (código interno) por preencher — Processo › 1');
   if(!v(r.objeto))w.push('«Objeto de análise» por preencher — Processo › R2');
@@ -1622,6 +1706,7 @@ function relRelHTML(p){const r=ensureRel(p),col=isCol(r);
   ${sec('rr3','Reservas e ambiente',`${tickBox('',r.incReservas!==false,'Incluir «Âmbito de utilização – reservas de análise»','data-act="rTk" data-k="incReservas"')}${RT('reservas','',r.reservas||RESERVAS_R,6)}${tickBox('',r.incAmbiente!==false,'Incluir «Ambiente, sustentabilidade e conformidade de licenciamento»','data-act="rTk" data-k="incAmbiente"')}${RT('ambiente','',r.ambiente||AMBIENTE_R,6)}`,{def:false})}
   ${sec('rr4','Termo de encerramento',termo,{cnt:col?pill(r.unan?'unanimidade':'discordâncias',r.unan?'ok':'warn'):'',def:false})}
   ${sec('rr5','Em anexo',anex,{cnt:pill(ANEX_R.filter(d=>r.anexos[d]).length+(r.anexF||[]).length+' ✓'),def:false})}
+  <div id="rvCard">${reviewHTML(p)}</div>
   ${(()=>{const w=relCheck(p);return `<div class="card"><b>Verificação antes de gerar</b>${w.length?`<ul class="muted" style="margin:6px 0 0 18px;padding:0">${w.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'<p class="muted">✓ Tudo preenchido.</p>'}</div>`})()}
   <div class="card"><b>Relatório completo</b><p class="muted">Word com capa (mapa + fotos), índice, secções 1–12 e a análise das situações em texto corrido. Cabeçalho: ${esc((GABS_R.find(g=>g[0]===r.gab)||['',''])[1])}.</p><div class="exp"><button class="secondary" data-act="relPrev">👁 Pré-visualizar</button><button class="green" data-act="relWord">📘 Word</button><button class="green" data-act="relPdf">📕 PDF</button><button class="secondary" data-act="relZip">📦 Pasta (Word + PDF + anexos)</button></div></div>`}
 // ---------- importação de quesitos ----------
@@ -2085,8 +2170,8 @@ document.addEventListener('click',async e=>{
     case 'rAprDoc':{const r=ensureRel(p);r.aprDocs=r.aprDocs||{};r.aprDocs[el.dataset.k]=!r.aprDocs[el.dataset.k];await saveProc();S.scrollTop=window.scrollY;break}
     case 'rTk':{const r=ensureRel(p),k=el.dataset.k;r[k]=r[k]===false;await saveProc();S.scrollTop=window.scrollY;break}
     case 'relPrev':{if(dirty)await saveProc();try{const d=await relBuildBlob(p);await previewDocx(d.blob,d.name,relCheck(p))}catch(err){busy(false);toast('Erro na pré-visualização: '+err.message,1)}return}
-    case 'relPdf':{if(dirty)await saveProc();try{const x=await relPdf(p);await saveBlob(x.blob,x.name)}catch(err){busy(false);toast('Erro ao gerar o PDF: '+err.message,1)}return}
-    case 'relZip':{if(dirty)await saveProc();try{const x=await relZip(p);await saveBlob(x.blob,x.name)}catch(err){busy(false);toast('Erro ao preparar a pasta: '+err.message,1)}return}
+    case 'relPdf':{if(dirty)await saveProc();if(!await exportGate(p))return;try{const x=await relPdf(p);await saveBlob(x.blob,x.name)}catch(err){busy(false);toast('Erro ao gerar o PDF: '+err.message,1)}return}
+    case 'relZip':{if(dirty)await saveProc();if(!await exportGate(p))return;try{const x=await relZip(p);await saveBlob(x.blob,x.name)}catch(err){busy(false);toast('Erro ao preparar a pasta: '+err.message,1)}return}
     case 'rDelAnexF':{const r=ensureRel(p),i=+el.dataset.i,a=r.anexF[i];if(!a||!await ask(`Retirar o anexo «${a.nome}»?`,['Cancelar','Retirar'],1))return;r.anexF.splice(i,1);try{await fotoDel(a.id)}catch(_){}await saveProc();S.scrollTop=window.scrollY;break}
     case 'rSaveQMod':{const Q=ensureRel(p).quesitos.map(q=>q.txt).filter(x=>String(x||'').trim());if(!Q.length)return toast('Ainda não há quesitos para guardar.',1);const nm=prompt('Nome do modelo de quesitos:',p.rel.contexto||'');if(!nm)return;settings.qModelos=[...(settings.qModelos||[]).filter(m=>m.nome!==nm),{nome:nm,quesitos:Q}];await saveSettings();toast('Modelo guardado.');S.scrollTop=window.scrollY;break}
     case 'rSaveRMod':{const q=ensureRel(p).quesitos[+el.dataset.i],t=String(q?.resp||'').trim();if(!t)return toast('A resposta está vazia.',1);const nm=prompt('Nome curto para esta resposta-modelo:',t.slice(0,40));if(!nm)return;settings.rModelos=[...(settings.rModelos||[]).filter(m=>m.nome!==nm),{nome:nm,texto:t}];await saveSettings();toast('Resposta-modelo guardada.');S.scrollTop=window.scrollY;break}
@@ -2094,7 +2179,10 @@ document.addEventListener('click',async e=>{
     case 'rUseCons':{const q=ensureRel(p).quesitos[+el.dataset.i],t=String(q.rp?.[+el.dataset.j]||'').trim();if(!t)return toast('Essa resposta está vazia.',1);if(String(q.resp||'').trim()&&!await ask('Substituir a resposta de consenso atual?',['Cancelar','Substituir'],1))return;q.resp=t;await saveProc();S.scrollTop=window.scrollY;break}
     case 'rCapa':ensureRel(p).capa=el.dataset.v;await saveProc();S.scrollTop=window.scrollY;break;
     case 'rUnan':ensureRel(p).unan=el.dataset.v==='1';await saveProc();S.scrollTop=window.scrollY;break;
-    case 'relWord':{if(dirty)await saveProc();toast('A gerar o relatório…');try{const o=await buildRelat(p);await saveBlob(new Blob([o.bytes],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}),o.name)}catch(err){toast('Erro ao gerar o relatório: '+err.message,1)}return}
+    case 'relReview':{if(dirty)await saveProc();busy(true,'A rever o texto…');try{S.review={...(await relReview(p)),pid:p.id}}catch(err){toast('Erro na revisão: '+err.message,1)}finally{busy(false)}S.scrollTop=window.scrollY;break}
+    case 'rvGo':await reviewGo(+el.dataset.i);return;
+    case 'rvOk':{const w=el.dataset.w;settings.spellOk=[...new Set([...(settings.spellOk||[]),w])];await saveSettings();if(S.review)S.review.issues=S.review.issues.filter(x=>!(x.word&&x.word.toLowerCase()===w.toLowerCase()));toast(`«${w}» passa a ser aceite em todos os processos.`);S.scrollTop=window.scrollY;break}
+    case 'relWord':{if(dirty)await saveProc();if(!await exportGate(p))return;toast('A gerar o relatório…');try{const o=await buildRelat(p);await saveBlob(new Blob([o.bytes],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}),o.name)}catch(err){toast('Erro ao gerar o relatório: '+err.message,1)}return}
     case 'filt':S.filt.st=el.dataset.v;S.scrollTop=window.scrollY;break;
     case 'dupA':{const c=JSON.parse(JSON.stringify(a));c.id=uid();c.ref='';c.fotos=[];c.num=p.lockNum?nextNum(p,parteOf(p,a)):undefined;c.parte=parteOf(p,a);c.createdAt=Date.now();p.anomalias.splice(p.anomalias.indexOf(a)+1,0,c);S.aid=c.id;S.openId=true;S.open.f1=true;S.scrollTop=0;await saveProc();toast(`Duplicada como ${anCode(p,c)} (sem fotografias).`);break}
     case 'copyPrev':{const i=p.anomalias.indexOf(a),pv=p.anomalias[i-1];if(!pv)return;const has=Object.entries(a.vals||{}).some(([k,v])=>useK(p,k)&&(Array.isArray(v)?v.length:v));
