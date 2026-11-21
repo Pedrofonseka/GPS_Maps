@@ -21,6 +21,7 @@ Ao melhorar uma rotina numa app, atualizar o ficheiro respetivo e a tabela «Ond
 | Relatórios Word dos gabinetes: cabeçalho a 0,7 cm, fontes do gabinete, títulos sem avanço | ver abaixo | 1.0 |
 | Prioridade GUT (Gravidade × Urgência × Tendência) | ver abaixo | 1.0 |
 | Revisão do texto antes de exportar (gralhas, ortografia pt-PT, redundâncias, coerência) | ver abaixo | 1.0 |
+| Apoio de análise de fotografias por IA (sugestão, opcional) | ver abaixo | 1.0 |
 
 ### Imagens no Word — controlo de conteúdo
 Cada imagem gerada para Word vai dentro de um controlo de conteúdo de imagem (`<w:sdt><w:sdtPr><w:alias w:val="Imagem"/><w:id/><w:picture/></w:sdtPr><w:sdtContent>…run com w:drawing…</w:sdtContent></w:sdt>`), para que no Word um clique sobre a imagem permita trocá-la. Aplicado em: Relat_Anomalias 1.0.0; AVA_Input 2.88 (no `JSZip.generateAsync`, para todos os .docx); ExPropria 0.13.6 (passagem final `picSdtAll` antes de gravar: envolve todas as imagens inline sozinhas no parágrafo que ainda não estejam num controlo; id único por controlo).
@@ -88,3 +89,13 @@ Cada app mostra na régua (cabeçalho) a versão **e a data da release**, ex.: `
 - Não são assinalados: siglas em maiúsculas, palavras com algarismos, nomes próprios a meio da frase, termos técnicos da lista interna, valores das bases de dados (zonas, locais, elementos, tipos) e palavras «aceites sempre» pelo utilizador (`settings.spellOk`).
 - Ao exportar (Word, PDF, pasta), se houver avisos, pergunta «Exportar mesmo assim / Rever agora». Cada aviso tem «Ir ▶», que abre o campo e realça o texto.
 - Aplicado em: Relatório de Peritagem 1.11.0.
+
+## Apoio de análise de fotografias por IA (opcional)
+
+- É **sugestão para o perito validar**, nunca diagnóstico: nada entra no relatório sem o perito tocar em «Aplicar» ou «Juntar ao comentário».
+- Só corre quando o perito pede (por ficha, ou «analisar as em falta» no Relatório), com **chave própria** (Definições › IA), **consentimento explícito** (as fotos saem do aparelho) e internet. A chave fica só no aparelho e **não entra nas cópias de segurança**.
+- Envia até 6 fotografias da situação + identificação (NUF/Piso/Local/Elemento) + descrição; pede JSON com: sinais visíveis, resumo (2–4 frases, pt-PT AO90, linguagem prudente), tipos/gravidade/urgência/tendência **só das listas da app**, causas prováveis, o que verificar no local, limitações. Valores fora das listas são descartados.
+- Proibido inventar medidas (sem escala não se estima largura de fissuras).
+- A sugestão fica guardada na situação (`a.ia`) até ser descartada; o Relatório mostra um resumo por situação.
+- Modelo: o das Definições, senão `claude-sonnet-5-5` → `claude-sonnet-5` → `claude-sonnet-4-6` (passa ao seguinte se o modelo não existir).
+- Aplicado em: Relatório de Peritagem 1.13.0.

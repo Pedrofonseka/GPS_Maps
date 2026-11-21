@@ -137,6 +137,7 @@ table.pg{width:100%;border-collapse:collapse;table-layout:fixed}table.pg td{bord
 .rvit{border-top:1px solid #eee;padding:8px 0}.rvhd{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px}.rvex{font-size:13px;background:#f7f7f7;border-radius:6px;padding:4px 8px;margin:4px 0;color:#333}
 .rvhl{outline:3px solid #e0a800!important;outline-offset:2px}
 .cmpbox{border-left:4px solid #e0a800;background:#fffbea;border-radius:8px;padding:8px 10px;margin:12px 0 6px}.cmphd{font-weight:700;font-size:14px;margin-bottom:2px}
+.aibox{border:1px dashed #8a8a8a;border-radius:10px;padding:10px;margin:12px 0;background:#fafafa}.aiap{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:3px 0;font-size:13px}
 .rvbar{position:fixed;left:0;right:0;bottom:0;z-index:900;display:flex;gap:8px;align-items:center;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#fff8e1;border-top:2px solid #e0a800;box-shadow:0 -2px 10px rgba(0,0,0,.12)}
 body:has(.rvbar){padding-bottom:70px}
 </style>
@@ -728,7 +729,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.12.0';const VERSION_DATA='2026-11-20';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.13.0';const VERSION_DATA='2026-11-20';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1144,7 +1145,7 @@ function vFicha(){
       <div class="photos">${RF.map((f,i)=>th(f,i,false)).join('')}</div>
       ${RS.length?`<label style="margin-top:12px">Reserva — não vai para o relatório (${RS.length})</label><div class="photos">${RS.map((f,k)=>th(f,RF.length+k,true)).join('')}</div>`:''}
       ${a.fotos.length<MAXALL?`<div class="btns"><label class="btn green">📷 Tirar fotografia<input type="file" accept="image/*" capture="environment" data-act="addCam" hidden></label><label class="btn green">🖼 Escolher da fototeca<input type="file" accept="image/*" multiple data-act="addLib" hidden></label></div>`:`<p class="muted">Máximo de ${MAXALL} fotos guardadas nesta anomalia (relatório + reserva). Elimine algumas da reserva para juntar mais.</p>`}
-      ${S.camShots.length?`<div class="btns"><button class="secondary" data-act="saveCam">💾 Guardar ${S.camShots.length} foto(s) tirada(s) na fototeca</button></div>`:''}`,{cnt:pill(`${relF(a).length}/${max}${resF(a).length?' +'+resF(a).length:''}`,relF(a).length?'ok':'')})}
+      ${S.camShots.length?`<div class="btns"><button class="secondary" data-act="saveCam">💾 Guardar ${S.camShots.length} foto(s) tirada(s) na fototeca</button></div>`:''}${aiPanelHTML(cur(),a)}`,{cnt:pill(`${relF(a).length}/${max}${resF(a).length?' +'+resF(a).length:''}`,relF(a).length?'ok':'')})}
   }
   h+=`<div class="btns"><button class="green" data-act="stepA" data-d="1" ${idx<n-1?'':'disabled'}>Anomalia seguinte ▶</button><span class="grow"></span><button class="secondary mini" data-act="dupA">⧉ Duplicar</button><button class="del" data-act="delAnom">Eliminar</button></div>`;
   return h;
@@ -1327,6 +1328,10 @@ function vDefs(){
     <div class="btns"><button class="secondary mini" data-act="mvField" data-i="${i}" data-d="-1" ${i?'':'disabled'}>▲ Subir</button><button class="secondary mini" data-act="mvField" data-i="${i}" data-d="1" ${i<settings.fields.length-1?'':'disabled'}>▼ Descer</button><span class="grow"></span><button class="del" data-act="delField" data-i="${i}">Eliminar campo</button></div>`,{cnt:pill(TY[f.type]||f.type),def:false});
   return `<h2>Definições</h2>
   ${blk('R · Relatório','Dados do perito, modelos e mapa da capa')}${relDefsHTML()}${modDefsHTML()}${gmapsDefsHTML()}
+  ${blk('IA · Apoio de análise de fotografias (opcional)','Sugestões a partir das fotos — o perito valida sempre')}${sec('d_ia','Ligação ao serviço de IA',`<p class="muted">Opcional. Quando pedir «Analisar» numa ficha, as fotografias dessa situação e a sua identificação são enviadas ao serviço de IA da Anthropic (Claude). Precisa de internet e de uma chave própria, criada em console.anthropic.com (custo por utilização, normalmente cêntimos por situação). A chave fica só neste aparelho e não entra nas cópias de segurança.</p>
+    <label>Chave da API</label><input type="password" data-bind="s.aiKey" value="${esc(settings.aiKey||'')}" placeholder="sk-ant-…" autocomplete="off">
+    <label>Modelo (opcional)</label><input data-bind="s.aiModel" value="${esc(settings.aiModel||'')}" placeholder="${AI_MODELS[0]}">
+    <div class="tks col">${tickBox('',!!settings.aiOk,'Compreendo que as fotografias analisadas saem do aparelho para o serviço de IA, e que as sugestões têm de ser validadas por mim.','data-act="aiOkTk"')}</div>`,{cnt:aiReady()?pill('ativo','ok'):pill('desligado'),def:false})}
   ${blk('A · Bases de dados','Valores que aparecem como ticks nas fichas')}
   ${CATS.map((c,k)=>catSec(c,k+1)).join('')}
   ${blk('B · Campos da pronúncia','Valores por defeito para processos novos — em cada processo escolhe-se o que atender')}
@@ -1554,6 +1559,49 @@ function relFileName(p){const r=ensureRel(p);const cl=t=>String(t||'').normalize
   return [nref,proc?'Proc_'+proc:''].filter(Boolean).join('_')+(nref||proc?'-':'')+'Relatorio_'+ver+'.docx'}
 // visitas ao local: a 1.ª vem de «2 · Vistoria» (data, presenças); as seguintes do Processo › R5
 function visList(p){const r=ensureRel(p),v0=p.visita||{};return [{data:v0.data||'',hora:r.hora||'',presencas:v0.presencas||'',tempo:r.tempo||{},tempoTxt:r.tempoTxt||''},...(r.visitas||[])].filter((v,i)=>i===0||v.data||v.presencas||v.obs)}
+// ====================== Apoio de análise de fotografias (IA, opcional) ======================
+// Sugestão para o perito validar: sinais visíveis, tipos, gravidade/urgência/tendência prováveis, causas a verificar.
+// Só corre quando o perito pede, com chave própria (fica só neste aparelho) e consentimento; nada é aplicado sem o perito tocar em «Aplicar».
+const AI_MODELS=['claude-sonnet-5-5','claude-sonnet-5','claude-sonnet-4-6'];
+const aiReady=()=>!!(String(settings.aiKey||'').trim()&&settings.aiOk);
+function aiPrompt(p,a){const fo=id=>settings.fields.find(f=>f.id===id);const opt=id=>(fo(id)?.opts||[]).filter(o=>o[0]!=='OUT').map(o=>`${o[0]} = ${o[1]}`).join('; ');
+  return `És um assistente de um perito em patologias da construção (Portugal). Analisa as fotografias de UMA situação e devolve uma SUGESTÃO para o perito validar — não um diagnóstico.
+Contexto da situação: ${[a.zona,a.piso,a.local,a.elemento].filter(Boolean).join(' / ')||'(sem identificação)'}.
+Descrição dada: ${String(a.descricao||'').trim()||'(sem descrição)'}.
+Regras: português europeu (Acordo Ortográfico de 1990), linguagem técnica e prudente («aparenta», «sugere», «compatível com»); descreve só o que se vê; não inventes medidas (sem escala, não estimes larguras de fissuras); assinala o que tem de ser confirmado no local.
+Escolhe valores APENAS destas listas (ou null se não for possível):
+- tipos (pode ser mais de um): ${(settings.catalog||[]).join('; ')}
+- gravidade (código): ${opt('cons')}
+- urgencia: ${opt('urg')}
+- tendencia: ${opt('tend')}
+Responde SÓ com JSON válido, sem texto antes ou depois:
+{"sinais":["sinal visível 1","…"],"resumo":"2 a 4 frases para servir de rascunho do comentário de análise","tipos":["…"],"gravidade":"código ou null","urgencia":"valor ou null","tendencia":"valor ou null","causas_provaveis":["…"],"verificar_no_local":["…"],"limitacoes":"o que as fotografias não permitem concluir"}`}
+async function aiAnalyse(p,a){if(!aiReady())throw new Error('Configure primeiro a chave e o consentimento em Definições › IA.');await loadFotos(p);
+  const F=relF(a).slice(0,6);if(!F.length)throw new Error('Esta situação não tem fotografias no relatório.');
+  const imgs=F.map(f=>{const d=String(fd(f)||'');const m=d.match(/^data:(image\/[a-z]+);base64,(.*)$/);return m?{type:'image',source:{type:'base64',media_type:m[1],data:m[2]}}:null}).filter(Boolean);
+  const models=[String(settings.aiModel||'').trim(),...AI_MODELS].filter((x,i,arr)=>x&&arr.indexOf(x)===i);let last='';
+  for(const model of models){let res;try{res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':String(settings.aiKey).trim(),'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model,max_tokens:1500,messages:[{role:'user',content:[...imgs,{type:'text',text:aiPrompt(p,a)}]}]})})}catch(e){throw new Error('Sem ligação à internet (ou o serviço não respondeu).')}
+    const j=await res.json().catch(()=>({}));if(res.status===404||j?.error?.type==='not_found_error'){last=`modelo ${model} indisponível`;continue}
+    if(res.status===401)throw new Error('Chave inválida — confirme em Definições › IA.');if(!res.ok)throw new Error(j?.error?.message||('Erro '+res.status));
+    const t=(j.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('');const m=t.match(/\{[\s\S]*\}/);if(!m)throw new Error('Resposta sem JSON.');
+    const o=JSON.parse(m[0]);const cat=settings.catalog||[],fo=id=>settings.fields.find(f=>f.id===id),ok=(id,v)=>(fo(id)?.opts||[]).some(x=>x[0]===v);
+    return {at:Date.now(),model,fotos:F.length,sinais:o.sinais||[],resumo:String(o.resumo||''),tipos:(o.tipos||[]).filter(x=>cat.includes(x)),gravidade:ok('cons',o.gravidade)?o.gravidade:null,urgencia:ok('urg',o.urgencia)?o.urgencia:null,tendencia:ok('tend',o.tendencia)?o.tendencia:null,causas:o.causas_provaveis||[],verificar:o.verificar_no_local||[],limitacoes:String(o.limitacoes||'')}}
+  throw new Error(last||'Nenhum modelo disponível.')}
+function aiPanelHTML(p,a){const x=a.ia;const n=relF(a).length;
+  const head=`<div class="aibox"><div class="cmphd">🤖 Apoio de análise das fotografias <span class="muted" style="font-weight:400">— sugestão para o perito validar</span></div>`;
+  if(!aiReady())return head+`<p class="muted" style="font-size:12px">Opcional. Para usar, configure a chave e aceite as condições em Menu › Definições › IA. As fotografias só são enviadas quando tocar em «Analisar».</p></div>`;
+  if(!x)return head+`<p class="muted" style="font-size:12px">Analisa até 6 fotografias desta situação (precisa de internet; as fotos são enviadas ao serviço de IA). Nada entra no relatório sem tocar em «Aplicar».</p><div class="btns"><button class="secondary" data-act="aiRun" ${n?'':'disabled'}>🤖 Analisar ${n} foto(s)</button></div></div>`;
+  const fo=id=>settings.fields.find(f=>f.id===id),ot=(id,v)=>{const o=(fo(id)?.opts||[]).find(z=>z[0]===v);return o&&o[1]&&o[1]!==o[0]?`${o[0]} – ${o[1]}`:v};
+  const li=L=>L.length?`<ul style="margin:2px 0 6px 18px;padding:0">${L.map(s=>`<li>${esc(s)}</li>`).join('')}</ul>`:'<p class="muted">—</p>';
+  const ap=(lbl,v,act,shown)=>v&&(!Array.isArray(v)||v.length)?`<div class="aiap"><span><b>${lbl}:</b> ${esc(shown)}</span><button class="secondary mini" data-act="${act}">Aplicar</button></div>`:'';
+  return head+`<div class="muted" style="font-size:11px">${new Date(x.at).toLocaleString('pt-PT')} · ${x.fotos} foto(s) · ${esc(x.model)}</div>
+    <b>Sinais visíveis</b>${li(x.sinais)}
+    <b>Resumo sugerido</b><div class="rvex">${esc(x.resumo||'—')}</div>${x.resumo?`<div class="btns" style="margin-top:4px"><button class="secondary mini" data-act="aiUseTxt">＋ Juntar ao comentário de análise</button></div>`:''}
+    <b>Etiquetas sugeridas</b>${ap('Tipo',x.tipos,'aiTipo',(x.tipos||[]).join(', '))}${ap('Gravidade',x.gravidade,'aiGrav',ot('cons',x.gravidade))}${ap('Urgência',x.urgencia,'aiUrg',ot('urg',x.urgencia))}${ap('Tendência',x.tendencia,'aiTend',ot('tend',x.tendencia))}${!(x.tipos?.length||x.gravidade||x.urgencia||x.tendencia)?'<p class="muted">—</p>':''}
+    <b>Causas prováveis (a confirmar)</b>${li(x.causas)}<b>A verificar no local</b>${li(x.verificar)}
+    ${x.limitacoes?`<p class="muted" style="font-size:12px"><b>Limitações:</b> ${esc(x.limitacoes)}</p>`:''}
+    <div class="btns"><button class="secondary mini" data-act="aiRun">🔄 Analisar de novo</button><button class="secondary mini" data-act="aiDrop">Descartar sugestão</button></div></div>`}
 // ====================== Revisão do texto (antes de exportar) ======================
 // Lê o relatório de cima para baixo, pela ordem em que sai, e assinala: gralhas mecânicas, ortografia (dicionário pt-PT, AO90),
 // redundâncias (frases repetidas, comentários quase iguais) e coerência (textos em falta). Tudo no aparelho, sem internet.
@@ -1726,6 +1774,7 @@ function relRelHTML(p){const r=ensureRel(p),col=isCol(r);
   ${sec('rr3','Reservas e ambiente',`${tickBox('',r.incReservas!==false,'Incluir «Âmbito de utilização – reservas de análise»','data-act="rTk" data-k="incReservas"')}${RT('reservas','',r.reservas||RESERVAS_R,6)}${tickBox('',r.incAmbiente!==false,'Incluir «Ambiente, sustentabilidade e conformidade de licenciamento»','data-act="rTk" data-k="incAmbiente"')}${RT('ambiente','',r.ambiente||AMBIENTE_R,6)}`,{def:false})}
   ${sec('rr4','Termo de encerramento',termo,{cnt:col?pill(r.unan?'unanimidade':'discordâncias',r.unan?'ok':'warn'):'',def:false})}
   ${sec('rr5','Em anexo',anex,{cnt:pill(ANEX_R.filter(d=>r.anexos[d]).length+(r.anexF||[]).length+' ✓'),def:false})}
+  ${aiReady()?(()=>{const A=p.anomalias.filter(x=>relF(x).length),D=A.filter(x=>x.ia);return `<div class="card"><b>🤖 Apoio de análise das fotografias</b> ${pill(D.length+'/'+A.length,D.length===A.length&&A.length?'ok':'')}<p class="muted" style="font-size:12px">Sugestões por situação (validar sempre). Abra cada ficha para ver e aplicar.</p>${D.map(x=>`<div class="rvit"><div class="rvhd"><b>${anCode(p,x)}</b><span class="muted">${esc([x.local||x.zona,x.elemento].filter(Boolean).join(' · '))}</span></div><div style="font-size:13px">${esc((x.ia.tipos||[]).join(', ')||'—')}${x.ia.gravidade?' · '+esc(x.ia.gravidade):''}${x.ia.urgencia?' · urgência '+esc(x.ia.urgencia):''}</div><div class="muted" style="font-size:12px">${esc(x.ia.resumo.slice(0,160))}${x.ia.resumo.length>160?'…':''}</div></div>`).join('')}${A.length>D.length?`<div class="btns"><button class="secondary" data-act="aiAll">🤖 Analisar as ${A.length-D.length} situação(ões) em falta</button></div>`:''}</div>`})():''}
   <div id="rvCard">${reviewHTML(p)}</div>
   ${(()=>{const w=relCheck(p);return `<div class="card"><b>Verificação antes de gerar</b>${w.length?`<ul class="muted" style="margin:6px 0 0 18px;padding:0">${w.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'<p class="muted">✓ Tudo preenchido.</p>'}</div>`})()}
   <div class="card"><b>Relatório completo</b><p class="muted">Word com capa (mapa + fotos), índice, secções 1–12 e a análise das situações em texto corrido. Cabeçalho: ${esc((GABS_R.find(g=>g[0]===r.gab)||['',''])[1])}.</p><div class="exp"><button class="secondary" data-act="relPrev">👁 Pré-visualizar</button><button class="green" data-act="relWord">📘 Word</button><button class="green" data-act="relPdf">📕 PDF</button><button class="secondary" data-act="relZip">📦 Pasta (Word + PDF + anexos)</button></div></div>`}
@@ -2203,6 +2252,14 @@ document.addEventListener('click',async e=>{
     case 'rUseCons':{const q=ensureRel(p).quesitos[+el.dataset.i],t=String(q.rp?.[+el.dataset.j]||'').trim();if(!t)return toast('Essa resposta está vazia.',1);if(String(q.resp||'').trim()&&!await ask('Substituir a resposta de consenso atual?',['Cancelar','Substituir'],1))return;q.resp=t;await saveProc();S.scrollTop=window.scrollY;break}
     case 'rCapa':ensureRel(p).capa=el.dataset.v;await saveProc();S.scrollTop=window.scrollY;break;
     case 'rUnan':ensureRel(p).unan=el.dataset.v==='1';await saveProc();S.scrollTop=window.scrollY;break;
+    case 'aiRun':{if(!a)return;busy(true,'A analisar as fotografias…');try{a.ia=await aiAnalyse(p,a);await saveProc()}catch(err){toast(err.message,1)}finally{busy(false)}S.scrollTop=window.scrollY;break}
+    case 'aiDrop':{if(!a)return;delete a.ia;await saveProc();S.scrollTop=window.scrollY;break}
+    case 'aiUseTxt':{if(!a?.ia)return;a.comentario=[String(a.comentario||'').trim(),a.ia.resumo].filter(Boolean).join('\n');await saveProc();toast('Resumo junto ao comentário — reveja e adapte.');S.scrollTop=window.scrollY;break}
+    case 'aiTipo':{if(!a?.ia)return;a.vals=a.vals||{};a.vals.tipo=[...new Set([...(a.vals.tipo||[]),...a.ia.tipos])];await saveProc();S.scrollTop=window.scrollY;break}
+    case 'aiGrav':{if(!a?.ia)return;a.vals=a.vals||{};const grp=c=>(+String(c)[0]>=5)?'F':'E';a.vals.cons=[...new Set([...(a.vals.cons||[]).filter(c=>c==='OUT'||grp(c)!==grp(a.ia.gravidade)),a.ia.gravidade])]; /* uma escolha por grupo (estético / funcional) */await saveProc();S.scrollTop=window.scrollY;break}
+    case 'aiUrg':{if(!a?.ia)return;a.vals=a.vals||{};a.vals.urg=a.ia.urgencia;await saveProc();S.scrollTop=window.scrollY;break}
+    case 'aiTend':{if(!a?.ia)return;a.vals=a.vals||{};a.vals.tend=a.ia.tendencia;await saveProc();S.scrollTop=window.scrollY;break}
+    case 'aiAll':{const L=p.anomalias.filter(x=>relF(x).length&&!x.ia);if(!L.length)return toast('Não há situações por analisar.');let ok=0,err='';for(let k=0;k<L.length;k++){busy(true,`A analisar ${k+1} de ${L.length}…`);try{L[k].ia=await aiAnalyse(p,L[k]);ok++;await saveProc()}catch(e){err=e.message;if(/Chave|internet|Configure/.test(err))break}}busy(false);toast(`${ok} situação(ões) analisada(s).${err?' Erro: '+err:''}`,!!err);S.scrollTop=window.scrollY;break}
     case 'relReview':{if(dirty)await saveProc();busy(true,'A rever o texto…');try{S.review={...(await relReview(p)),pid:p.id}}catch(err){toast('Erro na revisão: '+err.message,1)}finally{busy(false)}S.scrollTop=window.scrollY;break}
     case 'rvGo':await reviewGo(+el.dataset.i);document.getElementById('rvbarBox').innerHTML=rvBarHTML();return;
     case 'rvBack':busy(true,'A rever o texto…');try{await rvBack(p)}finally{busy(false)}return;
@@ -2301,7 +2358,7 @@ document.addEventListener('click',async e=>{
         if(settings.expFichas!==false)L.push({blob:new Blob([await docxFor(p,'grelha')],{type:T}),name:`${safeName(p.codigo)}_Fichas_Anomalias.docx`});
         if(settings.expTexto!==false)L.push({blob:new Blob([await docxFor(p,'texto')],{type:T}),name:`${safeName(p.codigo)}_Analise_Anomalias_texto.docx`});
         if(!L.length)return toast('Marque pelo menos uma opção.',1);await saveBlobs(L)}catch(err){toast('Erro ao gerar Word: '+err.message,1)}return}
-    case 'backupOut':{toast('A preparar a cópia…');for(const pp of procs)await loadFotos(pp);const full=procs.map(pp=>({...pp,visita:pp.visita?.map?{...pp.visita,map:{...pp.visita.map,data:fotoCache.get(pp.visita.map.id)||''}}:pp.visita,anomalias:pp.anomalias.map(a=>({...a,fotos:a.fotos.map(f=>({...f,data:fd(f)}))}))}));settings.lastBackup=Date.now();await saveSettings();const data={app:'RelatAnomalias',version:VERSION,date:new Date().toISOString(),settings,procs:full};await saveBlob(new Blob([JSON.stringify(data)],{type:'application/json'}),`Backup_RelatAnomalias_${new Date().toISOString().slice(0,10)}.json`);break}
+    case 'backupOut':{toast('A preparar a cópia…');for(const pp of procs)await loadFotos(pp);const full=procs.map(pp=>({...pp,visita:pp.visita?.map?{...pp.visita,map:{...pp.visita.map,data:fotoCache.get(pp.visita.map.id)||''}}:pp.visita,anomalias:pp.anomalias.map(a=>({...a,fotos:a.fotos.map(f=>({...f,data:fd(f)}))}))}));settings.lastBackup=Date.now();await saveSettings();const data={app:'RelatAnomalias',version:VERSION,date:new Date().toISOString(),settings:{...settings,aiKey:undefined},procs:full};/* a chave da IA nunca sai do aparelho */await saveBlob(new Blob([JSON.stringify(data)],{type:'application/json'}),`Backup_RelatAnomalias_${new Date().toISOString().slice(0,10)}.json`);break}
     case 'catAdd':{const ck=el.dataset.k;S.open['dc_'+ck]=true;const t=$('#catNew_'+ck).value.trim();if(t&&!settings[ck].includes(t)){settings[ck].push(t);await saveSettings()}S.scrollTop=window.scrollY;break}
     case 'delCat':{const ck=el.dataset.k;const c=settings[ck][+el.dataset.i];if(!await ask(`Retirar "${c}" do catálogo? (fichas já preenchidas mantêm o valor)`,['Cancelar','Retirar'],1))return;settings[ck].splice(+el.dataset.i,1);await saveSettings();S.scrollTop=window.scrollY;break}
     case 'mvField':{const i=+el.dataset.i,j=i+ +el.dataset.d;if(j<0||j>=settings.fields.length)return;[settings.fields[i],settings.fields[j]]=[settings.fields[j],settings.fields[i]];await saveSettings();S.scrollTop=window.scrollY;break}
@@ -2318,6 +2375,7 @@ document.addEventListener('change',async e=>{
   const el=e.target,act=el.dataset.act,p=cur(),a=curA();
   if(el.id==='gps'){const t=el.value.trim();if(!t){p.visita.gps=null;await saveProc();setGpsStatus('');return}if(!parseGpsTxt(t)){setGpsStatus('Não reconheço estas coordenadas. Aceito, por exemplo: 41.1579, -8.6291 · 41°09\'28"N 8°37\'45"W · ou um link do Google Maps / Apple Maps.');return}await gpsSet(p,t);return}
   if(act==='rTk'||act==='rTkB'){const r=ensureRel(p);r[el.dataset.k]=el.checked;await saveProc();S.scrollTop=window.scrollY;render();return}
+  if(act==='aiOkTk'){settings.aiOk=el.checked;await saveSettings();S.scrollTop=window.scrollY;render();return}
   if(act==='rTempo'){const r=ensureRel(p),vi=+el.dataset.v,o=vi<0?(r.tempo=r.tempo||{}):(r.visitas[vi].tempo=r.visitas[vi].tempo||{});o[el.dataset.k]=el.checked;await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='rAnexTipo'){const r=ensureRel(p);r.anexF[+el.dataset.i].tipo2=el.value;await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='rDoc'||act==='rAnex'||act==='rRec'||act==='rCons'){const r=ensureRel(p),ob=act==='rDoc'?r.docs:act==='rAnex'?r.anexos:act==='rRec'?(r.recursos=r.recursos||{}):(r.conseq=r.conseq||{});ob[el.dataset.k]=el.checked;await saveProc();S.scrollTop=window.scrollY;render();return}
