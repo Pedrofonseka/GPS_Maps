@@ -144,6 +144,7 @@ body:has(.rvbar){padding-bottom:70px}
 .fz-g{border-color:#00B050;background:#EEF9F1}.fz-y{border-color:#E0B000;background:#FFF8D6}.fz-b{border-color:#BF8F00;background:#FBF1E2}.fz .tks{margin:0}.fz .cmpbox{margin-top:6px}
 .fzr{margin-top:4px}.fzt{font-weight:700;margin:12px 0 2px;font-size:14px;color:#444}
 .fzleg{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:11px;margin:6px 0 8px}.fzleg>span[class^=fz-]{border-left:4px solid;border-radius:6px;padding:2px 6px}
+.undobtn{min-width:34px;font-size:17px;padding:2px 6px;margin-right:4px}.undobtn:disabled{opacity:.35}.fzctx{font-size:12px;color:#00803A;font-style:italic;margin:0 0 3px}.fzok{background:#00B050!important;color:#fff!important;border-color:#00B050!important}
 </style>
 </head>
 <body>
@@ -733,7 +734,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.16.0';const VERSION_DATA='2026-11-21';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.17.0';const VERSION_DATA='2026-11-21';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -958,7 +959,19 @@ function migrateSettings(s){
 const saveSettings=()=>{S.prevStale=true;return kvSet('settings',settings)};
 let saveT=null,dirty=false,lastErrShown=0;
 function saveProcSoon(){dirty=true;clearTimeout(saveT);saveT=setTimeout(saveProc,500)}
-async function saveProc(){clearTimeout(saveT);S.prevStale=true;const p=cur();if(!p){dirty=false;return}p.updatedAt=Date.now();
+// ---------- desfazer / refazer (por processo; passos de edição juntam-se quando seguidos, < 1,5 s) ----------
+const HIST={};const snap=p=>JSON.stringify(p,(k,v)=>k==='updatedAt'?undefined:v);
+const hk=p=>HIST[p.id]||(HIST[p.id]={u:[],r:[],last:snap(p),t:0});
+function histBtns(){const p=cur(),h=p&&HIST[p.id];const u=document.querySelector('[data-act=undo]'),r=document.querySelector('[data-act=redo]');if(u)u.disabled=!(h&&h.u.length);if(r)r.disabled=!(h&&h.r.length)}
+async function doUndo(dir){const p=cur();if(!p)return;if(dirty)await saveProc();const h=hk(p),from=dir<0?h.u:h.r,to=dir<0?h.r:h.u;
+  if(!from.length)return toast(dir<0?'Nada para desfazer.':'Nada para refazer.');const st=from.pop();to.push(h.last);const o=JSON.parse(st);
+  for(const k of Object.keys(p))if(!(k in o)&&k!=='updatedAt')delete p[k];Object.assign(p,o);h.last=st;h.t=0;S.noHist=true;try{await saveProc()}finally{S.noHist=false}
+  if(S.sub==='ficha'&&!curA())S.sub=null;S.scrollTop=window.scrollY;render();toast(dir<0?'↶ Desfeito.':'↷ Refeito.')}
+document.addEventListener('keydown',e=>{if(!(e.ctrlKey||e.metaKey)||!/^[zy]$/i.test(e.key))return;const t=e.target;if(t&&t.matches&&t.matches('input,textarea,select,[contenteditable]'))return; // dentro de um campo, vale o desfazer do próprio campo
+  e.preventDefault();doUndo(e.key.toLowerCase()==='y'||e.shiftKey?1:-1)});
+async function saveProc(){clearTimeout(saveT);S.prevStale=true;const p=cur();if(!p){dirty=false;return}
+  if(!S.noHist){const h=hk(p),j=snap(p);if(j!==h.last){if(S.histBreak||!h.u.length||Date.now()-h.t>1500){h.u.push(h.last);if(h.u.length>60)h.u.shift()}h.r=[];h.last=j;h.t=S.histBreak?0:Date.now();S.histBreak=false;setTimeout(histBtns,0)}}
+  p.updatedAt=Date.now();
   try{await dbPut(p);dirty=false}
   catch(e){dirty=true;if(Date.now()-lastErrShown>8000){lastErrShown=Date.now();toast('Não foi possível gravar ('+errTxt(e)+'). Os dados continuam no ecrã; volte a tentar ou faça "Guardar cópia".',1)}}}
 const cur=()=>procs.find(p=>p.id===S.pid);
@@ -1026,7 +1039,7 @@ function render(){
   document.title=`Relatório de Peritagem · ${VERSION}`;
   const p=cur();if(!p&&['proc','anom','rel'].includes(S.view))S.view='home';
   const crumbs=p&&S.view!=='home'&&S.view!=='defs'?`${esc(p.codigo||'(sem código)')}${S.sub==='ficha'&&curA()?' › '+anCode(p,curA()):''}`:'';
-  $('#hdr').innerHTML=`<h1 data-act="go" data-v="home">Relatório de Peritagem</h1><span class="ver">v${VERSION} · ${VERSION_DATA.split('-').reverse().join('/')}</span><div class="crumbs">${crumbs}</div><button class="mini menubtn ${bkWarn()?'dot':''}" data-act="menu" aria-label="Menu">☰ Menu</button>`;
+  $('#hdr').innerHTML=`<h1 data-act="go" data-v="home">Relatório de Peritagem</h1><span class="ver">v${VERSION} · ${VERSION_DATA.split('-').reverse().join('/')}</span><div class="crumbs">${crumbs}</div>${p&&S.view!=='home'&&S.view!=='defs'?`<button class="mini undobtn" data-act="undo" title="Desfazer (Ctrl/⌘+Z)" aria-label="Desfazer" ${hk(p).u.length?'':'disabled'}>↶</button><button class="mini undobtn" data-act="redo" title="Refazer (Ctrl/⌘+Y)" aria-label="Refazer" ${hk(p).r.length?'':'disabled'}>↷</button>`:''}<button class="mini menubtn ${bkWarn()?'dot':''}" data-act="menu" aria-label="Menu">☰ Menu</button>`;
   $('#steps').innerHTML=p&&['proc','anom','rel'].includes(S.view)?[['proc','1 · Processo'],['anom','2 · Situações'],['rel','3 · Relatório']].map(([v,t])=>`<button class="${S.view===v?'on':''}" data-act="go" data-v="${v}">${t}</button>`).join(''):'';
   $('#steps').style.display=$('#steps').innerHTML?'':'none';
   let html;
@@ -1733,6 +1746,7 @@ async function exportGate(p){const R=S.review&&S.review.pid===p.id?S.review:null
   if(!res.issues.length)return true;const c=await ask(`A revisão do texto encontrou ${res.issues.length} aviso(s) (gralhas, ortografia, redundâncias ou textos em falta). Quer rever antes de exportar?`,['Exportar mesmo assim','Rever agora']);
   if(c===1||c===true){S.view='rel';S.sub=null;S.scrollTop=undefined;render();setTimeout(()=>document.getElementById('rvCard')?.scrollIntoView({block:'start'}),60);return false}return true}
 function relCheck(p){const r=ensureRel(p),col=isCol(r),part=isPart(r),w=[];const v=x=>String(x||'').trim();
+  {const L=Object.entries(ZSUG).filter(([k])=>/\[[^\]]+\]/.test(String(r[k]||''))).map(([k])=>k);if(L.length)w.push(`Há ${L.length} texto(s) com partes sugeridas por completar, entre [ ] — separadores Processo/Relatório`)}
   if(part&&r.quesitos.some(q=>v(q.resp)||Object.values(q.rp||{}).some(v)))w.push('Há respostas escritas em «Apreciação das queixas», que já não sai nos relatórios particulares — passe-as para a Análise ou para a Apreciação geral (separador Relatório)');
   if(!v(p.codigo))w.push('N_Ref (código interno) por preencher — Processo › 1');
   if(!v(r.objeto))w.push('«Objeto de análise» por preencher — Processo › R2');
@@ -1755,8 +1769,16 @@ const qCode=i=>`1.${String(i+1).padStart(3,'0')}`;
 const mesAno=()=>{const d=new Date();return `${MESES_R[d.getMonth()]} de ${d.getFullYear()}`};
 const RL=(k,lbl,val,ph='')=>`<label>${esc(lbl)}</label><input data-bind="r.${k}" value="${esc(val||'')}" placeholder="${esc(ph)}">`;
 // fases do preenchimento, com as cores do modelo: verde = texto introdutório (editável) · amarelo = classificação por ticks · castanho = texto livre
-const ZG=(k,val,def,lbl='Texto introdutório')=>`<div class="fz fz-g"><div class="fzh">🟩 ${esc(lbl)} <span class="muted">(por defeito; pode alterar)</span></div><textarea data-bind="r.${k}" rows="${String(val??def).length>60?2:1}" placeholder="${esc(def)}">${esc(val??'')}</textarea>${val!==def&&def?`<button class="secondary mini fzr" data-act="rDefTxt" data-k="${k}" data-v="${esc(def)}">↺ repor</button>`:''}</div>`;
-const ZB=(k,val,lbl,rows=3,ph='',hint='')=>`<div class="fz fz-b"><div class="fzh">🟫 ${esc(lbl)}</div>${hint?`<div class="muted" style="font-size:11px">${hint}</div>`:''}<textarea data-bind="r.${k}" rows="${rows}" placeholder="${esc(ph)}">${esc(val||'')}</textarea></div>`;
+const ZG=(k,val,def,lbl='Texto introdutório')=>{const v=String(val??'').trim();return `<div class="fz fz-g"><div class="fzh">🟩 ${esc(lbl)} <span class="muted">(sugerido pelo modelo; pode alterar)</span></div><textarea data-bind="r.${k}" rows="${String(val||def).length>60?2:1}" placeholder="${esc(def)}">${esc(val??'')}</textarea>${!v&&def?`<button class="mini fzr fzok" data-act="rDefTxt" data-k="${k}" data-v="${esc(def)}">✓ Aceitar o texto sugerido</button>`:v!==def&&def?`<button class="secondary mini fzr" data-act="rDefTxt" data-k="${k}" data-v="${esc(def)}">↺ repor o sugerido</button>`:''}</div>`};
+// texto livre: sugestão do modelo (aceita-se com um toque e depois corrigem-se os [ ]) e, em cima, a frase introdutória que ele continua
+const ZSUG={objetivo:['objIntro','analisar um conjunto de anomalias que se manifestam numa fração destinada a [uso], referidas nos seguintes termos:'],
+  outrasTxt:['','Nada a acrescentar.'],docsCom:['','Nada a considerar.'],interv:['','Não houve.'],
+  decurso:['decursoIntro','os locais onde se manifestam as aludidas anomalias, bem como [outros espaços percorridos, ex.: o terraço exterior e as fachadas].'],
+  constrang:['','Nada a considerar.'],ctxNota:['ctxIntro','um edifício de [n.º] pisos, cuja morfologia apresenta [descrição].\n[Localização da fração em relação aos elementos com anomalias.]'],
+  causasG:['causasIntro',' - [causa provável 1];\n - [causa provável 2];'],conseqComp:['','Os danos são [graves / moderados / ligeiros] e exigem reparação [urgente / a curto prazo].'],
+  passos:['passosIntro',' - [ação 1];\n - [ação 2];']};
+const ZB=(k,val,lbl,rows=3,ph='',hint='')=>{const z=ZSUG[k],r=cur()?.rel||{},it=z&&z[0]?String(r[z[0]]||'').trim():'',sg=z?z[1]:'',v=String(val||'').trim();
+  return `<div class="fz fz-b"><div class="fzh">🟫 ${esc(lbl)}</div>${hint?`<div class="muted" style="font-size:11px">${hint}</div>`:''}${it?`<div class="fzctx">${esc(it)} <b>…</b></div>`:''}<textarea data-bind="r.${k}" rows="${rows}" placeholder="${esc(ph)}">${esc(val||'')}</textarea>${sg&&!v?`<button class="mini fzr fzok" data-act="rSug" data-k="${k}" data-v="${esc(sg)}">✓ Aceitar o texto sugerido${/\[/.test(sg)?' (depois corrija o que está entre [ ])':''}</button>`:''}</div>`};
 const ZY=(lbl,html)=>`<div class="fz fz-y"><div class="fzh">🟨 ${esc(lbl)}</div>${html}</div>`;
 const FZH=t=>`<div class="fzt">${esc(t)}</div>`;
 const FZLEG=`<div class="fzleg"><span class="fz-g">🟩 texto introdutório</span><span class="fz-y">🟨 classificação (ticks)</span><span class="fz-b">🟫 texto livre</span><span class="muted">— no Word, o texto livre continua a frase introdutória.</span></div>`;
@@ -2287,7 +2309,7 @@ function avaJpegPdf(pages, titulo) {
   return new Blob(parts, {type: 'application/pdf'});
 }
 
-document.addEventListener('click',async e=>{
+document.addEventListener('click',async e=>{S.histBreak=true;setTimeout(()=>{S.histBreak=false},700);
   const el=e.target.closest('[data-act]');if(!el||el.tagName==='INPUT'&&el.type!=='button'||el.tagName==='SELECT')return;
   const act=el.dataset.act,p=cur(),a=curA();
   switch(act){
@@ -2315,7 +2337,8 @@ document.addEventListener('click',async e=>{
     case 'rMvQ':{const Q=ensureRel(p).quesitos,i=+el.dataset.i,j=i+(+el.dataset.d);if(j<0||j>=Q.length)return;[Q[i],Q[j]]=[Q[j],Q[i]];await saveProc();S.scrollTop=window.scrollY;break}
     case 'rPasteQ':{const t=prompt('Cole aqui os quesitos (uma alínea por linha: a), b)… ou 1., 2.…):');if(!t)return;const q=splitQuesitos(t.split('\n'));q.forEach(x=>ensureRel(p).quesitos.push({id:uid(),txt:x,resp:'',rp:{}}));await saveProc();toast(q.length+' quesito(s) acrescentado(s).');S.scrollTop=window.scrollY;break}
     case 'rDoc':case 'rAnex':case 'rRec':case 'rCons':{const r=ensureRel(p),o=act==='rDoc'?r.docs:act==='rAnex'?r.anexos:act==='rRec'?(r.recursos=r.recursos||{}):(r.conseq=r.conseq||{}),k=el.dataset.k;o[k]=!o[k];await saveProc();S.scrollTop=window.scrollY;break}
-    case 'rDefTxt':{const r=ensureRel(p);r[el.dataset.k]=el.dataset.v;await saveProc();S.scrollTop=window.scrollY;break}
+    case 'rDefTxt':case 'rSug':{const r=ensureRel(p),k=el.dataset.k;r[k]=el.dataset.v;await saveProc();S.scrollTop=window.scrollY;render();
+      setTimeout(()=>{const t=document.querySelector(`[data-bind="r.${k}"]`);if(!t)return;t.focus();const a=t.value.indexOf('['),b=t.value.indexOf(']',a);if(a>=0&&b>a)t.setSelectionRange(a,b+1);else t.setSelectionRange(t.value.length,t.value.length)},60);return}
     case 'consAdd':{const r=ensureRel(p),v=String(document.getElementById('consNew')?.value||'').trim().replace(/[;.]+$/,'');if(!v)return toast('Escreva a consequência a acrescentar.');
       const t=v.charAt(0).toUpperCase()+v.slice(1),ex=conseqList().find(x=>x.toLowerCase()===t.toLowerCase());
       if(!ex){settings.conseqExtra=[...(settings.conseqExtra||[]),t];await saveSettings()}r.conseq=r.conseq||{};r.conseq[ex||t]=true;await saveProc();toast(ex?'Já existia na lista — ficou marcada.':'Acrescentada à lista e marcada.');S.scrollTop=window.scrollY;break}
@@ -2362,7 +2385,7 @@ document.addEventListener('click',async e=>{
     case 'sendProc':{if(dirty)await saveProc();const pp=procs.find(x=>x.id===el.dataset.id);if(!pp)return;toast('A preparar o processo…');await loadFotos(pp);
       const one={...pp,visita:pp.visita?.map?{...pp.visita,map:{...pp.visita.map,data:fotoCache.get(pp.visita.map.id)||''}}:pp.visita,anomalias:pp.anomalias.map(a=>({...a,fotos:a.fotos.map(f=>({...f,data:fd(f)}))}))};
       await saveBlob(new Blob([JSON.stringify({app:'RelatAnomalias',kind:'processo',version:VERSION,date:new Date().toISOString(),procs:[one]})],{type:'application/json'}),`${safeName(pp.codigo)}_Processo_Relat.json`);return}
-    case 'menu':openMenu();return;
+    case 'undo':return doUndo(-1);case 'redo':return doUndo(1);case 'menu':openMenu();return;
     case 'menuClose':return;
     case 'quit':await quitApp();return;
     case 'help':{const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="box helpbox"><div class="btns" style="margin-top:0;justify-content:space-between"><b style="font-size:17px">Como funciona a Relatório de Peritagem</b><button class="secondary mini" data-x>✕</button></div>${HELP_HTML}</div>`;m.addEventListener('click',e=>{if(e.target===m||e.target.closest('[data-x]'))m.remove()});document.body.appendChild(m);return}
@@ -2455,7 +2478,7 @@ document.addEventListener('click',async e=>{
 function parseOpts(t){return t.split('\n').map(s=>s.trim()).filter(Boolean).map(s=>{const k=s.indexOf('=');return k>0?[s.slice(0,k).trim(),s.slice(k+1).trim()]:[s,s]})}
 function setImport(rows,sheets,si){if(rows.length&&rows.every(r=>r.length===1)&&rows.filter(r=>NUM_RE.test(r[0])).length>=Math.max(1,rows.length/2)){S.imp={rows:rows.map(r=>splitNum(r[0])),sheets,si,hdr:-1,map:{ref:0,descricao:1}};return}const det=detectHeader(rows);S.imp={rows,sheets,si,hdr:det?det.row:-1,map:det?det.map:defaultMap(rows)}}
 
-document.addEventListener('change',async e=>{
+document.addEventListener('change',async e=>{S.histBreak=true;setTimeout(()=>{S.histBreak=false},700);
   const el=e.target,act=el.dataset.act,p=cur(),a=curA();
   if(el.id==='gps'){const t=el.value.trim();if(!t){p.visita.gps=null;await saveProc();setGpsStatus('');return}if(!parseGpsTxt(t)){setGpsStatus('Não reconheço estas coordenadas. Aceito, por exemplo: 41.1579, -8.6291 · 41°09\'28"N 8°37\'45"W · ou um link do Google Maps / Apple Maps.');return}await gpsSet(p,t);return}
   if(act==='rTk'||act==='rTkB'){const r=ensureRel(p);r[el.dataset.k]=el.checked;await saveProc();S.scrollTop=window.scrollY;render();return}
