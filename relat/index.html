@@ -140,7 +140,11 @@ table.pg{width:100%;border-collapse:collapse;table-layout:fixed}table.pg td{bord
 .aibox{border:1px dashed #8a8a8a;border-radius:10px;padding:10px;margin:12px 0;background:#fafafa}.aiap{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:3px 0;font-size:13px}
 .rvbar{position:fixed;left:0;right:0;bottom:0;z-index:900;display:flex;gap:8px;align-items:center;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#fff8e1;border-top:2px solid #e0a800;box-shadow:0 -2px 10px rgba(0,0,0,.12)}
 body:has(.rvbar){padding-bottom:70px}
-.consx>*:first-child{flex:1}</style>
+.consx>*:first-child{flex:1}.fz{border-left:4px solid;border-radius:8px;padding:6px 8px 8px;margin:6px 0}.fz .fzh{font-size:12px;font-weight:600;margin-bottom:4px}.fz textarea,.fz input{margin-top:0}
+.fz-g{border-color:#00B050;background:#EEF9F1}.fz-y{border-color:#E0B000;background:#FFF8D6}.fz-b{border-color:#BF8F00;background:#FBF1E2}.fz .tks{margin:0}.fz .cmpbox{margin-top:6px}
+.fzr{margin-top:4px}.fzt{font-weight:700;margin:12px 0 2px;font-size:14px;color:#444}
+.fzleg{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:11px;margin:6px 0 8px}.fzleg>span[class^=fz-]{border-left:4px solid;border-radius:6px;padding:2px 6px}
+</style>
 </head>
 <body>
 <div id="top"><div id="hdr"></div><nav id="steps"></nav><div id="sub"></div></div>
@@ -729,7 +733,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.14.1';const VERSION_DATA='2026-11-21';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.15.0';const VERSION_DATA='2026-11-21';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1497,24 +1501,32 @@ const GABS_R=[['proficis','Proficis'],['peritava','Peritava'],['pfk','pfk'],['ni
 const AMB_GAB={institucional:['proficis','nid'],particular:['peritava','pfk']};
 const QUAL_R=['Pelo Tribunal','Pela Parte 1','Pela Parte 2'];
 // frases comuns de articulação (editáveis por processo) e listas de opções cumulativas
-const CONSEQ_INTRO='Sob pena de outras considerações que possam vir a suceder na sequência desta análise ou subsequentes trabalhos de reparação, as situações agora constatadas, configuram:';
+const CONSEQ_INTRO='Sem prejuízo de outras considerações subsequentes a esta análise ou em fase de intervenção curativa, o que se constata nesta fase, configura:';
+const CONSEQ_INTRO_OLD=['Sob pena de outras considerações que possam vir a suceder na sequência desta análise ou subsequentes trabalhos de reparação, as situações agora constatadas, configuram:'];
+// textos introdutórios por defeito (verde no modelo): sem «:» no fim, continuam na mesma frase o texto livre que se segue
+const OBJ_INTRO='Em função do que é solicitado, o presente relatório pretende';
+const DECURSO_INTRO='Para efeitos de análise e caraterização, foram percorridos';
+const DECURSO_DEF='os locais onde se manifestam as situações em análise.';
+const CTX_INTRO='Trata-se de';
+const CAUSAS_INTRO='Tendo em atenção a configuração das situações e os locais onde se manifestam, interpreta-se que:';
+const CONSEQ_REN={'Queda de revestimentos ou artefactos':'Risco de queda de revestimentos ou artefactos sobre os utilizadores do espaço','Perigo de escorregamento':'Perigo de circulação com escorregamento'};
 const CONSEQ_R=[/* saúde */'Insalubridade','Afetação das condições de salubridade',
-  /* segurança */'Insegurança estrutural','Afetação das condições estruturais','Risco de queda de materiais','Queda de revestimentos ou artefactos','Perigo de escorregamento','Risco elétrico (contacto de água com a instalação elétrica)','Risco de fugas ou roturas nas redes prediais (água, esgotos, gás)','Insegurança à intrusão','Insegurança ao incêndio',
+  /* segurança */'Insegurança estrutural','Afetação das condições estruturais','Risco de queda de materiais','Risco de queda de revestimentos ou artefactos sobre os utilizadores do espaço','Perigo de circulação com escorregamento','Risco elétrico (contacto de água com a instalação elétrica)','Risco de fugas ou roturas nas redes prediais (água, esgotos, gás)','Insegurança à intrusão','Insegurança ao incêndio',
   /* uso e conforto */'Afetação das condições de uso normal','Impossibilidade de uso, em condições de normalidade','Afetação da circulação e da acessibilidade','Afetação do conforto térmico','Afetação do conforto acústico','Perda de estanquidade (entrada de água ou ar)','Aumento dos consumos de energia',
   /* danos e valor */'Danificação de recheio','Dano elétrico (instalação e equipamentos)','Afetação de frações ou espaços contíguos','Degradação precoce de materiais e sistemas','Deterioração física por causas não decorrentes do uso normal','Agravamento e propagação das anomalias, se não houver intervenção','Afetação estética (aspeto e imagem)','Desvalorização do imóvel',
   'Outros prejuízos'];
 // lista completa = tópicos da app + os que o utilizador acrescentou (Definições, para todos os processos) + «Outros prejuízos» no fim
 const conseqList=()=>[...CONSEQ_R.filter(x=>x!=='Outros prejuízos'),...(settings.conseqExtra||[]).filter(x=>!CONSEQ_R.includes(x)),'Outros prejuízos'];
-const PASSOS_INTRO='Sem prejuízo de outras recomendações que venham a decorrer de constatações subsequentes, em função do que se percebe nesta fase, sugere-se:';
+const PASSOS_INTRO='Sem prejuízo de outras recomendações que venham a decorrer de constatações subsequentes, nesta fase, sugere-se:';
 const RESUMO_INTRO='De acordo com a análise específica, temos:';
 // ordem dos quadros do «Resumo de análise»: quantidade · tipo · relevância (+ GUT) · gravidade · urgência · local
 const RESUMO_ORD=['qtd','tipo','flash','gut','cons','urg','hier'];
-const RECURSOS_INTRO='com recurso a:';
+const RECURSOS_INTRO='A inspeção foi realizada com recurso a:';
 const RECURSOS_R=['Análise visual e sensitiva','Levantamento fotográfico','Levantamento de medidas e dimensões','Termografia','Humidímetro','Câmara 360°','Drone','Endoscópio (câmara de inspeção)','Fissurómetro','Nível e/ou prumo','Escada / meios de acesso','Outros'];
 // estado do tempo no dia de cada visita (opções cumulativas + texto complementar opcional)
 const TEMPO_R=['Céu limpo / sol','Céu parcialmente nublado','Céu nublado','Chuva fraca','Chuva intensa','Vento forte','Nevoeiro','Neve ou geada','Temperatura elevada','Temperatura baixa','Choveu nos dias anteriores'];
 const tempoFrase=(o,txt)=>{const L=TEMPO_R.filter(k=>o?.[k]).map((k,i)=>i?k.charAt(0).toLowerCase()+k.slice(1):k);return L.length?L.join(', ')+'.':''};
-const tempoUI=(o,txt,vi)=>`<div class="tempo"><label>Estado do tempo${vi<0?' (1.ª visita)':''} <span class="muted">(pode marcar vários)</span></label><div class="tks">${TEMPO_R.map(k=>tickBox('',!!o?.[k],k,`data-act="rTempo" data-v="${vi}" data-k="${esc(k)}"`)).join('')}</div><div class="cmpbox"><div class="cmphd">💬 Estado do tempo — texto complementar (opcional)</div><div class="muted" style="font-size:12px">Comentário às opções marcadas (ex.: temperatura, humidade do ar, chuva nos dias anteriores). Se ficar vazio, não sai nada.</div><textarea data-bind="${vi<0?'r.tempoTxt':`vx.${vi}.tempoTxt`}" rows="2">${esc(txt||'')}</textarea></div></div>`;
+const tempoUI=(o,txt,vi)=>`<div class="tempo fz fz-y"><div class="fzh">🟨 Estado do tempo${vi<0?' (1.ª visita)':''} <span class="muted">(pode marcar vários) — sai «O estado meteorológico era: …»</span></div><div class="tks">${TEMPO_R.map(k=>tickBox('',!!o?.[k],k,`data-act="rTempo" data-v="${vi}" data-k="${esc(k)}"`)).join('')}</div><div class="cmpbox"><div class="cmphd">💬 Estado do tempo — texto complementar (opcional)</div><div class="muted" style="font-size:12px">Comentário às opções marcadas (ex.: temperatura, humidade do ar, chuva nos dias anteriores). Se ficar vazio, não sai nada.</div><textarea data-bind="${vi<0?'r.tempoTxt':`vx.${vi}.tempoTxt`}" rows="2">${esc(txt||'')}</textarea></div></div>`;
 const ANEXT_R=['Caderneta predial','Certidão de registo predial','Planta','Lista de assuntos','Outros'];
 const DOCS_R=['Lista de quesitos','Relatório de situações','Cadernetas prediais','Certidões de registo','Levantamento topográfico','Plantas','Projetos','Caderno de encargos','Lista de trabalhos a realizar','Orçamento','Lista de alterações','Lista de queixas','Conjunto de fotos','Outros'];
 const ANEX_R=['Plantas','Medições e orçamento','Análise de anomalias','Levantamento topográfico','Lista de trabalhos a realizar','Outros elementos de base'];
@@ -1549,7 +1561,7 @@ Não é pressuposto deste trabalho:
 - realizar análise de projeto ou averiguar a legalidade das edificações, em termos de uso ou licenciamento;
 - atestar sobre a qualidade ambiental.`;
 const MESES_R=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
-function ensureRel(p){const r=p.rel=p.rel||{};const d={ambito:'institucional',modo:'singular',gab:'proficis',peritos:[],procJud:'',entidade:'',funcao:'Peritagem',contexto:'',parte1:'',parte2:'',objeto:'',versao:'1.00',h1:'',h3:'',h4a:'',h4b:'',despacho:'',objIntro:'De acordo com o solicitado, o relatório pretende:',objetivo:'',capa:'fotosLoc',quesitos:[],docs:{},docsOutros:'',docsCom:'',hora:'',interv:'',decurso:'',constrang:'',nota:'',incReservas:true,incAmbiente:true,reservas:'',ambiente:'',unan:true,discord:'',dataEnc:'',anexos:{},anexosOutros:'',incComp:true,conseqComp:'',tempo:{},tempoTxt:'',visitas:[],recursos:{},recursosOutros:'',recursosIntro:RECURSOS_INTRO,conseq:{},conseqOutros:'',conseqTxt:'',conseqIntro:CONSEQ_INTRO,causasG:'',passosIntro:PASSOS_INTRO,resumoIntro:RESUMO_INTRO,outrasTxt:''};
+function ensureRel(p){const r=p.rel=p.rel||{};const d={ambito:'institucional',modo:'singular',gab:'proficis',peritos:[],procJud:'',entidade:'',funcao:'Peritagem',contexto:'',parte1:'',parte2:'',objeto:'',versao:'1.00',h1:'',h3:'',h4a:'',h4b:'',despacho:'',objIntro:OBJ_INTRO,objetivo:'',capa:'fotosLoc',quesitos:[],docs:{},docsOutros:'',docsCom:'',hora:'',interv:'',decurso:'',constrang:'',nota:'',incReservas:true,incAmbiente:true,reservas:'',ambiente:'',unan:true,discord:'',dataEnc:'',anexos:{},anexosOutros:'',incComp:true,conseqComp:'',tempo:{},tempoTxt:'',visitas:[],recursos:{},recursosOutros:'',recursosIntro:RECURSOS_INTRO,conseq:{},conseqOutros:'',conseqTxt:'',conseqIntro:CONSEQ_INTRO,causasG:'',passosIntro:PASSOS_INTRO,resumoIntro:RESUMO_INTRO,outrasTxt:''};
   if(p.printStats===undefined)p.printStats=true;
   if(r.despacho==='De acordo com o despacho:')r.despacho='';if(r.objIntro==='Constitui objeto da perícia determinar:'||r.objIntro==='Pretende-se:')r.objIntro='De acordo com o solicitado, pretende-se:';
   if(r.docs&&r.docs['Outros elementos de base']){r.docs['Outros']=true;delete r.docs['Outros elementos de base']}
@@ -1558,6 +1570,16 @@ function ensureRel(p){const r=p.rel=p.rel||{};const d={ambito:'institucional',mo
   if(r.recursos)for(const k of Object.keys(r.recursos)){const n=k.replace(/^Utilização de /,'').replace(/^./,c=>c.toUpperCase()).replace('Câmara 360°','Câmara 360°').replace('Endoscópio (câmara de inspeção)','Endoscópio (câmara de inspeção)');if(n!==k){if(r.recursos[k])r.recursos[n]=true;delete r.recursos[k]}}
   if(String(r.conseqTxt||'').trim()){r.conseqComp=[String(r.conseqTxt).trim(),String(r.conseqComp||'').trim()].filter(Boolean).join('\n');r.conseqTxt=''}
   if(r.recursosIntro==='Na inspeção, foram utilizados os seguintes recursos:')r.recursosIntro='com recurso a:';if(r.objIntro==='De acordo com o solicitado, pretende-se:')r.objIntro='De acordo com o solicitado, o relatório pretende:';
+  // modelo «Per_Anomalias_MM_2611_01» (fases verde/amarelo/castanho): novos textos introdutórios
+  if(r.objIntro==='De acordo com o solicitado, o relatório pretende:')r.objIntro=OBJ_INTRO;
+  if(r.recursosIntro==='com recurso a:')r.recursosIntro=RECURSOS_INTRO;
+  if(CONSEQ_INTRO_OLD.includes(r.conseqIntro))r.conseqIntro=CONSEQ_INTRO;
+  if(r.passosIntro==='Sem prejuízo de outras recomendações que venham a decorrer de constatações subsequentes, em função do que se percebe nesta fase, sugere-se:')r.passosIntro=PASSOS_INTRO;
+  if(r.decursoIntro===undefined)r.decursoIntro=String(r.decurso||'').trim()?'':DECURSO_INTRO; // textos antigos já escritos como frase completa
+  if(r.ctxIntro===undefined)r.ctxIntro=String(r.ctxNota||'').trim()?'':CTX_INTRO;
+  if(r.causasIntro===undefined)r.causasIntro=String(r.causasG||'').trim()?'':CAUSAS_INTRO;
+  if(r.conseq)for(const [a,b] of Object.entries(CONSEQ_REN))if(a in r.conseq){if(r.conseq[a])r.conseq[b]=true;delete r.conseq[a]}
+  if(String(r.docsOutros||'').trim()&&r.docs)r.docs['Outros']=true;
   for(const k in d)if(r[k]===undefined)r[k]=clone(d[k]);r.quesitos.forEach(q=>{if(!q.id)q.id=uid();if(!q.rp)q.rp={}});return r}
 // nome do ficheiro: <N_Ref>_Proc_<processo>-Relatorio_<versão>.docx  (ex.: Trib_2630_Proc_1407_25_6_T8CBR-Relatorio_1.01VF.docx)
 function relFileName(p){const r=ensureRel(p);const cl=t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
@@ -1732,6 +1754,12 @@ function represR(r,pe){const q=pe.qual||'';if(/tribunal/i.test(q))return 'Perito
 const qCode=i=>`1.${String(i+1).padStart(3,'0')}`;
 const mesAno=()=>{const d=new Date();return `${MESES_R[d.getMonth()]} de ${d.getFullYear()}`};
 const RL=(k,lbl,val,ph='')=>`<label>${esc(lbl)}</label><input data-bind="r.${k}" value="${esc(val||'')}" placeholder="${esc(ph)}">`;
+// fases do preenchimento, com as cores do modelo: verde = texto introdutório (editável) · amarelo = classificação por ticks · castanho = texto livre
+const ZG=(k,val,def,lbl='Texto introdutório')=>`<div class="fz fz-g"><div class="fzh">🟩 ${esc(lbl)} <span class="muted">(por defeito; pode alterar)</span></div><textarea data-bind="r.${k}" rows="${String(val??def).length>60?2:1}" placeholder="${esc(def)}">${esc(val??'')}</textarea>${val!==def&&def?`<button class="secondary mini fzr" data-act="rDefTxt" data-k="${k}" data-v="${esc(def)}">↺ repor</button>`:''}</div>`;
+const ZB=(k,val,lbl,rows=3,ph='',hint='')=>`<div class="fz fz-b"><div class="fzh">🟫 ${esc(lbl)}</div>${hint?`<div class="muted" style="font-size:11px">${hint}</div>`:''}<textarea data-bind="r.${k}" rows="${rows}" placeholder="${esc(ph)}">${esc(val||'')}</textarea></div>`;
+const ZY=(lbl,html)=>`<div class="fz fz-y"><div class="fzh">🟨 ${esc(lbl)}</div>${html}</div>`;
+const FZH=t=>`<div class="fzt">${esc(t)}</div>`;
+const FZLEG=`<div class="fzleg"><span class="fz-g">🟩 texto introdutório</span><span class="fz-y">🟨 classificação (ticks)</span><span class="fz-b">🟫 texto livre</span><span class="muted">— no Word, o texto livre continua a frase introdutória.</span></div>`;
 const RT=(k,lbl,val,rows=3,ph='')=>`${lbl?`<label>${esc(lbl)}</label>`:''}<textarea data-bind="r.${k}" rows="${rows}" placeholder="${esc(ph)}">${esc(val||'')}</textarea>`;
 const segR=(act,opts,cur)=>`<div class="seg">${opts.map(([k,t])=>`<button class="${cur===k?'on':''}" data-act="${act}" data-v="${k}">${esc(t)}</button>`).join('')}</div>`;
 function hdrDefaults(p){const r=p.rel;return {h1:`${r.funcao||'Peritagem'} - Relatório`,h3:r.objeto||p.designacao||'',h4a:r.procJud?`Proc. ${r.procJud}`:'',h4b:p.codigo?` - ${p.codigo}`:''}}
@@ -1754,21 +1782,23 @@ function relProcHTML(p){const r=ensureRel(p),col=isCol(r),part=isPart(r),hd=hdrD
     ${RL('versao','Versão do relatório',r.versao,'ex.: 1.01VF ou Draft00')}<p class="muted">Nome do ficheiro (e rodapé): <b>${esc(relFileName(p))}</b></p>`;
   const nq=r.quesitos.length;
   const QW=part?['queixa','queixas','Queixa']:['quesito','quesitos','Quesito'];
-  const t3=`${part?'<p class="muted">Particular: em princípio não há quesitos, mas uma lista de queixas sobre determinadas situações. O perito pode encontrar outras no decurso da inspeção (registe-as em Anomalias, origem P – Perito).</p>':''}${RL('objIntro','Frase de abertura (antes de 1.1)',r.objIntro,'De acordo com o solicitado, o relatório pretende:')}${RT('objetivo','Objetivo do relatório — conta o problema (sai antes de 1.1)',r.objetivo,2,'Ex.: Analisar um problema de infiltração de água líquida, através do teto de uma fração destinada a escritórios.')}
-    <div class="rows">${r.quesitos.map((q,i)=>`<div class="qbox"><div class="qhd"><b>${qCode(i)}</b><span class="grow"></span><button class="secondary mini" data-act="rMvQ" data-i="${i}" data-d="-1" ${i?'':'disabled'}>▲</button><button class="secondary mini" data-act="rMvQ" data-i="${i}" data-d="1" ${i<nq-1?'':'disabled'}>▼</button><button class="del" data-act="rDelQ" data-i="${i}">✕</button></div><input data-bind="q.${i}.autor" value="${esc(q.autor||'')}" placeholder="Autor da questão (vazio = ${part?'pelo solicitante':'sem autor'}); ex.: pelo Autor, pela Ré, pelo Tribunal" style="margin-bottom:4px"><textarea data-bind="q.${i}.txt" rows="3">${esc(q.txt||'')}</textarea></div>`).join('')||`<p class="muted">Ainda sem ${QW[1]}.</p>`}</div>
+  const t3=`${part?'<p class="muted">Particular: em princípio não há quesitos, mas uma lista de queixas sobre determinadas situações. O perito pode encontrar outras no decurso da inspeção (registe-as em Anomalias, origem P – Perito).</p>':''}${ZG('objIntro',r.objIntro,OBJ_INTRO)}${ZB('objetivo',r.objetivo,'Objetivo — continua a frase («…pretende analisar…»)',2,'Ex.: analisar um conjunto de anomalias que se manifestam numa fração destinada a escritórios, referidas nos seguintes termos:')}
+    ${FZH(part?'1.1 Pelo solicitante':'Questões / matéria a responder')}<div class="muted" style="font-size:11px;margin:-2px 0 4px">${part?'🟫 Cada queixa como foi apresentada (sai numerada «1- …»). Sem queixas escritas, sai a lista das situações alegadas.':''}</div><div class="rows">${r.quesitos.map((q,i)=>`<div class="qbox"><div class="qhd"><b>${qCode(i)}</b><span class="grow"></span><button class="secondary mini" data-act="rMvQ" data-i="${i}" data-d="-1" ${i?'':'disabled'}>▲</button><button class="secondary mini" data-act="rMvQ" data-i="${i}" data-d="1" ${i<nq-1?'':'disabled'}>▼</button><button class="del" data-act="rDelQ" data-i="${i}">✕</button></div><input data-bind="q.${i}.autor" value="${esc(q.autor||'')}" placeholder="Autor da questão (vazio = ${part?'pelo solicitante':'sem autor'}); ex.: pelo Autor, pela Ré, pelo Tribunal" style="margin-bottom:4px"><textarea data-bind="q.${i}.txt" rows="3">${esc(q.txt||'')}</textarea></div>`).join('')||`<p class="muted">Ainda sem ${QW[1]}.</p>`}</div>
     <div class="btns"><button class="secondary mini" data-act="rAddQ">+ ${QW[2]}</button><label class="btn secondary mini">📄 Do Word<input type="file" accept=".docx" data-act="rImpQ" data-k="docx" hidden></label><label class="btn secondary mini">📊 Do Excel<input type="file" accept=".xlsx" data-act="rImpQ" data-k="xlsx" hidden></label><button class="secondary mini" data-act="rPasteQ">📋 Colar texto</button></div>${qModHTML()}
-    <p class="muted">Word: cada alínea (a), b)…, 1., 2.…) ou parágrafo passa a um quesito. Excel: 1.ª coluna da 1.ª folha (ignora a linha de títulos se disser «quesito»). Pode editar e reordenar depois.</p>`;
+    <p class="muted">Word: cada alínea (a), b)…, 1., 2.…) ou parágrafo passa a um quesito. Excel: 1.ª coluna da 1.ª folha (ignora a linha de títulos se disser «quesito»). Pode editar e reordenar depois.</p>${part?FZH('1.2 Por outros')+ZB('outrasTxt',r.outrasTxt,'Texto quando não há situações constatadas pelo perito (as que registar com origem P saem aqui, em lista)',2,'Nada a acrescentar.'):''}`;
   const nd=DOCS_R.filter(d=>r.docs[d]).length;
-  const t4=`<div class="tks col">${DOCS_R.map(d=>tickBox('',!!r.docs[d],d,`data-act="rDoc" data-k="${esc(d)}"`)).join('')}</div>${RT('docsOutros','Outros elementos',r.docsOutros,2,'-')}${RT('docsCom','Comentários',r.docsCom,2)}`;
-  const t5=`${RL('hora','Hora (1.ª visita)',r.hora,'ex.: 14:30')}<p class="muted">A data e «Compareceram» da 1.ª visita vêm de «2 · Vistoria». Uma peritagem pode ter várias visitas: acrescente as seguintes aqui.</p>${tempoUI(r.tempo,r.tempoTxt,-1)}
+  const t4=`${FZH('2.1 Lista de documentos fornecidos')}${ZY('Documentos (cumulativos)',`<div class="tks col">${DOCS_R.map(d=>tickBox('',!!r.docs[d],d,`data-act="rDoc" data-k="${esc(d)}"`)).join('')}</div>${r.docs['Outros']||String(r.docsOutros||'').trim()?ZB('docsOutros',r.docsOutros,'Outros: (um por linha)',2,'Ex.: Relatório de HST da empresa…'):''}`)}${FZH('2.2 Outros elementos ou fundamentos')}${ZB('docsCom',r.docsCom,'Texto livre',2,'Nada a considerar.')}`;
+  const t5=`${FZH('3.1 Data e presenças')}${RL('hora','Hora (1.ª visita)',r.hora,'ex.: 14:30')}<p class="muted">A data e «Compareceram e acompanharam» da 1.ª visita vêm de «2 · Vistoria». Uma peritagem pode ter várias visitas: acrescente as seguintes aqui.</p>${tempoUI(r.tempo,r.tempoTxt,-1)}
     <label>Outras visitas</label><div class="rows">${(r.visitas||[]).map((v,i)=>`<div class="qbox"><div class="qhd"><b>${i+2}.ª visita</b><span class="grow"></span><button class="del" data-act="rDelVis" data-i="${i}">✕</button></div><div class="grid2"><div><label>Data</label><input data-bind="vx.${i}.data" value="${esc(v.data||'')}" placeholder="dd/mm/aaaa"></div><div><label>Hora</label><input data-bind="vx.${i}.hora" value="${esc(v.hora||'')}" placeholder="ex.: 10:00"></div></div><label>Compareceram</label><textarea data-bind="vx.${i}.presencas" rows="2">${esc(v.presencas||'')}</textarea><label>Notas desta visita (opcional)</label><textarea data-bind="vx.${i}.obs" rows="2">${esc(v.obs||'')}</textarea>${tempoUI(v.tempo,v.tempoTxt,i)}</div>`).join('')||'<p class="muted">Só a 1.ª visita.</p>'}</div><div class="btns"><button class="secondary mini" data-act="rAddVis">+ Visita</button></div>
-${RT('interv','Outros intervenientes e suas funções',r.interv,2,'Não houve.')}${RT('decurso','Decurso da inspeção',r.decurso,3,'Com o acompanhamento dos presentes, foi visitado o interior e exterior do edifício, para analisar as situações que vinham definidas.')}    <label>Recursos utilizados na inspeção <span class="muted">(cumulativos)</span></label>${RL('recursosIntro','Ligação ao decurso (fim da frase do 3.3)',r.recursosIntro,RECURSOS_INTRO)}<div class="tks col">${RECURSOS_R.map(d=>tickBox('',!!r.recursos?.[d],d,`data-act="rRec" data-k="${esc(d)}"`)).join('')}</div>${r.recursos?.Outros?RT('recursosOutros','Outros recursos (um por linha)',r.recursosOutros,2):''}${RT('constrang','Constrangimentos, impedimentos ou dúvidas relevantes',r.constrang,2,'Nada a considerar.')}`;
+${FZH('3.2 Outros intervenientes e suas funções')}${ZB('interv',r.interv,'Texto livre',2,'Não houve.')}
+${FZH('3.3 Forma de inspeção')}${ZG('recursosIntro',r.recursosIntro,RECURSOS_INTRO)}${ZY('Meios utilizados (cumulativos)',`<div class="tks col">${RECURSOS_R.map(d=>tickBox('',!!r.recursos?.[d],d,`data-act="rRec" data-k="${esc(d)}"`)).join('')}</div>${r.recursos?.Outros?ZB('recursosOutros',r.recursosOutros,'Outros meios (um por linha)',2):''}`)}${ZG('decursoIntro',r.decursoIntro,DECURSO_INTRO)}${ZB('decurso',r.decurso,'Percurso — continua a frase («…foram percorridos…»)',3,DECURSO_DEF)}
+${FZH('3.4 Constrangimentos, impedimentos ou dúvidas relevantes')}${ZB('constrang',r.constrang,'Texto livre',2,'Nada a considerar.')}`;
   return `${blk('R · Relatório','Tipo de peritagem, capa, objeto, documentos e visita')}
   ${sec('rp1','R1 · Tipo de relatório e gabinete',t1,{cnt:pill((r.ambito==='particular'?'Particular':'Institucional')+' · '+(col?'Colegial':'Singular')+' · '+(GABS_R.find(g=>g[0]===r.gab)||['',''])[1].split(' ')[0])})}
   ${sec('rp2','R2 · Capa — identificação',t2,{cnt:falta([r.entidade,r.parte1].filter(x=>!String(x||'').trim()).length),def:false})}
-  ${sec('rp3','R3 · Objeto da perícia — '+QW[1],t3,{cnt:pill(nq+' '+(nq===1?QW[0]:QW[1]),nq?'ok':'warn'),def:false})}
-  ${sec('rp4','R4 · Elementos de apoio (documentos fornecidos)',t4,{cnt:pill(nd+' ✓'),def:false})}
-  ${sec('rp5','R5 · Da visita ao local',t5,{def:false})}`}
+  ${FZLEG}${sec('rp3',(part?'R3 · 1. Objeto de análise':'R3 · Objeto da perícia — '+QW[1]),t3,{cnt:pill(nq+' '+(nq===1?QW[0]:QW[1]),nq?'ok':'warn'),def:false})}
+  ${sec('rp4','R4 · 2. Elementos de apoio e fundamentação',t4,{cnt:pill(nd+' ✓'),def:false})}
+  ${sec('rp5','R5 · 3. Da visita ao local',t5,{def:false})}`}
 // ---------- Separador Relatório ----------
 function relRelHTML(p){const r=ensureRel(p),col=isCol(r);
   const qs=r.quesitos.map((q,i)=>{const resp=col?`${r.peritos.map((pe,j)=>`<label>${esc(pe.nome||('Perito '+(j+1)))} <span class="muted">(${esc(pe.qual||'')})</span></label><textarea data-bind="qp.${i}.${j}" rows="3">${esc(q.rp?.[j]||'')}</textarea><div class="btns" style="margin-top:2px"><button class="secondary mini" data-act="rUseCons" data-i="${i}" data-j="${j}">⤵ Usar como consenso</button></div>`).join('')||'<p class="muted">Acrescente os peritos em Processo › R1.</p>'}<label>Resposta de consenso <span class="muted">(se preenchida, é a que sai no relatório)</span></label><textarea data-bind="q.${i}.resp" rows="3">${esc(q.resp||'')}</textarea>${rModHTML(i)}`:`<label>Resposta</label><textarea data-bind="q.${i}.resp" rows="4">${esc(q.resp||'')}</textarea>${rModHTML(i)}`;
@@ -1779,18 +1809,20 @@ function relRelHTML(p){const r=ensureRel(p),col=isCol(r);
   const anex=`<div class="tks col">${ANEX_R.map(d=>tickBox('',!!r.anexos[d],d,`data-act="rAnex" data-k="${esc(d)}"`)).join('')}</div>${RT('anexosOutros','Outros anexos (um por linha)',r.anexosOutros,2)}${anexFilesHTML(p)}`;
   const oldR=isPart(r)&&r.quesitos.some(q=>String(q.resp||'').trim()||Object.values(q.rp||{}).some(t=>String(t||'').trim()));
   return `${isPart(r)&&!oldR?'':sec('rr1',isPart(r)?'Apreciação das queixas — já não sai no relatório':'Resposta ao solicitado (quesitos)',(isPart(r)?'<p class="warn" style="margin-top:0">⚠ Nos relatórios particulares este capítulo deixou de sair (as situações já são comentadas na Análise específica). Passe estes textos para o comentário da situação ou para a Apreciação geral e apague-os aqui.</p>':'')+qs,{cnt:pill(`${nr}/${r.quesitos.length}`,nr&&nr===r.quesitos.length?'ok':'warn')})}
-  ${sec('rrC',isPart(r)?'Contextualizando e outras questões':'Nota de contextualização (antes da análise específica)',RT('ctxNota',isPart(r)?'Contextualizando — sai em «Apreciação geral»':'Sai em «Situações a analisar», antes dos tópicos e da análise específica',r.ctxNota,5,'Enquadramento do imóvel, do pedido e das circunstâncias relevantes para a análise…')+(isPart(r)?RT('outrasTxt','«1.2 Outras questões ou situações» — texto quando o perito não acrescentou situações',r.outrasTxt,2,'Nada a acrescentar.'):''),{cnt:String(r.ctxNota||'').trim()?pill('✓','ok'):pill('por preencher','warn'),def:false})}
-  ${sec('rrA','Apreciação geral (contextualizando · causas · consequências · conclusões)',`<p class="muted">Sai como capítulo próprio, a seguir ao «Resumo de análise». Só saem os subtítulos preenchidos.${isPart(r)?' «Contextualizando» é a nota de contextualização (acima).':''}</p>
-    ${RT('causasG','Possíveis causas',r.causasG,4,'Interpretação das causas prováveis, a partir dos locais, configuração e alinhamentos das anomalias…')}
-    <label>Consequências — 1) marque os tópicos</label>
-    ${RL('conseqIntro','Frase de abertura da lista',r.conseqIntro,CONSEQ_INTRO)}
-    <div class="tks col">${conseqList().map(d=>(settings.conseqExtra||[]).includes(d)&&!CONSEQ_R.includes(d)?`<div class="row consx" style="gap:4px;align-items:center">${tickBox('',!!r.conseq?.[d],d,`data-act="rCons" data-k="${esc(d)}"`)}<button class="secondary mini" title="Retirar da lista (todos os processos)" data-act="consDel" data-k="${esc(d)}">✕</button></div>`:tickBox('',!!r.conseq?.[d],d,`data-act="rCons" data-k="${esc(d)}"`)).join('')}</div><div class="row" style="gap:6px;margin:4px 0 8px"><input id="consNew" placeholder="Acrescentar outra consequência à lista…" style="flex:1"><button class="secondary mini" data-act="consAdd">＋ Acrescentar</button></div><div class="muted" style="font-size:11px;margin-top:-4px">Fica na lista para todos os processos e já marcada neste.</div>${r.conseq?.['Outros prejuízos']?RT('conseqOutros','Outros prejuízos (um por linha)',r.conseqOutros,2):''}<div class="cmpbox"><div class="cmphd">💬 Consequências — 2) texto complementar</div><div class="muted" style="font-size:12px">Comentário aos tópicos marcados acima: desenvolve-os e acrescenta outras considerações. Sai no relatório logo a seguir à lista.</div>${RT('conseqComp','',r.conseqComp,5,'Ex.: Os danos são graves e exigem reparação urgente. A persistência da infiltração afeta as condições de salubridade dos gabinetes…')}</div>
-    ${tickBox('',r.incApr===true,'Incluir comentários e conclusões (texto livre)','data-act="rTkB" data-k="incApr"')}${r.incApr===true?RT('apreciacao','',r.apreciacao,6):''}<label>Documentos a juntar nesta apreciação (saem também em «Em anexo»)</label>${(r.anexF||[]).length?`<div class="tks col">${(r.anexF||[]).map((x,i)=>tickBox('',!!(r.aprDocs||{})[x.id],anexLbl(x,i),`data-act="rAprDoc" data-k="${x.id}"`)).join('')}</div>`:'<p class="muted">Ainda não há ficheiros juntos.</p>'}<div class="btns"><label class="btn secondary mini">📎 Juntar ficheiros<input type="file" multiple data-act="rAddAnexF" hidden></label></div>`,{cnt:(()=>{const n=[isPart(r)&&String(r.ctxNota||'').trim(),String(r.causasG||'').trim(),String(r.conseqTxt||'').trim()||conseqList().some(d=>r.conseq?.[d]),r.incApr===true&&String(r.apreciacao||'').trim()].filter(Boolean).length;return n?pill(n+' ✓','ok'):pill('vazia')})(),def:false})}
-  ${sec('rrP','Passos seguintes',`${tickBox('',r.incPassos!==false,'Incluir o capítulo «Passos seguintes» (a seguir à resposta ao solicitado)','data-act="rTk" data-k="incPassos"')}${RL('passosIntro','Frase de abertura',r.passosIntro,PASSOS_INTRO)}${RT('passos','',r.passos,5,'Ex.: inspeções complementares, ensaios, reparações a acompanhar, nova vistoria…')}`,{cnt:r.incPassos===false?pill('não incluído'):String(r.passos||'').trim()?pill('✓','ok'):pill('por preencher','warn'),def:false})}
+  ${isPart(r)?'':sec('rrC',isPart(r)?'Contextualizando e outras questões':'Nota de contextualização (antes da análise específica)',RT('ctxNota',isPart(r)?'Contextualizando — sai em «Apreciação geral»':'Sai em «Situações a analisar», antes dos tópicos e da análise específica',r.ctxNota,5,'Enquadramento do imóvel, do pedido e das circunstâncias relevantes para a análise…')+(isPart(r)?RT('outrasTxt','«1.2 Outras questões ou situações» — texto quando o perito não acrescentou situações',r.outrasTxt,2,'Nada a acrescentar.'):''),{cnt:String(r.ctxNota||'').trim()?pill('✓','ok'):pill('por preencher','warn'),def:false})}
   ${sec('rr2','Resumo de análise — nota',RL('resumoIntro','Frase de abertura',r.resumoIntro,RESUMO_INTRO)+RT('nota','Nota (sai a seguir aos gráficos)',r.nota,3)+'<p class="muted">Os quadros e gráficos vêm do «Resumo estatístico» (abaixo). Sem estatística e sem nota, a secção não sai no relatório.</p>',{def:false})}
+  ${sec('rrA',(isPart(r)?'6. ':'')+'Apreciação geral (contextualização · causas · consequências)',`<p class="muted">Sai como capítulo próprio, a seguir ao «Resumo de análise». Só saem os subtítulos preenchidos.</p>${FZLEG}
+    ${isPart(r)?FZH('Contextualização')+ZG('ctxIntro',r.ctxIntro,CTX_INTRO)+ZB('ctxNota',r.ctxNota,'Texto livre — continua a frase («Trata-se de…»)',5,'um edifício de vários pisos, cuja morfologia…'):''}
+    ${FZH('Possíveis causas')}${ZG('causasIntro',r.causasIntro,CAUSAS_INTRO)}${ZB('causasG',r.causasG,'Texto livre',4,'- Há anomalias de fissuração entre elementos estruturais…')}
+    ${FZH('Consequências')}${ZG('conseqIntro',r.conseqIntro,CONSEQ_INTRO)}
+    ${ZY('Classificação (cumulativa) — sai em lista «- …;»',`<div class="tks col">${conseqList().map(d=>(settings.conseqExtra||[]).includes(d)&&!CONSEQ_R.includes(d)?`<div class="row consx" style="gap:4px;align-items:center">${tickBox('',!!r.conseq?.[d],d,`data-act="rCons" data-k="${esc(d)}"`)}<button class="secondary mini" title="Retirar da lista (todos os processos)" data-act="consDel" data-k="${esc(d)}">✕</button></div>`:tickBox('',!!r.conseq?.[d],d,`data-act="rCons" data-k="${esc(d)}"`)).join('')}</div><div class="row" style="gap:6px;margin:4px 0 8px"><input id="consNew" placeholder="Acrescentar outra consequência à lista…" style="flex:1"><button class="secondary mini" data-act="consAdd">＋ Acrescentar</button></div><div class="muted" style="font-size:11px;margin-top:-4px">Fica na lista para todos os processos e já marcada neste.</div>${r.conseq?.['Outros prejuízos']?ZB('conseqOutros',r.conseqOutros,'Outros prejuízos (um por linha)',2):''}`)}
+    ${ZB('conseqComp',r.conseqComp,'Texto complementar — sai a seguir à lista',5,'Os danos são graves e exigem reparação urgente…')}
+    ${FZH('Outras considerações')}${tickBox('',r.incApr===true,'Incluir comentários e conclusões (texto livre)','data-act="rTkB" data-k="incApr"')}${r.incApr===true?RT('apreciacao','',r.apreciacao,6):''}<label>Documentos a juntar nesta apreciação (saem também em «Em anexo»)</label>${(r.anexF||[]).length?`<div class="tks col">${(r.anexF||[]).map((x,i)=>tickBox('',!!(r.aprDocs||{})[x.id],anexLbl(x,i),`data-act="rAprDoc" data-k="${x.id}"`)).join('')}</div>`:'<p class="muted">Ainda não há ficheiros juntos.</p>'}<div class="btns"><label class="btn secondary mini">📎 Juntar ficheiros<input type="file" multiple data-act="rAddAnexF" hidden></label></div>`,{cnt:(()=>{const n=[isPart(r)&&String(r.ctxNota||'').trim(),String(r.causasG||'').trim(),String(r.conseqTxt||'').trim()||conseqList().some(d=>r.conseq?.[d]),r.incApr===true&&String(r.apreciacao||'').trim()].filter(Boolean).length;return n?pill(n+' ✓','ok'):pill('vazia')})(),def:false})}
+  ${sec('rrP','Passos seguintes',`${tickBox('',r.incPassos!==false,'Incluir o capítulo «Passos seguintes» (a seguir à resposta ao solicitado)','data-act="rTk" data-k="incPassos"')}${ZG('passosIntro',r.passosIntro,PASSOS_INTRO)}${ZB('passos',r.passos,'Texto livre',5,' - Remoção do sistema de revestimento exterior do terraço…')}`,{cnt:r.incPassos===false?pill('não incluído'):String(r.passos||'').trim()?pill('✓','ok'):pill('por preencher','warn'),def:false})}
   ${sec('rr3','Reservas e ambiente',`${tickBox('',r.incReservas!==false,'Incluir «Âmbito de utilização – reservas de análise»','data-act="rTk" data-k="incReservas"')}${RT('reservas','',r.reservas||RESERVAS_R,6)}${tickBox('',r.incAmbiente!==false,'Incluir «Ambiente, sustentabilidade e conformidade de licenciamento»','data-act="rTk" data-k="incAmbiente"')}${RT('ambiente','',r.ambiente||AMBIENTE_R,6)}`,{def:false})}
   ${sec('rr4','Termo de encerramento',termo,{cnt:col?pill(r.unan?'unanimidade':'discordâncias',r.unan?'ok':'warn'):'',def:false})}
   ${sec('rr5','Em anexo',anex,{cnt:pill(ANEX_R.filter(d=>r.anexos[d]).length+(r.anexF||[]).length+' ✓'),def:false})}
+  
   ${aiReady()?(()=>{const A=p.anomalias.filter(x=>relF(x).length),D=A.filter(x=>x.ia);return `<div class="card"><b>🤖 Apoio de análise das fotografias</b> ${pill(D.length+'/'+A.length,D.length===A.length&&A.length?'ok':'')}<p class="muted" style="font-size:12px">Sugestões por situação (validar sempre). Abra cada ficha para ver e aplicar.</p>${(()=>{const G=p.anomalias.reduce((t,x)=>t+(x.iaGasto||0),0),N=p.anomalias.reduce((t,x)=>t+(x.iaN||0),0);return N?`<p style="font-size:13px;margin:4px 0">💶 Gasto neste processo: <b>${aiUSD(G)}</b> em ${N} análise(s) (estimativa a partir dos tokens que o serviço indica; o valor faturado vê-se na consola Anthropic).</p>`:''})()}${D.map(x=>`<div class="rvit"><div class="rvhd"><b>${anCode(p,x)}</b><span class="muted">${esc([x.local||x.zona,x.elemento].filter(Boolean).join(' · '))}</span></div><div style="font-size:13px">${esc((x.ia.tipos||[]).join(', ')||'—')}${x.ia.gravidade?' · '+esc(x.ia.gravidade):''}${x.ia.urgencia?' · urgência '+esc(x.ia.urgencia):''}</div><div class="muted" style="font-size:12px">${esc(x.ia.resumo.slice(0,160))}${x.ia.resumo.length>160?'…':''}</div></div>`).join('')}${A.length>D.length?`<div class="btns"><button class="secondary" data-act="aiAll">🤖 Analisar as ${A.length-D.length} situação(ões) em falta</button></div>`:''}</div>`})():''}
   <div id="rvCard">${reviewHTML(p)}</div>
   ${(()=>{const w=relCheck(p);return `<div class="card"><b>Verificação antes de gerar</b>${w.length?`<ul class="muted" style="margin:6px 0 0 18px;padding:0">${w.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'<p class="muted">✓ Tudo preenchido.</p>'}</div>`})()}
@@ -1818,6 +1850,10 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
   const P=(runs,o={})=>`<w:p><w:pPr><w:pStyle w:val="${o.st||'1-periTextogeral'}"/>${o.keep?'<w:keepNext/>':''}${o.bdrT?'<w:pBdr><w:top w:val="single" w:sz="6" w:space="1" w:color="808080"/></w:pBdr>':''}${o.sp!=null?`<w:spacing w:before="${o.sp[0]}" w:after="${o.sp[1]}"/>`:''}${o.ind?`<w:ind w:left="${o.ind}"/>`:''}${o.jc?`<w:jc w:val="${o.jc}"/>`:''}</w:pPr>${runs}</w:p>`;
   const T=(t,o={})=>String(t??'').split('\n').map(l=>P(R(l,o),o)).join('');
   const E=()=>P('');
+  // texto introdutório (verde) + texto livre (castanho): se a introdução acabar em «:» fica em parágrafo próprio; senão continua na mesma frase
+  const GT=(intro,txt,o={jc:'both'})=>{intro=String(intro||'').trim();txt=String(txt||'').trim();if(!txt)return '';if(!intro)return T(txt,o);
+    if(/:$/.test(intro))return T(intro,o)+T(txt,o);const L=txt.split('\n');let f=L[0].trim();if(/^[A-ZÁÉÍÓÚÂÊÔÃÕÇ][a-záéíóúâêôãõçà]/.test(f))f=f.charAt(0).toLowerCase()+f.slice(1);
+    return T([intro+' '+f,...L.slice(1)].join('\n'),o)};
   const toc=[];let n1=0,n2=0;const BMS=[];let bmi=100;
   const BL='<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/></w:pPr></w:p>';
   const HIND='<w:tabs><w:tab w:val="left" w:pos="567"/></w:tabs><w:ind w:left="0" w:firstLine="0"/>'; // títulos de nível 1–3 sem avanço (regra)
@@ -1865,44 +1901,40 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
   const comp=part||r.incComp===false?'':(col?COMP_COLEGIAL:(String(settings.compSingular||'').trim()||COMP_SINGULAR));
   if(!part){body+=H1('Compromisso de honra')+E()+(comp?T(comp,{jc:'both'}):T('[Texto do compromisso de honra — preencha em Definições › Relatório]',{i:true,color:'C00000'}))+E()}
   // 1 — objeto: primeiro conta-se o problema (frase de abertura + objetivo), depois as questões e os seus autores (1.1, 1.2…)
-  body+=H1('Objeto da perícia')+E();
-  {const ob=String(r.objetivo||'').trim()||String(r.contexto||'').trim();const oi=String(r.objIntro||'').trim();if(oi||ob)body+=(oi?T(oi,{jc:'both'}):'')+(ob?T(ob,{jc:'both'}):'')+E()}
-  if(part)body+='\u0001PSIT\u0001'; // particular: 1.1 situações colocadas pelo solicitante · 1.2 outras questões (preenchido mais abaixo)
+  // corpo das situações (Regi) preparado antes, para o ponto 1 do particular poder listar as situações por ordem
+  const o=await docOpts(p,'texto','.docx');
+  const A=buildDocx({...o,bodyOnly:true,withIndex:false,stats:null,withResumo:false,withVistoria:false,mapImg:null,onePerPage:false,layout:'texto'});
+  const topLine=x=>{const z=zonaTxt(x);return P(R(`${x._code}  –  ${[x.ref?'Item '+x.ref:'',z,x.elemento].filter(Boolean).join(' · ')}`),{sp:[20,20]})};
+  body+=H1(part?'Objeto de análise':'Objeto da perícia')+E();
+  {const ob=String(r.objetivo||'').trim()||String(r.contexto||'').trim();if(ob)body+=GT(r.objIntro,ob)+E()}
+  if(part){const AL=o.anoms.filter(x=>x.origem!=='local'),OU=o.anoms.filter(x=>x.origem==='local'),QT=r.quesitos.map(q=>String(q.txt||'').trim()).filter(Boolean);
+    // «Pelo solicitante»: as questões tal como foram escritas (numeradas «1- …»); sem elas, a lista das situações alegadas
+    const ps=H2('Pelo solicitante')+(QT.length?QT.map((t,k)=>T(/^\s*(\d+\s*[-.)–]|[-–•])/.test(t)?t:`${k+1}- ${t}`,{jc:'both'})).join(''):(AL.map(topLine).join('')||T('Não foram apresentadas.')))+E()
+      +H2('Por outros')+(OU.length?T('Constatadas no local pelo perito:')+OU.map(topLine).join(''):T(String(r.outrasTxt||'').trim()||'Nada a acrescentar.'))+E();
+    body+=ps} // particular: 1.1 situações colocadas pelo solicitante · 1.2 outras questões (preenchido mais abaixo)
   else{const AU=[];for(const q of r.quesitos){const a=String(q.autor||'').trim();if(!AU.includes(a))AU.push(a)}
    for(const a of AU){const tit=a?`Questões colocadas ${/^(pel[oa]s?|por) /i.test(a)?a:'por '+a}`:part?'Questões colocadas pelo solicitante':'Matéria a que é preciso dar resposta';
      body+=H2(tit)+E();r.quesitos.filter(q=>String(q.autor||'').trim()===a).forEach(q=>{body+=T(q.txt,{jc:'both'})+E()})}
    if(!r.quesitos.length)body+=H2('Matéria a que é preciso dar resposta')+T('—')+E()}
-  body+=H1('Elementos de apoio e fundamentação')+H2('Lista de documentos fornecidos')+E()+(DOCS_R.filter(d=>r.docs[d]).map(d=>CHK(true,d)).join('')||T('—'))+E();
-  if(String(r.docsOutros||'').trim())body+=H2('Outros elementos')+T(r.docsOutros);
-  if(String(r.docsCom||'').trim())body+=H2('Comentários')+T(r.docsCom);
+  body+=H1('Elementos de apoio e fundamentação')+H2('Lista de documentos fornecidos')+E()+(DOCS_R.filter(d=>r.docs[d]).map(d=>d==='Outros'?CHK(true,'Outros:')+String(r.docsOutros||'').split('\n').map(x=>x.trim()).filter(Boolean).map(x=>P('<w:r><w:tab/></w:r>'+R(x))).join(''):CHK(true,d)).join('')||T('—'))+E();
+  body+=H2('Outros elementos ou fundamentos')+T(String(r.docsCom||'').trim()||'Nada a considerar.',{jc:'both'});
   body+=E()+H1('Da visita ao local')+H2('Data e presenças')+E();
   VIS.forEach((v,k)=>{if(VIS.length>1)body+=P(R(`${k+1}.ª visita`,{b:true}),{sp:[k?160:40,40],keep:1});
     body+=P(R('Data:')+'<w:r><w:tab/></w:r>'+R(v.data||'—'))+(v.hora?P(R('Hora:')+'<w:r><w:tab/></w:r>'+R(v.hora)):'');
-    {const tf=tempoFrase(v.tempo),tt=String(v.tempoTxt||'').trim();if(tf||tt)body+=P(R('Estado do tempo:')+'<w:r><w:tab/></w:r>'+R(tf||tt))+(tf&&tt?T(tt,{jc:'both'}):'')}
-    const pres=String(v.presencas||'').trim();if(pres)body+=P(R('Compareceram:'))+T(pres);if(String(v.obs||'').trim())body+=T(v.obs,{jc:'both'})});
+    const pres=String(v.presencas||'').trim();if(pres)body+=P(R('Compareceram e acompanharam:'))+T(pres);
+    {const tf=tempoFrase(v.tempo).replace(/\.$/,''),tt=String(v.tempoTxt||'').trim();if(tf||tt)body+=P(R('O estado meteorológico era: '+(tf||tt)))+(tf&&tt?T(tt,{jc:'both'}):'')}
+    if(String(v.obs||'').trim())body+=T(v.obs,{jc:'both'})});
   body+=H2('Outros intervenientes e suas funções')+T(String(r.interv||'').trim()||'Não houve.');
   {const rc=RECURSOS_R.filter(x=>x!=='Outros'&&r.recursos?.[x]).concat(String(r.recursosOutros||'').split('\n').map(x=>x.trim()).filter(Boolean));
-   let dt=String(r.decurso||'').trim()||'Com o acompanhamento dos presentes, foi visitado o interior e exterior do edifício, para analisar as situações que vinham definidas';
-   // 3.3 decurso e meios na mesma frase: «…, com recurso a:» seguido dos meios marcados (sem repetir noutro parágrafo)
-   if(rc.length)dt=dt.replace(/[\s.:;,]+$/,'')+', '+(String(r.recursosIntro||'').trim()||'com recurso a:');
-   body+=H2('Decurso da inspeção')+T(dt,{jc:'both'})+rc.map(x=>CHK(true,x)).join('')}
+   // forma de inspeção: meios (introdução + ticks) e depois o percurso (introdução + texto livre)
+   body+=H2('Forma de inspeção')+(rc.length?T(String(r.recursosIntro||'').trim()||RECURSOS_INTRO,{jc:'both'})+rc.map(x=>CHK(true,x)).join(''):'')+GT(r.decursoIntro,String(r.decurso||'').trim()||(String(r.decursoIntro||'').trim()?DECURSO_DEF:'Com o acompanhamento dos presentes, foi visitado o interior e exterior do edifício, para analisar as situações que vinham definidas.'))}
   body+=H2('Constrangimentos, impedimentos ou dúvidas relevantes')+T(String(r.constrang||'').trim()||'Nada a considerar.')+E();
   // 5 — situações (corpo do Regi, texto corrido, sem índice próprio)
-  const o=await docOpts(p,'texto','.docx');
-  const A=buildDocx({...o,bodyOnly:true,withIndex:false,stats:null,withResumo:false,withVistoria:false,mapImg:null,onePerPage:false,layout:'texto'});
-  const topLine=x=>{const z=zonaTxt(x);return P(R(`${x._code}  –  ${[x.ref?'Item '+x.ref:'',z,x.elemento].filter(Boolean).join(' · ')}`),{sp:[20,20]})};
-  if(part){ // particular: questões do solicitante (alegadas) e outras questões (constatadas pelo perito)
-    const AL=o.anoms.filter(x=>x.origem!=='local'),OU=o.anoms.filter(x=>x.origem==='local');
-    // particular: as situações apresentam-se no ponto 1 (Objeto da perícia) e o capítulo «Situações a analisar» não se repete
-    const QT=r.quesitos.map(q=>String(q.txt||'').trim()).filter(Boolean); // questões escritas à mão: texto complementar, depois da lista
-    const ps=H2('Colocadas pelo solicitante')+E()+(AL.map(topLine).join('')||(QT.length?'':T('Não foram apresentadas.')))+(QT.length?(AL.length?E():'')+QT.map(t=>T(t,{jc:'both'})).join(''):'')+E()
-      +H2('Outras questões ou situações')+(OU.length?T('Constatadas no local pelo perito:')+OU.map(topLine).join(''):T(String(r.outrasTxt||'').trim()||'Nada a acrescentar.'))+E();
-    body=body.replace('\u0001PSIT\u0001',()=>ps);
-  }else{
+  if(!part){
     body+=H1('Situações a analisar')+H2('Nota de contextualização')+E()+(String(r.ctxNota||'').trim()?T(r.ctxNota,{jc:'both'}):T('[Nota de contextualização por preencher — separador Relatório]',{i:true,color:'C00000'}))+E()+H2('Tópicos')+E()+T('A análise segue os seguintes tópicos:');
     let gPrev=null;for(const x of o.anoms){if(x._grp&&x._grp!==gPrev){gPrev=x._grp;body+=P(R(x._grp,{b:true}),{sp:[120,40],keep:1})}body+=topLine(x)}body+=E();
   }
-  body+='<w:p><w:r><w:br w:type="page"/></w:r></w:p>'+H1('Análise específica')+gabStyle(A.body);media.push(...A.media);
+  body+='<w:p><w:r><w:br w:type="page"/></w:r></w:p>'+H1(part?'Situações a analisar':'Análise específica')+gabStyle(A.body);media.push(...A.media);
   // 6 — resumo
   {const hasS=!!(p.printStats&&o.stats),hasN=!!String(r.nota||'').trim();
    if(hasS||hasN){body+='<w:p><w:r><w:br w:type="page"/></w:r></w:p>'+H1('Resumo de análise')+E(); // o ponto «Resumo de análise» começa em página nova
@@ -1959,8 +1991,8 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
    const cs=conseqList().filter(x=>x!=='Outros prejuízos'&&r.conseq?.[x]).concat(r.conseq?.['Outros prejuízos']?(co.length?co:['Outros prejuízos']):[]);
    const ct=String(r.conseqTxt||'').trim();const ad=r.incApr===true?(r.anexF||[]).map((x,i)=>[x,i]).filter(([x])=>(r.aprDocs||{})[x.id]):[];
    if(ctx||cau||ct||cs.length||apr||ad.length||String(r.conseqComp||'').trim()){body+='<w:p><w:r><w:br w:type="page"/></w:r></w:p>'+H1('Apreciação geral');
-    if(ctx)body+=H2('Contextualizando')+T(ctx,{jc:'both'})+E();
-    if(cau)body+=H2('Possíveis causas')+T(cau,{jc:'both'})+E();
+    if(ctx)body+=H2('Contextualização')+GT(r.ctxIntro,ctx)+E();
+    if(cau)body+=H2('Possíveis causas')+GT(r.causasIntro,cau)+E();
     {const cc=[ct,String(r.conseqComp||'').trim()].filter(Boolean).join('\n');if(cs.length||cc){body+=H2('Consequências');if(cs.length)body+=(String(r.conseqIntro||'').trim()?T(r.conseqIntro,{jc:'both'}):'')+cs.map((x,k)=>T(`- ${x}${k<cs.length-1?';':'.'}`)).join('');if(cc)body+=(cs.length?E():'')+T(cc,{jc:'both'});body+=E()}} // tópicos marcados primeiro; o texto complementar vem sempre depois
     if(apr)body+=H2(ctx||cau||ct||cs.length?'Outras considerações':'Comentários e conclusões')+T(apr,{jc:'both'})+E();
     if(ad.length)body+=P(R('Documentos juntos (em anexo):',{b:true}))+ad.map(([x,i])=>CHK(true,anexLbl(x,i))).join('')+E()}}
@@ -1972,7 +2004,7 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
     if(cons||!col)body+=P(R('Resposta:',{b:true,i:true}))+T(cons||'—',{jc:'both'})+E();
     else{r.peritos.forEach((pe,j)=>{const t=String(q.rp?.[j]||'').trim();body+=P(R(`Resposta — ${pe.nome||'Perito '+(j+1)} (${represR(r,pe).replace(/^Perito /,'').replace(/^n/,'n')}):`,{b:true,i:true}))+T(t||'—',{jc:'both'})+E()})}});
   if(!r.quesitos.length)body+=T('—')}
-  if(r.incPassos!==false){body+=E()+H1('Passos seguintes')+E()+(String(r.passosIntro||'').trim()&&String(r.passos||'').trim()?T(r.passosIntro,{jc:'both'}):'')+(String(r.passos||'').trim()?T(r.passos,{jc:'both'}):T('[Passos seguintes por preencher — ou retire o capítulo no separador Relatório]',{i:true,color:'C00000'}))+E()}
+  if(r.incPassos!==false){body+=E()+H1('Passos seguintes')+E()+(String(r.passos||'').trim()?GT(r.passosIntro,r.passos):T('[Passos seguintes por preencher — ou retire o capítulo no separador Relatório]',{i:true,color:'C00000'}))+E()}
   // 8, 9
   if(r.incReservas!==false){body+=H1('Âmbito de utilização – reservas de análise');for(const l of String(r.reservas||RESERVAS_R).split('\n'))body+=/^\d+\.\s/.test(l)?H2(l.replace(/^\d+\.\s*/,'')):T(l,{jc:'both'})}
   if(r.incAmbiente!==false){body+=H1('Ambiente, sustentabilidade e conformidade de licenciamento')+T(String(r.ambiente||AMBIENTE_R),{jc:'both'})}
@@ -2258,6 +2290,7 @@ document.addEventListener('click',async e=>{
     case 'rMvQ':{const Q=ensureRel(p).quesitos,i=+el.dataset.i,j=i+(+el.dataset.d);if(j<0||j>=Q.length)return;[Q[i],Q[j]]=[Q[j],Q[i]];await saveProc();S.scrollTop=window.scrollY;break}
     case 'rPasteQ':{const t=prompt('Cole aqui os quesitos (uma alínea por linha: a), b)… ou 1., 2.…):');if(!t)return;const q=splitQuesitos(t.split('\n'));q.forEach(x=>ensureRel(p).quesitos.push({id:uid(),txt:x,resp:'',rp:{}}));await saveProc();toast(q.length+' quesito(s) acrescentado(s).');S.scrollTop=window.scrollY;break}
     case 'rDoc':case 'rAnex':case 'rRec':case 'rCons':{const r=ensureRel(p),o=act==='rDoc'?r.docs:act==='rAnex'?r.anexos:act==='rRec'?(r.recursos=r.recursos||{}):(r.conseq=r.conseq||{}),k=el.dataset.k;o[k]=!o[k];await saveProc();S.scrollTop=window.scrollY;break}
+    case 'rDefTxt':{const r=ensureRel(p);r[el.dataset.k]=el.dataset.v;await saveProc();S.scrollTop=window.scrollY;break}
     case 'consAdd':{const r=ensureRel(p),v=String(document.getElementById('consNew')?.value||'').trim().replace(/[;.]+$/,'');if(!v)return toast('Escreva a consequência a acrescentar.');
       const t=v.charAt(0).toUpperCase()+v.slice(1),ex=conseqList().find(x=>x.toLowerCase()===t.toLowerCase());
       if(!ex){settings.conseqExtra=[...(settings.conseqExtra||[]),t];await saveSettings()}r.conseq=r.conseq||{};r.conseq[ex||t]=true;await saveProc();toast(ex?'Já existia na lista — ficou marcada.':'Acrescentada à lista e marcada.');S.scrollTop=window.scrollY;break}
