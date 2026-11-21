@@ -149,6 +149,7 @@ body:has(.rvbar){padding-bottom:70px}
 #steps{overflow-x:auto}#steps button{font-size:13px;padding:10px 2px;white-space:nowrap;min-width:64px}#steps button b{display:block;font-size:11px;color:inherit;opacity:.7}
 .vias{margin-top:8px;border:1px dashed var(--line);border-radius:10px;padding:8px}.via{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}.via .vn{font-weight:700;font-size:11px;background:var(--pri);border-radius:6px;padding:2px 6px}.via .muted{font-size:12px}
 .seg.wrap{flex-wrap:wrap}.seg.wrap button{flex:0 0 auto}.thc .thh{margin-bottom:6px}.thc .thh .clamp{font-size:12px}
+.newver{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;background:#222;color:#fff;padding:8px 12px;border-radius:10px;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.3)}.newver button{margin-left:8px}
 </style>
 </head>
 <body>
@@ -743,7 +744,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.19.0';const VERSION_DATA='2026-11-21';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.19.1';const VERSION_DATA='2026-11-21';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -2666,7 +2667,11 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
   catch(e){memMode=true;db=null;settings=migrateSettings(null);procs=[];
     setTimeout(()=>{const b=document.createElement('div');b.className='banner';b.innerHTML='⚠︎ Base de dados indisponível ('+esc(errTxt(e))+'). Os dados NÃO ficam gravados. Abra a app no Safari a sério (não na pré-visualização da app Ficheiros) ou pelo endereço do GitHub Pages.';document.body.insertBefore(b,$('#app'))},0)}
   render();
-  if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
+  if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{});
+  // aviso de versão nova: compara a versão publicada com a que está aberta (ao abrir e de 10 em 10 minutos)
+  const chkVer=async()=>{if(location.protocol!=='https:'||!navigator.onLine)return;try{const t=await (await fetch('index.html?v='+Date.now(),{cache:'no-store'})).text();const m=t.match(/const VERSION='([^']+)'/);
+    if(m&&m[1]!==VERSION&&!document.getElementById('newVer')){const b=document.createElement('div');b.id='newVer';b.className='newver';b.innerHTML=`🔄 Há uma versão nova (${m[1]}). <button class="mini green">Atualizar agora</button>`;b.querySelector('button').onclick=async()=>{try{if(dirty)await saveProc()}catch(e){}location.reload()};document.body.appendChild(b)}}catch(e){}};
+  setTimeout(chkVer,3000);setInterval(chkVer,600000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)chkVer()});
 })();
 
 </script>
