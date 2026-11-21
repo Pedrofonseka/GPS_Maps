@@ -6,6 +6,7 @@
 | Regi Anomalias | 0.14.2–0.16.0 | origem; 0.16.0 tem máximo de fotos por assunto (maxF/enforceMax) |
 | ExPropria | 0.13.2–0.13.3 | máximo por parcela desde 0.13.3 |
 | Relat_Anomalias | 1.0.0 | herdada do Regi 0.16.4 |
+| Relatório de Peritagem (relat) | 1.19.0 | também nas «Imagens de contextualização» do processo (ponto 3.5), como assunto próprio `p.ctxA` (código IMG C.n); repetidas comparadas em todo o processo |
 | FullTopics | 1.06–1.07 | assinaturas guardadas no registo da foto (store 'fotos') |
 | AVA_Input | 2.88 | portada da FullTopics 1.07 (mesma base de código); fichas Word por verba e capa-mosaico usam só as fotos do relatório |
 

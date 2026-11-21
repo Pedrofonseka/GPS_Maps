@@ -743,13 +743,15 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.18.0';const VERSION_DATA='2026-11-21';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.19.0';const VERSION_DATA='2026-11-21';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
 const parteNome=(p,n)=>(p.partes||[]).find(x=>x.n==n)?.nome||'';
 const zonaTxt=a=>[a.zona,a.piso,a.local].filter(Boolean).filter((v,i,r)=>r.indexOf(v)===i).join(' · ');
-const anCode=(p,a)=>`${parteSig(p,parteOf(p,a))}.${String(numOf(p,a)).padStart(3,'0')}`;
+const CTXID='__ctx';const ensureCtx=p=>p.ctxA||(p.ctxA={id:CTXID,fotos:[],vals:{}});
+const holders=p=>[...(p.anomalias||[]),...(p.ctxA?[p.ctxA]:[])]; // todos os conjuntos de fotos do processo
+const anCode=(p,a)=>a&&a.id===CTXID?'C':`${parteSig(p,parteOf(p,a))}.${String(numOf(p,a)).padStart(3,'0')}`;
 const imgCode=(p,a,i)=>`IMG ${anCode(p,a)}.${i+1}`;
 const DB_NAME='RelatAnomalias_DB';
 const DEF_CATALOG=['Humidade', 'Infiltrações', 'Impermeabilizações', 'Fissuração', 'Desgaste', 'Desagregação', 'Por concluir', 'Fratura', 'Riscado', 'Picado', 'Erro de medidas', 'Erro de geometria', 'Condensações', 'Bolores', 'Eflorescências', 'Corrosão', 'Destacamento', 'Deformação', 'Assentamento', 'Falta de estanquidade', 'Mau funcionamento', 'Vetustez'];
@@ -887,9 +889,15 @@ function openMarker(a,f,selId=''){f.marks=f.marks||[];if(selId&&!f.marks.some(m=
  svg.addEventListener('pointerup',end);svg.addEventListener('pointercancel',()=>{drag=null;document.removeEventListener('touchmove',block,true)})}
 
 
-async function loadFotos(p){if(!p)return;const m=p.visita?.map;if(m&&!fotoCache.has(m.id)){try{const r=await fotoGet(m.id);if(r)fotoCache.set(m.id,r.data)}catch(e){}}for(const a of p.anomalias)for(const f of a.fotos)if(!fotoCache.has(f.id)&&!f.data){try{const r=await fotoGet(f.id);if(r)fotoCache.set(f.id,r.data)}catch(e){}}}
+async function loadFotos(p){if(!p)return;const m=p.visita?.map;if(m&&!fotoCache.has(m.id)){try{const r=await fotoGet(m.id);if(r)fotoCache.set(m.id,r.data)}catch(e){}}for(const a of holders(p))for(const f of a.fotos)if(!fotoCache.has(f.id)&&!f.data){try{const r=await fotoGet(f.id);if(r)fotoCache.set(f.id,r.data)}catch(e){}}}
 {const _lf=loadFotos;loadFotos=async p=>{await _lf(p);await prepMarks(p)}}
-async function migrateFotos(p){let ch=false;const m=p.visita?.map;if(m&&m.data){await fotoPut(m.id,m.data);delete m.data;ch=true}for(const a of p.anomalias||[])for(const f of a.fotos||[]){if(!f.id)f.id=uid();if(f.data){await fotoPut(f.id,f.data);delete f.data;ch=true}}if(ch)await dbPut(p);return p}
+// processo com os dados das fotos e dos anexos embutidos (para cópia de segurança / envio)
+async function procFull(pp){await loadFotos(pp);const withF=a=>({...a,fotos:a.fotos.map(f=>({...f,data:fd(f)}))});const r=pp.rel?{...pp.rel}:pp.rel;
+  if(r&&r.anexF)r.anexF=await Promise.all(r.anexF.map(async a=>({...a,data:await anexData(a),pages:await Promise.all((a.pages||[]).map(async pg=>({...pg,data:await anexData({id:pg.id})})))})));
+  return {...pp,rel:r,visita:pp.visita?.map?{...pp.visita,map:{...pp.visita.map,data:fotoCache.get(pp.visita.map.id)||''}}:pp.visita,anomalias:pp.anomalias.map(withF),...(pp.ctxA?{ctxA:withF(pp.ctxA)}:{})}}
+async function migrateFotos(p){let ch=false;const m=p.visita?.map;if(m&&m.data){await fotoPut(m.id,m.data);delete m.data;ch=true}for(const a of holders(p))for(const f of a.fotos||[]){if(!f.id)f.id=uid();if(f.data){await fotoPut(f.id,f.data);delete f.data;ch=true}}
+  for(const a of p.rel?.anexF||[]){if(a.data){await fotoPut(a.id,a.data);delete a.data;ch=true}for(const pg of a.pages||[])if(pg.data){await fotoPut(pg.id,pg.data);delete pg.data;ch=true}}
+  if(ch)await dbPut(p);return p}
 const numOf=(p,a)=>{if(p.lockNum&&a.num)return a.num;const pt=parteOf(p,a);let k=0;for(const x of p.anomalias){if(parteOf(p,x)==pt)k++;if(x===a||(a.id&&x.id===a.id))return k}return k};
 // fotos escolhidas para o relatório (sel!==false) vêm primeiro; as restantes ficam em reserva (guardadas, não exportadas)
 // máximo de fotos no relatório por assunto: 2·4·6·8·9·10·sem limite (por defeito 6) — biblioteca: tamanho.md
@@ -985,7 +993,7 @@ async function saveProc(){clearTimeout(saveT);S.prevStale=true;const p=cur();if(
   try{await dbPut(p);dirty=false}
   catch(e){dirty=true;if(Date.now()-lastErrShown>8000){lastErrShown=Date.now();toast('Não foi possível gravar ('+errTxt(e)+'). Os dados continuam no ecrã; volte a tentar ou faça "Guardar cópia".',1)}}}
 const cur=()=>procs.find(p=>p.id===S.pid);
-const curA=()=>cur()?.anomalias.find(a=>a.id===S.aid);
+const curA=()=>{const p=cur();if(!p)return null;if(S.aid===CTXID)return ensureCtx(p);return p.anomalias.find(a=>a.id===S.aid)};
 
 // ---------- UI helpers ----------
 // Eliminar com «Desfazer»: a remoção definitiva das fotos só acontece passados 10 s
@@ -1035,10 +1043,10 @@ async function phash(src){const i=await loadImg(src);const c=document.createElem
   for(let r=0;r<8;r++){let n=0;for(let cc=0;cc<8;cc++)n=(n<<1)|(g(r*9+cc)>g(r*9+cc+1)?1:0);h+=n.toString(16).padStart(2,'0')}return h}
 const hamm=(a,b)=>{let n=0;for(let i=0;i<a.length;i+=2){let v=parseInt(a.substr(i,2),16)^parseInt(b.substr(i,2),16);while(v){n+=v&1;v>>=1}}return n};
 const SAME=2;
-async function ensureHashes(p){let ch=false;for(const a of p.anomalias)for(const f of a.fotos)if(!f.ph){try{const src=fd(f)||(await fotoGet(f.id))?.data;if(src){f.ph=await phash(src);ch=true}}catch(e){}}return ch}
-function dupGroups(p){const L=[];p.anomalias.forEach(a=>relF(a).forEach((f,i)=>{if(f.ph)L.push({a,f,i,code:imgCode(p,a,i)})}));const G=[],used=new Set();
+async function ensureHashes(p){let ch=false;for(const a of holders(p))for(const f of a.fotos)if(!f.ph){try{const src=fd(f)||(await fotoGet(f.id))?.data;if(src){f.ph=await phash(src);ch=true}}catch(e){}}return ch}
+function dupGroups(p){const L=[];holders(p).forEach(a=>relF(a).forEach((f,i)=>{if(f.ph)L.push({a,f,i,code:imgCode(p,a,i)})}));const G=[],used=new Set();
   for(let x=0;x<L.length;x++){if(used.has(x))continue;const g=[L[x]];for(let y=x+1;y<L.length;y++)if(!used.has(y)&&hamm(L[x].f.ph,L[y].f.ph)<=SAME){g.push(L[y]);used.add(y)}if(g.length>1)G.push(g)}return G}
-function dupOf(p,f){const out=[];p.anomalias.forEach(a=>a.fotos.forEach((g,i)=>{if(g!==f&&g.id!==f.id&&g.ph&&f.ph&&hamm(g.ph,f.ph)<=SAME)out.push(fotoLbl(p,a,i))}));return out}
+function dupOf(p,f){const out=[];holders(p).forEach(a=>a.fotos.forEach((g,i)=>{if(g!==f&&g.id!==f.id&&g.ph&&f.ph&&hamm(g.ph,f.ph)<=SAME)out.push(fotoLbl(p,a,i))}));return out}
 const fotoLbl=(p,a,i)=>inRel(a.fotos[i])?imgCode(p,a,i):`${anCode(p,a)} reserva ${i-relF(a).length+1}`;
 function warnDup(p,a,i){const c=dupOf(p,a.fotos[i]);if(c.length)toast(`⚠︎ ${fotoLbl(p,a,i)} parece repetida: igual a ${c.join(', ')}.`,1);return c.length>0}
 async function rotateFoto(f){const i=await loadImg(fd(f));const c=document.createElement('canvas');c.width=i.naturalHeight;c.height=i.naturalWidth;const x=c.getContext('2d');x.translate(c.width,0);x.rotate(Math.PI/2);x.drawImage(i,0,0);await fotoPut(f.id,c.toDataURL('image/jpeg',.8));delete f.data;f.w=c.width;f.h=c.height;(f.marks||[]).forEach(m=>{[m.x,m.y]=[markClamp(1-m.y),markClamp(m.x)];if(m.x2!=null)[m.x2,m.y2]=[markClamp(1-m.y2),markClamp(m.x2)]})}
@@ -1123,6 +1131,7 @@ function vInsp(){const p=cur();
   return `<h2>3 · Inspeção</h2><p class="muted" style="margin-top:-6px">O dia da visita: data, tempo, presenças, localização, tipo de inspeção e fotografias.</p>
   ${secVistoria(p)}
   ${relProcHTML(p,'insp')}
+  ${sec('ctxF','3.5 · Imagens de contextualização',`<p class="muted" style="margin-top:0">Vistas gerais do edifício, da envolvente e dos acessos — saem no relatório no ponto 3.5, antes da análise. Seguem a rotina das fotografias (reserva, legendas, marcações, repetidas, máximo por assunto).</p><div data-aid="${CTXID}">${fotosSecHTML(ensureCtx(p),true)}</div>`,{cnt:pill(relF(ensureCtx(p)).length+' 📷',relF(ensureCtx(p)).length?'ok':''),def:true})}
   <div class="card"><b>📷 Fotografias da inspeção</b><p class="muted" style="font-size:12px;margin:4px 0">Tire ou carregue as fotos de todas as situações de seguida, sem sair deste modo.</p><div class="btns"><button class="green" data-act="theme" data-v="fotos">📷 Fotografar todas as situações ▶</button></div></div>
   ${nextBtn('anal','4 · Análise')}`}
 // ----- 4 · Análise -----
@@ -1180,7 +1189,7 @@ function fotosSecHTML(a,bare){const max=maxTxt();let h='';const RF=relF(a),RS=re
       <div class="photos">${RF.map((f,i)=>th(f,i,false)).join('')}</div>
       ${RS.length?`<label style="margin-top:12px">Reserva — não vai para o relatório (${RS.length})</label><div class="photos">${RS.map((f,k)=>th(f,RF.length+k,true)).join('')}</div>`:''}
       ${a.fotos.length<MAXALL?`<div class="btns"><label class="btn green">📷 Tirar fotografia<input type="file" accept="image/*" capture="environment" data-act="addCam" hidden></label><label class="btn green">🖼 Escolher da fototeca<input type="file" accept="image/*" multiple data-act="addLib" hidden></label></div>`:`<p class="muted">Máximo de ${MAXALL} fotos guardadas nesta anomalia (relatório + reserva). Elimine algumas da reserva para juntar mais.</p>`}
-      ${S.camShots.length?`<div class="btns"><button class="secondary" data-act="saveCam">💾 Guardar ${S.camShots.length} foto(s) tirada(s) na fototeca</button></div>`:''}${aiPanelHTML(cur(),a)}`;h=bare?B:sec('f3','3 · Fotografias',B,{cnt:pill(`${relF(a).length}/${max}${resF(a).length?' +'+resF(a).length:''}`,relF(a).length?'ok':'')});return h}
+      ${S.camShots.length?`<div class="btns"><button class="secondary" data-act="saveCam">💾 Guardar ${S.camShots.length} foto(s) tirada(s) na fototeca</button></div>`:''}${a.id===CTXID?'':aiPanelHTML(cur(),a)}`;h=bare?B:sec('f3','3 · Fotografias',B,{cnt:pill(`${relF(a).length}/${max}${resF(a).length?' +'+resF(a).length:''}`,relF(a).length?'ok':'')});return h}
 function vFicha(){
   const p=cur(),a=curA();const idx=p.anomalias.indexOf(a),n=p.anomalias.length;
   const fs=settings.fields.filter(f=>fieldOn(p,f));const max=maxTxt();
@@ -1713,9 +1722,9 @@ function reviewTexts(p){const r=ensureRel(p),part=isPart(r),L=[];const add=(sec,
   add('1. Objeto da perícia','Frase de abertura',r.objIntro,RP('objIntro','rp3'));add('1. Objeto da perícia','Objetivo do relatório',r.objetivo,RP('objetivo','rp3'));
   r.quesitos.forEach((q,i)=>add('1. Objeto da perícia',`Questão ${i+1}`,q.txt,{view:'proc',open:'rp3',bind:`q.${i}.txt`}));
   add('2. Elementos de apoio','Outros elementos',r.docsOutros,RP('docsOutros','rp4'));add('2. Elementos de apoio','Comentários',r.docsCom,RP('docsCom','rp4'));
-  (r.visitas||[]).forEach((v,i)=>{add('3. Da visita ao local',`${i+2}.ª visita — presenças`,v.presencas,{view:'proc',open:'rp5',bind:`vx.${i}.presencas`});add('3. Da visita ao local',`${i+2}.ª visita — notas`,v.obs,{view:'proc',open:'rp5',bind:`vx.${i}.obs`})});
-  add('3. Da visita ao local','Estado do tempo — texto complementar',r.tempoTxt,RP('tempoTxt','rp5'));(r.visitas||[]).forEach((v,i)=>add('3. Da visita ao local',`${i+2}.ª visita — estado do tempo`,v.tempoTxt,{view:'proc',open:'rp5',bind:`vx.${i}.tempoTxt`}));
-  add('3. Da visita ao local','Outros intervenientes',r.interv,RP('interv','rp5'));add('3. Da visita ao local','Decurso da inspeção',r.decurso,RP('decurso','rp5'));add('3. Da visita ao local','Constrangimentos',r.constrang,RP('constrang','rp5'));
+  (r.visitas||[]).forEach((v,i)=>{add('3. Inspeção',`${i+2}.ª visita — presenças`,v.presencas,{view:'proc',open:'rp5',bind:`vx.${i}.presencas`});add('3. Inspeção',`${i+2}.ª visita — notas`,v.obs,{view:'proc',open:'rp5',bind:`vx.${i}.obs`})});
+  add('3. Inspeção','Estado do tempo — texto complementar',r.tempoTxt,RP('tempoTxt','rp5'));(r.visitas||[]).forEach((v,i)=>add('3. Inspeção',`${i+2}.ª visita — estado do tempo`,v.tempoTxt,{view:'proc',open:'rp5',bind:`vx.${i}.tempoTxt`}));
+  add('3. Inspeção','Outros intervenientes',r.interv,RP('interv','rp5'));add('3. Inspeção','Decurso da inspeção',r.decurso,RP('decurso','rp5'));add('3. Inspeção','Constrangimentos',r.constrang,RP('constrang','rp5'));
   if(part)add('1. Objeto da perícia','Outras questões ou situações',r.outrasTxt,RR('outrasTxt','rrC'));else add('4. Situações a analisar','Nota de contextualização',r.ctxNota,RR('ctxNota','rrC'));
   const lF=printFields(p,settings).filter(f=>f.type==='long');
   for(const a of hydrate(p)){const c=a._code,go=b=>({aid:a.id,bind:b});add('5. Análise específica',`${c} — ${lblD(p)}`,a.descricao,go('a.descricao'));add('5. Análise específica',`${c} — ${lblC(p)}`,a.comentario,go('a.comentario'));
@@ -1866,7 +1875,7 @@ function relProcHTML(p,which='proc'){const r=ensureRel(p),col=isCol(r),part=isPa
 ${FZH('3.2 Outros intervenientes e suas funções')}${ZB('interv',r.interv,'Texto livre',2,'Não houve.')}
 ${FZH('3.3 Tipo de inspeção')}${ZM('decurso',r.decurso,'Percurso da inspeção')}${ZY('Meios utilizados (cumulativos) — a frase acima continua automaticamente com «…, com recurso a:» e a lista',`<div class="tks col">${RECURSOS_R.map(d=>tickBox('',!!r.recursos?.[d],d,`data-act="rRec" data-k="${esc(d)}"`)).join('')}</div>${r.recursos?.Outros?ZB('recursosOutros',r.recursosOutros,'Outros meios (um por linha)',2):''}`)}
 ${FZH('3.4 Constrangimentos, impedimentos ou dúvidas relevantes')}${ZB('constrang',r.constrang,'Texto livre',2,'Nada a considerar.')}`;
-  if(which==='insp')return `${FZLEG}${sec('rp5','3.1–3.4 · Da visita ao local',t5,{def:true})}`;
+  if(which==='insp')return `${FZLEG}${sec('rp5','3.1–3.4 · Inspeção',t5,{def:true})}`;
   return `${blk('Relatório — identificação','Tipo de peritagem, capa, objeto e documentos')}
   ${sec('rp1','R1 · Tipo de relatório e gabinete',t1,{cnt:pill((r.ambito==='particular'?'Particular':'Institucional')+' · '+(col?'Colegial':'Singular')+' · '+(GABS_R.find(g=>g[0]===r.gab)||['',''])[1].split(' ')[0])})}
   ${sec('rp2','R2 · Capa — identificação',t2,{cnt:falta([r.entidade,r.parte1].filter(x=>!String(x||'').trim()).length),def:false})}
@@ -1991,7 +2000,12 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
    if(!r.quesitos.length)body+=H2('Matéria a que é preciso dar resposta')+T('—')+E()}
   body+=H1('Elementos de apoio e fundamentação')+H2('Lista de documentos fornecidos')+E()+(DOCS_R.filter(d=>r.docs[d]).map(d=>d==='Outros'?CHK(true,'Outros:')+String(r.docsOutros||'').split('\n').map(x=>x.trim()).filter(Boolean).map(x=>P('<w:r><w:tab/></w:r>'+R(x))).join(''):CHK(true,d)).join('')||T('—'))+E();
   body+=H2('Outros elementos ou fundamentos')+T(String(r.docsCom||'').trim()||'Nada a considerar.',{jc:'both'});
-  body+=E()+H1('Da visita ao local')+H2('Data, estado do tempo e presenças')+E();
+  body+=E()+H1('Inspeção');
+  // localização (imagem do mapa GPS e coordenadas), logo a seguir ao título
+  if(g){let mL=mapData;if(!mL){mL=await googleMapData(g,1600,Math.round(1600*9.2/16.9));if(!mL){try{if(await ensureMap(p,true))mL=fotoCache.get(p.visita.map.id)}catch(e){}}}
+    if(mL)body+=P(R('Localização:',{b:true}),{sp:[60,60],keep:1})+`<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:keepNext/><w:spacing w:before="0" w:after="0"/><w:jc w:val="center"/></w:pPr>${imgRun(await cropTo(mL,16.9/9.2,1600),16.9,9.2,'Localização')}</w:p>`;
+    body+=P(R(`${mL?'':'Localização: '}${g.lat.toFixed(6)}°, ${g.lon.toFixed(6)}°`,{sz:8,color:'404040'}),{sp:[20,60],jc:mL?'center':undefined})}
+  body+=H2('Data, estado do tempo e presenças')+E();
   VIS.forEach((v,k)=>{if(VIS.length>1)body+=P(R(`${k+1}.ª visita`,{b:true}),{sp:[k?160:40,40],keep:1});
     body+=P(R('Data:')+'<w:r><w:tab/></w:r>'+R(v.data||'—'))+(v.hora?P(R('Hora:')+'<w:r><w:tab/></w:r>'+R(v.hora)):'');
     {const tf=tempoFrase(v.tempo).replace(/\.$/,''),tt=String(v.tempoTxt||'').trim();if(tf||tt)body+=P(R('Meteorologia:')+'<w:r><w:tab/></w:r>'+R(tf||tt))+(tf&&tt?T(tt,{jc:'both'}):'')}
@@ -2005,6 +2019,13 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
    dt=dt.replace(/[\s.:;,]+$/,'')+(rc.length?', '+(String(r.recursosIntro||'').trim()||RECURSOS_INTRO):'.');
    body+=H2('Tipo de inspeção')+T(dt,{jc:'both'})+rc.map(x=>CHK(true,x)).join('')}
   body+=H2('Constrangimentos, impedimentos ou dúvidas relevantes')+T(String(r.constrang||'').trim()||'Nada a considerar.')+E();
+  // 3.5 imagens de contextualização (2 por linha, 4:3, com código e legenda)
+  {const CF=relF(p.ctxA||{fotos:[]}).filter(f=>fd(f));if(CF.length){body+=H2('Imagens de contextualização');const W2=Math.floor(TW/2),pw=8.3,ph=6.22;
+    const cell=c=>`<w:tc><w:tcPr><w:tcW w:w="${W2}" w:type="dxa"/></w:tcPr>${c}</w:tc>`,cp=(runs,o='')=>`<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:spacing w:before="0" w:after="${o?60:0}"/><w:jc w:val="center"/></w:pPr>${runs}</w:p>`;
+    let rows='';for(let k=0;k<CF.length;k+=2){let im='',cap='';for(let c=0;c<2;c++){const f=CF[k+c],i=k+c;im+=cell(cp(f?imgRun(await cropTo(fdOut(f),4/3,1200),pw,ph,'Contexto'):''));cap+=cell(cp(f?R(imgCode(p,p.ctxA,i),{b:true,sz:8})+(String(f.legenda||'').trim()?R(' – '+String(f.legenda).trim(),{sz:8}):''):'','a'))}
+      rows+=`<w:tr><w:trPr><w:cantSplit/></w:trPr>${im}</w:tr><w:tr><w:trPr><w:cantSplit/></w:trPr>${cap}</w:tr>`}
+    const noB2=['top','left','bottom','right','insideH','insideV'].map(x=>`<w:${x} w:val="nil"/>`).join('');
+    body+=`<w:tbl><w:tblPr><w:tblW w:w="${TW}" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders>${noB2}</w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="${W2}"/><w:gridCol w:w="${W2}"/></w:tblGrid>${rows}</w:tbl>`+E()}}
   // 5 — situações (corpo do Regi, texto corrido, sem índice próprio)
   if(!part){
     body+=H1('Situações a analisar')+H2('Nota de contextualização')+E()+(mtxt(r,'ctxNota')?T(mtxt(r,'ctxNota'),{jc:'both'}):T('[Nota de contextualização por preencher — separador Relatório]',{i:true,color:'C00000'}))+E()+H2('Tópicos')+E()+T('A análise segue os seguintes tópicos:');
@@ -2439,7 +2460,7 @@ document.addEventListener('click',async e=>{{const _x=e.target.closest&&e.target
     case 'chkGo':S.view='anal';S.aid=el.dataset.id;S.sub='ficha';S.openId=false;S.scrollTop=0;break;
     case 'chkProc':S.view=p.visita?.data?'proc':'insp';S.sub=null;S.open.p1=true;S.open.p2=true;S.scrollTop=0;break;
     case 'sendProc':{if(dirty)await saveProc();const pp=procs.find(x=>x.id===el.dataset.id);if(!pp)return;toast('A preparar o processo…');await loadFotos(pp);
-      const one={...pp,visita:pp.visita?.map?{...pp.visita,map:{...pp.visita.map,data:fotoCache.get(pp.visita.map.id)||''}}:pp.visita,anomalias:pp.anomalias.map(a=>({...a,fotos:a.fotos.map(f=>({...f,data:fd(f)}))}))};
+      const one=await procFull(pp);
       await saveBlob(new Blob([JSON.stringify({app:'RelatAnomalias',kind:'processo',version:VERSION,date:new Date().toISOString(),procs:[one]})],{type:'application/json'}),`${safeName(pp.codigo)}_Processo_Relat.json`);return}
     case 'undo':return doUndo(-1);case 'redo':return doUndo(1);case 'menu':openMenu();return;
     case 'menuClose':return;
@@ -2498,7 +2519,7 @@ document.addEventListener('click',async e=>{{const _x=e.target.closest&&e.target
     case 'pickCat':{a.vals=a.vals||{};const f=el.dataset.f,v=el.dataset.v;const arr=Array.isArray(a.vals[f])?a.vals[f]:[];a.vals[f]=arr.includes(v)?arr.filter(x=>x!==v):[...arr,v];S.scrollTop=window.scrollY;await saveProc();break}
     case 'addCat':{const t=$('#newCat').value.trim();if(!t)return;if(!settings.catalog.includes(t)){const k=settings.catalog.indexOf('Outros');k>=0?settings.catalog.splice(k,0,t):settings.catalog.push(t);await saveSettings()}a.vals=a.vals||{};const f=el.dataset.f;const arr=Array.isArray(a.vals[f])?a.vals[f]:[];if(!arr.includes(t))a.vals[f]=[...arr,t];S.scrollTop=window.scrollY;await saveProc();break}
     case 'delAnom':if(await ask(`Eliminar a ficha ${anCode(p,a)}? (inclui as fotos)${p.lockNum?'':'\nAs seguintes da mesma parte são renumeradas.'}`,['Cancelar','Eliminar'],1)){removeAnomUndo(p,a);S.sub=null;await saveProc()}else return;break;
-    case 'delProc':if(await ask(`Eliminar o processo ${p.codigo||''} e todas as fichas e fotos?\nSugestão: faça antes uma cópia de segurança.`,['Cancelar','Eliminar'],1)){p.anomalias.forEach(x=>x.fotos.forEach(f=>fotoDel(f.id)));procs=procs.filter(x=>x!==p);await dbDel(p.id);S.pid=null;S.view='home'}else return;break;
+    case 'delProc':if(await ask(`Eliminar o processo ${p.codigo||''} e todas as fichas e fotos?\nSugestão: faça antes uma cópia de segurança.`,['Cancelar','Eliminar'],1)){holders(p).forEach(x=>x.fotos.forEach(f=>fotoDel(f.id)));procs=procs.filter(x=>x!==p);await dbDel(p.id);S.pid=null;S.view='home'}else return;break;
     case 'rotF':{await rotateFoto(a.fotos[+el.dataset.i]);S.scrollTop=window.scrollY;await saveProc();break}
     case 'mvF':{const i=+el.dataset.i,j=i+ +el.dataset.d;if(!a.fotos[j]||inRel(a.fotos[i])!==inRel(a.fotos[j]))return;[a.fotos[i],a.fotos[j]]=[a.fotos[j],a.fotos[i]];S.scrollTop=window.scrollY;await saveProc();break}
     case 'delF':{removeFotoUndo(p,a,+el.dataset.i);S.scrollTop=window.scrollY;await saveProc();break}
@@ -2525,7 +2546,7 @@ document.addEventListener('click',async e=>{{const _x=e.target.closest&&e.target
         if(settings.expFichas!==false)L.push({blob:new Blob([await docxFor(p,'grelha')],{type:T}),name:`${safeName(p.codigo)}_Fichas_Anomalias.docx`});
         if(settings.expTexto!==false)L.push({blob:new Blob([await docxFor(p,'texto')],{type:T}),name:`${safeName(p.codigo)}_Analise_Anomalias_texto.docx`});
         if(!L.length)return toast('Marque pelo menos uma opção.',1);await saveBlobs(L)}catch(err){toast('Erro ao gerar Word: '+err.message,1)}return}
-    case 'backupOut':{toast('A preparar a cópia…');for(const pp of procs)await loadFotos(pp);const full=procs.map(pp=>({...pp,visita:pp.visita?.map?{...pp.visita,map:{...pp.visita.map,data:fotoCache.get(pp.visita.map.id)||''}}:pp.visita,anomalias:pp.anomalias.map(a=>({...a,fotos:a.fotos.map(f=>({...f,data:fd(f)}))}))}));settings.lastBackup=Date.now();await saveSettings();const data={app:'RelatAnomalias',version:VERSION,date:new Date().toISOString(),settings:{...settings,aiKey:undefined},procs:full};/* a chave da IA nunca sai do aparelho */await saveBlob(new Blob([JSON.stringify(data)],{type:'application/json'}),`Backup_RelatAnomalias_${new Date().toISOString().slice(0,10)}.json`);break}
+    case 'backupOut':{toast('A preparar a cópia…');const full=[];for(const pp of procs)full.push(await procFull(pp));settings.lastBackup=Date.now();await saveSettings();const data={app:'RelatAnomalias',version:VERSION,date:new Date().toISOString(),settings:{...settings,aiKey:undefined},procs:full};/* a chave da IA nunca sai do aparelho */await saveBlob(new Blob([JSON.stringify(data)],{type:'application/json'}),`Backup_RelatAnomalias_${new Date().toISOString().slice(0,10)}.json`);break}
     case 'catAdd':{const ck=el.dataset.k;S.open['dc_'+ck]=true;const t=$('#catNew_'+ck).value.trim();if(t&&!settings[ck].includes(t)){settings[ck].push(t);await saveSettings()}S.scrollTop=window.scrollY;break}
     case 'delCat':{const ck=el.dataset.k;const c=settings[ck][+el.dataset.i];if(!await ask(`Retirar "${c}" do catálogo? (fichas já preenchidas mantêm o valor)`,['Cancelar','Retirar'],1))return;settings[ck].splice(+el.dataset.i,1);await saveSettings();S.scrollTop=window.scrollY;break}
     case 'mvField':{const i=+el.dataset.i,j=i+ +el.dataset.d;if(j<0||j>=settings.fields.length)return;[settings.fields[i],settings.fields[j]]=[settings.fields[j],settings.fields[i]];await saveSettings();S.scrollTop=window.scrollY;break}
