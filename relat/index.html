@@ -728,7 +728,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.11.2';const VERSION_DATA='2026-11-20';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.12.0';const VERSION_DATA='2026-11-20';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1498,6 +1498,10 @@ const PASSOS_INTRO='Sem prejuízo de outras recomendações que venham a decorre
 const RESUMO_INTRO='De acordo com a análise específica, temos:';
 const RECURSOS_INTRO='com recurso a:';
 const RECURSOS_R=['Análise visual e sensitiva','Levantamento fotográfico','Levantamento de medidas e dimensões','Termografia','Humidímetro','Câmara 360°','Drone','Endoscópio (câmara de inspeção)','Fissurómetro','Nível e/ou prumo','Escada / meios de acesso','Outros'];
+// estado do tempo no dia de cada visita (opções cumulativas + texto complementar opcional)
+const TEMPO_R=['Céu limpo / sol','Céu parcialmente nublado','Céu nublado','Chuva fraca','Chuva intensa','Vento forte','Nevoeiro','Neve ou geada','Temperatura elevada','Temperatura baixa','Choveu nos dias anteriores'];
+const tempoFrase=(o,txt)=>{const L=TEMPO_R.filter(k=>o?.[k]).map((k,i)=>i?k.charAt(0).toLowerCase()+k.slice(1):k);return L.length?L.join(', ')+'.':''};
+const tempoUI=(o,txt,vi)=>`<div class="tempo"><label>Estado do tempo${vi<0?' (1.ª visita)':''} <span class="muted">(pode marcar vários)</span></label><div class="tks">${TEMPO_R.map(k=>tickBox('',!!o?.[k],k,`data-act="rTempo" data-v="${vi}" data-k="${esc(k)}"`)).join('')}</div><div class="cmpbox"><div class="cmphd">💬 Estado do tempo — texto complementar (opcional)</div><div class="muted" style="font-size:12px">Comentário às opções marcadas (ex.: temperatura, humidade do ar, chuva nos dias anteriores). Se ficar vazio, não sai nada.</div><textarea data-bind="${vi<0?'r.tempoTxt':`vx.${vi}.tempoTxt`}" rows="2">${esc(txt||'')}</textarea></div></div>`;
 const ANEXT_R=['Caderneta predial','Certidão de registo predial','Planta','Lista de assuntos','Outros'];
 const DOCS_R=['Lista de quesitos','Relatório de situações','Cadernetas prediais','Certidões de registo','Levantamento topográfico','Plantas','Projetos','Caderno de encargos','Lista de trabalhos a realizar','Orçamento','Lista de alterações','Lista de queixas','Conjunto de fotos','Outros'];
 const ANEX_R=['Plantas','Medições e orçamento','Análise de anomalias','Levantamento topográfico','Lista de trabalhos a realizar','Outros elementos de base'];
@@ -1532,7 +1536,7 @@ Não é pressuposto deste trabalho:
 - realizar análise de projeto ou averiguar a legalidade das edificações, em termos de uso ou licenciamento;
 - atestar sobre a qualidade ambiental.`;
 const MESES_R=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
-function ensureRel(p){const r=p.rel=p.rel||{};const d={ambito:'institucional',modo:'singular',gab:'proficis',peritos:[],procJud:'',entidade:'',funcao:'Peritagem',contexto:'',parte1:'',parte2:'',objeto:'',versao:'1.00',h1:'',h3:'',h4a:'',h4b:'',despacho:'',objIntro:'De acordo com o solicitado, o relatório pretende:',objetivo:'',capa:'fotosLoc',quesitos:[],docs:{},docsOutros:'',docsCom:'',hora:'',interv:'',decurso:'',constrang:'',nota:'',incReservas:true,incAmbiente:true,reservas:'',ambiente:'',unan:true,discord:'',dataEnc:'',anexos:{},anexosOutros:'',incComp:true,conseqComp:'',visitas:[],recursos:{},recursosOutros:'',recursosIntro:RECURSOS_INTRO,conseq:{},conseqOutros:'',conseqTxt:'',conseqIntro:CONSEQ_INTRO,causasG:'',passosIntro:PASSOS_INTRO,resumoIntro:RESUMO_INTRO,outrasTxt:''};
+function ensureRel(p){const r=p.rel=p.rel||{};const d={ambito:'institucional',modo:'singular',gab:'proficis',peritos:[],procJud:'',entidade:'',funcao:'Peritagem',contexto:'',parte1:'',parte2:'',objeto:'',versao:'1.00',h1:'',h3:'',h4a:'',h4b:'',despacho:'',objIntro:'De acordo com o solicitado, o relatório pretende:',objetivo:'',capa:'fotosLoc',quesitos:[],docs:{},docsOutros:'',docsCom:'',hora:'',interv:'',decurso:'',constrang:'',nota:'',incReservas:true,incAmbiente:true,reservas:'',ambiente:'',unan:true,discord:'',dataEnc:'',anexos:{},anexosOutros:'',incComp:true,conseqComp:'',tempo:{},tempoTxt:'',visitas:[],recursos:{},recursosOutros:'',recursosIntro:RECURSOS_INTRO,conseq:{},conseqOutros:'',conseqTxt:'',conseqIntro:CONSEQ_INTRO,causasG:'',passosIntro:PASSOS_INTRO,resumoIntro:RESUMO_INTRO,outrasTxt:''};
   if(p.printStats===undefined)p.printStats=true;
   if(r.despacho==='De acordo com o despacho:')r.despacho='';if(r.objIntro==='Constitui objeto da perícia determinar:'||r.objIntro==='Pretende-se:')r.objIntro='De acordo com o solicitado, pretende-se:';
   if(r.docs&&r.docs['Outros elementos de base']){r.docs['Outros']=true;delete r.docs['Outros elementos de base']}
@@ -1549,7 +1553,7 @@ function relFileName(p){const r=ensureRel(p);const cl=t=>String(t||'').normalize
   const ver=cl(r.versao).replace(/\s+/g,'').replace(/[^A-Za-z0-9.]+/g,'_')||'1.00';
   return [nref,proc?'Proc_'+proc:''].filter(Boolean).join('_')+(nref||proc?'-':'')+'Relatorio_'+ver+'.docx'}
 // visitas ao local: a 1.ª vem de «2 · Vistoria» (data, presenças); as seguintes do Processo › R5
-function visList(p){const r=ensureRel(p),v0=p.visita||{};return [{data:v0.data||'',hora:r.hora||'',presencas:v0.presencas||''},...(r.visitas||[])].filter((v,i)=>i===0||v.data||v.presencas||v.obs)}
+function visList(p){const r=ensureRel(p),v0=p.visita||{};return [{data:v0.data||'',hora:r.hora||'',presencas:v0.presencas||'',tempo:r.tempo||{},tempoTxt:r.tempoTxt||''},...(r.visitas||[])].filter((v,i)=>i===0||v.data||v.presencas||v.obs)}
 // ====================== Revisão do texto (antes de exportar) ======================
 // Lê o relatório de cima para baixo, pela ordem em que sai, e assinala: gralhas mecânicas, ortografia (dicionário pt-PT, AO90),
 // redundâncias (frases repetidas, comentários quase iguais) e coerência (textos em falta). Tudo no aparelho, sem internet.
@@ -1566,6 +1570,7 @@ function reviewTexts(p){const r=ensureRel(p),part=isPart(r),L=[];const add=(sec,
   r.quesitos.forEach((q,i)=>add('1. Objeto da perícia',`Questão ${i+1}`,q.txt,{view:'proc',open:'rp3',bind:`q.${i}.txt`}));
   add('2. Elementos de apoio','Outros elementos',r.docsOutros,RP('docsOutros','rp4'));add('2. Elementos de apoio','Comentários',r.docsCom,RP('docsCom','rp4'));
   (r.visitas||[]).forEach((v,i)=>{add('3. Da visita ao local',`${i+2}.ª visita — presenças`,v.presencas,{view:'proc',open:'rp5',bind:`vx.${i}.presencas`});add('3. Da visita ao local',`${i+2}.ª visita — notas`,v.obs,{view:'proc',open:'rp5',bind:`vx.${i}.obs`})});
+  add('3. Da visita ao local','Estado do tempo — texto complementar',r.tempoTxt,RP('tempoTxt','rp5'));(r.visitas||[]).forEach((v,i)=>add('3. Da visita ao local',`${i+2}.ª visita — estado do tempo`,v.tempoTxt,{view:'proc',open:'rp5',bind:`vx.${i}.tempoTxt`}));
   add('3. Da visita ao local','Outros intervenientes',r.interv,RP('interv','rp5'));add('3. Da visita ao local','Decurso da inspeção',r.decurso,RP('decurso','rp5'));add('3. Da visita ao local','Constrangimentos',r.constrang,RP('constrang','rp5'));
   if(part)add('4. Situações a analisar','Outras questões ou situações',r.outrasTxt,RR('outrasTxt','rrC'));else add('4. Situações a analisar','Nota de contextualização',r.ctxNota,RR('ctxNota','rrC'));
   const lF=printFields(p,settings).filter(f=>f.type==='long');
@@ -1649,6 +1654,7 @@ function relCheck(p){const r=ensureRel(p),col=isCol(r),part=isPart(r),w=[];const
   if(!part&&!v(r.procJud))w.push('N.º do processo (tribunal) por preencher — Processo › R2');
   if(!part&&(!v(r.parte1)||!v(r.parte2)))w.push('Parte 1 / Parte 2 por preencher — Processo › R2');
   if(!p.visita?.data)w.push('Data da visita por preencher — Processo › 2');
+  if(!TEMPO_R.some(k=>r.tempo?.[k])&&!String(r.tempoTxt||'').trim())w.push('Estado do tempo da visita por indicar — Processo › R5');
   if(!p.visita?.gps&&(r.capa||'fotosLoc')==='fotosLoc')w.push('Sem coordenadas GPS: a capa sai sem mapa — Processo › 2');
   if(!r.quesitos.length)w.push((part?'Sem queixas':'Sem quesitos')+' — Processo › R3');
   const sr=r.quesitos.filter(q=>!v(q.resp)&&!(col&&r.peritos.some((_,j)=>v(q.rp?.[j])))).length;if(sr)w.push(`${sr} quesito(s) sem resposta — Relatório › Resposta ao solicitado`);
@@ -1690,8 +1696,8 @@ function relProcHTML(p){const r=ensureRel(p),col=isCol(r),part=isPart(r),hd=hdrD
     <p class="muted">Word: cada alínea (a), b)…, 1., 2.…) ou parágrafo passa a um quesito. Excel: 1.ª coluna da 1.ª folha (ignora a linha de títulos se disser «quesito»). Pode editar e reordenar depois.</p>`;
   const nd=DOCS_R.filter(d=>r.docs[d]).length;
   const t4=`<div class="tks col">${DOCS_R.map(d=>tickBox('',!!r.docs[d],d,`data-act="rDoc" data-k="${esc(d)}"`)).join('')}</div>${RT('docsOutros','Outros elementos',r.docsOutros,2,'-')}${RT('docsCom','Comentários',r.docsCom,2)}`;
-  const t5=`${RL('hora','Hora (1.ª visita)',r.hora,'ex.: 14:30')}<p class="muted">A data e «Compareceram» da 1.ª visita vêm de «2 · Vistoria». Uma peritagem pode ter várias visitas: acrescente as seguintes aqui.</p>
-    <label>Outras visitas</label><div class="rows">${(r.visitas||[]).map((v,i)=>`<div class="qbox"><div class="qhd"><b>${i+2}.ª visita</b><span class="grow"></span><button class="del" data-act="rDelVis" data-i="${i}">✕</button></div><div class="grid2"><div><label>Data</label><input data-bind="vx.${i}.data" value="${esc(v.data||'')}" placeholder="dd/mm/aaaa"></div><div><label>Hora</label><input data-bind="vx.${i}.hora" value="${esc(v.hora||'')}" placeholder="ex.: 10:00"></div></div><label>Compareceram</label><textarea data-bind="vx.${i}.presencas" rows="2">${esc(v.presencas||'')}</textarea><label>Notas desta visita (opcional)</label><textarea data-bind="vx.${i}.obs" rows="2">${esc(v.obs||'')}</textarea></div>`).join('')||'<p class="muted">Só a 1.ª visita.</p>'}</div><div class="btns"><button class="secondary mini" data-act="rAddVis">+ Visita</button></div>
+  const t5=`${RL('hora','Hora (1.ª visita)',r.hora,'ex.: 14:30')}<p class="muted">A data e «Compareceram» da 1.ª visita vêm de «2 · Vistoria». Uma peritagem pode ter várias visitas: acrescente as seguintes aqui.</p>${tempoUI(r.tempo,r.tempoTxt,-1)}
+    <label>Outras visitas</label><div class="rows">${(r.visitas||[]).map((v,i)=>`<div class="qbox"><div class="qhd"><b>${i+2}.ª visita</b><span class="grow"></span><button class="del" data-act="rDelVis" data-i="${i}">✕</button></div><div class="grid2"><div><label>Data</label><input data-bind="vx.${i}.data" value="${esc(v.data||'')}" placeholder="dd/mm/aaaa"></div><div><label>Hora</label><input data-bind="vx.${i}.hora" value="${esc(v.hora||'')}" placeholder="ex.: 10:00"></div></div><label>Compareceram</label><textarea data-bind="vx.${i}.presencas" rows="2">${esc(v.presencas||'')}</textarea><label>Notas desta visita (opcional)</label><textarea data-bind="vx.${i}.obs" rows="2">${esc(v.obs||'')}</textarea>${tempoUI(v.tempo,v.tempoTxt,i)}</div>`).join('')||'<p class="muted">Só a 1.ª visita.</p>'}</div><div class="btns"><button class="secondary mini" data-act="rAddVis">+ Visita</button></div>
 ${RT('interv','Outros intervenientes e suas funções',r.interv,2,'Não houve.')}${RT('decurso','Decurso da inspeção',r.decurso,3,'Com o acompanhamento dos presentes, foi visitado o interior e exterior do edifício, para analisar as situações que vinham definidas.')}    <label>Recursos utilizados na inspeção <span class="muted">(cumulativos)</span></label>${RL('recursosIntro','Ligação ao decurso (fim da frase do 3.3)',r.recursosIntro,RECURSOS_INTRO)}<div class="tks col">${RECURSOS_R.map(d=>tickBox('',!!r.recursos?.[d],d,`data-act="rRec" data-k="${esc(d)}"`)).join('')}</div>${r.recursos?.Outros?RT('recursosOutros','Outros recursos (um por linha)',r.recursosOutros,2):''}${RT('constrang','Constrangimentos, impedimentos ou dúvidas relevantes',r.constrang,2,'Nada a considerar.')}`;
   return `${blk('R · Relatório','Tipo de peritagem, capa, objeto, documentos e visita')}
   ${sec('rp1','R1 · Tipo de relatório e gabinete',t1,{cnt:pill((r.ambito==='particular'?'Particular':'Institucional')+' · '+(col?'Colegial':'Singular')+' · '+(GABS_R.find(g=>g[0]===r.gab)||['',''])[1].split(' ')[0])})}
@@ -1800,11 +1806,12 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
      body+=H2(tit)+E();r.quesitos.filter(q=>String(q.autor||'').trim()===a).forEach(q=>{body+=T(q.txt,{jc:'both'})+E()})}
    if(!r.quesitos.length)body+=H2(part?'Questões colocadas pelo solicitante':'Matéria a que é preciso dar resposta')+T('—')+E()}
   body+=H1('Elementos de apoio e fundamentação')+H2('Lista de documentos fornecidos')+E()+(DOCS_R.filter(d=>r.docs[d]).map(d=>CHK(true,d)).join('')||T('—'))+E();
-  body+=H2('Outros elementos')+T(String(r.docsOutros||'').trim()||'-');
+  if(String(r.docsOutros||'').trim())body+=H2('Outros elementos')+T(r.docsOutros);
   if(String(r.docsCom||'').trim())body+=H2('Comentários')+T(r.docsCom);
   body+=E()+H1('Da visita ao local')+H2('Data e presenças')+E();
   VIS.forEach((v,k)=>{if(VIS.length>1)body+=P(R(`${k+1}.ª visita`,{b:true}),{sp:[k?160:40,40],keep:1});
     body+=P(R('Data:')+'<w:r><w:tab/></w:r>'+R(v.data||'—'))+(v.hora?P(R('Hora:')+'<w:r><w:tab/></w:r>'+R(v.hora)):'');
+    {const tf=tempoFrase(v.tempo),tt=String(v.tempoTxt||'').trim();if(tf||tt)body+=P(R('Estado do tempo:')+'<w:r><w:tab/></w:r>'+R(tf||tt))+(tf&&tt?T(tt,{jc:'both'}):'')}
     const pres=String(v.presencas||'').trim();if(pres)body+=P(R('Compareceram:'))+T(pres);if(String(v.obs||'').trim())body+=T(v.obs,{jc:'both'})});
   body+=H2('Outros intervenientes e suas funções')+T(String(r.interv||'').trim()||'Não houve.');
   {const rc=RECURSOS_R.filter(x=>x!=='Outros'&&r.recursos?.[x]).concat(String(r.recursosOutros||'').split('\n').map(x=>x.trim()).filter(Boolean));
@@ -2180,7 +2187,8 @@ document.addEventListener('click',async e=>{
     case 'rMvQ':{const Q=ensureRel(p).quesitos,i=+el.dataset.i,j=i+(+el.dataset.d);if(j<0||j>=Q.length)return;[Q[i],Q[j]]=[Q[j],Q[i]];await saveProc();S.scrollTop=window.scrollY;break}
     case 'rPasteQ':{const t=prompt('Cole aqui os quesitos (uma alínea por linha: a), b)… ou 1., 2.…):');if(!t)return;const q=splitQuesitos(t.split('\n'));q.forEach(x=>ensureRel(p).quesitos.push({id:uid(),txt:x,resp:'',rp:{}}));await saveProc();toast(q.length+' quesito(s) acrescentado(s).');S.scrollTop=window.scrollY;break}
     case 'rDoc':case 'rAnex':case 'rRec':case 'rCons':{const r=ensureRel(p),o=act==='rDoc'?r.docs:act==='rAnex'?r.anexos:act==='rRec'?(r.recursos=r.recursos||{}):(r.conseq=r.conseq||{}),k=el.dataset.k;o[k]=!o[k];await saveProc();S.scrollTop=window.scrollY;break}
-    case 'rAddVis':{const r=ensureRel(p);(r.visitas=r.visitas||[]).push({data:'',hora:'',presencas:'',obs:''});await saveProc();S.scrollTop=window.scrollY;break}
+    case 'rTempo':{const r=ensureRel(p),vi=+el.dataset.v,o=vi<0?(r.tempo=r.tempo||{}):(r.visitas[vi].tempo=r.visitas[vi].tempo||{});o[el.dataset.k]=!o[el.dataset.k];await saveProc();S.scrollTop=window.scrollY;break}
+    case 'rAddVis':{const r=ensureRel(p);(r.visitas=r.visitas||[]).push({data:'',hora:'',presencas:'',obs:'',tempo:{},tempoTxt:''});await saveProc();S.scrollTop=window.scrollY;break}
     case 'rDelVis':{const r=ensureRel(p);const i=+el.dataset.i;if(!await ask(`Retirar a ${i+2}.ª visita?`,['Cancelar','Retirar'],true))return;r.visitas.splice(i,1);await saveProc();S.scrollTop=window.scrollY;break}
     case 'rTkB':{const r=ensureRel(p),k=el.dataset.k;r[k]=!r[k];await saveProc();S.scrollTop=window.scrollY;break}
     case 'rAprDoc':{const r=ensureRel(p);r.aprDocs=r.aprDocs||{};r.aprDocs[el.dataset.k]=!r.aprDocs[el.dataset.k];await saveProc();S.scrollTop=window.scrollY;break}
@@ -2310,6 +2318,7 @@ document.addEventListener('change',async e=>{
   const el=e.target,act=el.dataset.act,p=cur(),a=curA();
   if(el.id==='gps'){const t=el.value.trim();if(!t){p.visita.gps=null;await saveProc();setGpsStatus('');return}if(!parseGpsTxt(t)){setGpsStatus('Não reconheço estas coordenadas. Aceito, por exemplo: 41.1579, -8.6291 · 41°09\'28"N 8°37\'45"W · ou um link do Google Maps / Apple Maps.');return}await gpsSet(p,t);return}
   if(act==='rTk'||act==='rTkB'){const r=ensureRel(p);r[el.dataset.k]=el.checked;await saveProc();S.scrollTop=window.scrollY;render();return}
+  if(act==='rTempo'){const r=ensureRel(p),vi=+el.dataset.v,o=vi<0?(r.tempo=r.tempo||{}):(r.visitas[vi].tempo=r.visitas[vi].tempo||{});o[el.dataset.k]=el.checked;await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='rAnexTipo'){const r=ensureRel(p);r.anexF[+el.dataset.i].tipo2=el.value;await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='rDoc'||act==='rAnex'||act==='rRec'||act==='rCons'){const r=ensureRel(p),ob=act==='rDoc'?r.docs:act==='rAnex'?r.anexos:act==='rRec'?(r.recursos=r.recursos||{}):(r.conseq=r.conseq||{});ob[el.dataset.k]=el.checked;await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='rAprDoc'){const r=ensureRel(p);r.aprDocs=r.aprDocs||{};r.aprDocs[el.dataset.k]=el.checked;await saveProc();S.scrollTop=window.scrollY;render();return}
