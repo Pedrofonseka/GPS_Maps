@@ -145,6 +145,7 @@ body:has(.rvbar){padding-bottom:70px}
 .fzr{margin-top:4px}.fzt{font-weight:700;margin:12px 0 2px;font-size:14px;color:#444}
 .fzleg{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:11px;margin:6px 0 8px}.fzleg>span[class^=fz-]{border-left:4px solid;border-radius:6px;padding:2px 6px}
 .undobtn{min-width:34px;font-size:17px;padding:2px 6px;margin-right:4px}.undobtn:disabled{opacity:.35}.fzctx{font-size:12px;color:#00803A;font-style:italic;margin:0 0 3px}.fzok{background:#00B050!important;color:#fff!important;border-color:#00B050!important}
+.fz-m{border-color:#00B050;background:linear-gradient(90deg,#EEF9F1,#FBF1E2)}
 </style>
 </head>
 <body>
@@ -739,7 +740,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.17.1';const VERSION_DATA='2026-11-21';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.17.2';const VERSION_DATA='2026-11-21';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1076,7 +1077,7 @@ function installTip(){
   return `<div class="card tip">📲 <b>Instalar no iPhone:</b> no Safari, toque em <b>≡</b> (à esquerda do endereço) ou <b>···</b> › <b>Partilhar</b> › deslize para cima › <b>Adicionar ao ecrã principal</b>. A app passa a abrir em ecrã inteiro e funciona sem rede.<div class="btns"><button class="secondary mini" data-act="hideTip">Já instalei / não mostrar</button></div></div>`}
 const HELP_HTML=`
 <details open><summary>O percurso</summary><p><b>Processo</b> (preparar) → <b>Anomalias</b> (lista e pronúncia) → <b>Relatório</b> (verificar e exportar). Tudo se grava sozinho.</p></details>
-<details><summary>1 · Processo</summary><p><b>A</b> — dados do processo e da vistoria: data (📅), presenças e localização GPS («📍 Obter GPS», ou colar coordenadas / link do Google Maps). O mapa de satélite fica guardado para o Word.<br><b>B</b> — <b>Partes</b>: cada parte tem um prefixo (1 Autor, 2 Réu, 3 Tribunal, 4 Perito). Os <b>Campos a atender</b> escolhem o que se aprecia em cada anomalia. A <b>Lógica da ficha</b> escolhe os títulos: Situação/Análise ou Questão/Resposta.</p></details>
+<details><summary>1 · Processo</summary><p><b>A</b> — dados do processo e da vistoria: data (📅), presenças e localização GPS («📍 Obter GPS», ou colar coordenadas / link do Google Maps). O mapa de satélite fica guardado para o Word.<br><b>B</b> — <b>Partes</b>: cada parte tem um prefixo (1 Autor, 2 Réu, 3 Tribunal, 4 Perito). Os <b>Campos a atender</b> escolhem o que se aprecia em cada anomalia. A <b>Lógica da análise</b> escolhe os títulos: Situação/Análise ou Questão/Resposta.</p></details>
 <details><summary>2 · Anomalias</summary><p><b>Importar lista</b> de Excel ou Word (tabela, lista numerada ou parágrafos numerados) e escolher de que parte é — os códigos ficam 1.001, 1.002… / 2.001… Também se acrescentam à mão («+ Acrescentar anomalia»; as constatadas no local vão para a parte do Perito).<br>Toque numa anomalia para se pronunciar: a situação fica fixa no topo; ◀ ▶ passa à anterior/seguinte. <b>⧉ Copiar a pronúncia</b> repete a classificação da anomalia anterior. Até 9 fotos (câmara ou fototeca); toque na foto para legendar, rodar, mover para outra anomalia ou eliminar.<br><b>🔍 Pesquisa</b> e filtros (por analisar, parte, zona). <b>🔒 Fixar numeração</b> congela os códigos. Ao eliminar, há 10 s para <b>↶ Desfazer</b>.</p></details>
 <details><summary>3 · Relatório</summary><p>O quadro <b>«Antes de exportar»</b> mostra o que falta (por analisar, sem fotos, fotos sem legenda…). Pré-visualização do Word real; Word com fichas (uma por página, fotos em 1/2/3 colunas) e/ou análise em texto corrido; Excel; pasta completa (.zip) com fotos IMG 1.001.1…</p></details>
 <details><summary>Cópias e passagem entre aparelhos</summary><p><b>Backup OUT/IN</b> — todos os processos. <b>📤 Enviar</b> (em cada processo) cria um ficheiro só com esse processo, para passar ao iPad/PC por AirDrop ou iCloud; no outro aparelho, <b>📥 Receber processo</b> compara as datas e pergunta se substitui ou mantém os dois. Trabalhe cada processo num aparelho de cada vez.</p></details>
@@ -1104,7 +1105,7 @@ function vProc(){
     <div class="rows">${p.partes.map((x,i)=>`<div class="rw"><input data-pn="${i}" value="${x.n}" inputmode="numeric" style="max-width:56px;text-align:center;font-weight:700"><input data-pnome="${i}" value="${esc(x.nome)}" placeholder="Nome da parte"><span class="muted" style="white-space:nowrap">${p.anomalias.filter(a=>parteOf(p,a)==x.n).length}</span><button class="del" data-act="delParte" data-i="${i}">✕</button></div>`).join('')}</div>
     <div class="btns"><button class="secondary mini" data-act="addParte">+ Acrescentar parte</button></div>
     <label>Situações acrescentadas no local (pelo perito) ficam na parte</label><select data-act="parteLocal">${p.partes.map(x=>`<option value="${x.n}" ${x.n==(p.parteLocal??4)?'selected':''}>${parteSig(p,x.n)} – ${esc(x.nome)}</option>`).join('')}</select>`,{cnt:pill(p.partes.map(x=>parteSig(p,x.n)).join(' · ')),def:false})}
-  ${sec('p5','Lógica da ficha',`<p class="muted">Escolha o par de títulos que sai em cada ficha do Word.</p>
+  ${sec('p5','Lógica da análise',`<p class="muted">Escolha o par de títulos que sai em cada ficha do Word.</p>
     <div class="seg">${[['Situação','Análise'],['Questão','Resposta']].map(([d,c])=>`<button class="${lblD(p)===d&&lblC(p)===c?'on':''}" data-act="setPair" data-d="${d}" data-c="${c}">${d} / ${c}</button>`).join('')}</div>
     <p class="muted">Personalizar (opcional):</p><div class="grid2"><div><label>1.º título</label><input data-bind="p.lblDesc" value="${esc(p.lblDesc||'')}" placeholder="${esc(lblD(p))}"></div><div><label>2.º título</label><input data-bind="p.lblCom" value="${esc(p.lblCom||'')}" placeholder="${esc(lblC(p))}"></div></div>`,{cnt:pill(lblD(p)+' / '+lblC(p)),def:false})}
   ${sec('p3','3 · Campos a atender na pronúncia',`<p class="muted">Marque os campos sobre os quais se vai pronunciar. Só esses aparecem em cada ficha. "Imprimir" decide se saem no Word.</p>
@@ -1601,7 +1602,14 @@ function ensureRel(p){syncUrg(p);const r=p.rel=p.rel||{};const d={ambito:'instit
   if(r.causasIntro===undefined)r.causasIntro=String(r.causasG||'').trim()?'':CAUSAS_INTRO;
   if(r.conseq)for(const [a,b] of Object.entries(CONSEQ_REN))if(a in r.conseq){if(r.conseq[a])r.conseq[b]=true;delete r.conseq[a]}
   if(String(r.docsOutros||'').trim()&&r.docs)r.docs['Outros']=true;
-  for(const k in d)if(r[k]===undefined)r[k]=clone(d[k]);r.quesitos.forEach(q=>{if(!q.id)q.id=uid();if(!q.rp)q.rp={}});return r}
+  for(const k in d)if(r[k]===undefined)r[k]=clone(d[k]);
+  if(!r.mzv){for(const [k,ik] of [['objetivo','objIntro'],['decurso','decursoIntro'],['ctxNota','ctxIntro'],['causasG','causasIntro'],['passos','passosIntro']]){
+      const it=String(r[ik]??'').trim(),tx=String(r[k]||'').trim();
+      if(!tx)r[k]=it?it+(/:$/.test(it)?'\n':' '):ZDEF[k];
+      else if(it&&!tx.startsWith(it))r[k]=/:$/.test(it)?it+'\n'+tx:it+' '+(/^[A-ZÁÉÍÓÚÂÊÔÃÕÇ][a-záéíóúâêôãõçà]/.test(tx)?tx.charAt(0).toLowerCase()+tx.slice(1):tx);
+      r[ik]=''}
+    r.mzv=1}
+  r.quesitos.forEach(q=>{if(!q.id)q.id=uid();if(!q.rp)q.rp={}});return r}
 // nome do ficheiro: <N_Ref>_Proc_<processo>-Relatorio_<versão>.docx  (ex.: Trib_2630_Proc_1407_25_6_T8CBR-Relatorio_1.01VF.docx)
 function relFileName(p){const r=ensureRel(p);const cl=t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
   const nref=cl(p.codigo).replace(/[^A-Za-z0-9]+/g,'_').replace(/^_|_$/g,'');
@@ -1779,14 +1787,19 @@ const RL=(k,lbl,val,ph='')=>`<label>${esc(lbl)}</label><input data-bind="r.${k}"
 // fases do preenchimento, com as cores do modelo: verde = texto introdutório (editável) · amarelo = classificação por ticks · castanho = texto livre
 const ZG=(k,val,def,lbl='Texto introdutório')=>{const v=String(val??'').trim();return `<div class="fz fz-g"><div class="fzh">🟩 ${esc(lbl)} <span class="muted">(sugerido pelo modelo; pode alterar)</span></div><textarea data-bind="r.${k}" rows="${String(val||def).length>60?2:1}" placeholder="${esc(def)}">${esc(val??'')}</textarea>${!v&&def?`<button class="mini fzr fzok" data-act="rDefTxt" data-k="${k}" data-v="${esc(def)}">✓ Aceitar o texto sugerido</button>`:v!==def&&def?`<button class="secondary mini fzr" data-act="rDefTxt" data-k="${k}" data-v="${esc(def)}">↺ repor o sugerido</button>`:''}</div>`};
 // texto livre: sugestão do modelo (aceita-se com um toque e depois corrigem-se os [ ]) e, em cima, a frase introdutória que ele continua
-const ZSUG={objetivo:['objIntro','analisar um conjunto de anomalias que se manifestam numa fração destinada a [uso], referidas nos seguintes termos:'],
+const ZSUG={objetivo:['','analisar um conjunto de anomalias que se manifestam numa fração destinada a [uso], referidas nos seguintes termos:'],
   outrasTxt:['','Nada a acrescentar.'],docsCom:['','Nada a considerar.'],interv:['','Não houve.'],
-  decurso:['decursoIntro','o interior da fração e o exterior do edifício[, incluindo …]'],
-  constrang:['','Nada a considerar.'],ctxNota:['ctxIntro','um edifício de [n.º] pisos, cuja morfologia apresenta [descrição].\n[Localização da fração em relação aos elementos com anomalias.]'],
-  causasG:['causasIntro',' - [causa provável 1];\n - [causa provável 2];'],conseqComp:['','Os danos são [graves / moderados / ligeiros] e exigem reparação [urgente / a curto prazo].'],
-  passos:['passosIntro',' - [ação 1];\n - [ação 2];']};
+  decurso:['','o interior da fração e o exterior do edifício'],
+  constrang:['','Nada a considerar.'],ctxNota:['','um edifício de [n.º] pisos, cuja morfologia apresenta [descrição].\n[Localização da fração em relação aos elementos com anomalias.]'],
+  causasG:['',' - [causa provável 1];\n - [causa provável 2];'],conseqComp:['','Os danos são [graves / moderados / ligeiros] e exigem reparação [urgente / a curto prazo].'],
+  passos:['',' - [ação 1];\n - [ação 2];']};
 const ZB=(k,val,lbl,rows=3,ph='',hint='')=>{const z=ZSUG[k],r=cur()?.rel||{},it=z&&z[0]?String(r[z[0]]||'').trim():'',sg=z?z[1]:'',v=String(val||'').trim();
   return `<div class="fz fz-b"><div class="fzh">🟫 ${esc(lbl)}</div>${hint?`<div class="muted" style="font-size:11px">${hint}</div>`:''}${it?`<div class="fzctx">${esc(it)} <b>…</b></div>`:''}<textarea data-bind="r.${k}" rows="${rows}" placeholder="${esc(ph)}">${esc(val||'')}</textarea>${sg&&!v?`<button class="mini fzr fzok" data-act="rSug" data-k="${k}" data-v="${esc(sg)}">✓ Aceitar o texto sugerido${/\[/.test(sg)?' (depois corrija o que está entre [ ])':''}</button>`:''}</div>`};
+// caixa única: começa com a introdução do modelo (já escrita) — aceita-se a sugestão completa, altera-se ou completa-se
+const ZDEF={objetivo:OBJ_INTRO+' ',decurso:DECURSO_INTRO+' ',ctxNota:CTX_INTRO+' ',causasG:CAUSAS_INTRO+'\n',passos:PASSOS_INTRO+'\n'};
+const mtxt=(r,k)=>{const v=String(r[k]||'').trim();return ZDEF[k]&&v===ZDEF[k].trim()?'':v}; // só a introdução = ainda por escrever
+const ZM=(k,val,lbl,rows=3)=>{const z=ZSUG[k],v=String(val||'').trim(),bare=!v||v===ZDEF[k].trim(),full=ZDEF[k]+(z?z[1]:'');
+  return `<div class="fz fz-m"><div class="fzh">🟩🟫 ${esc(lbl)} <span class="muted">— começa com o texto do modelo: aceite a sugestão, altere ou complete</span></div><textarea data-bind="r.${k}" rows="${rows}" placeholder="${esc(full)}">${esc(val||'')}</textarea>${bare?`<button class="mini fzr fzok" data-act="rSug" data-k="${k}" data-v="${esc(full)}">✓ Aceitar o texto sugerido${/\[/.test(full)?' (depois corrija o que está entre [ ])':''}</button>`:''}${v&&!v.startsWith(ZDEF[k].trim().slice(0,25))?`<button class="secondary mini fzr" data-act="rSug" data-k="${k}" data-v="${esc(ZDEF[k])}" data-cf="1">↺ recomeçar com a introdução do modelo</button>`:''}</div>`};
 const ZY=(lbl,html)=>`<div class="fz fz-y"><div class="fzh">🟨 ${esc(lbl)}</div>${html}</div>`;
 const FZH=t=>`<div class="fzt">${esc(t)}</div>`;
 const FZLEG=`<div class="fzleg"><span class="fz-g">🟩 texto introdutório</span><span class="fz-y">🟨 classificação (ticks)</span><span class="fz-b">🟫 texto livre</span><span class="muted">— no Word, o texto livre continua a frase introdutória.</span></div>`;
@@ -1812,7 +1825,7 @@ function relProcHTML(p){const r=ensureRel(p),col=isCol(r),part=isPart(r),hd=hdrD
     ${RL('versao','Versão do relatório',r.versao,'ex.: 1.01VF ou Draft00')}<p class="muted">Nome do ficheiro (e rodapé): <b>${esc(relFileName(p))}</b></p>`;
   const nq=r.quesitos.length;
   const QW=part?['queixa','queixas','Queixa']:['quesito','quesitos','Quesito'];
-  const t3=`${part?'<p class="muted">Particular: em princípio não há quesitos, mas uma lista de queixas sobre determinadas situações. O perito pode encontrar outras no decurso da inspeção (registe-as em Anomalias, origem P – Perito).</p>':''}${ZG('objIntro',r.objIntro,OBJ_INTRO)}${ZB('objetivo',r.objetivo,'Objetivo — continua a frase («…pretende analisar…»)',2,'Ex.: analisar um conjunto de anomalias que se manifestam numa fração destinada a escritórios, referidas nos seguintes termos:')}
+  const t3=`${part?'<p class="muted">Particular: em princípio não há quesitos, mas uma lista de queixas sobre determinadas situações. O perito pode encontrar outras no decurso da inspeção (registe-as em Anomalias, origem P – Perito).</p>':''}${ZM('objetivo',r.objetivo,'Objeto da análise')}
     ${FZH(part?'1.1 Pelo solicitante':'Questões / matéria a responder')}<div class="muted" style="font-size:11px;margin:-2px 0 4px">${part?'🟫 Cada queixa como foi apresentada (sai numerada «1- …»). Sem queixas escritas, sai a lista das situações alegadas.':''}</div><div class="rows">${r.quesitos.map((q,i)=>`<div class="qbox"><div class="qhd"><b>${qCode(i)}</b><span class="grow"></span><button class="secondary mini" data-act="rMvQ" data-i="${i}" data-d="-1" ${i?'':'disabled'}>▲</button><button class="secondary mini" data-act="rMvQ" data-i="${i}" data-d="1" ${i<nq-1?'':'disabled'}>▼</button><button class="del" data-act="rDelQ" data-i="${i}">✕</button></div><input data-bind="q.${i}.autor" value="${esc(q.autor||'')}" placeholder="Autor da questão (vazio = ${part?'pelo solicitante':'sem autor'}); ex.: pelo Autor, pela Ré, pelo Tribunal" style="margin-bottom:4px"><textarea data-bind="q.${i}.txt" rows="3">${esc(q.txt||'')}</textarea></div>`).join('')||`<p class="muted">Ainda sem ${QW[1]}.</p>`}</div>
     <div class="btns"><button class="secondary mini" data-act="rAddQ">+ ${QW[2]}</button><label class="btn secondary mini">📄 Do Word<input type="file" accept=".docx" data-act="rImpQ" data-k="docx" hidden></label><label class="btn secondary mini">📊 Do Excel<input type="file" accept=".xlsx" data-act="rImpQ" data-k="xlsx" hidden></label><button class="secondary mini" data-act="rPasteQ">📋 Colar texto</button></div>${qModHTML()}
     <p class="muted">Word: cada alínea (a), b)…, 1., 2.…) ou parágrafo passa a um quesito. Excel: 1.ª coluna da 1.ª folha (ignora a linha de títulos se disser «quesito»). Pode editar e reordenar depois.</p>${part?FZH('1.2 Por outros')+ZB('outrasTxt',r.outrasTxt,'Texto quando não há situações constatadas pelo perito (as que registar com origem P saem aqui, em lista)',2,'Nada a acrescentar.'):''}`;
@@ -1821,7 +1834,7 @@ function relProcHTML(p){const r=ensureRel(p),col=isCol(r),part=isPart(r),hd=hdrD
   const t5=`${FZH('3.1 Data, estado do tempo e presenças')}${RL('hora','Hora (1.ª visita)',r.hora,'ex.: 14:30')}<p class="muted">A data e «Compareceram e acompanharam» da 1.ª visita vêm de «2 · Vistoria». Uma peritagem pode ter várias visitas: acrescente as seguintes aqui.</p>${tempoUI(r.tempo,r.tempoTxt,-1)}
     <label>Outras visitas</label><div class="rows">${(r.visitas||[]).map((v,i)=>`<div class="qbox"><div class="qhd"><b>${i+2}.ª visita</b><span class="grow"></span><button class="del" data-act="rDelVis" data-i="${i}">✕</button></div><div class="grid2"><div><label>Data</label><input data-bind="vx.${i}.data" value="${esc(v.data||'')}" placeholder="dd/mm/aaaa"></div><div><label>Hora</label><input data-bind="vx.${i}.hora" value="${esc(v.hora||'')}" placeholder="ex.: 10:00"></div></div><label>Compareceram</label><textarea data-bind="vx.${i}.presencas" rows="2">${esc(v.presencas||'')}</textarea><label>Notas desta visita (opcional)</label><textarea data-bind="vx.${i}.obs" rows="2">${esc(v.obs||'')}</textarea>${tempoUI(v.tempo,v.tempoTxt,i)}</div>`).join('')||'<p class="muted">Só a 1.ª visita.</p>'}</div><div class="btns"><button class="secondary mini" data-act="rAddVis">+ Visita</button></div>
 ${FZH('3.2 Outros intervenientes e suas funções')}${ZB('interv',r.interv,'Texto livre',2,'Não houve.')}
-${FZH('3.3 Tipo de inspeção')}${ZG('decursoIntro',r.decursoIntro,DECURSO_INTRO)}${ZB('decurso',r.decurso,'Percurso — continua a frase («…foi percorrido…»)',2,DECURSO_DEF)}${ZG('recursosIntro',r.recursosIntro,RECURSOS_INTRO,'Ligação aos meios (continua a frase)')}${ZY('Meios utilizados (cumulativos)',`<div class="tks col">${RECURSOS_R.map(d=>tickBox('',!!r.recursos?.[d],d,`data-act="rRec" data-k="${esc(d)}"`)).join('')}</div>${r.recursos?.Outros?ZB('recursosOutros',r.recursosOutros,'Outros meios (um por linha)',2):''}`)}
+${FZH('3.3 Tipo de inspeção')}${ZM('decurso',r.decurso,'Percurso da inspeção')}${ZY('Meios utilizados (cumulativos) — a frase acima continua automaticamente com «…, com recurso a:» e a lista',`<div class="tks col">${RECURSOS_R.map(d=>tickBox('',!!r.recursos?.[d],d,`data-act="rRec" data-k="${esc(d)}"`)).join('')}</div>${r.recursos?.Outros?ZB('recursosOutros',r.recursosOutros,'Outros meios (um por linha)',2):''}`)}
 ${FZH('3.4 Constrangimentos, impedimentos ou dúvidas relevantes')}${ZB('constrang',r.constrang,'Texto livre',2,'Nada a considerar.')}`;
   return `${blk('R · Relatório','Tipo de peritagem, capa, objeto, documentos e visita')}
   ${sec('rp1','R1 · Tipo de relatório e gabinete',t1,{cnt:pill((r.ambito==='particular'?'Particular':'Institucional')+' · '+(col?'Colegial':'Singular')+' · '+(GABS_R.find(g=>g[0]===r.gab)||['',''])[1].split(' ')[0])})}
@@ -1839,16 +1852,16 @@ function relRelHTML(p){const r=ensureRel(p),col=isCol(r);
   const anex=`<div class="tks col">${ANEX_R.map(d=>tickBox('',!!r.anexos[d],d,`data-act="rAnex" data-k="${esc(d)}"`)).join('')}</div>${RT('anexosOutros','Outros anexos (um por linha)',r.anexosOutros,2)}${anexFilesHTML(p)}`;
   const oldR=isPart(r)&&r.quesitos.some(q=>String(q.resp||'').trim()||Object.values(q.rp||{}).some(t=>String(t||'').trim()));
   return `${isPart(r)&&!oldR?'':sec('rr1',isPart(r)?'Apreciação das queixas — já não sai no relatório':'Resposta ao solicitado (quesitos)',(isPart(r)?'<p class="warn" style="margin-top:0">⚠ Nos relatórios particulares este capítulo deixou de sair (as situações já são comentadas na Análise específica). Passe estes textos para o comentário da situação ou para a Apreciação geral e apague-os aqui.</p>':'')+qs,{cnt:pill(`${nr}/${r.quesitos.length}`,nr&&nr===r.quesitos.length?'ok':'warn')})}
-  ${isPart(r)?'':sec('rrC',isPart(r)?'Contextualizando e outras questões':'Nota de contextualização (antes da análise específica)',RT('ctxNota',isPart(r)?'Contextualizando — sai em «Apreciação geral»':'Sai em «Situações a analisar», antes dos tópicos e da análise específica',r.ctxNota,5,'Enquadramento do imóvel, do pedido e das circunstâncias relevantes para a análise…')+(isPart(r)?RT('outrasTxt','«1.2 Outras questões ou situações» — texto quando o perito não acrescentou situações',r.outrasTxt,2,'Nada a acrescentar.'):''),{cnt:String(r.ctxNota||'').trim()?pill('✓','ok'):pill('por preencher','warn'),def:false})}
+  ${isPart(r)?'':sec('rrC',isPart(r)?'Contextualizando e outras questões':'Nota de contextualização (antes da análise específica)',RT('ctxNota',isPart(r)?'Contextualizando — sai em «Apreciação geral»':'Sai em «Situações a analisar», antes dos tópicos e da análise específica',r.ctxNota,5,'Enquadramento do imóvel, do pedido e das circunstâncias relevantes para a análise…')+(isPart(r)?RT('outrasTxt','«1.2 Outras questões ou situações» — texto quando o perito não acrescentou situações',r.outrasTxt,2,'Nada a acrescentar.'):''),{cnt:mtxt(r,'ctxNota')?pill('✓','ok'):pill('por preencher','warn'),def:false})}
   ${sec('rr2','Resumo de análise — nota',RL('resumoIntro','Frase de abertura',r.resumoIntro,RESUMO_INTRO)+RT('nota','Nota (sai a seguir aos gráficos)',r.nota,3)+'<p class="muted">Os quadros e gráficos vêm do «Resumo estatístico» (abaixo). Sem estatística e sem nota, a secção não sai no relatório.</p>',{def:false})}
   ${sec('rrA',(isPart(r)?'6. ':'')+'Apreciação geral (contextualização · causas · consequências)',`<p class="muted">Sai como capítulo próprio, a seguir ao «Resumo de análise». Só saem os subtítulos preenchidos.</p>${FZLEG}
-    ${isPart(r)?FZH('Contextualização')+ZG('ctxIntro',r.ctxIntro,CTX_INTRO)+ZB('ctxNota',r.ctxNota,'Texto livre — continua a frase («Trata-se de…»)',5,'um edifício de vários pisos, cuja morfologia…'):''}
-    ${FZH('Possíveis causas')}${ZG('causasIntro',r.causasIntro,CAUSAS_INTRO)}${ZB('causasG',r.causasG,'Texto livre',4,'- Há anomalias de fissuração entre elementos estruturais…')}
+    ${isPart(r)?FZH('Contextualização')+ZM('ctxNota',r.ctxNota,'Contextualização',5):''}
+    ${FZH('Possíveis causas')}${ZM('causasG',r.causasG,'Possíveis causas',4)}
     ${FZH('Consequências')}${ZG('conseqIntro',r.conseqIntro,CONSEQ_INTRO)}
     ${ZY('Classificação (cumulativa) — sai em lista «- …;»',`<div class="tks col">${conseqList().map(d=>(settings.conseqExtra||[]).includes(d)&&!CONSEQ_R.includes(d)?`<div class="row consx" style="gap:4px;align-items:center">${tickBox('',!!r.conseq?.[d],d,`data-act="rCons" data-k="${esc(d)}"`)}<button class="secondary mini" title="Retirar da lista (todos os processos)" data-act="consDel" data-k="${esc(d)}">✕</button></div>`:tickBox('',!!r.conseq?.[d],d,`data-act="rCons" data-k="${esc(d)}"`)).join('')}</div><div class="row" style="gap:6px;margin:4px 0 8px"><input id="consNew" placeholder="Acrescentar outra consequência à lista…" style="flex:1"><button class="secondary mini" data-act="consAdd">＋ Acrescentar</button></div><div class="muted" style="font-size:11px;margin-top:-4px">Fica na lista para todos os processos e já marcada neste.</div>${r.conseq?.['Outros prejuízos']?ZB('conseqOutros',r.conseqOutros,'Outros prejuízos (um por linha)',2):''}`)}
     ${ZB('conseqComp',r.conseqComp,'Texto complementar — sai a seguir à lista',5,'Os danos são graves e exigem reparação urgente…')}
-    ${FZH('Outras considerações')}${tickBox('',r.incApr===true,'Incluir comentários e conclusões (texto livre)','data-act="rTkB" data-k="incApr"')}${r.incApr===true?RT('apreciacao','',r.apreciacao,6):''}<label>Documentos a juntar nesta apreciação (saem também em «Em anexo»)</label>${(r.anexF||[]).length?`<div class="tks col">${(r.anexF||[]).map((x,i)=>tickBox('',!!(r.aprDocs||{})[x.id],anexLbl(x,i),`data-act="rAprDoc" data-k="${x.id}"`)).join('')}</div>`:'<p class="muted">Ainda não há ficheiros juntos.</p>'}<div class="btns"><label class="btn secondary mini">📎 Juntar ficheiros<input type="file" multiple data-act="rAddAnexF" hidden></label></div>`,{cnt:(()=>{const n=[isPart(r)&&String(r.ctxNota||'').trim(),String(r.causasG||'').trim(),String(r.conseqTxt||'').trim()||conseqList().some(d=>r.conseq?.[d]),r.incApr===true&&String(r.apreciacao||'').trim()].filter(Boolean).length;return n?pill(n+' ✓','ok'):pill('vazia')})(),def:false})}
-  ${sec('rrP','Passos seguintes',`${tickBox('',r.incPassos!==false,'Incluir o capítulo «Passos seguintes» (a seguir à resposta ao solicitado)','data-act="rTk" data-k="incPassos"')}${ZG('passosIntro',r.passosIntro,PASSOS_INTRO)}${ZB('passos',r.passos,'Texto livre',5,' - Remoção do sistema de revestimento exterior do terraço…')}`,{cnt:r.incPassos===false?pill('não incluído'):String(r.passos||'').trim()?pill('✓','ok'):pill('por preencher','warn'),def:false})}
+    ${FZH('Outras considerações')}${tickBox('',r.incApr===true,'Incluir comentários e conclusões (texto livre)','data-act="rTkB" data-k="incApr"')}${r.incApr===true?RT('apreciacao','',r.apreciacao,6):''}<label>Documentos a juntar nesta apreciação (saem também em «Em anexo»)</label>${(r.anexF||[]).length?`<div class="tks col">${(r.anexF||[]).map((x,i)=>tickBox('',!!(r.aprDocs||{})[x.id],anexLbl(x,i),`data-act="rAprDoc" data-k="${x.id}"`)).join('')}</div>`:'<p class="muted">Ainda não há ficheiros juntos.</p>'}<div class="btns"><label class="btn secondary mini">📎 Juntar ficheiros<input type="file" multiple data-act="rAddAnexF" hidden></label></div>`,{cnt:(()=>{const n=[isPart(r)&&mtxt(r,'ctxNota'),mtxt(r,'causasG'),String(r.conseqTxt||'').trim()||conseqList().some(d=>r.conseq?.[d]),r.incApr===true&&String(r.apreciacao||'').trim()].filter(Boolean).length;return n?pill(n+' ✓','ok'):pill('vazia')})(),def:false})}
+  ${sec('rrP','Passos seguintes',`${tickBox('',r.incPassos!==false,'Incluir o capítulo «Passos seguintes» (a seguir à resposta ao solicitado)','data-act="rTk" data-k="incPassos"')}${ZM('passos',r.passos,'Passos seguintes',5)}`,{cnt:r.incPassos===false?pill('não incluído'):mtxt(r,'passos')?pill('✓','ok'):pill('por preencher','warn'),def:false})}
   ${sec('rr3','Reservas e ambiente',`${tickBox('',r.incReservas!==false,'Incluir «Âmbito de utilização – reservas de análise»','data-act="rTk" data-k="incReservas"')}${RT('reservas','',r.reservas||RESERVAS_R,6)}${tickBox('',r.incAmbiente!==false,'Incluir «Ambiente, sustentabilidade e conformidade de licenciamento»','data-act="rTk" data-k="incAmbiente"')}${RT('ambiente','',r.ambiente||AMBIENTE_R,6)}`,{def:false})}
   ${sec('rr4','Termo de encerramento',termo,{cnt:col?pill(r.unan?'unanimidade':'discordâncias',r.unan?'ok':'warn'):'',def:false})}
   ${sec('rr5','Em anexo',anex,{cnt:pill(ANEX_R.filter(d=>r.anexos[d]).length+(r.anexF||[]).length+' ✓'),def:false})}
@@ -1936,7 +1949,7 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
   const A=buildDocx({...o,bodyOnly:true,withIndex:false,stats:null,withResumo:false,withVistoria:false,mapImg:null,onePerPage:false,layout:'texto'});
   const topLine=x=>{const z=zonaTxt(x);return P(R(`${x._code}  –  ${[x.ref?'Item '+x.ref:'',z,x.elemento].filter(Boolean).join(' · ')}`),{sp:[20,20]})};
   body+=H1(part?'Objeto de análise':'Objeto da perícia')+E();
-  {const ob=String(r.objetivo||'').trim()||String(r.contexto||'').trim();if(ob)body+=GT(r.objIntro,ob)+E()}
+  {const ob=mtxt(r,'objetivo');if(ob)body+=T(ob,{jc:'both'})+E();else if(String(r.contexto||'').trim())body+=GT(OBJ_INTRO,r.contexto)+E()}
   if(part){const AL=o.anoms.filter(x=>x.origem!=='local'),OU=o.anoms.filter(x=>x.origem==='local'),QT=r.quesitos.map(q=>String(q.txt||'').trim()).filter(Boolean);
     // «Pelo solicitante»: as questões tal como foram escritas (numeradas «1- …»); sem elas, a lista das situações alegadas
     const ps=H2('Pelo solicitante')+(QT.length?QT.map((t,k)=>T(/^\s*(\d+\s*[-.)–]|[-–•])/.test(t)?t:`${k+1}- ${t}`,{jc:'both'})).join(''):(AL.map(topLine).join('')||T('Não foram apresentadas.')))+E()
@@ -1958,13 +1971,13 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
   {const rc=RECURSOS_R.filter(x=>x!=='Outros'&&r.recursos?.[x]).concat(String(r.recursosOutros||'').split('\n').map(x=>x.trim()).filter(Boolean));
    // forma de inspeção: meios (introdução + ticks) e depois o percurso (introdução + texto livre)
    // tipo de inspeção: percurso (introdução + texto livre) e, na mesma frase, «…, com recurso a:» seguido dos meios marcados
-   let dt=String(r.decurso||'').trim()||(String(r.decursoIntro||'').trim()?DECURSO_DEF:'Com o acompanhamento dos presentes, foi visitado o interior e exterior do edifício, para analisar as situações que vinham definidas');
+   let dt=mtxt(r,'decurso')||DECURSO_INTRO+' '+DECURSO_DEF;
    dt=dt.replace(/[\s.:;,]+$/,'')+(rc.length?', '+(String(r.recursosIntro||'').trim()||RECURSOS_INTRO):'.');
-   body+=H2('Tipo de inspeção')+GT(r.decursoIntro,dt)+rc.map(x=>CHK(true,x)).join('')}
+   body+=H2('Tipo de inspeção')+T(dt,{jc:'both'})+rc.map(x=>CHK(true,x)).join('')}
   body+=H2('Constrangimentos, impedimentos ou dúvidas relevantes')+T(String(r.constrang||'').trim()||'Nada a considerar.')+E();
   // 5 — situações (corpo do Regi, texto corrido, sem índice próprio)
   if(!part){
-    body+=H1('Situações a analisar')+H2('Nota de contextualização')+E()+(String(r.ctxNota||'').trim()?T(r.ctxNota,{jc:'both'}):T('[Nota de contextualização por preencher — separador Relatório]',{i:true,color:'C00000'}))+E()+H2('Tópicos')+E()+T('A análise segue os seguintes tópicos:');
+    body+=H1('Situações a analisar')+H2('Nota de contextualização')+E()+(mtxt(r,'ctxNota')?T(mtxt(r,'ctxNota'),{jc:'both'}):T('[Nota de contextualização por preencher — separador Relatório]',{i:true,color:'C00000'}))+E()+H2('Tópicos')+E()+T('A análise segue os seguintes tópicos:');
     let gPrev=null;for(const x of o.anoms){if(x._grp&&x._grp!==gPrev){gPrev=x._grp;body+=P(R(x._grp,{b:true}),{sp:[120,40],keep:1})}body+=topLine(x)}body+=E();
   }
   body+='<w:p><w:r><w:br w:type="page"/></w:r></w:p>'+H1(part?'Análise':'Análise específica')+gabStyle(A.body);media.push(...A.media);
@@ -2019,13 +2032,13 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
      body+=RESUMO_ORD.map(k=>Q[k]||'').join('')}
     if(hasN)body+=E()+P(R('Nota:',{b:true}),{bdrT:1})+T(r.nota)}}
   // Apreciação geral (H1): contextualizando · possíveis causas · consequências · outras considerações
-  {const ctx=part?String(r.ctxNota||'').trim():'',cau=String(r.causasG||'').trim(),apr=r.incApr===true?String(r.apreciacao||'').trim():'';
+  {const ctx=part?mtxt(r,'ctxNota'):'',cau=mtxt(r,'causasG'),apr=r.incApr===true?String(r.apreciacao||'').trim():'';
    const co=String(r.conseqOutros||'').split('\n').map(x=>x.trim()).filter(Boolean);
    const cs=conseqList().filter(x=>x!=='Outros prejuízos'&&r.conseq?.[x]).concat(r.conseq?.['Outros prejuízos']?(co.length?co:['Outros prejuízos']):[]);
    const ct=String(r.conseqTxt||'').trim();const ad=r.incApr===true?(r.anexF||[]).map((x,i)=>[x,i]).filter(([x])=>(r.aprDocs||{})[x.id]):[];
    if(ctx||cau||ct||cs.length||apr||ad.length||String(r.conseqComp||'').trim()){body+='<w:p><w:r><w:br w:type="page"/></w:r></w:p>'+H1('Apreciação geral');
-    if(ctx)body+=H2('Contextualização')+GT(r.ctxIntro,ctx)+E();
-    if(cau)body+=H2('Possíveis causas')+GT(r.causasIntro,cau)+E();
+    if(ctx)body+=H2('Contextualização')+T(ctx,{jc:'both'})+E();
+    if(cau)body+=H2('Possíveis causas')+T(cau,{jc:'both'})+E();
     {const cc=[ct,String(r.conseqComp||'').trim()].filter(Boolean).join('\n');if(cs.length||cc){body+=H2('Consequências');if(cs.length)body+=(String(r.conseqIntro||'').trim()?T(r.conseqIntro,{jc:'both'}):'')+cs.map((x,k)=>T(`- ${x}${k<cs.length-1?';':'.'}`)).join('');if(cc)body+=(cs.length?E():'')+T(cc,{jc:'both'});body+=E()}} // tópicos marcados primeiro; o texto complementar vem sempre depois
     if(apr)body+=H2(ctx||cau||ct||cs.length?'Outras considerações':'Comentários e conclusões')+T(apr,{jc:'both'})+E();
     if(ad.length)body+=P(R('Documentos juntos (em anexo):',{b:true}))+ad.map(([x,i])=>CHK(true,anexLbl(x,i))).join('')+E()}}
@@ -2037,7 +2050,7 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
     if(cons||!col)body+=P(R('Resposta:',{b:true,i:true}))+T(cons||'—',{jc:'both'})+E();
     else{r.peritos.forEach((pe,j)=>{const t=String(q.rp?.[j]||'').trim();body+=P(R(`Resposta — ${pe.nome||'Perito '+(j+1)} (${represR(r,pe).replace(/^Perito /,'').replace(/^n/,'n')}):`,{b:true,i:true}))+T(t||'—',{jc:'both'})+E()})}});
   if(!r.quesitos.length)body+=T('—')}
-  if(r.incPassos!==false){body+=E()+H1('Passos seguintes')+E()+(String(r.passos||'').trim()?GT(r.passosIntro,r.passos):T('[Passos seguintes por preencher — ou retire o capítulo no separador Relatório]',{i:true,color:'C00000'}))+E()}
+  if(r.incPassos!==false){body+=E()+H1('Passos seguintes')+E()+(mtxt(r,'passos')?T(mtxt(r,'passos'),{jc:'both'}):T('[Passos seguintes por preencher — ou retire o capítulo no separador Relatório]',{i:true,color:'C00000'}))+E()}
   // 8, 9
   if(r.incReservas!==false){body+=H1('Âmbito de utilização – reservas de análise');for(const l of String(r.reservas||RESERVAS_R).split('\n'))body+=/^\d+\.\s/.test(l)?H2(l.replace(/^\d+\.\s*/,'')):T(l,{jc:'both'})}
   if(r.incAmbiente!==false){body+=H1('Ambiente, sustentabilidade e conformidade de licenciamento')+T(String(r.ambiente||AMBIENTE_R),{jc:'both'})}
@@ -2348,7 +2361,7 @@ document.addEventListener('click',async e=>{S.histBreak=true;setTimeout(()=>{S.h
     case 'rMvQ':{const Q=ensureRel(p).quesitos,i=+el.dataset.i,j=i+(+el.dataset.d);if(j<0||j>=Q.length)return;[Q[i],Q[j]]=[Q[j],Q[i]];await saveProc();S.scrollTop=window.scrollY;break}
     case 'rPasteQ':{const t=prompt('Cole aqui os quesitos (uma alínea por linha: a), b)… ou 1., 2.…):');if(!t)return;const q=splitQuesitos(t.split('\n'));q.forEach(x=>ensureRel(p).quesitos.push({id:uid(),txt:x,resp:'',rp:{}}));await saveProc();toast(q.length+' quesito(s) acrescentado(s).');S.scrollTop=window.scrollY;break}
     case 'rDoc':case 'rAnex':case 'rRec':case 'rCons':{const r=ensureRel(p),o=act==='rDoc'?r.docs:act==='rAnex'?r.anexos:act==='rRec'?(r.recursos=r.recursos||{}):(r.conseq=r.conseq||{}),k=el.dataset.k;o[k]=!o[k];await saveProc();S.scrollTop=window.scrollY;break}
-    case 'rDefTxt':case 'rSug':{const r=ensureRel(p),k=el.dataset.k;r[k]=el.dataset.v;await saveProc();S.scrollTop=window.scrollY;render();
+    case 'rDefTxt':case 'rSug':{const r=ensureRel(p),k=el.dataset.k;if(el.dataset.cf&&String(r[k]||'').trim()&&!confirm('Substituir o texto atual pela introdução do modelo? (pode desfazer com ↶)'))return;r[k]=el.dataset.v;await saveProc();S.scrollTop=window.scrollY;render();
       setTimeout(()=>{const t=document.querySelector(`[data-bind="r.${k}"]`);if(!t)return;t.focus();const a=t.value.indexOf('['),b=t.value.indexOf(']',a);if(a>=0&&b>a)t.setSelectionRange(a,b+1);else t.setSelectionRange(t.value.length,t.value.length)},60);return}
     case 'consAdd':{const r=ensureRel(p),v=String(document.getElementById('consNew')?.value||'').trim().replace(/[;.]+$/,'');if(!v)return toast('Escreva a consequência a acrescentar.');
       const t=v.charAt(0).toUpperCase()+v.slice(1),ex=conseqList().find(x=>x.toLowerCase()===t.toLowerCase());
