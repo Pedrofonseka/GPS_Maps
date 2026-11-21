@@ -729,7 +729,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.13.3';const VERSION_DATA='2026-11-21';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.14.0';const VERSION_DATA='2026-11-21';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1633,7 +1633,7 @@ function reviewTexts(p){const r=ensureRel(p),part=isPart(r),L=[];const add=(sec,
   (r.visitas||[]).forEach((v,i)=>{add('3. Da visita ao local',`${i+2}.ª visita — presenças`,v.presencas,{view:'proc',open:'rp5',bind:`vx.${i}.presencas`});add('3. Da visita ao local',`${i+2}.ª visita — notas`,v.obs,{view:'proc',open:'rp5',bind:`vx.${i}.obs`})});
   add('3. Da visita ao local','Estado do tempo — texto complementar',r.tempoTxt,RP('tempoTxt','rp5'));(r.visitas||[]).forEach((v,i)=>add('3. Da visita ao local',`${i+2}.ª visita — estado do tempo`,v.tempoTxt,{view:'proc',open:'rp5',bind:`vx.${i}.tempoTxt`}));
   add('3. Da visita ao local','Outros intervenientes',r.interv,RP('interv','rp5'));add('3. Da visita ao local','Decurso da inspeção',r.decurso,RP('decurso','rp5'));add('3. Da visita ao local','Constrangimentos',r.constrang,RP('constrang','rp5'));
-  if(part)add('4. Situações a analisar','Outras questões ou situações',r.outrasTxt,RR('outrasTxt','rrC'));else add('4. Situações a analisar','Nota de contextualização',r.ctxNota,RR('ctxNota','rrC'));
+  if(part)add('1. Objeto da perícia','Outras questões ou situações',r.outrasTxt,RR('outrasTxt','rrC'));else add('4. Situações a analisar','Nota de contextualização',r.ctxNota,RR('ctxNota','rrC'));
   const lF=printFields(p,settings).filter(f=>f.type==='long');
   for(const a of hydrate(p)){const c=a._code,go=b=>({aid:a.id,bind:b});add('5. Análise específica',`${c} — ${lblD(p)}`,a.descricao,go('a.descricao'));add('5. Análise específica',`${c} — ${lblC(p)}`,a.comentario,go('a.comentario'));
     for(const f of lF)add('5. Análise específica',`${c} — ${f.label}`,a.vals?.[f.id],go('v.'+f.id));(a.fotos||[]).forEach((f,i)=>add('5. Análise específica',`${imgCode(p,a,i)} — legenda`,f.legenda,{aid:a.id,foto:i}))}
@@ -1641,7 +1641,7 @@ function reviewTexts(p){const r=ensureRel(p),part=isPart(r),L=[];const add=(sec,
   if(part)add('7. Apreciação geral','Contextualizando',r.ctxNota,RR('ctxNota','rrC'));add('7. Apreciação geral','Possíveis causas',r.causasG,RR('causasG','rrA'));
   add('7. Apreciação geral','Consequências',r.conseqTxt,RR('conseqTxt','rrA'));add('7. Apreciação geral','Consequências — texto complementar',r.conseqComp,RR('conseqComp','rrA'));
   if(r.incApr===true)add('7. Apreciação geral','Comentários e conclusões',r.apreciacao,RR('apreciacao','rrA'));
-  r.quesitos.forEach((q,i)=>add(part?'Apreciação das queixas':'Resposta ao solicitado',`Resposta à questão ${i+1}`,q.resp,{view:'rel',open:'rr1',bind:`q.${i}.resp`}));
+  if(!part)r.quesitos.forEach((q,i)=>add('Resposta ao solicitado',`Resposta à questão ${i+1}`,q.resp,{view:'rel',open:'rr1',bind:`q.${i}.resp`}));
   add('Passos seguintes','Frase de abertura',r.passosIntro,RR('passosIntro','rrP'));add('Passos seguintes','Texto',r.passos,RR('passos','rrP'));
   return L}
 const RV_ABBR=/(?:^|\s)(?:ex|n\.º|art|arts|p|pág|págs|sr|sra|dr|dra|eng|arq|cf|etc|aprox|nº|n|al|v|vs|fl|fls|proc|ref|tel|séc|av|lda|s\.a|cód)\.$/i;
@@ -1709,6 +1709,7 @@ async function exportGate(p){const R=S.review&&S.review.pid===p.id?S.review:null
   if(!res.issues.length)return true;const c=await ask(`A revisão do texto encontrou ${res.issues.length} aviso(s) (gralhas, ortografia, redundâncias ou textos em falta). Quer rever antes de exportar?`,['Exportar mesmo assim','Rever agora']);
   if(c===1||c===true){S.view='rel';S.sub=null;S.scrollTop=undefined;render();setTimeout(()=>document.getElementById('rvCard')?.scrollIntoView({block:'start'}),60);return false}return true}
 function relCheck(p){const r=ensureRel(p),col=isCol(r),part=isPart(r),w=[];const v=x=>String(x||'').trim();
+  if(part&&r.quesitos.some(q=>v(q.resp)||Object.values(q.rp||{}).some(v)))w.push('Há respostas escritas em «Apreciação das queixas», que já não sai nos relatórios particulares — passe-as para a Análise ou para a Apreciação geral (separador Relatório)');
   if(!v(p.codigo))w.push('N_Ref (código interno) por preencher — Processo › 1');
   if(!v(r.objeto))w.push('«Objeto de análise» por preencher — Processo › R2');
   if(!v(r.entidade))w.push((part?'Solicitante':'Tribunal / entidade')+' por preencher — Processo › R2');
@@ -1774,8 +1775,9 @@ function relRelHTML(p){const r=ensureRel(p),col=isCol(r);
   const termo=`${col?`<label>Conclusão</label>${segR('rUnan',[['1','Por unanimidade'],['0','Com posições discordantes']],r.unan?'1':'0')}${r.unan?'':RT('discord','Posições discordantes (perito e fundamento)',r.discord,4)}`:''}
     ${RL('dataEnc','Concluído em',r.dataEnc,mesAno())}<p class="muted">${col?'Assinam os peritos do colégio.':'Assina o perito (nome em Definições).'}</p>`;
   const anex=`<div class="tks col">${ANEX_R.map(d=>tickBox('',!!r.anexos[d],d,`data-act="rAnex" data-k="${esc(d)}"`)).join('')}</div>${RT('anexosOutros','Outros anexos (um por linha)',r.anexosOutros,2)}${anexFilesHTML(p)}`;
-  return `${sec('rr1',isPart(r)?'Apreciação das queixas':'Resposta ao solicitado (quesitos)',qs,{cnt:pill(`${nr}/${r.quesitos.length}`,nr&&nr===r.quesitos.length?'ok':'warn')})}
-  ${sec('rrC',isPart(r)?'Contextualizando e outras questões':'Nota de contextualização (antes da análise específica)',RT('ctxNota',isPart(r)?'Contextualizando — sai em «Apreciação geral»':'Sai em «Situações a analisar», antes dos tópicos e da análise específica',r.ctxNota,5,'Enquadramento do imóvel, do pedido e das circunstâncias relevantes para a análise…')+(isPart(r)?RT('outrasTxt','«Outras questões ou situações» — texto quando o perito não acrescentou situações',r.outrasTxt,2,'Nada a acrescentar.'):''),{cnt:String(r.ctxNota||'').trim()?pill('✓','ok'):pill('por preencher','warn'),def:false})}
+  const oldR=isPart(r)&&r.quesitos.some(q=>String(q.resp||'').trim()||Object.values(q.rp||{}).some(t=>String(t||'').trim()));
+  return `${isPart(r)&&!oldR?'':sec('rr1',isPart(r)?'Apreciação das queixas — já não sai no relatório':'Resposta ao solicitado (quesitos)',(isPart(r)?'<p class="warn" style="margin-top:0">⚠ Nos relatórios particulares este capítulo deixou de sair (as situações já são comentadas na Análise específica). Passe estes textos para o comentário da situação ou para a Apreciação geral e apague-os aqui.</p>':'')+qs,{cnt:pill(`${nr}/${r.quesitos.length}`,nr&&nr===r.quesitos.length?'ok':'warn')})}
+  ${sec('rrC',isPart(r)?'Contextualizando e outras questões':'Nota de contextualização (antes da análise específica)',RT('ctxNota',isPart(r)?'Contextualizando — sai em «Apreciação geral»':'Sai em «Situações a analisar», antes dos tópicos e da análise específica',r.ctxNota,5,'Enquadramento do imóvel, do pedido e das circunstâncias relevantes para a análise…')+(isPart(r)?RT('outrasTxt','«1.2 Outras questões ou situações» — texto quando o perito não acrescentou situações',r.outrasTxt,2,'Nada a acrescentar.'):''),{cnt:String(r.ctxNota||'').trim()?pill('✓','ok'):pill('por preencher','warn'),def:false})}
   ${sec('rrA','Apreciação geral (contextualizando · causas · consequências · conclusões)',`<p class="muted">Sai como capítulo próprio, a seguir ao «Resumo de análise». Só saem os subtítulos preenchidos.${isPart(r)?' «Contextualizando» é a nota de contextualização (acima).':''}</p>
     ${RT('causasG','Possíveis causas',r.causasG,4,'Interpretação das causas prováveis, a partir dos locais, configuração e alinhamentos das anomalias…')}
     <label>Consequências — 1) marque os tópicos</label>
@@ -1863,10 +1865,11 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
   // 1 — objeto: primeiro conta-se o problema (frase de abertura + objetivo), depois as questões e os seus autores (1.1, 1.2…)
   body+=H1('Objeto da perícia')+E();
   {const ob=String(r.objetivo||'').trim()||String(r.contexto||'').trim();const oi=String(r.objIntro||'').trim();if(oi||ob)body+=(oi?T(oi,{jc:'both'}):'')+(ob?T(ob,{jc:'both'}):'')+E()}
-  {const AU=[];for(const q of r.quesitos){const a=String(q.autor||'').trim();if(!AU.includes(a))AU.push(a)}
+  if(part)body+='\u0001PSIT\u0001'; // particular: 1.1 situações colocadas pelo solicitante · 1.2 outras questões (preenchido mais abaixo)
+  else{const AU=[];for(const q of r.quesitos){const a=String(q.autor||'').trim();if(!AU.includes(a))AU.push(a)}
    for(const a of AU){const tit=a?`Questões colocadas ${/^(pel[oa]s?|por) /i.test(a)?a:'por '+a}`:part?'Questões colocadas pelo solicitante':'Matéria a que é preciso dar resposta';
      body+=H2(tit)+E();r.quesitos.filter(q=>String(q.autor||'').trim()===a).forEach(q=>{body+=T(q.txt,{jc:'both'})+E()})}
-   if(!r.quesitos.length)body+=H2(part?'Questões colocadas pelo solicitante':'Matéria a que é preciso dar resposta')+T('—')+E()}
+   if(!r.quesitos.length)body+=H2('Matéria a que é preciso dar resposta')+T('—')+E()}
   body+=H1('Elementos de apoio e fundamentação')+H2('Lista de documentos fornecidos')+E()+(DOCS_R.filter(d=>r.docs[d]).map(d=>CHK(true,d)).join('')||T('—'))+E();
   if(String(r.docsOutros||'').trim())body+=H2('Outros elementos')+T(r.docsOutros);
   if(String(r.docsCom||'').trim())body+=H2('Comentários')+T(r.docsCom);
@@ -1888,8 +1891,11 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
   const topLine=x=>{const z=zonaTxt(x);return P(R(`${x._code}  –  ${[x.ref?'Item '+x.ref:'',z,x.elemento].filter(Boolean).join(' · ')}`),{sp:[20,20]})};
   if(part){ // particular: questões do solicitante (alegadas) e outras questões (constatadas pelo perito)
     const AL=o.anoms.filter(x=>x.origem!=='local'),OU=o.anoms.filter(x=>x.origem==='local');
-    body+=H1('Situações a analisar')+H2('Colocadas pelo solicitante')+E()+(AL.map(topLine).join('')||T('Não foram apresentadas.'))+E();
-    body+=H2('Outras questões ou situações')+(OU.length?T('Constatadas no local pelo perito:')+OU.map(topLine).join(''):T(String(r.outrasTxt||'').trim()||'Nada a acrescentar.'))+E();
+    // particular: as situações apresentam-se no ponto 1 (Objeto da perícia) e o capítulo «Situações a analisar» não se repete
+    const QT=r.quesitos.map(q=>String(q.txt||'').trim()).filter(Boolean); // questões escritas à mão: texto complementar, depois da lista
+    const ps=H2('Colocadas pelo solicitante')+E()+(AL.map(topLine).join('')||(QT.length?'':T('Não foram apresentadas.')))+(QT.length?(AL.length?E():'')+QT.map(t=>T(t,{jc:'both'})).join(''):'')+E()
+      +H2('Outras questões ou situações')+(OU.length?T('Constatadas no local pelo perito:')+OU.map(topLine).join(''):T(String(r.outrasTxt||'').trim()||'Nada a acrescentar.'))+E();
+    body=body.replace('\u0001PSIT\u0001',()=>ps);
   }else{
     body+=H1('Situações a analisar')+H2('Nota de contextualização')+E()+(String(r.ctxNota||'').trim()?T(r.ctxNota,{jc:'both'}):T('[Nota de contextualização por preencher — separador Relatório]',{i:true,color:'C00000'}))+E()+H2('Tópicos')+E()+T('A análise segue os seguintes tópicos:');
     let gPrev=null;for(const x of o.anoms){if(x._grp&&x._grp!==gPrev){gPrev=x._grp;body+=P(R(x._grp,{b:true}),{sp:[120,40],keep:1})}body+=topLine(x)}body+=E();
@@ -1958,7 +1964,7 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
     if(ad.length)body+=P(R('Documentos juntos (em anexo):',{b:true}))+ad.map(([x,i])=>CHK(true,anexLbl(x,i))).join('')+E()}}
   // 7 — resposta ao solicitado (particular: só se houver alguma apreciação escrita)
   const temResp=r.quesitos.some(q=>String(q.resp||'').trim()||Object.values(q.rp||{}).some(t=>String(t||'').trim()));
-  if(!part||temResp){body+=E()+H1(part?'Apreciação das queixas':'Resposta ao solicitado');
+  if(!part){body+=E()+H1('Resposta ao solicitado');
   r.quesitos.forEach((q,i)=>{body+=H2(`${part?'Queixa':'Quesito'} ${qCode(i)}`)+E()+T(q.txt,{jc:'both'})+E();
     const cons=String(q.resp||'').trim();
     if(cons||!col)body+=P(R('Resposta:',{b:true,i:true}))+T(cons||'—',{jc:'both'})+E();
