@@ -729,7 +729,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.13.2';const VERSION_DATA='2026-11-21';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.13.3';const VERSION_DATA='2026-11-21';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1222,7 +1222,7 @@ function vRel(){const p=cur();const nf=p.anomalias.reduce((s,a)=>s+relF(a).lengt
   ${relRelHTML(p)}
   ${sec('r1','1 · Resumo de apreciação geral',txt('p.resumo','',p.resumo,5),{cnt:p.resumo?pill('✓','ok'):pill('vazio')})}
   ${sec('r5','Resumo estatístico',`${statsHTML(computeStats(p))}<div class="tks col">${tickBox('',!!p.printStats,'Incluir este resumo no relatório (Word e PDF, no fim das fichas)','data-act="tkStats"')}${p.printStats?tickBox('',p.printCharts!==false,'Com gráficos de barras horizontais','data-act="tkCharts"'):''}</div>
-      ${p.printStats?`<label>O que sai no relatório</label><div class="tks col">${[['qtd','Quantidade de situações → confirmadas'],['flash','Quadro-resumo de prioridades (importância, consequência, urgência)'],['hier','Quadro por NUF / Piso / Local / Elemento'],...computeStats(p).filter(t=>['tipo','cons','urg','gut'].includes(t.key)).map(t=>[t.key,'Por '+t.title.charAt(0).toLowerCase()+t.title.slice(1)])].map(([k,t])=>tickBox('',statOn(p,k),t,`data-act="tkStat" data-k="${k}"`)).join('')}</div>`:''}`,{cnt:pill(p.printStats?'no Word':'só no ecrã',p.printStats?'ok':''),def:false})}
+      ${p.printStats?`<label>O que sai no relatório</label><div class="tks col">${(()=>{const av=computeStats(p).map(t=>t.key),N={qtd:'Quantidade de situações → confirmadas',tipo:'Tipo de situações',flash:'Relevância (quadro-resumo de prioridades: importância, consequência, urgência)',gut:'Prioridade GUT',cons:'Gravidade',urg:'Urgência',hier:'Local (NUF / Piso / Local / Elemento)'};return RESUMO_ORD.filter(k=>['qtd','flash','hier'].includes(k)||av.includes(k)).map(k=>[k,N[k]])})().map(([k,t])=>tickBox('',statOn(p,k),t,`data-act="tkStat" data-k="${k}"`)).join('')}</div>`:''}`,{cnt:pill(p.printStats?'no Word':'só no ecrã',p.printStats?'ok':''),def:false})}
   ${sec('r2','2 · O que entra no Word',`<div class="tks col">${printOpts(p)}</div>`)}
   ${sec('r3','3 · Pré-visualização',`<div class="btns"><button class="secondary mini" data-act="prevMode">${S.prevSimple?'📄 Ver o Word real':'⚡ Vista rápida'}</button>${S.prevSimple?'':`<span class="grow"></span><button class="secondary mini" data-act="pvZ" data-d="-1" title="Reduzir">－</button><span class="muted" id="pvZl" style="min-width:44px;text-align:center">${Math.round((S.pvZoom||1)*100)} %</span><button class="secondary mini" data-act="pvZ" data-d="1" title="Ampliar">＋</button><button class="secondary mini" data-act="pvZ" data-d="0">Ajustar</button>`}</div>${S.prevSimple?`<div class="paper">${paperHTML(p)||'<p class="muted">Sem fichas.</p>'}</div>`:`${S.prevNode&&S.prevStale?'<div class="msg pvstale">A pré-visualização está desatualizada (houve alterações). <button class="green mini" data-act="prevRefresh">🔄 Atualizar</button></div>':S.prevNode?'<div class="btns"><button class="secondary mini" data-act="prevRefresh">🔄 Atualizar</button></div>':''}<div id="docxPrev" class="docxprev"><p class="muted">A preparar a pré-visualização…</p></div>`}`)}
   ${sec('r4','4 · Exportar',`<label>Formatos da análise</label><div class="tks col">${tickBox('',settings.expFichas!==false,'Fichas em grelha','data-act="tkExp" data-k="expFichas"')}${tickBox('',settings.expTexto!==false,'Texto em parágrafos corridos (resposta clássica)','data-act="tkExp" data-k="expTexto"')}</div>${tickBox('',settings.txtPhotos!==false,'Com fotografias','data-act="tkExp" data-k="txtPhotos"')}
@@ -1505,6 +1505,8 @@ const CONSEQ_R=[/* saúde */'Insalubridade','Afetação das condições de salub
   'Outros prejuízos'];
 const PASSOS_INTRO='Sem prejuízo de outras recomendações que venham a decorrer de constatações subsequentes, em função do que se percebe nesta fase, sugere-se:';
 const RESUMO_INTRO='De acordo com a análise específica, temos:';
+// ordem dos quadros do «Resumo de análise»: quantidade · tipo · relevância (+ GUT) · gravidade · urgência · local
+const RESUMO_ORD=['qtd','tipo','flash','gut','cons','urg','hier'];
 const RECURSOS_INTRO='com recurso a:';
 const RECURSOS_R=['Análise visual e sensitiva','Levantamento fotográfico','Levantamento de medidas e dimensões','Termografia','Humidímetro','Câmara 360°','Drone','Endoscópio (câmara de inspeção)','Fissurómetro','Nível e/ou prumo','Escada / meios de acesso','Outros'];
 // estado do tempo no dia de cada visita (opções cumulativas + texto complementar opcional)
@@ -1902,7 +1904,7 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
        const cell=(t,w,al,b,sh)=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${sh?`<w:shd w:val="clear" w:color="auto" w:fill="${sh}"/>`:''}</w:tcPr><w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:keepNext/><w:shd w:val="clear" w:color="auto" w:fill="auto"/><w:spacing w:before="20" w:after="20"/>${al?`<w:jc w:val="${al}"/>`:''}</w:pPr>${R(t,{b,sz:9})}</w:p></w:tc>`;
        return `<w:tbl><w:tblPr><w:tblW w:w="${W}" w:type="dxa"/>${bd}<w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="60" w:type="dxa"/><w:right w:w="60" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${cols.map(c=>`<w:gridCol w:w="${c[1]}"/>`).join('')}</w:tblGrid><w:tr><w:trPr><w:cantSplit/><w:tblHeader/></w:trPr>${cols.map(c=>cell(c[0],c[1],c[2],true,'F2F2F2')).join('')}</w:tr>${rows.map(x=>`<w:tr><w:trPr><w:cantSplit/></w:trPr>${x.c.map((t,i)=>cell(t,cols[i][1],cols[i][2],!!x.b,(x.shc&&x.shc[i])||x.sh)).join('')}</w:tr>`).join('')}</w:tbl>`};
      const sub=t=>P(R(t,{b:true}),{sp:[200,80],keep:1});
-     const AN=o.anoms,AL=AN.filter(x=>x.origem!=='local'),LC=AN.filter(x=>x.origem==='local');const fC=settings.fields.find(f=>f.id==='conf');const useC=!!(fC&&p.use?.conf);
+     const Q={};/* blocos do resumo, juntos no fim pela ordem definida */const AN=o.anoms,AL=AN.filter(x=>x.origem!=='local'),LC=AN.filter(x=>x.origem==='local');const fC=settings.fields.find(f=>f.id==='conf');const useC=!!(fC&&p.use?.conf);
      // 1) quantidade de situações → confirmadas
      if(statOn(p,'qtd')){const rows=[{c:['Analisadas',String(AN.length)],b:1}];
        if(useC){const cfm=AL.filter(x=>/^CF/i.test(x.vals?.conf||'')).length;rows.push({c:['Confirmadas',String(cfm+LC.length)],b:1});
@@ -1910,7 +1912,7 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
          for(const op of (fC.opts||[]))if(!/^CF/i.test(op[0])){const n=AL.filter(x=>x.vals?.conf===op[0]).length;if(n)rows.push({c:[`   – ${optText(op,settings.printStyle)}`,String(n)]})}
          const sn=AL.filter(x=>!x.vals?.conf).length;if(sn)rows.push({c:['   – alegadas sem status atribuído',String(sn)]})}
        else{if(AL.length)rows.push({c:['   – alegadas (lista fornecida)',String(AL.length)]});if(LC.length)rows.push({c:['   – constatadas no local pelo perito',String(LC.length)]})}
-       body+=sub('Quantidade de situações')+TB([['',7637,''],['N.º',2000,'right']],rows)+E()}
+       Q.qtd=sub('Quantidade de situações')+TB([['',7637,''],['N.º',2000,'right']],rows)+E()}
      // 1b) quadro-resumo de prioridades («flash»): importância (GUT), consequência (gravidade) e urgência de intervenção, por situação, da mais prioritária para a menos
      if(statOn(p,'flash')&&AN.length){const uG=!!p.use?.gut&&AN.some(x=>gutScore(x.vals?.gut)),uC=!!p.use?.cons,uU=!!p.use?.urg;
        if(uG||uC||uU){const UR=['Baixa','Média','Alta','Imediata'],GR=['1-ENR','2-EPR','3-ERV','6-FNR','7-FPR','8-FRV'];
@@ -1925,22 +1927,23 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
           if(uU){c.push(x.vals?.urg||'—');sh.push(SHU[x.vals?.urg]||'')}return {c,shc:sh}});
         const usedG=[...new Set(L.flatMap(x=>(x.vals?.cons||[]).filter(v=>v!=='OUT')))].sort((a,b)=>GR.indexOf(b)-GR.indexOf(a));const fCo=settings.fields.find(f=>f.id==='cons');
         const leg=uC&&usedG.length?P(R('Gravidade: ',{b:true,sz:8,color:'595959'})+R(usedG.map(c=>{const o=(fCo?.opts||[]).find(z=>z[0]===c);return `${c} – ${o?o[1]:c}`}).join(';  '),{sz:8,color:'595959'}),{sp:[60,0]}):'';
-        body+=sub('Quadro-resumo de prioridades')+T('Situações ordenadas da mais para a menos prioritária'+(uG?' (prioridade GUT = gravidade × urgência × tendência)':'')+'; o sombreado assinala as de maior importância e urgência.',{sz:9,color:'595959'})+TB(cols,rows)+leg+E()}}
+        Q.flash=sub('Relevância')+T('Situações ordenadas da mais para a menos prioritária'+(uG?' (prioridade GUT = gravidade × urgência × tendência)':'')+'; o sombreado assinala as de maior importância e urgência.',{sz:9,color:'595959'})+TB(cols,rows)+leg+E()}}
      // 2) quadro NUF / Piso / Local / Elemento
      if(statOn(p,'hier')&&AN.length){const L=ordAnoms({...p,ordem:'hier'},AN);const G=[];for(const x of L){const k=[x.zona||'—',x.piso||'—',x.local||'—',x.elemento||'—'];const g=G[G.length-1];if(g&&g.k.join('|')===k.join('|')){g.n++;g.cod.push(x._code)}else G.push({k,n:1,cod:[x._code]})}
        const rows=[];let prev=['','','',''];const byNuf={};G.forEach(g=>byNuf[g.k[0]]=(byNuf[g.k[0]]||0)+g.n);const nufs=[...new Set(G.map(g=>g.k[0]))];
        G.forEach((g,i)=>{const show=g.k.map((v,l)=>g.k.slice(0,l+1).join('|')===prev.slice(0,l+1).join('|')?'':v);rows.push({c:[...show,String(g.n),g.cod.join(', ')]});prev=g.k;
          const nx=G[i+1];if(nufs.length>1&&(!nx||nx.k[0]!==g.k[0])&&G.filter(z=>z.k[0]===g.k[0]).length>1)rows.push({c:[`Subtotal ${g.k[0]}`,'','','',String(byNuf[g.k[0]]),''],b:1,sh:'F7F7F7'})});
        rows.push({c:['Total','','','',String(AN.length),''],b:1,sh:'F2F2F2'});
-       body+=sub('Situações por NUF / Piso / Local / Elemento')+TB([['NUF',1450,''],['Piso',1000,''],['Local',1850,''],['Elemento',1850,''],['N.º',550,'right'],['Situações',2937,'']],rows)+E()}
+       Q.hier=sub('Local (NUF / Piso / Local / Elemento)')+TB([['NUF',1450,''],['Piso',1000,''],['Local',1850,''],['Elemento',1850,''],['N.º',550,'right'],['Situações',2937,'']],rows)+E()}
      // 3) por tipo, gravidade e urgência (e prioridade GUT, se usada) — gráficos de barras ou quadros
-     const ST=(o.stats||[]).filter(t=>['tipo','cons','urg','gut'].includes(t.key)&&!t.noTable).sort((a,b)=>['tipo','cons','urg','gut'].indexOf(a.key)-['tipo','cons','urg','gut'].indexOf(b.key)).map(t=>({...t,title:t.key==='tipo'?'Por tipo':t.key==='cons'?'Por gravidade':t.key==='urg'?'Por urgência':t.title}));
+     const ST=(o.stats||[]).filter(t=>['tipo','cons','urg','gut'].includes(t.key)&&!t.noTable).sort((a,b)=>['tipo','cons','urg','gut'].indexOf(a.key)-['tipo','cons','urg','gut'].indexOf(b.key)).map(t=>({...t,title:t.key==='tipo'?'Tipo de situações':t.key==='cons'?'Gravidade':t.key==='urg'?'Urgência':t.title}));
      // mesmo grafismo dos quadros anteriores (sem gráficos de barras)
      const SEV={urg:['Imediata','Alta','Média','Baixa'],cons:['8-FRV','7-FPR','6-FNR','3-ERV','2-EPR','1-ENR']};
      for(const t of ST){const R2=t.rows.filter(x=>typeof x[1]==='number'&&x[1]>0);if(!R2.length)continue;
        if(SEV[t.key]){const rk=l=>{const i=SEV[t.key].findIndex(v=>String(l).startsWith(v));return i<0?99:i};R2.sort((a,b)=>rk(a[0])-rk(b[0]))} // do mais grave/urgente para o menos
-       if(t.key==='gut')body+=sub('Por prioridade GUT')+TB([['Situação',7637,''],['G × U × T',2000,'right']],R2.map(x=>({c:[String(x[0]),String(x[1])]})))+E();
-       else body+=sub(t.title)+TB([['',6637,''],['N.º',1500,'right'],['%',1500,'right']],R2.map(x=>({c:[String(x[0]),String(x[1]),AN.length?Math.round(100*x[1]/AN.length)+' %':'']})))+E()}}
+       if(t.key==='gut')Q.gut=sub('Prioridade GUT')+TB([['Situação',7637,''],['G × U × T',2000,'right']],R2.map(x=>({c:[String(x[0]),String(x[1])]})))+E();
+       else Q[t.key]=sub(t.title)+TB([['',6637,''],['N.º',1500,'right'],['%',1500,'right']],R2.map(x=>({c:[String(x[0]),String(x[1]),AN.length?Math.round(100*x[1]/AN.length)+' %':'']})))+E()}
+     body+=RESUMO_ORD.map(k=>Q[k]||'').join('')}
     if(hasN)body+=E()+P(R('Nota:',{b:true}),{bdrT:1})+T(r.nota)}}
   // Apreciação geral (H1): contextualizando · possíveis causas · consequências · outras considerações
   {const ctx=part?String(r.ctxNota||'').trim():'',cau=String(r.causasG||'').trim(),apr=r.incApr===true?String(r.apreciacao||'').trim():'';
