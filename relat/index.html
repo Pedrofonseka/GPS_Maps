@@ -723,7 +723,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.10.0';const VERSION_DATA='2026-11-20';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.10.1';const VERSION_DATA='2026-11-20';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1297,9 +1297,13 @@ function openMenu(){document.querySelector('.menusheet')?.remove();const m=docum
    <div class="mgrp">Dados e configuração</div>${it('go','bk','💾','Cópias de segurança','Backup OUT/IN, enviar e receber processos',bkWarn()?'warn':'')}${it('go','defs','⚙️','Definições','Relatório e gabinetes, bases de dados, campos, impressão')}
    <div class="mgrp">Outros</div>${it('help','','❓','Ajuda','Como usar a app')}${it('quit','','⏻','Sair','Confirma que está tudo gravado')}</div>`;
   m.addEventListener('click',e=>{if(e.target===m||e.target.closest('[data-act]'))m.remove()});document.body.appendChild(m)}
+// como fechar depende do aparelho: iPhone/iPad (gesto), Android (apps recentes), computador (janela/separador)
+const isIOS=()=>/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const isAndroid=()=>/Android/i.test(navigator.userAgent);const isDesktop=()=>!isIOS()&&!isAndroid();
+const quitHint=()=>isIOS()?'Pode fechar a app: deslize de baixo para cima e afaste a app para cima.':isAndroid()?'Pode fechar a app: abra as apps recentes (botão ▢ ou deslize do fundo e pare a meio) e afaste a app.':`Pode fechar a janela ou o separador: botão ✕ da janela, ou ${/Mac/.test(navigator.platform)?'⌘ W':'Ctrl + W'}.`;
 async function quitApp(){try{if(dirty)await saveProc()}catch(e){}const w=bkWarn();const m=document.createElement('div');m.className='modal';
-  m.innerHTML=`<div class="box" style="text-align:center"><div style="font-size:40px">✓</div><b style="font-size:18px">Está tudo gravado neste aparelho.</b><p>Pode fechar a app: deslize de baixo para cima e afaste a app para cima.</p>${w?'<p class="red">Atenção: há alterações sem cópia de segurança.</p><div class="btns" style="justify-content:center"><button class="green" data-act="backupOut">⬇ Fazer backup agora</button></div>':''}<div class="btns" style="justify-content:center"><button class="secondary" data-x="1">Continuar a trabalhar</button></div></div>`;
-  m.addEventListener('click',e=>{if(e.target===m||e.target.dataset.x||e.target.closest('[data-act]'))m.remove()});document.body.appendChild(m)}
+  m.innerHTML=`<div class="box" style="text-align:center"><div style="font-size:40px">✓</div><b style="font-size:18px">Está tudo gravado neste aparelho.</b><p>${quitHint()}</p>${isDesktop()?'<div class="btns" style="justify-content:center"><button class="green" data-x="1" data-close="1">✕ Fechar a janela</button></div>':''}${w?'<p class="red">Atenção: há alterações sem cópia de segurança.</p><div class="btns" style="justify-content:center"><button class="green" data-act="backupOut">⬇ Fazer backup agora</button></div>':''}<div class="btns" style="justify-content:center"><button class="secondary" data-x="1">Continuar a trabalhar</button></div></div>`;
+  m.addEventListener('click',e=>{if(e.target.dataset.close){window.close();setTimeout(()=>toast(`O navegador não deixou fechar automaticamente: use ${/Mac/.test(navigator.platform)?'⌘ W':'Ctrl + W'} ou o ✕ da janela.`),300)}if(e.target===m||e.target.dataset.x||e.target.closest('[data-act]'))m.remove()});document.body.appendChild(m)}
 function vBk(){return `<h2>Cópias de segurança</h2><p class="muted">Os processos ficam gravados só neste aparelho. Faça backup com regularidade e guarde o ficheiro (Ficheiros/iCloud). Para passar um processo para outro aparelho, use «Enviar» e, no outro, «Receber processo».</p>${bkBarHTML()}
   <h3>Enviar um processo</h3><div class="list">${[...procs].sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).map(x=>`<div class="card"><button class="secondary mini" style="float:right" data-act="sendProc" data-id="${x.id}">📤 Enviar</button><b>${esc(x.codigo||'(sem código)')}</b> ${esc(x.designacao||'')}<div class="muted">${x.anomalias.length} situação(ões)</div></div>`).join('')||'<p class="muted">Ainda não há processos.</p>'}</div>`}
 function bkBarHTML(){const t=settings.lastBackup;const alt=procs.filter(x=>(x.updatedAt||0)>(t||0)).length;
