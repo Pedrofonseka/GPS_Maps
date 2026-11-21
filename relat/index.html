@@ -129,6 +129,11 @@ table.pg{width:100%;border-collapse:collapse;table-layout:fixed}table.pg td{bord
 :root{--pri:#E3AE1F;--pri2:#E3AE1F;--priTx:#6b4f00;--bg:#f7f4ea;--line:#e2d9bf}#hdr{color:#1f2328}#hdr button{background:rgba(255,255,255,.5);color:#1f2328;border-color:rgba(0,0,0,.2)}#hdr button.on{background:#1f2328;color:#fff}h2{color:var(--priTx)}button,.btn{color:#1f2328;border-color:#c99a12}.secondary,button.sm,.btn:not(.green){background:#fff;color:var(--priTx);border-color:#d8c48a}.green,.pri{color:#fff;border-color:var(--ok)}.seg button{color:var(--priTx)}.seg button.on{background:var(--pri);color:#1f2328}.pill{color:var(--priTx)}.blk{color:#1f2328}table.st th{color:#1f2328}.steps3 b{color:#1f2328}.cd.sel{color:#1f2328}.subdesc b{color:var(--priTx)}details.sec>summary:before{color:var(--priTx)}.tk.on{background:#fbf3d6}
 .annotStage{display:flex;justify-content:center;width:100%;margin:6px 0;background:#111;border-radius:10px;overflow:hidden;touch-action:none;overscroll-behavior:none}.annotMedia{position:relative;display:inline-block;max-width:100%;line-height:0;touch-action:none}.annotMedia .pmImg{width:auto;max-width:100%;height:auto;max-height:58vh;border-radius:0;pointer-events:none}.annotSvg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;touch-action:none}.annotToolbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0 0;padding:6px 0 calc(6px + env(safe-area-inset-bottom))}.annotToolbar button{min-height:38px;padding:6px 9px;font-size:12.5px;flex:1 1 auto;min-width:0;margin:0}.annotHint{font-size:11.5px;color:#5f656c;margin:4px 0}.markHandle{fill:#1687d9;stroke:#fff;stroke-width:5;vector-effect:non-scaling-stroke}.markHit{fill:none;stroke:transparent;stroke-width:30;vector-effect:non-scaling-stroke;pointer-events:stroke}.markSelected{filter:drop-shadow(0 0 5px #1687d9)}.annotColorRow{display:flex;gap:8px;flex:1 1 100%;align-items:center;justify-content:center}.colorSwatch{width:30px!important;height:30px;min-height:30px!important;padding:0!important;border-radius:50%;border:2px solid #0004;flex:0 0 auto!important}.colorSwatch.selectedColor{box-shadow:0 0 0 2px #fff,0 0 0 4px #1687d9}
 #mkOv{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);overflow:auto;overscroll-behavior:contain}#mkOv .mkBox{background:#fff;max-width:780px;margin:0 auto;min-height:100%;padding:10px 12px;box-sizing:border-box}#mkOv .mkHead{display:flex;align-items:center;gap:8px}.ph .mkBtn{position:absolute;left:6px;top:114px;margin:0;padding:3px 8px;min-height:0;font-size:12px;background:#fffe}
+.menubtn{position:relative}.menubtn.dot::after{content:'';position:absolute;top:3px;right:3px;width:8px;height:8px;border-radius:50%;background:#c0392b}
+.menusheet .box{max-width:420px;padding:12px 12px 16px}.mhd{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}.mhd b{font-size:18px}
+.mgrp{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:#777;margin:12px 4px 4px}
+.mitem{display:flex;align-items:center;justify-content:flex-start;gap:12px;width:100%;text-align:left;background:#fff;border:1px solid #ddd;border-radius:12px;padding:10px 12px;margin:6px 0;color:#222;min-height:52px}
+.mitem .mic{font-size:22px;width:30px;text-align:center}.mitem .mtx{display:flex;flex-direction:column}.mitem small{color:#777;font-size:12px}.mitem.warn{border-color:#e0a800;background:#fff8e1}
 </style>
 </head>
 <body>
@@ -718,7 +723,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.8.0';const VERSION_DATA='2026-11-20';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.9.0';const VERSION_DATA='2026-11-20';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1011,12 +1016,12 @@ function render(){
   document.title=`Relatório de Peritagem · ${VERSION}`;
   const p=cur();if(!p&&['proc','anom','rel'].includes(S.view))S.view='home';
   const crumbs=p&&S.view!=='home'&&S.view!=='defs'?`${esc(p.codigo||'(sem código)')}${S.sub==='ficha'&&curA()?' › '+anCode(p,curA()):''}`:'';
-  $('#hdr').innerHTML=`<h1 data-act="go" data-v="home">Relatório de Peritagem</h1><span class="ver">v${VERSION} · ${VERSION_DATA.split('-').reverse().join('/')}</span><div class="crumbs">${crumbs}</div><button class="mini ${S.view==='home'?'on':''}" data-act="go" data-v="home">Processos</button><button class="mini ${S.view==='defs'?'on':''}" data-act="go" data-v="defs">Definições</button><button class="mini" data-act="help" aria-label="Ajuda">?</button>`;
-  $('#steps').innerHTML=p&&['proc','anom','rel'].includes(S.view)?[['proc','Processo'],['anom','Anomalias'],['rel','Relatório']].map(([v,t])=>`<button class="${S.view===v?'on':''}" data-act="go" data-v="${v}">${t}</button>`).join(''):'';
+  $('#hdr').innerHTML=`<h1 data-act="go" data-v="home">Relatório de Peritagem</h1><span class="ver">v${VERSION} · ${VERSION_DATA.split('-').reverse().join('/')}</span><div class="crumbs">${crumbs}</div><button class="mini menubtn ${bkWarn()?'dot':''}" data-act="menu" aria-label="Menu">☰ Menu</button>`;
+  $('#steps').innerHTML=p&&['proc','anom','rel'].includes(S.view)?[['proc','1 · Processo'],['anom','2 · Situações'],['rel','3 · Relatório']].map(([v,t])=>`<button class="${S.view===v?'on':''}" data-act="go" data-v="${v}">${t}</button>`).join(''):'';
   $('#steps').style.display=$('#steps').innerHTML?'':'none';
   let html;
   if(S.sub==='ficha'&&curA())html=vFicha();else if(S.sub==='imp'&&p)html=vImport();
-  else{S.sub=null;html=({home:vHome,proc:vProc,anom:vAnoms,rel:vRel,defs:vDefs}[S.view]||vHome)()}
+  else{S.sub=null;html=({home:vHome,proc:vProc,anom:vAnoms,rel:vRel,defs:vDefs,bk:vBk}[S.view]||vHome)()}
   $('#sub').innerHTML=S.sub==='ficha'?(S.subNav||''):'';$('#sub').style.display=S.sub==='ficha'?'':'none';
   $('#app').innerHTML=html;
   document.querySelectorAll('#app textarea').forEach(autosize);
@@ -1049,7 +1054,7 @@ const HELP_HTML=`
 <details><summary>Instalação e atualizações</summary><p>Abra pelo ícone do ecrã principal (não pela app Ficheiros). As versões novas instalam-se sozinhas quando abre a app com rede. Os dados ficam só neste aparelho.</p></details>`;
 function vHome(){
   const list=[...procs].sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
-  return `${installTip()}${bkBarHTML()}<h2>Processos (${procs.length})</h2><div class="btns"><button class="green" data-act="newProc">+ Novo processo</button></div>
+  return `${installTip()}${bkWarn()?`<div class="bkbar warn" data-act="go" data-v="bk"><div class="bktxt"><b>Cópia de segurança em atraso</b><span>Toque para abrir «Cópias de segurança».</span></div></div>`:''}<h2>Processos (${procs.length})</h2><div class="btns"><button class="green" data-act="newProc">+ Novo processo</button></div>
   <div class="list">${list.map(x=>{const n=x.anomalias.length,ok=x.anomalias.filter(isDone).length;return `<div class="card ${x.id===S.pid?'active':''}" data-act="openProc" data-id="${x.id}"><b>${esc(x.codigo||'(sem código)')}</b> ${esc(x.designacao||'')}<div class="muted">${esc(x.local||'')}${x.visita?.data?' · vistoria '+esc(x.visita.data):''}</div><div style="margin-top:4px"><button class="secondary mini" style="float:right" data-act="sendProc" data-id="${x.id}">📤 Enviar</button>${pill(n+' anomalia'+(n===1?'':'s'))}${n?pill(ok+' analisada'+(ok===1?'':'s'),ok===n?'ok':'warn'):''}</div></div>`}).join('')||'<p class="muted">Ainda não há processos.</p>'}</div>`;
 }
 // ----- Processo -----
@@ -1096,7 +1101,7 @@ function vAnoms(){
   const p=cur(),an=p.anomalias,done=an.filter(isDone).length;const nl=an.filter(a=>a.origem!=='local').length,nc=an.length-nl;
   const F=S.filt||(S.filt={st:'all',zona:''});const zonas=[...new Set(an.map(a=>a.zona).filter(Boolean))];
   const usedP=[...new Set(an.map(a=>parteOf(p,a)))].sort();const q=(F.q||'').trim().toLowerCase();const vis=an.filter(a=>(!q||[anCode(p,a),a.ref,a.zona,a.piso,a.local,a.elemento,a.descricao,a.comentario].join(' ').toLowerCase().includes(q))&&(F.st==='all'||(F.st==='done'?isDone(a):!isDone(a)))&&(!F.zona||a.zona===F.zona)&&(!F.parte||parteOf(p,a)==F.parte));
-  return `<h2>Anomalias</h2>
+  return `<h2>Situações</h2>
   <div class="card"><div class="muted" style="margin-bottom:6px">Tipo de trabalho: <b>${(MODOS.find(m=>m[0]===(p.modo||'misto'))||MODOS[2])[1]}</b> <button class="secondary mini" data-act="go" data-v="proc">alterar</button></div>
   <div class="steps3">${p.modo==='livre'?'<span><b>1</b> Nova situação</span><span><b>2</b> Descrever e classificar</span><span><b>3</b> Fotografar</span>':'<span><b>1</b> Criar a lista</span><span><b>2</b> Tocar numa situação</span><span><b>3</b> Confirmar, comentar e fotografar</span>'}</div>
   ${addBtns(p)}
@@ -1283,6 +1288,20 @@ function vImport(){
   }
   return h;
 }
+const bkWarn=()=>{const t=settings.lastBackup;return procs.length&&(!t||procs.some(x=>(x.updatedAt||0)>t))};
+// ---------- Menu geral: Processos · Cópias de segurança · Definições · Ajuda · Sair ----------
+function openMenu(){document.querySelector('.menusheet')?.remove();const m=document.createElement('div');m.className='modal menusheet';const p=cur();
+  const it=(act,v,ic,t,sub,cls='')=>`<button class="mitem ${cls}" data-act="${act}" ${v?`data-v="${v}"`:''}><span class="mic">${ic}</span><span class="mtx"><b>${t}</b><small>${sub}</small></span></button>`;
+  m.innerHTML=`<div class="box"><div class="mhd"><b>Menu</b><button class="secondary mini" data-act="menuClose">✕</button></div>
+   <div class="mgrp">Trabalho</div>${it('go','home','📁','Processos','Lista, novo processo, abrir')}${p?it('go','proc','1️⃣','Processo atual · '+esc(p.codigo||'(sem código)'),'Dados, vistoria, partes, campos a atender')+it('go','anom','2️⃣','Situações','Lista, importar, fichas, fotografias')+it('go','rel','3️⃣','Relatório','Capítulos, resumo, pré-visualização, exportar'):''}
+   <div class="mgrp">Dados e configuração</div>${it('go','bk','💾','Cópias de segurança','Backup OUT/IN, enviar e receber processos',bkWarn()?'warn':'')}${it('go','defs','⚙️','Definições','Relatório e gabinetes, bases de dados, campos, impressão')}
+   <div class="mgrp">Outros</div>${it('help','','❓','Ajuda','Como usar a app')}${it('quit','','⏻','Sair','Confirma que está tudo gravado')}</div>`;
+  m.addEventListener('click',e=>{if(e.target===m||e.target.closest('[data-act]'))m.remove()});document.body.appendChild(m)}
+async function quitApp(){try{if(dirty)await saveProc()}catch(e){}const w=bkWarn();const m=document.createElement('div');m.className='modal';
+  m.innerHTML=`<div class="box" style="text-align:center"><div style="font-size:40px">✓</div><b style="font-size:18px">Está tudo gravado neste aparelho.</b><p>Pode fechar a app: deslize de baixo para cima e afaste a app para cima.</p>${w?'<p class="red">Atenção: há alterações sem cópia de segurança.</p><div class="btns" style="justify-content:center"><button class="green" data-act="backupOut">⬇ Fazer backup agora</button></div>':''}<div class="btns" style="justify-content:center"><button class="secondary" data-x="1">Continuar a trabalhar</button></div></div>`;
+  m.addEventListener('click',e=>{if(e.target===m||e.target.dataset.x||e.target.closest('[data-act]'))m.remove()});document.body.appendChild(m)}
+function vBk(){return `<h2>Cópias de segurança</h2><p class="muted">Os processos ficam gravados só neste aparelho. Faça backup com regularidade e guarde o ficheiro (Ficheiros/iCloud). Para passar um processo para outro aparelho, use «Enviar» e, no outro, «Receber processo».</p>${bkBarHTML()}
+  <h3>Enviar um processo</h3><div class="list">${[...procs].sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).map(x=>`<div class="card"><button class="secondary mini" style="float:right" data-act="sendProc" data-id="${x.id}">📤 Enviar</button><b>${esc(x.codigo||'(sem código)')}</b> ${esc(x.designacao||'')}<div class="muted">${x.anomalias.length} situação(ões)</div></div>`).join('')||'<p class="muted">Ainda não há processos.</p>'}</div>`}
 function bkBarHTML(){const t=settings.lastBackup;const alt=procs.filter(x=>(x.updatedAt||0)>(t||0)).length;
   const txt=!t?(procs.length?'Ainda não foi feito nenhum backup neste aparelho.':'Sem dados para guardar.'):`Último backup: ${new Date(t).toLocaleString('pt-PT')}${alt?` · ${alt} processo(s) alterado(s) desde então`:' · sem alterações desde então'}`;
   const warn=procs.length&&(!t||alt);
@@ -2075,6 +2094,9 @@ document.addEventListener('click',async e=>{
     case 'sendProc':{if(dirty)await saveProc();const pp=procs.find(x=>x.id===el.dataset.id);if(!pp)return;toast('A preparar o processo…');await loadFotos(pp);
       const one={...pp,visita:pp.visita?.map?{...pp.visita,map:{...pp.visita.map,data:fotoCache.get(pp.visita.map.id)||''}}:pp.visita,anomalias:pp.anomalias.map(a=>({...a,fotos:a.fotos.map(f=>({...f,data:fd(f)}))}))};
       await saveBlob(new Blob([JSON.stringify({app:'RelatAnomalias',kind:'processo',version:VERSION,date:new Date().toISOString(),procs:[one]})],{type:'application/json'}),`${safeName(pp.codigo)}_Processo_Relat.json`);return}
+    case 'menu':openMenu();return;
+    case 'menuClose':return;
+    case 'quit':await quitApp();return;
     case 'help':{const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="box helpbox"><div class="btns" style="margin-top:0;justify-content:space-between"><b style="font-size:17px">Como funciona a Relatório de Peritagem</b><button class="secondary mini" data-x>✕</button></div>${HELP_HTML}</div>`;m.addEventListener('click',e=>{if(e.target===m||e.target.closest('[data-x]'))m.remove()});document.body.appendChild(m);return}
     case 'filtQClear':S.filt.q='';S.scrollTop=window.scrollY;break;
     case 'addParte':{const n=Math.max(0,...p.partes.map(x=>+x.n))+1;p.partes.push({n,nome:'Parte '+n});await saveProc();S.scrollTop=window.scrollY;break}
