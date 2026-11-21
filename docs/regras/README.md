@@ -69,7 +69,8 @@ Cada app mostra na régua (cabeçalho) a versão **e a data da release**, ex.: `
 - **Não alterar as fontes definidas para os gabinetes** (regra geral). Texto gerado pela app que entre no corpo do relatório sem estilo próprio (ex.: análise específica e resumo estatístico vindos do Regi) recebe o estilo de texto do modelo (`1-periTextogeral`), para herdar a fonte do gabinete; dentro de tabelas acrescenta-se `w:shd` sem preenchimento, para não tapar o fundo das células.
 - **Títulos de nível 1, 2 e 3 sem avanço**: começam na margem esquerda (`w:ind w:left="0" w:firstLine="0"`), com o texto depois do número numa tabulação a 1 cm. Aplica-se no parágrafo, no estilo (Cabeçalho 1–3) e nos níveis de numeração ligados a esses estilos.
 - Frases comuns de articulação (ex.: «De acordo com o solicitado, pretende-se:», «De acordo com a análise específica, temos:», «Sob pena de outras considerações…, configuram:», «Sem prejuízo de outras recomendações…, sugere-se:») ficam como texto predefinido **editável por processo**.
-- Aplicado em: Relatório de Peritagem 1.7.0.
+- **Logótipo/cabeçalho do gabinete**: copiado tal como está no Word do gabinete, com as fontes de cada parte do texto (ex.: Peritava — «perit_Ava» e o e-mail em Bookman Old Style, a linha «peritagem de engenharia…» em Calibri 10). Nunca deixar partes do logótipo sem fonte explícita, porque herdariam a fonte do modelo do relatório.
+- Aplicado em: Relatório de Peritagem 1.7.0 (logótipo Peritava corrigido na 1.8.0).
 
 ## Prioridade GUT (Gravidade × Urgência × Tendência)
 
