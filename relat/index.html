@@ -136,6 +136,8 @@ table.pg{width:100%;border-collapse:collapse;table-layout:fixed}table.pg td{bord
 .mitem .mic{font-size:22px;width:30px;text-align:center}.mitem .mtx{display:flex;flex-direction:column}.mitem small{color:#777;font-size:12px}.mitem.warn{border-color:#e0a800;background:#fff8e1}
 .rvit{border-top:1px solid #eee;padding:8px 0}.rvhd{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px}.rvex{font-size:13px;background:#f7f7f7;border-radius:6px;padding:4px 8px;margin:4px 0;color:#333}
 .rvhl{outline:3px solid #e0a800!important;outline-offset:2px}
+.rvbar{position:fixed;left:0;right:0;bottom:0;z-index:900;display:flex;gap:8px;align-items:center;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#fff8e1;border-top:2px solid #e0a800;box-shadow:0 -2px 10px rgba(0,0,0,.12)}
+body:has(.rvbar){padding-bottom:70px}
 </style>
 </head>
 <body>
@@ -725,7 +727,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.11.0';const VERSION_DATA='2026-11-20';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.11.1';const VERSION_DATA='2026-11-20';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1025,7 +1027,7 @@ function render(){
   if(S.sub==='ficha'&&curA())html=vFicha();else if(S.sub==='imp'&&p)html=vImport();
   else{S.sub=null;html=({home:vHome,proc:vProc,anom:vAnoms,rel:vRel,defs:vDefs,bk:vBk}[S.view]||vHome)()}
   $('#sub').innerHTML=S.sub==='ficha'?(S.subNav||''):'';$('#sub').style.display=S.sub==='ficha'?'':'none';
-  $('#app').innerHTML=html;
+  $('#app').innerHTML=html;{let b=document.getElementById('rvbarBox');if(!b){b=document.createElement('div');b.id='rvbarBox';document.body.appendChild(b)}b.innerHTML=rvBarHTML()}
   document.querySelectorAll('#app textarea').forEach(autosize);
   if(S.scrollTop!==undefined){window.scrollTo(0,S.scrollTop);S.scrollTop=undefined}
   if(S.view==='rel'&&!S.sub&&!S.prevSimple&&S.open['r3']!==false){const box=$('#docxPrev');if(S.prevNode&&S.prevPid===S.pid&&box){box.innerHTML='';box.appendChild(S.prevNode);fitDocxPreview()}else renderDocxPreview()}
@@ -1612,11 +1614,21 @@ async function relReview(p){const L=reviewTexts(p),out=[];const okSet=new Set();
     if(a.origem!=='local'&&p.use?.conf&&!a.vals?.conf)out.push({sec:'5. Análise específica',lbl:`${a._code} — Status`,go:{aid:a.id},kind:'Coerência',msg:'Situação alegada sem Status (confirmada ou não)',ex:''})}
   if(CONSEQ_R.some(d=>r.conseq?.[d])&&!String(r.conseqComp||'').trim()&&!String(r.conseqTxt||'').trim())out.push({sec:'7. Apreciação geral',lbl:'Consequências',go:{view:'rel',open:'rrA',bind:'r.conseqComp'},kind:'Coerência',msg:'Consequências marcadas sem texto complementar',ex:''});
   for(const w of relCheck(p))out.push({sec:'Dados do relatório',lbl:'',go:null,kind:'Coerência',msg:w,ex:''});
+  const KO=['Gralha','Ortografia','Redundância','Coerência'];out.sort((a,b)=>KO.indexOf(a.kind)-KO.indexOf(b.kind)); // mesma ordem da lista no ecrã (estável: dentro de cada grupo, a ordem de leitura)
   return {issues:out,spellErr:spErr,at:Date.now(),n:L.length}}
-async function reviewGo(i){const x=S.review?.issues?.[i];if(!x||!x.go)return;const g=x.go;
+const rvKey=x=>[x.sec,x.lbl,x.kind,x.msg,x.ex].join('|');
+async function reviewGo(i){const x=S.review?.issues?.[i];if(!x||!x.go)return;const g=x.go;S.rvNav={i,key:rvKey(x)};
   if(g.aid){S.view='anom';S.aid=g.aid;S.sub='ficha';S.open.f2=true;S.open.f1=true}else{S.view=g.view;S.sub=null;S.open[g.open]=true}
   render();if(g.foto!=null&&typeof openPhotoModal==='function'){openPhotoModal(g.foto);return}
   setTimeout(()=>{const el=g.bind&&document.querySelector(`[data-bind="${g.bind}"]`);if(el){el.scrollIntoView({block:'center'});el.classList.add('rvhl');try{el.focus({preventScroll:true});if(x.word&&el.setSelectionRange){const k=el.value.indexOf(x.word);if(k>=0)el.setSelectionRange(k,k+x.word.length)}}catch(e){}setTimeout(()=>el.classList.remove('rvhl'),2500)}},60)}
+// barra fixa enquanto se corrige: «◀ Revisão» volta à lista (revista de novo); «Seguinte ▶» salta para o aviso seguinte
+async function rvRerun(p){if(dirty)await saveProc();S.review={...(await relReview(p)),pid:p.id}}
+async function rvBack(p){await rvRerun(p);S.rvNav=null;S.view='rel';S.sub=null;render();setTimeout(()=>document.getElementById('rvCard')?.scrollIntoView({block:'start'}),60)}
+async function rvNext(p){const nav=S.rvNav;await rvRerun(p);const I=S.review.issues;if(!I.length){S.rvNav=null;toast('✓ Já não há avisos.');S.view='rel';S.sub=null;render();setTimeout(()=>document.getElementById('rvCard')?.scrollIntoView({block:'start'}),60);return}
+  const k=I.findIndex(x=>rvKey(x)===nav?.key);let j=k>=0?k+1:Math.min(nav?.i??0,I.length-1);while(j<I.length&&!I[j].go)j++;if(j>=I.length){j=I.findIndex(x=>x.go);if(j<0){await rvBack(p);return}}
+  document.querySelector('.modal')?.remove();await reviewGo(j)}
+function rvBarHTML(){const p=cur();if(!S.rvNav||!S.review||!p||S.review.pid!==p.id||(S.view==='rel'&&!S.sub))return '';const n=S.review.issues.length;
+  return `<div class="rvbar"><button class="secondary" data-act="rvBack">◀ Revisão (${n})</button><span class="grow muted" style="font-size:12px;text-align:center">corrija e avance</span><button class="green" data-act="rvNext">Seguinte ▶</button></div>`}
 function reviewHTML(p){const R=S.review&&S.review.pid===p.id?S.review:null;const stale=R&&(p.updatedAt||0)>R.at;
   if(!R)return `<div class="card"><b>Revisão do texto</b><p class="muted">Lê o relatório de cima para baixo e assinala gralhas, erros ortográficos (português europeu, Acordo Ortográfico), redundâncias e textos em falta. É feita antes de exportar.</p><div class="btns"><button class="green" data-act="relReview">🔍 Rever o texto</button></div></div>`;
   const K=['Gralha','Ortografia','Redundância','Coerência'],I=R.issues;
@@ -2180,7 +2192,9 @@ document.addEventListener('click',async e=>{
     case 'rCapa':ensureRel(p).capa=el.dataset.v;await saveProc();S.scrollTop=window.scrollY;break;
     case 'rUnan':ensureRel(p).unan=el.dataset.v==='1';await saveProc();S.scrollTop=window.scrollY;break;
     case 'relReview':{if(dirty)await saveProc();busy(true,'A rever o texto…');try{S.review={...(await relReview(p)),pid:p.id}}catch(err){toast('Erro na revisão: '+err.message,1)}finally{busy(false)}S.scrollTop=window.scrollY;break}
-    case 'rvGo':await reviewGo(+el.dataset.i);return;
+    case 'rvGo':await reviewGo(+el.dataset.i);document.getElementById('rvbarBox').innerHTML=rvBarHTML();return;
+    case 'rvBack':busy(true,'A rever o texto…');try{await rvBack(p)}finally{busy(false)}return;
+    case 'rvNext':busy(true,'A rever o texto…');try{await rvNext(p)}finally{busy(false)}document.getElementById('rvbarBox').innerHTML=rvBarHTML();return;
     case 'rvOk':{const w=el.dataset.w;settings.spellOk=[...new Set([...(settings.spellOk||[]),w])];await saveSettings();if(S.review)S.review.issues=S.review.issues.filter(x=>!(x.word&&x.word.toLowerCase()===w.toLowerCase()));toast(`«${w}» passa a ser aceite em todos os processos.`);S.scrollTop=window.scrollY;break}
     case 'relWord':{if(dirty)await saveProc();if(!await exportGate(p))return;toast('A gerar o relatório…');try{const o=await buildRelat(p);await saveBlob(new Blob([o.bytes],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}),o.name)}catch(err){toast('Erro ao gerar o relatório: '+err.message,1)}return}
     case 'filt':S.filt.st=el.dataset.v;S.scrollTop=window.scrollY;break;
