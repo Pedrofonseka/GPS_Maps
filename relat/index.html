@@ -761,7 +761,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.28.2';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.28.3';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):parteLista(p));
@@ -1960,7 +1960,7 @@ const segR=(act,opts,cur)=>`<div class="seg">${opts.map(([k,t])=>`<button class=
 const TITULOS=['Relatório de Peritagem','Relatório de inspeção expedita','Relatório de Inspeção','Relatório de Levantamento de anomalias'];
 // ===== Medições e orçamento (estimativa de custos): capítulos › artigos (descrição, un, qtd, preço) =====
 const ORC_UN=['m²','m','m³','un','vg','kg','h','dia','l','cj'];
-const orcE=p=>p.orc||(p.orc={caps:[],iva:23,out:'cap',nota:'Valores estimados com base em preços correntes de mercado, sujeitos a confirmação em consulta a empresas da especialidade.',intro:'Para a execução dos trabalhos de reparação propostos, estima-se o seguinte custo:'});
+const orcE=p=>{if(p.orc&&!p.orc.outSet&&p.orc.out==='cap')p.orc.out='anexo';return p.orc||(p.orc={caps:[],iva:23,out:'anexo',nota:'Valores estimados com base em preços correntes de mercado, sujeitos a confirmação em consulta a empresas da especialidade.',intro:'Para a execução dos trabalhos de reparação propostos, estima-se o seguinte custo:'})};
 const numPT=v=>{const n=parseFloat(String(v??'').replace(/\s|€/g,'').replace(/\.(?=\d{3}(\D|$))/g,'').replace(',','.'));return isFinite(n)?n:0};
 const n2=v=>{const t=(Math.round((+v||0)*100)/100).toFixed(2),[i,d]=t.replace('-','').split('.');return (t[0]==='-'?'-':'')+i.replace(/\B(?=(\d{3})+(?!\d))/g,'\u00a0')+','+d}; // 1 234,56 (espaço inseparável)
 const eur=v=>n2(v)+'\u00a0€';
@@ -1985,7 +1985,7 @@ function vOrc(){const p=cur(),o=orcE(p),T=orcTot(p),V=S.orcV||'med';
   ${!o.caps.length?'<p class="muted">Ainda não há capítulos — use «+ Capítulo» ou crie-os a partir das soluções propostas.</p>':V==='res'?resumo:o.caps.map((c,ci)=>`<div class="orccap">${capHead(c,ci)}${V==='med'?medT(c,ci):estT(c,ci)}</div>`).join('')}
   ${o.caps.length&&V!=='res'?`<div class="card" style="text-align:right"><b>${V==='med'?o.caps.reduce((n,c)=>n+c.arts.length,0)+' artigo(s)':'Total (sem IVA): '+eur(T.sub)+' · com IVA: '+eur(T.tot)}</b></div>`:''}
   ${blk('No relatório','O que sai e onde')}
-  <div class="card"><label>Conteúdo</label>${segR('orcMode',[['med','Só medição (sem preços)'],['orc','Medição e estimativa de custo']],o.modo||'orc')}<label>Onde</label>${segR('orcOut',[['cap','Capítulo próprio (antes do termo)'],['anexo','Em anexo'],['nao','Não sai']],o.out||'cap')}
+  <div class="card"><label>Conteúdo</label>${segR('orcMode',[['med','Só medição (sem preços)'],['orc','Medição e estimativa de custo']],o.modo||'orc')}<label>Onde</label>${segR('orcOut',[['anexo','Em anexo (por princípio)'],['cap','Capítulo próprio (antes do termo)'],['nao','Não sai']],o.out||'anexo')}
    ${o.out!=='nao'?`<label>Frase de abertura</label><input data-act="orcSet" data-k="intro" value="${esc(o.intro||'')}">`:''}${(o.modo||'orc')==='orc'?`<label>Nota (por baixo do resumo)</label><textarea rows="2" data-act="orcSet" data-k="nota">${esc(o.nota||'')}</textarea>`:''}
    <div class="btns">${orcHas(p)?'<button class="secondary" data-act="orcXlsx">📊 Excel (com fórmulas)</button>':''}</div></div>
   ${nextBtn('rel','6 · Relatório')}`}
@@ -2855,7 +2855,7 @@ document.addEventListener('change',async e=>{{const _x=e.target.closest&&e.targe
     bindSet(p,a,b,cur0.trim()?cur0.replace(/\s+$/,'')+(/[:\n]$/.test(cur0.trim())?'\n':'\n')+t:t);await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='orcSet'){const o=orcE(p),k=el.dataset.k;let tgt=o;if(el.dataset.c!==undefined){tgt=o.caps[+el.dataset.c];if(el.dataset.a!==undefined)tgt=tgt.arts[+el.dataset.a]}
     tgt[k]=k==='iva'?+el.value:el.value;await saveProc();S.scrollTop=window.scrollY;const sx=[...document.querySelectorAll('.orcw')].map(w=>w.scrollLeft);render();document.querySelectorAll('.orcw').forEach((w,i)=>w.scrollLeft=sx[i]||0);return}
-  if(act==='orcOut'){orcE(p).out=el.dataset.v;await saveProc();S.scrollTop=window.scrollY;render();return}
+  if(act==='orcOut'){orcE(p).out=el.dataset.v;orcE(p).outSet=1;await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='orcMode'){orcE(p).modo=el.dataset.v;await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='rTitulo'){const r=ensureRel(p);r.titulo=el.dataset.v;await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='mxSet'||act==='mxGut'||act==='mxAll'){let v=el.value;if(v==='')return;
