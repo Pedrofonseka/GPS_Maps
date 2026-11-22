@@ -754,7 +754,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.22.0';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.23.1';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):parteLista(p));
@@ -777,7 +777,8 @@ const DEF_FIELDS=[
   {id:'rep',label:'Indícios de reparação',type:'choice',opts:[['Sim','Sim'],['Não','Não'],['Parcial','Parcial']],on:true,print:true},
   {id:'repData',label:'Data de reparação',type:'text',ph:'mm/aaaa',on:true,print:true},
   {id:'causas',label:'Causas hipotéticas',type:'long',on:false,print:true},
-  {id:'medidas',label:'Medidas de reparação propostas',type:'long',on:false,print:true},
+  {id:'sondagens',label:'Medições e sondagens',type:'long',on:true,print:true,ph:'Ex.: humidímetro — 28 % na base da parede; termografia — ponte térmica no alinhamento da viga…'},
+  {id:'medidas',label:'Solução proposta',type:'long',on:true,print:true},
   {id:'obs',label:'Observações / outras anomalias',type:'long',on:true,print:true},
 ];
 const DEF_ZONA=['Edifício', 'Fração', 'Moradia', 'Anexo', 'Garagem', 'Piscina', 'Jardim', 'Logradouro', 'Vedações', 'Pavim. exterior', 'Rd. téc. exteriores'];
@@ -969,6 +970,8 @@ function migrateSettings(s){
   if(!s.migFracao){if(Array.isArray(s.catZona)&&!s.catZona.includes('Fração'))s.catZona.splice(1,0,'Fração');s.migFracao=true}
   for(const df of DEF_FIELDS)if(!s.fields.find(f=>f.id===df.id)&&!(s.removed||[]).includes(df.id))s.fields.push(clone(df));
   {const g=s.fields.find(f=>f.id==='gut');if(g&&g.label==='Prioridade GUT')g.label='Prioridade'}
+  {const m=s.fields.find(f=>f.id==='medidas');if(m&&m.label==='Medidas de reparação propostas'){m.label='Solução proposta';m.on=true}
+   const sd=s.fields.find(f=>f.id==='sondagens'),mi=s.fields.findIndex(f=>f.id==='medidas');if(sd&&mi>=0){const si=s.fields.indexOf(sd);if(si>mi){s.fields.splice(si,1);s.fields.splice(mi,0,sd)}}}
   if(!s.mig0110){s.catalog=clone(DEF_CATALOG);s.catZona=clone(DEF_ZONA);s.catPiso=clone(DEF_PISO);s.catLocal=clone(DEF_LOCAL);s.catElem=clone(DEF_ELEM);s.mig0110=true}
   if(!s.mig092){const c=s.fields.find(f=>f.id==='conf');if(c&&c.opts)c.opts=c.opts.map(([k,t])=>k==='CON'?['CFM',t==='Confirma-se'?'Confirmado':t]:[k,t]);s.mig092=true}
   if(!s.mig080){s.onePerPage=true;s.fitPage=true;s.mig080=true}
@@ -1124,12 +1127,16 @@ function vHome(){
   <div class="list">${list.map(x=>{const n=x.anomalias.length,ok=x.anomalias.filter(isDone).length;return `<div class="card ${x.id===S.pid?'active':''}" data-act="openProc" data-id="${x.id}"><b>${esc(x.codigo||'(sem código)')}</b> ${esc(x.designacao||'')}<div class="muted">${esc(x.local||'')}${x.visita?.data?' · vistoria '+esc(x.visita.data):''}</div><div style="margin-top:4px"><span style="float:right;display:flex;gap:4px"><button class="secondary mini" data-act="dupProc" data-id="${x.id}" title="Duplicar">⧉ Duplicar</button><button class="secondary mini" data-act="sendProc" data-id="${x.id}">📤 Enviar</button><button class="del mini" data-act="delProcId" data-id="${x.id}" title="Eliminar">🗑</button></span>${pill(n+' situaç'+(n===1?'ão':'ões'))}${n?pill(ok+' analisada'+(ok===1?'':'s'),ok===n?'ok':'warn'):''}</div></div>`}).join('')||'<p class="muted">Ainda não há processos.</p>'}</div>`;
 }
 // ----- Processo -----
-const MODOS=[['livre','Levantamento livre','O perito observa, descreve, fotografa e classifica as situações que encontra no local.'],['confirma','Confirmação','As situações vêm alegadas (lista importada ou escrita). No local, o perito confirma ou não (Status), comenta e classifica.'],['misto','Misto','Situações alegadas a confirmar + outras situações constatadas livremente no local.']];
+const MODOS=[['confirma','Situações colocadas por alguém','As situações vêm indicadas por quem pede (lista importada ou escrita). No local, o perito confirma ou não (Status), comenta e classifica.'],['livre','Situações detetadas pelo perito','O perito observa, descreve, fotografa e classifica as situações que encontra no local.'],['misto','Ambas','Situações indicadas a confirmar + outras detetadas pelo perito no local.']];
 function vProc(){
   const p=cur(),v=p.visita,an=p.anomalias;
   const f1=[p.codigo,p.designacao,p.local].filter(x=>!String(x||'').trim()).length;
-  return `<h2>1 · Processo</h2><p class="muted" style="margin-top:-6px">Quem pede, o quê, onde — dados que não mudam durante o trabalho.</p>${blk('Identificação do processo','Código, designação, local e tipo de trabalho')}
-  ${sec('p1','Dados do processo',`<label>Tipo de trabalho</label><div class="seg">${MODOS.map(([k,t])=>`<button class="${(p.modo||'misto')===k?'on':''}" data-act="setModo" data-v="${k}">${t}</button>`).join('')}</div><p class="muted">${MODOS.find(m=>m[0]===(p.modo||'misto'))[2]}</p>${inp('p.codigo','N_Ref — código interno do processo',p.codigo,'ex.: Trib 2630')}${inp('p.designacao','Designação',p.designacao)}${inp('p.local','Local / morada',p.local)}`,{cnt:falta(f1)})}
+  const r=ensureRel(p);
+  return `<h2>1 · Processo</h2><p class="muted" style="margin-top:-6px">Quem pede, o quê, onde — dados que não mudam durante o trabalho.</p>${blk('Tipo de trabalho','Decida primeiro: que relatório e de onde vêm as situações')}
+  ${sec('p0','Título e abordagem',`<label>Título do trabalho <span class="muted">(1.ª linha da capa e topo da 1.ª página do texto)</span></label><div class="tks col">${[...TITULOS,'Outro'].map(t=>tickBox('',(r.titulo||'Relatório de Peritagem')===t,t,`data-act="rTitulo" data-v="${esc(t)}"`)).join('')}</div>${r.titulo==='Outro'?RL('tituloOutro','Título (outro)',r.tituloOutro,'ex.: Relatório de vistoria técnica'):''}
+    <label>Abordagem — de onde vêm as situações</label><div class="seg">${MODOS.map(([k,t])=>`<button class="${(p.modo||'misto')===k?'on':''}" data-act="setModo" data-v="${k}">${t}</button>`).join('')}</div><p class="muted">${MODOS.find(m=>m[0]===(p.modo||'misto'))[2]}</p>`,{cnt:pill(relTitulo(r)+' · '+MODOS.find(m=>m[0]===(p.modo||'misto'))[1])})}
+  ${blk('Identificação do processo','Código, designação e local')}
+  ${sec('p1','Dados do processo',`${inp('p.codigo','N_Ref — código interno do processo',p.codigo,'ex.: Trib 2630')}${inp('p.designacao','Designação',p.designacao)}${inp('p.local','Local / morada',p.local)}`,{cnt:falta(f1)})}
   ${relProcHTML(p)}
   ${nextBtn('anom','2 · Situações')}
   <div class="btns" style="margin-top:30px"><button class="del" data-act="delProc">Eliminar processo</button></div>`;
@@ -1208,7 +1215,7 @@ function vAnoms(){
   const F=S.filt||(S.filt={st:'all',zona:''});const zonas=[...new Set(an.map(a=>a.zona).filter(Boolean))];
   const usedP=[...new Set(an.map(a=>parteOf(p,a)))].sort();const q=(F.q||'').trim().toLowerCase();const vis=an.filter(a=>(!q||[anCode(p,a),a.ref,a.zona,a.piso,a.local,a.elemento,a.descricao,a.comentario].join(' ').toLowerCase().includes(q))&&(F.st==='all'||(F.st==='done'?isDone(a):!isDone(a)))&&(!F.zona||a.zona===F.zona)&&(!F.parte||parteOf(p,a)==F.parte));
   return `<h2>2 · Situações</h2>
-  <div class="card"><div class="muted" style="margin-bottom:6px">Tipo de trabalho: <b>${(MODOS.find(m=>m[0]===(p.modo||'misto'))||MODOS[2])[1]}</b> <button class="secondary mini" data-act="go" data-v="proc">alterar</button></div>
+  <div class="card"><div class="muted" style="margin-bottom:6px">Abordagem: <b>${(MODOS.find(m=>m[0]===(p.modo||'misto'))||MODOS[2])[1]}</b> <button class="secondary mini" data-act="go" data-v="proc">alterar</button></div>
   
   <div class="vias"><b>Criar a lista de situações</b>
    <div class="via"><span class="vn">V1</span><label class="btn secondary">📄 Importar do Word<input type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" data-act="impFile" hidden></label><span class="muted">lista numerada, parágrafos ou tabela</span></div>
@@ -1224,7 +1231,7 @@ function vAnoms(){
   ${zonas.length>1?`<select data-act="filtZona"><option value="">Todas as zonas</option>${zonas.map(z=>`<option ${F.zona===z?'selected':''}>${esc(z)}</option>`).join('')}</select>`:''}`:''}
   <div class="list">${vis.map(a=>anomCard(a,an.indexOf(a),an.length,'analise')).join('')||(an.length?'<p class="muted">Nenhuma anomalia com este filtro.</p>':'<p class="muted">Sem anomalias. Importe a lista fornecida ou acrescente-as uma a uma.</p>')}</div>
   ${an.length>3?addBtns(p,true):''}
-  ${secPartes(p)}
+  ${isPart(ensureRel(p))?'':secPartes(p)}
   ${an.length?nextBtn('insp','3 · Inspeção'):''}`;
 }
 function tickBox(name,checked,label,attrs){return `<label class="tk ${checked?'on':''}"><input type="checkbox" ${checked?'checked':''} ${attrs}><span>${label}</span></label>`}
@@ -1322,12 +1329,16 @@ function vRel(){const p=cur();const nf=p.anomalias.reduce((s,a)=>s+relF(a).lengt
   if(semF.length)W.push([`${semF.length} situação(ões) sem fotografias`,'chkGo:'+semF[0].id,semF.slice(0,6).map(a=>anCode(p,a)).join(', ')+(semF.length>6?'…':'')]);
   if(an.some(a=>a.fotos.some(f=>!f.ph))&&!S.hashing&&S.hashDone!==p.id){S.hashing=true;S.hashDone=p.id;(async()=>{await loadFotos(p);if(await ensureHashes(p))await saveProc();S.hashing=false;S.scrollTop=window.scrollY;render()})()}
   const DG=dupGroups(p);if(DG.length)W.push([`${DG.length} fotografia(s) repetida(s)`,'chkGo:'+DG[0][1].a.id,DG.slice(0,4).map(g=>g.map(x=>x.code).join(' = ')).join(' · ')+(DG.length>4?'…':'')]);
+  {const all=holders(p).flatMap(a=>relF(a).map((f,i)=>({a,f,c:imgCode(p,a,i)})));const cs=all.map(x=>x.c),dup=cs.filter((c,i)=>cs.indexOf(c)!==i);
+   if(dup.length)W.push([`${dup.length} imagem(ns) com número repetido`,'chkGo:'+all.find(x=>dup.includes(x.c)).a.id,[...new Set(dup)].slice(0,6).join(', ')]);
+   if(p.lockNum&&!seqOk(p))W.push(['Numeração das situações com números em falta ou fora de sequência (Situações › Renumerar)','chkTodo','']);
+   S.imgOk=!dup.length&&all.length?`✓ ${all.length} imagem(ns) numeradas no relatório (${cs[0]} … ${cs[cs.length-1]})`:''}
   if(semL)W.push([`${semL} fotografia(s) sem legenda`,'chkGo:'+(an.find(a=>relF(a).some(f=>!String(f.legenda||'').trim()))||{}).id,'']);
   if(settings.dateCom!==false&&!p.visita?.data)W.push(['Sem data da vistoria (sai antes de «'+lblC(p)+'»)','chkProc','']);
   if(!p.codigo)W.push(['Processo sem código (vai no nome dos ficheiros)','chkProc','']);
   // uma só verificação: a das situações (fotos, legendas, repetidas…) + a do relatório (capítulos por preencher)
   const RC=relCheck(p);
-  const chk=W.length||RC.length?`<div class="card chk"><b>Antes de gerar, confirme:</b>${W.map(([t,act,sub])=>{const [ac,id]=act.split(':');return `<div class="chkrow"><span>⚠︎ ${esc(t)}${sub?`<br><small>${esc(sub)}</small>`:''}</span><button class="secondary mini" data-act="${ac}" ${id?`data-id="${id}"`:''}>Ver ›</button></div>`}).join('')}${RC.map(t=>`<div class="chkrow"><span>⚠︎ ${esc(t)}</span></div>`).join('')}</div>`:'<div class="card chk ok">✓ Tudo analisado e preenchido.</div>';
+  const chk=W.length||RC.length?`<div class="card chk"><b>Antes de gerar, confirme:</b>${W.map(([t,act,sub])=>{const [ac,id]=act.split(':');return `<div class="chkrow"><span>⚠︎ ${esc(t)}${sub?`<br><small>${esc(sub)}</small>`:''}</span><button class="secondary mini" data-act="${ac}" ${id?`data-id="${id}"`:''}>Ver ›</button></div>`}).join('')}${RC.map(t=>`<div class="chkrow"><span>⚠︎ ${esc(t)}</span></div>`).join('')}${S.imgOk?`<div class="muted" style="margin-top:6px">${esc(S.imgOk)}</div>`:''}</div>`:`<div class="card chk ok">✓ Tudo analisado e preenchido.${S.imgOk?'<br>'+esc(S.imgOk):''}</div>`;
   const r=ensureRel(p);
   return `<h2>5 · Relatório</h2>${blk('Resultado da análise',`${an.length} situaç${an.length===1?'ão':'ões'} · ${done} analisada${done===1?'':'s'} · ${nf} foto${nf===1?'':'s'}`)}${chk}
   ${sec('r5','Resumo de análise',`${tickBox('',!!p.printStats,'Incluir o «Resumo de análise» no relatório','data-act="tkStats"')}
@@ -1337,9 +1348,11 @@ function vRel(){const p=cur();const nf=p.anomalias.reduce((s,a)=>s+relF(a).lengt
   ${sec('r2','Análise das situações no Word',`<div class="tks col">${tickBox('',settings.dateCom!==false,`Data da vistoria antes de «${esc(lblC(p))}» (ex.: ${esc(p.visita?.data||'19/11/2026')} - ${esc(lblC(p))}:)`,'data-act="tkExp" data-k="dateCom"')}${tickBox('',settings.txtPhotos!==false,'Com fotografias','data-act="tkExp" data-k="txtPhotos"')}</div><label>Ordenar as situações por</label><select data-act="setOrdem">${ORDENS.map(([k,t])=>`<option value="${k}" ${(p.ordem||'lista')===k?'selected':''}>${t}</option>`).join('')}</select><label>Grelha de fotografias</label><div class="seg">${[1,2,3].map(n=>`<button class="${settings.photoCols==n?'on':''}" data-act="setCols" data-v="${n}">${n} coluna${n>1?'s':''}</button>`).join('')}</div>${maxUI()}`,{def:false})}
   ${relRelHTML(p)}
   ${sec('r4','4 · Exportar o relatório',`<p class="muted" style="margin-top:0">O relatório completo: capa (mapa + fotos), índice, todos os capítulos, a análise das situações em texto corrido e os anexos. Cabeçalho do gabinete ${esc((GABS_R.find(g=>g[0]===ensureRel(p).gab)||['',''])[1])}.</p>${tickBox('',settings.txtPhotos!==false,'Análise com fotografias','data-act="tkExp" data-k="txtPhotos"')}
-    ${tamHTML(p)}<div class="exp"><button class="secondary" data-act="relPrev">👁 Pré-visualizar</button><button class="green" data-act="relWord">📘 Word</button><button class="green" data-act="relPdf">📕 PDF</button></div>
-    <div class="exp"><button class="secondary" data-act="exportXlsx">📊 Excel — dados das situações</button><span class="muted">Uma linha por situação (estatística).</span></div>
-    <label>Pasta completa (.zip) — leva</label><div class="tks col">${ZIPK.map(([k,t])=>tickBox('',settings[k]!==false,t,`data-act="tkExp" data-k="${k}"`)).join('')}</div>
+    ${tamHTML(p)}<label>Relatório completo</label><div class="exp"><button class="secondary" data-act="relPrev">👁 Pré-visualizar</button><button class="green" data-act="relWord">📘 Word</button><button class="green" data-act="relPdf">📕 PDF</button></div>
+    <label>Só as fichas das situações <span class="muted">(uma ficha por situação, em grelha, com fotos)</span></label><div class="exp"><button class="secondary" data-act="fichasWord">📄 Word</button><button class="secondary" data-act="fichasPdf">📕 PDF</button></div>
+    <label>Dados</label>
+    <div class="exp"><button class="secondary" data-act="exportXlsx">📊 Excel — dados das situações</button><button class="secondary" data-act="gpsKml" ${p.visita?.gps?'':'disabled'}>🌍 KML — localização</button></div>
+    <label>Pasta completa (.zip) — leva</label><div class="tks col">${ZIPK.map(([k,t,d])=>tickBox('',d===false?settings[k]===true:settings[k]!==false,t,`data-act="tkExp" data-k="${k}"`)).join('')}</div>
     <div class="exp"><button class="secondary" data-act="exportZip">📁 Pasta completa (.zip)</button><span class="muted">${(()=>{const e=zipEstimate(p);return `≈ ${fmtMB(e.mb)} · ${e.nF} foto(s)${outKB()?` até ${outKB()} KB`:' como foram gravadas'}`})()}</span></div>
     <div class="exp"><button class="secondary" data-act="copyTxt">📋 Copiar a análise (texto)</button><span class="muted">Para colar onde quiser.</span></div>`)}`}
 window.addEventListener('resize',()=>{if(Math.abs(window.innerWidth-pvLastW)<2)return;pvLastW=window.innerWidth;if(S.view==='rel'&&!S.sub)fitDocxPreview()});
@@ -1567,7 +1580,7 @@ async function docOpts(p,lay,ext){await loadFotos(p);let mapImg=null;lay=lay||pr
 async function docxFor(p,lay){const o=await docOpts(p,lay,'.docx');if(settings.useTpl&&tplBytes)return await buildDocxTpl(o,tplBytes);return buildDocx(o)}
 async function pdfFor(p,lay){return buildPdf(await docOpts(p,lay,'.pdf'))}
 const fmts=()=>[settings.expFichas!==false&&'grelha',settings.expTexto!==false&&'texto'].filter(Boolean);
-const ZIPK=[['zipWord','Relatório em Word'],['zipPdf','Relatório em PDF'],['zipXlsx','Excel — dados das situações'],['zipKml','KML (localização)'],['zipFotos','Pastas das fotos (situações e contextualização)'],['zipAnex','Ficheiros anexos (originais)']];
+const ZIPK=[['zipWord','Relatório em Word'],['zipPdf','Relatório em PDF'],['zipFichas','Só as fichas (Word)',false],['zipXlsx','Excel — dados das situações'],['zipKml','KML (localização)'],['zipFotos','Pastas das fotos (situações e contextualização)'],['zipAnex','Ficheiros anexos (originais)']];
 function zipEstimate(p){const T=outTarget('foto'),sz=f=>{const b=(fd(f)||'').length*.75||(settings.photoKB||150)*1024;return T&&b>T?T*.9:b};const M=1048576;let rel=0,all=0,nF=0;for(const a of p.anomalias){for(const f of a.fotos){const b=sz(f);all+=b;if(inRel(f)){rel+=b;nF++}}}const nd=fmts().length,ph=settings.txtPhotos!==false?rel:0,map=p.printMap!==false&&p.visita?.gps?.15*M:0;
   const word=(.08*M+map+ph)/M,pdf=word*1.02,zip=nd*((settings.zipWord!==false?word:0)+(settings.zipPdf!==false?pdf:0))+(settings.zipFotos!==false?all/M:0)+.05;return {nF,word,pdf,mb:zip}}
 function tamHTML(p){const e=zipEstimate(p),mx=Math.max(e.word,e.pdf,e.mb),k=outKB();return `<label>Resolução das fotos nos documentos</label><div class="seg">${OUT_KB.map(([v,t])=>`<button class="${k===v?'on':''}" data-act="setNum" data-k="outKB" data-v="${v}">${t}</button>`).join('')}</div><p class="muted" style="${mx>8?'color:#8a5a00;font-weight:600':''}">Tamanho previsto${fmts().length>1?' (cada documento)':''}: Word ≈ ${fmtMB(e.word)} · PDF ≈ ${fmtMB(e.pdf)} · Pasta ≈ ${fmtMB(e.mb)} — ${e.nF} foto(s) no relatório${k?`, até ${k} KB cada (lado maior ≥ 800 px)`:', como foram gravadas'}.${mx>20?' Ficheiro muito grande: baixe a resolução.':mx>8?' Pode não seguir por e-mail (limite habitual 10–25 MB) — pode baixar a resolução.':''} As fotos guardadas não são alteradas.</p>`}
@@ -1634,7 +1647,8 @@ const TEMPO_R=['Céu limpo / sol','Céu parcialmente nublado','Céu nublado','Ch
 const tempoFrase=(o,txt)=>{const L=TEMPO_R.filter(k=>o?.[k]).map((k,i)=>i?k.charAt(0).toLowerCase()+k.slice(1):k);return L.length?L.join(', ')+'.':''};
 const tempoUI=(o,txt,vi)=>`<div class="tempo fz fz-y"><div class="fzh">🟨 Estado do tempo${vi<0?' (1.ª visita)':''} <span class="muted">(pode marcar vários) — sai «Meteorologia: …»</span></div><div class="tks">${TEMPO_R.map(k=>tickBox('',!!o?.[k],k,`data-act="rTempo" data-v="${vi}" data-k="${esc(k)}"`)).join('')}</div><div class="cmpbox"><div class="cmphd">💬 Estado do tempo — texto complementar (opcional)</div><div class="muted" style="font-size:12px">Comentário às opções marcadas (ex.: temperatura, humidade do ar, chuva nos dias anteriores). Se ficar vazio, não sai nada.</div><textarea data-bind="${vi<0?'r.tempoTxt':`vx.${vi}.tempoTxt`}" rows="2">${esc(txt||'')}</textarea></div></div>`;
 const ANEXT_R=['Caderneta predial','Certidão de registo predial','Planta','Lista de assuntos','Outros'];
-const DOCS_R=['Lista de quesitos','Relatório de situações','Cadernetas prediais','Certidões de registo','Levantamento topográfico','Plantas','Projetos','Caderno de encargos','Lista de trabalhos a realizar','Orçamento','Lista de alterações','Lista de queixas','Conjunto de fotos','Outros'];
+const DOCS_R=['Lista de quesitos','Lista de queixas','Relatório(s)','Caderneta(s) predial(ais)','Certidão(ões) de registo predial','Planta(s)','Projeto(s)','Levantamento topográfico','Caderno de encargos','Medições','Orçamento','Lista de trabalhos a realizar','Lista de alterações','Reportagem fotográfica','Outros'];
+const DOCS_REN={'Relatório de situações':'Relatório(s)','Cadernetas prediais':'Caderneta(s) predial(ais)','Certidões de registo':'Certidão(ões) de registo predial','Plantas':'Planta(s)','Projetos':'Projeto(s)','Conjunto de fotos':'Reportagem fotográfica'};
 const ANEX_R=['Medições','Medições e orçamento','Orçamento','Estimativa de custos','Reportagem fotográfica','Planta(s)','Caderneta(s) predial(ais)','Certidão(ões) de registo predial','Relatório(s)','Análise de anomalias','Levantamento topográfico','Lista de trabalhos a realizar','Outros anexos'];
 const ANEX_REN={'Plantas':'Planta(s)','Outros elementos de base':'Outros anexos'};
 const COMP_SINGULAR='Pedro Jorge Fernandes Fonseca, engenheiro, perito-avaliador da Lista Oficial do Ministério da Justiça e do Ministério das Finanças, com formação em avaliação imobiliária e expropriações pelo Centro de Estudos Judiciários do Ministério da Justiça, inscrito na Associação Nacional de Avaliadores Imobiliários sob o número 336 e na CMVM sob o registo PAI 2011 0005, ao serviço da empresa Proficis serviços de engenharia Lda, pessoa coletiva com o número 503 759 813, jura por sua honra desempenhar as funções que lhe foram atribuídas, com lealdade e proficiência.';
@@ -1691,6 +1705,7 @@ function ensureRel(p){syncUrg(p);const r=p.rel=p.rel||{};const d={ambito:'instit
   if(r.decursoIntro===undefined)r.decursoIntro=String(r.decurso||'').trim()?'':DECURSO_INTRO; // textos antigos já escritos como frase completa
   if(r.ctxIntro===undefined)r.ctxIntro=String(r.ctxNota||'').trim()?'':CTX_INTRO;
   if(r.causasIntro===undefined)r.causasIntro=String(r.causasG||'').trim()?'':CAUSAS_INTRO;
+  if(r.docs)for(const [a,b] of Object.entries(DOCS_REN))if(a in r.docs){if(r.docs[a])r.docs[b]=true;delete r.docs[a]}
   if(r.anexos)for(const [a,b] of Object.entries(ANEX_REN))if(a in r.anexos){if(r.anexos[a])r.anexos[b]=true;delete r.anexos[a]}
   if(r.conseq)for(const [a,b] of Object.entries(CONSEQ_REN))if(a in r.conseq){if(r.conseq[a])r.conseq[b]=true;delete r.conseq[a]}
   if(String(r.docsOutros||'').trim()&&r.docs)r.docs['Outros']=true;
@@ -1903,6 +1918,7 @@ const RT=(k,lbl,val,rows=3,ph='')=>`${lbl?`<label>${esc(lbl)}</label>`:''}<texta
 const segR=(act,opts,cur)=>`<div class="seg">${opts.map(([k,t])=>`<button class="${cur===k?'on':''}" data-act="${act}" data-v="${k}">${esc(t)}</button>`).join('')}</div>`;
 // título do trabalho: primeira linha da capa, topo da página a seguir à capa e cabeçalho genérico (substitui o antigo campo «Função»)
 const TITULOS=['Relatório de Peritagem','Relatório de inspeção expedita','Relatório de Inspeção','Relatório de Levantamento de anomalias'];
+const MTOP=g=>g==='proficis'?2268:1701; // twips: 4,0 cm · 3,0 cm
 const relTitulo=r=>r.titulo==='Outro'?(String(r.tituloOutro||'').trim()||'Relatório'):(r.titulo||'Relatório de Peritagem');
 function hdrDefaults(p){const r=p.rel;return {h1:relTitulo(r),h3:r.objeto||p.designacao||'',h4a:r.procJud?`Proc. ${r.procJud}`:'',h4b:p.codigo?` - ${p.codigo}`:''}}
 // ---------- Separador Processo: blocos do relatório ----------
@@ -1914,13 +1930,13 @@ function relProcHTML(p,which='proc'){const r=ensureRel(p),col=isCol(r),part=isPa
     <p class="muted">✓ = habitual para este âmbito. NID = sem imagem de gabinete (cabeçalho genérico de 4 linhas). ${part?'Particular: sem compromisso de honra.':col?'Institucional colegial: compromisso de honra coletivo.':'Institucional singular: compromisso de honra do perito (texto em Definições).'}</p>
     ${r.gab==='nid'?`<p class="muted">Cabeçalho genérico (4 linhas). Deixe vazio para usar o texto sugerido.</p>${RL('h1','Linha 1 — título',r.h1,hd.h1)}${RL('h3','Linha 3 — descrição (itálico)',r.h3,hd.h3)}<div class="grid2"><div>${RL('h4a','Linha 4 — à direita',r.h4a,hd.h4a)}</div><div>${RL('h4b','Linha 4 — parte a negrito',r.h4b,hd.h4b)}</div></div>`:''}
     ${col?`<label>Peritos do colégio</label><div class="rows">${r.peritos.map((x,i)=>`<div class="rw"><input data-bind="pe.${i}.nome" value="${esc(x.nome||'')}" placeholder="Nome do perito" style="flex:1 1 55%;min-width:0"><select data-act="rQual" data-i="${i}" style="flex:1 1 40%;min-width:0">${QUAL_R.map(q=>`<option ${x.qual===q?'selected':''}>${q}</option>`).join('')}</select><button class="del" data-act="rDelPer" data-i="${i}">✕</button></div>`).join('')}</div><div class="btns"><button class="secondary mini" data-act="rAddPer">+ Perito</button></div>`:''}`;
-  const t2=`<label>Título do trabalho <span class="muted">(1.ª linha da capa e topo da 1.ª página do texto)</span></label><div class="tks col">${[...TITULOS,'Outro'].map(t=>tickBox('',(r.titulo||'Relatório de Peritagem')===t,t,`data-act="rTitulo" data-v="${esc(t)}"`)).join('')}</div>${r.titulo==='Outro'?RL('tituloOutro','Título (outro)',r.tituloOutro,'ex.: Relatório de vistoria técnica'):''}<p class="muted">N_Ref (código interno): <b>${esc(p.codigo||'— preencha em «1 · Dados do processo»')}</b></p>${RL('procJud','N.º do processo (tribunal)',r.procJud,part?'Em situações particulares, normalmente não existe':'ex.: 1407/25.6T8CBR')}
+  const t2=`<p class="muted">N_Ref (código interno): <b>${esc(p.codigo||'— preencha em «1 · Dados do processo»')}</b></p>${RL('procJud','N.º do processo (tribunal)',r.procJud,part?'Em situações particulares, normalmente não existe':'ex.: 1407/25.6T8CBR')}
     <p class="muted">O local está em «1 · Dados do processo».</p>
     ${RL('entidade',part?'Solicitante (entidade / nome)':'Tribunal / entidade',r.entidade,part?'':'ex.: Tribunal Judicial de Coimbra')}
     ${RL('objeto','Objeto de análise',r.objeto,'ex.: Moradia – Rua X, n.º 10 (habitação e logradouro)')}
     ${RL('contexto','Contexto/ finalidade',r.contexto,'ex.: Ação de despejo')}
     ${part?'':`${RL('parte1','Parte 1',r.parte1)}${RL('parte2','Parte 2',r.parte2)}`}
-    <label>Grelha de imagens da capa (3×3)</label>${segR('rCapa',[['fotosLoc','Fotos e localização'],['fotos','Fotos'],['nenhuma','Sem imagens']],r.capa||'fotosLoc')}
+    <label>Tipo de capa <span class="muted">(imagens de contextualização; se não houver, usa as das situações)</span></label>${segR('rCapa',[['fotosLoc','Mapa + fotos'],['destaque','Uma imagem grande'],['fotos','Grelha de fotos'],['nenhuma','Só texto']],r.capa||'fotosLoc')}
     ${RL('versao','Versão do relatório',r.versao,'ex.: 1.01VF ou Draft00')}<p class="muted">Nome do ficheiro (e rodapé): <b>${esc(relFileName(p))}</b></p>`;
   const nq=r.quesitos.length;
   const QW=part?['queixa','queixas','Queixa']:['quesito','quesitos','Quesito'];
@@ -2007,13 +2023,14 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
   // ---- capa ----
   const TW=9638,CW=3212;const g=p.visita?.gps;const allF0=()=>p.anomalias.flatMap(a=>relF(a)).filter(f=>fd(f)).length;
   let mapData=null;if(g&&(r.capa||'fotosLoc')==='fotosLoc'){mapData=await googleMapData(g,1600,Math.round(1600*(allF0()<6?9.2:5.0)/16.9));if(!mapData){try{if(await ensureMap(p,true))mapData=fotoCache.get(p.visita.map.id)}catch(e){}}}
-  const allF=shuffleR(p.anomalias.flatMap(a=>relF(a)).filter(f=>fd(f)));
-  const CM=r.capa||'fotosLoc';const nF=CM==='fotos'?Math.min(9,allF.length):CM==='nenhuma'?0:(allF.length>=6?6:Math.min(3,allF.length));const big=nF<6;
+  const ctxF=relF(p.ctxA||{fotos:[]}).filter(f=>fd(f));const allF=ctxF.length?ctxF:shuffleR(p.anomalias.flatMap(a=>relF(a)).filter(f=>fd(f)));
+  const CM=r.capa||'fotosLoc';const nF=CM==='fotos'?Math.min(9,allF.length):(CM==='nenhuma'||CM==='destaque')?0:(allF.length>=6?6:Math.min(3,allF.length));const big=nF<6;
   const mapH=big?9.2:5.0,phW=5.55,phH=4.16;
   const cellM=(content,w,o={})=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${o.span?`<w:gridSpan w:val="${o.span}"/>`:''}<w:vAlign w:val="center"/></w:tcPr>${content}</w:tc>`;
   const cpara=runs=>`<w:p><w:pPr><w:spacing w:before="0" w:after="0"/><w:jc w:val="center"/></w:pPr>${runs}</w:p>`;
   let rows='';
   const mapRun=mapData?imgRun(await cropTo(mapData,16.9/mapH,1600),16.9,mapH,'Localização'):R('[Localização — sem coordenadas GPS ou sem rede ao gerar]',{i:true,color:'808080',sz:9});
+  if(CM==='destaque'&&allF.length){const dh=12.5;rows+=`<w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="${Math.round(dh*567)+40}" w:hRule="exact"/></w:trPr>${cellM(cpara(imgRun(await cropTo(fdOut(allF[0]),16.9/dh,1600),16.9,dh,'Capa')),TW,{span:3})}</w:tr>`}
   if(CM==='fotosLoc')rows+=`<w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="${Math.round(mapH*567)+40}" w:hRule="exact"/></w:trPr>${cellM(cpara(mapRun),TW,{span:3})}</w:tr>`;
   if(nF){const sel=allF.slice(0,nF);for(let rr=0;rr<Math.ceil(nF/3);rr++){let cells='';for(let c=0;c<3;c++){const f=sel[rr*3+c];cells+=cellM(cpara(f?imgRun(await cropTo(fdOut(f),4/3,900),phW,phH,'Foto'):''),CW)}rows+=`<w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="${Math.round(phH*567)+40}" w:hRule="exact"/></w:trPr>${cells}</w:tr>`}}
   const noB=['top','left','bottom','right','insideH','insideV'].map(s=>`<w:${s} w:val="nil"/>`).join('');
@@ -2064,7 +2081,7 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
   // altura do mapa a conferir: estima o espaço que resta na página (texto desde a última quebra) e reduz o mapa para caber; se não couber um mapa legível (≥ 5 cm), o capítulo começa na página seguinte
   const estH=xml=>{const k=xml.lastIndexOf('w:type="page"');const seg=k>=B0?xml.slice(k):xml.slice(B0);let h=k>=B0?0:1.2,pb=false;for(const m of seg.matchAll(/<w:p[ >][\s\S]*?<\/w:p>/g)){const px=m[0];if(/<w:drawing>/.test(px)){const e=/<wp:extent cx="\d+" cy="(\d+)"/.exec(px);h+=e?+e[1]/360000+0.2:5;continue}
       const t=(px.match(/<w:t[^>]*>[^<]*<\/w:t>/g)||[]).map(x=>x.replace(/<[^>]+>/g,'')).join('');if(!t.trim()&&!/<w:sdt>/.test(px)){if(!pb)h+=0.42;pb=true;continue}pb=false;const hd=/Cabealho1/.test(px)?0.5:/Cabealho2/.test(px)?0.2:0;h+=Math.max(1,Math.ceil(t.length/100))*0.45+hd+0.06}return h};
-  const PAGE_H=23.2,usedH=estH(body)%PAGE_H,restH=PAGE_H-usedH-1.6-(String(p.local||'').trim()?0.6:0)-(g?0.6:0)-1.0;let locH=Math.max(5,Math.min(8,restH));
+  const PAGE_H=23.2+(MTOP(r.gab)===1701?1:0),usedH=estH(body)%PAGE_H,restH=PAGE_H-usedH-1.6-(String(p.local||'').trim()?0.6:0)-(g?0.6:0)-1.0;let locH=Math.max(5,Math.min(8,restH));
   if(g&&restH<5){body+=BRK;locH=8}
   body+=E()+H1('Localização');if(String(p.local||'').trim())body+=P(R('Morada / local:')+'<w:r><w:tab/></w:r>'+R(String(p.local).trim()),{sp:[60,60]});if(!g&&!String(p.local||'').trim())body+=T('[Localização por preencher — morada em 1 · Processo e GPS em 3 · Inspeção]',{i:true,color:'C00000'});
   if(g){let mL=mapData;if(!mL){mL=await googleMapData(g,1600,Math.round(1600*9.2/16.9));if(!mL){try{if(await ensureMap(p,true))mL=fotoCache.get(p.visita.map.id)}catch(e){}}}
@@ -2202,7 +2219,9 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
   const hd=hdrDefaults(p);const HV={H1:r.h1||hd.h1,H3:r.h3||hd.h3,H4A:r.h4a||hd.h4a,H4B:r.h4b||hd.h4b};
   const H=RELAT_HDRS[r.gab]||RELAT_HDRS.nid;
   let doc=TX(F('word/document.xml'));
-  doc=doc.replace(/(<w:pgMar [^>]*w:header=")\d+"/,'$1397"'); // margem: limite superior da folha → cabeçalho = 0,7 cm (todos os gabinetes)
+  doc=doc.replace(/(<w:pgMar [^>]*w:header=")\d+"/,'$1397"');
+  // margem superior por gabinete: o cabeçalho da Proficis (logotipo + 5 linhas) ocupa cerca de 4 cm; os outros cabem em 3 cm — mais área para texto
+  doc=doc.replace(/(<w:pgMar w:top=")\d+"/,'$1'+MTOP(r.gab)+'"'); // margem: limite superior da folha → cabeçalho = 0,7 cm (todos os gabinetes)
   {const st=F('word/styles.xml');st.data=_enc.encode(TX(st).replace(/(<w:style [^>]*w:styleId="Cabealho[123]"[\s\S]*?<\/w:style>)/g,m=>m.replace(/<w:ind [^>]*\/>/,'').replace('</w:pPr>','<w:ind w:left="0" w:firstLine="0"/></w:pPr>').replace(/(<w:jc [^>]*\/>)?(<w:outlineLvl [^>]*\/>)?<w:ind w:left="0" w:firstLine="0"\/><\/w:pPr>/,(x,jc,ol)=>'<w:ind w:left="0" w:firstLine="0"/>'+(jc||'')+(ol||'')+'</w:pPr>')));
    const nb=F('word/numbering.xml');if(nb)nb.data=_enc.encode(TX(nb).replace(/<w:lvl w:ilvl="[012]"[^>]*>(?:(?!<\/w:lvl>)[\s\S])*?<w:pStyle w:val="Cabealho[123]"\/>[\s\S]*?<\/w:lvl>/g,m=>m.replace(/<w:tabs>[\s\S]*?<\/w:tabs>/,'').replace(/<w:ind [^>]*\/>/,'<w:tabs><w:tab w:val="left" w:pos="567"/></w:tabs><w:ind w:left="0" w:firstLine="0"/>')))}
   for(const [k,u] of Object.entries({wp:'http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing',a:'http://schemas.openxmlformats.org/drawingml/2006/main',pic:'http://schemas.openxmlformats.org/drawingml/2006/picture',r:'http://schemas.openxmlformats.org/officeDocument/2006/relationships',w14:'http://schemas.microsoft.com/office/word/2010/wordml'}))if(!new RegExp('xmlns:'+k+'=').test(doc.slice(0,3000)))doc=doc.replace(/<w:document\b/,`<w:document xmlns:${k}="${u}"`);
@@ -2288,6 +2307,10 @@ function avaDocxLib() {
 // Depois de mostrar o Word em páginas: numerar os títulos, paginar (o visualizador não reparte o texto por páginas),
 // refazer o índice com as páginas certas e pôr «n/N» no rodapé
 function avaPdfPost(wrapper) {
+  // Word junta parágrafos seguidos com o mesmo limite num só grupo: traço de cima só no 1.º e de baixo só no último (o docx-preview desenhava em todos)
+  wrapper.querySelectorAll('section.docx p').forEach(q => { const pr = q.previousElementSibling; if (!pr || pr.tagName !== 'P') return; const a = getComputedStyle(q), b = getComputedStyle(pr);
+    const same = k => a[k + 'Style'] === b[k + 'Style'] && a[k + 'Width'] === b[k + 'Width'];
+    if (a.borderTopStyle !== 'none' && same('borderTop') && same('borderLeft') && same('borderRight') && same('borderBottom')) { q.style.borderTop = 'none'; if (b.borderBottomStyle !== 'none') pr.style.borderBottom = 'none'; } });
   const pt = v => parseFloat(v) * (String(v).endsWith('pt') ? 96 / 72 : 1);
   // 0) cabeçalho e rodapé: as tabulações (esquerda · centro · direita) ficam como no Word
   wrapper.querySelectorAll('section.docx > header p, section.docx > footer p').forEach(q => { if (!q.querySelector('.docx-tab-stop')) return;
@@ -2568,13 +2591,16 @@ document.addEventListener('click',async e=>{{const _x=e.target.closest&&e.target
     case 'gpsDel':if(!await ask('Apagar as coordenadas GPS?',['Cancelar','Apagar'],1))return;p.visita.gps=null;if(p.visita.map){fotoDel(p.visita.map.id);p.visita.map=null}S.gpsMsg='';await saveProc();S.scrollTop=window.scrollY;break;
     case 'exportTxt':{if(dirty)await saveProc();if(!p.anomalias.length)return toast('Não há anomalias.',1);await saveBlob(new Blob([await docxFor(p,'texto')],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}),`${safeName(p.codigo)}_Analise_Anomalias_texto.docx`);return}
     case 'copyTxt':{const t=analysisText(p,settings,hydrate(p));try{await navigator.clipboard.writeText(t);toast('Análise copiada.')}catch(err){const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="box"><p>Selecione e copie:</p><textarea style="height:50vh">${esc(t)}</textarea><div class="btns"><button>Fechar</button></div></div>`;m.querySelector('button').onclick=()=>m.remove();document.body.appendChild(m)}return}
-    case 'exportXlsx':{if(dirty)await saveProc();if(!p.anomalias.length)return toast('Não há anomalias.',1);try{await saveBlob(new Blob([xlsxFor(p)],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),`${safeName(p.codigo)}_Dados_Anomalias.xlsx`)}catch(err){toast('Erro ao gerar Excel: '+err.message,1)}return}
+    case 'exportXlsx':{if(dirty)await saveProc();if(!p.anomalias.length)return toast('Não há anomalias.',1);try{await saveBlob(new Blob([xlsxFor(p)],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),`${safeName(p.codigo)}_Dados_Situacoes.xlsx`)}catch(err){toast('Erro ao gerar Excel: '+err.message,1)}return}
+    case 'fichasWord':{if(dirty)await saveProc();if(!p.anomalias.length)return toast('Não há situações.',1);try{toast('A gerar as fichas…');await saveBlob(new Blob([await docxFor(p,'grelha')],{type:DOCX_MIME}),`${safeName(p.codigo)}_Fichas_Situacoes.docx`)}catch(err){toast('Erro ao gerar as fichas: '+err.message,1)}return}
+    case 'fichasPdf':{if(dirty)await saveProc();if(!p.anomalias.length)return toast('Não há situações.',1);try{toast('A gerar o PDF das fichas…');await saveBlob(new Blob([await pdfFor(p,'grelha')],{type:'application/pdf'}),`${safeName(p.codigo)}_Fichas_Situacoes.pdf`)}catch(err){toast('Erro ao gerar o PDF: '+err.message,1)}return}
     case 'exportZip':{if(dirty)await saveProc();if(!await exportGate(p))return;
       // a pasta leva o RELATÓRIO (o mesmo Word/PDF dos botões acima), não a antiga «análise de anomalias» em separado
       try{const on=k=>settings[k]!==false;const files=[];let base=safeName(p.codigo);
         if(on('zipWord')||on('zipPdf')){let d;if(on('zipPdf')){const x=await relPdf(p);d=x.docx;files.push({name:`#/${x.name}`,data:new Uint8Array(await x.blob.arrayBuffer())})}else d=await relBuildBlob(p);
           base=d.name.replace(/\.docx$/i,'');if(on('zipWord'))files.unshift({name:`#/${d.name}`,data:new Uint8Array(await d.blob.arrayBuffer())})}
         busy(true,'A preparar a pasta…');
+        if(settings.zipFichas===true)files.push({name:`#/${safeName(p.codigo)}_Fichas_Situacoes.docx`,data:await docxFor(p,'grelha')});
         if(on('zipXlsx'))files.push({name:`#/${safeName(p.codigo)}_Dados_Situacoes.xlsx`,data:xlsxFor(p)});
         const g=p.visita?.gps;if(on('zipKml')&&g)files.push({name:`#/${safeName(p.codigo)}_Localizacao.kml`,data:kmlContent(g.lat,g.lon,`${p.codigo||'Processo'}${p.designacao?' – '+p.designacao:''}`)});
         if(on('zipFotos')){await loadFotos(p);for(const a of holders(p)){const c=a.id===CTXID?'Contextualizacao':anCode(p,a);const nR=relF(a).length;for(const [i,f] of a.fotos.entries()){const d=fd(f);if(!d)continue;files.push({name:inRel(f)?`#/Fotos/${c}/${imgCode(p,a,i).replace(' ','_')}.jpg`:`#/Fotos/${c}/Reserva/Reserva_${c}_${i-nR+1}.jpg`,data:b64ToU8(await outData(d,'foto',f.id))})}}}
