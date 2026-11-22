@@ -11,9 +11,16 @@ Estado: **interpretação apenas**, para implementar mais tarde. Fonte: folhas d
 | MER | Mercado (comparativo) | reserva um tópico de análise de mercado |
 | RND | Rendimento (capitalização) | em TOF, o rendimento é a rotina das culturas já implementada |
 | DCF | Fluxos de caixa (cash-flow) | |
-| VRF / REF | Valores referenciais | no Excel aparece como **VRF**; confirmar a sigla final |
+| VRF | Valores referenciais | sigla confirmada (VRF) |
 | Outros | — | |
 | BFT | Encargos / benfeitorias | não é método: parcela que se soma ao valor do método |
+
+## 1A. Decisões do utilizador (22/11/2026)
+
+- Sigla dos valores referenciais: **VRF**.
+- **ILZ** = percentagem do valor da construção imputável ao solo (lógica do Código das Expropriações) — confirmado.
+- **Depreciação** tem várias componentes: Ross-Heidecke trata só a **física**; o utilizador pode desvalorizar também por **obsolescência** (funcional, económica/externa).
+- Os ponderadores do topo da folha Excel servem apenas para **escolher** o método do caso (a folha tem vários métodos). Na app: podem aplicar-se **vários métodos** à mesma verba e o perito **decide qual o mais adequado** (valor adotado), com fundamentação — sem média ponderada obrigatória.
 
 ## 2. Estrutura comum a todas as folhas de verba
 
@@ -92,8 +99,8 @@ Linhas com Vref (da tabela), K1, K2, QTD → `parcela = QTD × Vref × K1 × K2 
 
 ## 9. Proposta de implementação gradual (a decidir)
 
-1. Quadro de métodos por verba (escolha, pesos que somam 100 %, valor por método, valor ponderado) + BFT — sem cálculos internos (valor de cada método escrito à mão).
-2. CST com Ross-Heidecke (tabela comum, para ir para `comum/`).
+1. Quadro de métodos por verba: vários métodos, valor de cada um (à mão), escolha do método adotado + fundamentação; BFT à parte; síntese no Word.
+2. CST com depreciação física Ross-Heidecke (tabela comum, para `comum/`) + obsolescência funcional e económica.
 3. MER com testemunhos e calibração do ILZ (tópico de análise de mercado).
 4. VRF com K_Aju ponderado (aproveitando a caracterização sucinta já existente).
 5. RND/DCF para edifícios; RES.
