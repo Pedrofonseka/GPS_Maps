@@ -717,7 +717,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.12';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.13';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1280,7 +1280,7 @@ function vDefs(){
     <div class="tks">${tickBox('',f.on,'Atender por defeito',`data-sf="${i}" data-k="on"`)}${tickBox('',f.print,'Imprimir por defeito',`data-sf="${i}" data-k="print"`)}</div>
     <div class="btns"><button class="secondary mini" data-act="mvField" data-i="${i}" data-d="-1" ${i?'':'disabled'}>▲ Subir</button><button class="secondary mini" data-act="mvField" data-i="${i}" data-d="1" ${i<settings.fields.length-1?'':'disabled'}>▼ Descer</button><span class="grow"></span><button class="del" data-act="delField" data-i="${i}">Eliminar campo</button></div>`,{cnt:pill(TY[f.type]||f.type),def:false});
   return `<h2>Definições</h2>
-  ${blk('R · Relatório','Dados do perito, modelos e mapa da capa')}${relDefsHTML()}${perDefsHTML()}${stDefsHTML()}${diagDefsHTML()}${modDefsHTML()}${gmapsDefsHTML()}
+  ${blk('R · Relatório','Dados do perito, modelos e mapa da capa')}${relDefsHTML()}${perDefsHTML()}${diagDefsHTML()}${modDefsHTML()}${gmapsDefsHTML()}
   ${blk('A · Bases de dados','Valores que aparecem como ticks nas fichas')}
   ${CATS.map((c,k)=>catSec(c,k+1)).join('')}
   ${blk('B · Campos da pronúncia','Valores por defeito para processos novos — em cada processo escolhe-se o que atender')}
@@ -1688,8 +1688,6 @@ async function buildRelat(p){ensureRel(p);alVisCapa(p);p.anomalias.forEach(a=>{a
    body+=tbl(Wv,tr(tc('Verba',Wv[0],{b:1,fill:'D9D9D9'})+tc('Data',Wv[1],{b:1,fill:'D9D9D9'})+tc('Presenças',Wv[2],{b:1,fill:'D9D9D9'}),1)+V.map(a=>tr(tc(alCode(p,a),Wv[0])+tc(a.vis?.data||'—',Wv[1])+tc(String(a.vis?.presencas||'').trim()||'—',Wv[2]))).join(''));
    body+=H2('Decurso das diligências')+T(String(r.decurso||'').trim()||'Com o acompanhamento dos presentes, foram visitados os ativos identificados, para os caracterizar e recolher o levantamento fotográfico.',{jc:'both'});
    body+=H2('Constrangimentos, impedimentos ou dúvidas relevantes')+T(String(r.constrang||'').trim()||'Nada a considerar.')+E();
-   // status das verbas (opcional)
-   if(r.stTab){const Ws=[1300,TWb-1300-2300,2300],used=[...new Set(p.anomalias.map(stOf))].filter(Boolean);body+=H2('Status das verbas')+tbl(Ws,tr(tc('Verba',Ws[0],{b:1,fill:'D9D9D9'})+tc('Designação',Ws[1],{b:1,fill:'D9D9D9'})+tc('Status',Ws[2],{b:1,fill:'D9D9D9'}),1)+p.anomalias.map(a=>tr(tc(alCode(p,a),Ws[0])+tc(a.al.designacao||'—',Ws[1])+tc(stOf(a)?`${stOf(a)} – ${TSTATUS[stOf(a)]}`:'—',Ws[2]))).join(''))+used.map(k=>T(`${k} – ${TSTATUS[k]}: ${stDesc(k)}`,{jc:'both',sz:9})).join('')+E()}
    // cronologia do processo (opcional)
    {const CL=cronoList(r);if(CL.length&&r.cronoWord!==false){const Wc=[1500,TWb-1500];body+=H1('Cronologia do processo')+E()+tbl(Wc,tr(tc('Data',Wc[0],{b:1,fill:'D9D9D9'})+tc('Ocorrência',Wc[1],{b:1,fill:'D9D9D9'}),1)+CL.map(x=>tr(tc(dPT(x.data)||'—',Wc[0])+tc(x.desc,Wc[1]))).join(''))+E()}}
    // valor estimado — quadro-resumo
@@ -2190,7 +2188,7 @@ function vFicha(){
  let h='';
  /* 1 identificação */
  const idOpts=fam?AL_IDTIPO[fam]:AL_IDTIPO.imo;
- h+=sec('v1','1 · Identificação',`${stHTML(a)}<div class="row2">${inp('al.codigo',`Código da verba (vazio = ${'VB_'+String(idx+1).padStart(3,'0')})`,x.codigo,'VB_001')}${inp('al.designacao','Designação (curta — sai no quadro-resumo)',x.designacao,'ex.: Moradia T3, Ligeiro Renault Clio…')}</div>
+ h+=sec('v1','1 · Identificação',`<div class="row2">${inp('al.codigo',`Código da verba (vazio = ${'VB_'+String(idx+1).padStart(3,'0')})`,x.codigo,'VB_001')}${inp('al.designacao','Designação (curta — sai no quadro-resumo)',x.designacao,'ex.: Moradia T3, Ligeiro Renault Clio…')}</div>
   <label>Identificação do ativo <span class="muted">(pode assinalar vários documentos, cada um com o seu número)</span></label><div class="tks sm">${idOpts.map(o=>alTk(o in (x.ids||{}),esc(AL_IDLBL[o]||o),`data-alact="idtog" data-v="${esc(o)}"`)).join('')}</div>${idOpts.map((o,i)=>o in (x.ids||{})?`<div class="inrow" style="margin-top:4px"><b style="min-width:52px">${esc(o.length>8?o.slice(0,8)+'…':o)}</b><input data-bind="alid.${i}" value="${esc(x.ids[o]||'')}" placeholder="${esc(AL_IDPH(o,x))}"></div>`:'').join('')}
   ${txt('a.descricao','Descrição sumária',a.descricao,3)}${fam==='imo'||fam==='ter'?alPredioHTML(a):''}`,{cnt:ok(x.designacao||a.descricao)});
  /* 2 localização */
@@ -2225,33 +2223,36 @@ function vFicha(){
  return h}
 
 /* ---------- lista de verbas ---------- */
-/* Status por verba (como no AVA_Input) — descrição editável em Definições; verbas «ANL» (sem efeito) não entram no relatório */
-const TSTATUS={NIN:'Não iniciado',ECU:'Em curso',STB:'Em StandBy',END:'Terminado',ANL:'Anulado'};
-const STATUS_DESC_DEF={NIN:'Verba identificada mas ainda sem qualquer diligência: não houve visita, análise nem recolha de elementos.',ECU:'Trabalho iniciado e em desenvolvimento: há elementos recolhidos ou análise parcial, faltando concluir diligências ou conclusões.',STB:'Trabalho suspenso temporariamente: aguarda documentos, esclarecimentos, decisão, acesso ao local ou intervenção de terceiros.',END:'Verba concluída: elementos recolhidos, análise feita e valor estabelecido, sem diligências pendentes.',ANL:'Verba sem efeito: retirada, duplicada, fora do âmbito do processo ou que deixou de ser relevante — não sai no relatório.'};
-const ST_COR={NIN:'#9e9e9e',ECU:'#1565c0',STB:'#ef6c00',END:'#2e7d32',ANL:'#b71c1c'};
-const stDesc=k=>{const d=settings.statusDesc||{};return String(d[k]||'').trim()||STATUS_DESC_DEF[k]||''};
-const stOf=a=>a.al?.st||''; // sem status escolhido = ''
-const stChip=k=>!k?'':`<span style="display:inline-block;font-size:11px;font-weight:700;color:#fff;background:${ST_COR[k]};border-radius:6px;padding:1px 6px;margin-right:4px" title="${esc(TSTATUS[k])}">${k}</span>`;
-const alAtivas=p=>p.anomalias.filter(a=>stOf(a)!=='ANL');
-function stHTML(a){const k=stOf(a);return `<label>Status da verba</label><div class="tks sm">${Object.entries(TSTATUS).map(([c,l])=>alTk(k===c,`${c} · ${esc(l)}`,`data-alact="set" data-k="st" data-v="${c}"`)).join('')}</div>${k?`<p class="muted" style="margin:2px 0 8px">${esc(stDesc(k))}</p>`:''}`}
-function stDefsHTML(){return sec('d_st','Tabela de status (verbas)',`<p class="muted">Descreve as situações que cabem em cada código. A descrição aparece na ficha da verba e, se escolhido no processo, numa tabela no relatório.</p>${Object.entries(TSTATUS).map(([k,l])=>`<label>${stChip(k)} ${esc(l)}</label><textarea data-stdesc="${k}" rows="2">${esc(stDesc(k))}</textarea>`).join('')}<div class="btns"><button class="secondary mini" data-stdef="1">Repor descrições de origem</button></div>`,{def:false})}
-document.addEventListener('input',e=>{const el=e.target;if(!el.dataset?.stdesc)return;e.stopImmediatePropagation();settings.statusDesc=settings.statusDesc||{};settings.statusDesc[el.dataset.stdesc]=el.value;clearTimeout(window._stT);window._stT=setTimeout(()=>saveSettings(),500)},true);
-document.addEventListener('click',async e=>{if(!e.target.closest('[data-stdef]'))return;e.preventDefault();e.stopImmediatePropagation();settings.statusDesc={};await saveSettings();S.scrollTop=window.scrollY;render()},true);
+/* Estado de preenchimento da verba (automático): o que falta, por secção da ficha */
+function alFalta(a){alA(a);const x=a.al,F=[];
+ if(!String(x.designacao||a.descricao||'').trim())F.push('designação');
+ if(!(a.vis?.gps||(x.morada&&x.concelho)))F.push('localização');
+ if(!a.vis?.data)F.push('data da visita');
+ if(!x.tipo)F.push('tipo de ativo');else if(!x.destino)F.push('destino');
+ if(!relF(a).length)F.push('fotografias');
+ if(x.tipo&&alFam(a)&&!(Object.entries(x.car||{}).some(([k,v])=>k[0]!=='_'&&(Array.isArray(v)?v.length:String(v??'').trim()))||Object.values(x.suc||{}).some(v=>String(v||'').trim())))F.push('caracterização');
+ if(!(x.atr||String(x.util||'').trim()))F.push('utilidade');
+ if(!(Object.values(x.met||{}).some(Boolean)||String(x.metTxt||'').trim()))F.push('métodos');
+ if(alNum(x.valor)==null)F.push('valor');
+ return F}
+const alCompleta=a=>!alFalta(a).length;
+const fillChip=a=>{const F=alFalta(a);return F.length?`<span class="pill warn" title="Falta: ${esc(F.join(', '))}">Incompleta · falta ${F.length}</span>`:`<span class="pill ok">✓ Completa</span>`};
+const alAtivas=p=>p.anomalias;
 /* Cronologia do processo — ocorrências com data; podem (ou não) sair no relatório */
 const cronoList=r=>(r.crono||[]).filter(x=>String(x.desc||'').trim()).slice().sort((a,b)=>String(a.data||'9999').localeCompare(String(b.data||'9999')));
 const dPT=d=>/^\d{4}-\d{2}-\d{2}$/.test(d||'')?d.split('-').reverse().join('/'):String(d||'');
 function cronoHTML(p){const r=ensureRel(p),L=r.crono||[];return sec('pcron','Cronologia do processo',`<p class="muted">Ocorrências datadas (nomeação, pedidos de elementos, visitas, prorrogações, entrega…). Ordenam-se por data.</p>
  ${L.map((x,i)=>`<div class="inrow" style="margin-top:4px"><input type="date" data-bind="cr.${i}.data" value="${esc(x.data||'')}" style="flex:0 0 150px;min-width:0"><input data-bind="cr.${i}.desc" value="${esc(x.desc||'')}" placeholder="Ocorrência" style="flex:1;min-width:0"><button class="del" data-crdel="${i}">✕</button></div>`).join('')}
  <div class="btns"><button class="secondary mini" data-cradd="1">+ Ocorrência</button></div>
- <div class="tks col">${tickBox('',r.cronoWord!==false,'Incluir a cronologia no relatório (Word)','data-crword="1"')}${tickBox('',!!r.stTab,'Incluir a tabela de status das verbas no relatório (Word)','data-stword="1"')}</div>`,{cnt:pill(String(cronoList(r).length)),def:false})}
+ <div class="tks col">${tickBox('',r.cronoWord!==false,'Incluir a cronologia no relatório (Word)','data-crword="1"')}</div>`,{cnt:pill(String(cronoList(r).length)),def:false})}
 document.addEventListener('click',async e=>{const a=e.target.closest('[data-cradd],[data-crdel]');if(!a)return;e.preventDefault();e.stopImmediatePropagation();const p=cur();if(!p)return;const r=ensureRel(p);r.crono=r.crono||[];
  if(a.dataset.cradd)r.crono.push({data:new Date().toISOString().slice(0,10),desc:''});else r.crono.splice(+a.dataset.crdel,1);await saveProc();S.scrollTop=window.scrollY;render()},true);
-document.addEventListener('change',async e=>{const el=e.target;if(!el.dataset?.crword&&!el.dataset?.stword)return;e.stopImmediatePropagation();const p=cur();if(!p)return;const r=ensureRel(p);if(el.dataset.crword)r.cronoWord=el.checked;else r.stTab=el.checked;await saveProc()},true);
-function vAnoms(){const p=cur();alP(p);const L=p.anomalias;L.forEach(alA);const tot=L.reduce((s,a)=>s+(alNum(a.al.valor)||0),0),done=L.filter(alFeita).length;
+document.addEventListener('change',async e=>{const el=e.target;if(!el.dataset?.crword)return;e.stopImmediatePropagation();const p=cur();if(!p)return;const r=ensureRel(p);r.cronoWord=el.checked;await saveProc()},true);
+function vAnoms(){const p=cur();alP(p);const L=p.anomalias;L.forEach(alA);const tot=L.reduce((s,a)=>s+(alNum(a.al.valor)||0),0),done=L.filter(alCompleta).length;
  return `<h2>Verbas (${L.length})</h2><div class="card"><div class="steps3"><span><b>1</b> Identificar e localizar</span><span><b>2</b> Tipo, estado e fotos</span><span><b>3</b> Utilidade, métodos e valor</span></div>
  <div class="btns"><button class="green" data-alact="nova">+ Nova verba</button><button class="secondary" data-alact="trocar">⇄ Enviar / receber verbas</button></div>
- ${L.length?`<div class="bar"><i style="width:${Math.round(100*done/L.length)}%"></i></div><b>${done}/${L.length}</b> com tipo e fotos ou valor${tot?` · total estimado <b>${esc(alEur(tot))}</b>`:''}`:''}</div>
- <div class="list">${L.map((a,i)=>{const x=a.al;return `<div class="card alcard" data-act="openAnom" data-id="${a.id}"><button class="aldel" data-alact="del" data-id="${a.id}" title="Eliminar a verba ${esc(alCode(p,a))}" aria-label="Eliminar a verba">🗑</button>${stChip(stOf(a))}${a.al.tipo?grpChip(alGrp(a)):''}<b>${esc(alCode(p,a))}</b> ${esc(x.designacao||'')}<div class="muted">${esc([alTipoNome(a),alDestTxt(a)].filter(Boolean).join(' · ')||'Tipo por definir')}${Object.keys(x.ids||{}).length?' · '+esc(alIdTxt(x).replace(/\n/g,' · ')):''}</div><div style="margin-top:4px">${pill('📷 '+relF(a).length)}${a.vis?.gps?pill('GPS','ok'):''}${a.vis?.data?pill(a.vis.data):''}${alNum(x.valor)!=null?pill(alEur(x.valor),'ok'):pill('sem valor','warn')}</div></div>`}).join('')||'<p class="muted">Ainda não há verbas.</p>'}</div>`}
+ ${L.length?`<div class="bar"><i style="width:${Math.round(100*done/L.length)}%"></i></div><b>${done}/${L.length}</b> verba(s) completa(s)${tot?` · total estimado <b>${esc(alEur(tot))}</b>`:''}`:''}</div>
+ <div class="list">${L.map((a,i)=>{const x=a.al;return `<div class="card alcard" data-act="openAnom" data-id="${a.id}"><button class="aldel" data-alact="del" data-id="${a.id}" title="Eliminar a verba ${esc(alCode(p,a))}" aria-label="Eliminar a verba">🗑</button>${a.al.tipo?grpChip(alGrp(a)):''}<b>${esc(alCode(p,a))}</b> ${esc(x.designacao||'')}<div class="muted">${esc([alTipoNome(a),alDestTxt(a)].filter(Boolean).join(' · ')||'Tipo por definir')}${Object.keys(x.ids||{}).length?' · '+esc(alIdTxt(x).replace(/\n/g,' · ')):''}</div><div style="margin-top:4px">${pill('📷 '+relF(a).length)}${a.vis?.gps?pill('GPS','ok'):''}${a.vis?.data?pill(a.vis.data):''}${alNum(x.valor)!=null?pill(alEur(x.valor),'ok'):''}${fillChip(a)}</div></div>`}).join('')||'<p class="muted">Ainda não há verbas.</p>'}</div>`}
 
 /* ---------- processo ---------- */
 function vProc(){const p=cur(),P=alP(p);
@@ -2335,7 +2336,7 @@ async function alReceber(d){if(d.app!=='AvaLias'||d.kind!=='verbas'||!d.procs?.[
 function alVisCapa(p){const v=p.anomalias.find(a=>a.vis?.gps)?.vis||p.anomalias.find(a=>a.vis?.data)?.vis||{data:'',presencas:'',gps:null};p.visita=v;return v}
 function alCheck(p){const w=[];alP(p);if(!p.al.finalidade)w.push('Processo › Contexto da avaliação: falta a finalidade.');p.anomalias.forEach(a=>{alA(a);const c=alCode(p,a);if(!a.al.tipo)w.push(`${c}: falta o tipo de ativo.`);if(alNum(a.al.valor)==null)w.push(`${c}: falta o valor estimado.`);if(!relF(a).length)w.push(`${c}: sem fotografias no relatório.`)});return w}
 
-function relCheck(p){alVisCapa(p);const w=relCheck_relat(p).filter(x=>!/Data da visita|Sem coordenadas GPS|Processo › 2/.test(x));{const an=p.anomalias.filter(a=>stOf(a)==='ANL');if(an.length)w.push(`${an.map(a=>alCode(p,a)).join(', ')}: status ANL (anulada) — não sai no relatório.`);const pend=p.anomalias.filter(a=>['NIN','STB'].includes(stOf(a)));if(pend.length)w.push(`${pend.map(a=>`${alCode(p,a)} (${stOf(a)})`).join(', ')}: verba(s) ainda não iniciada(s) ou em standby.`)}{const G=dupAll(p);if(G.length)w.push(`${G.length} grupo(s) de fotografias repetidas: ${G.slice(0,3).map(g=>g.map(x=>x.code).join(' = ')).join(' · ')}${G.length>3?'…':''} — Relatório › Fotografias › «Procurar repetidas»`)}{const n=camUnsaved(p).length;if(n)w.push(`${n} fotografia(s) tirada(s) na app ainda não guardadas na Fototeca do iPhone — Verbas › 5 · Estado › «Guardar na Fototeca»`)}if(!p.anomalias.some(a=>a.vis?.gps))w.push('Nenhuma verba tem GPS: a capa sai sem mapa — Verbas › 2 · Localização');p.anomalias.filter(a=>alFam(a)==='ter'&&!String(a.al?.car?.pdmClasse||'').trim()).forEach(a=>w.push(`${alCode(p,a)}: terreno sem enquadramento no PDM (classe de solo) — ver o que o PDM diz para o local (5 · Estado › Ordenamento)`));return [...w,...alCheck(p)]}
+function relCheck(p){alVisCapa(p);const w=relCheck_relat(p).filter(x=>!/Data da visita|Sem coordenadas GPS|Processo › 2/.test(x));for(const a of p.anomalias){const F=alFalta(a);if(F.length)w.push(`${alCode(p,a)}: incompleta — falta ${F.join(', ')}.`)}{const G=dupAll(p);if(G.length)w.push(`${G.length} grupo(s) de fotografias repetidas: ${G.slice(0,3).map(g=>g.map(x=>x.code).join(' = ')).join(' · ')}${G.length>3?'…':''} — Relatório › Fotografias › «Procurar repetidas»`)}{const n=camUnsaved(p).length;if(n)w.push(`${n} fotografia(s) tirada(s) na app ainda não guardadas na Fototeca do iPhone — Verbas › 5 · Estado › «Guardar na Fototeca»`)}if(!p.anomalias.some(a=>a.vis?.gps))w.push('Nenhuma verba tem GPS: a capa sai sem mapa — Verbas › 2 · Localização');p.anomalias.filter(a=>alFam(a)==='ter'&&!String(a.al?.car?.pdmClasse||'').trim()).forEach(a=>w.push(`${alCode(p,a)}: terreno sem enquadramento no PDM (classe de solo) — ver o que o PDM diz para o local (5 · Estado › Ordenamento)`));return [...w,...alCheck(p)]}
 function render(){const p=cur();if(p){p.anomalias.forEach(a=>{alA(a);alValSync(a)});if(S.sub==='ficha'&&curA())p.visita=curA().vis;else alVisCapa(p)}const r=render_relat();try{alSugHist()}catch(e){console.error(e)}return r}
 /* Regra geral (docs/regras/sugestoes.md): caixa de texto vazia com valor no histórico → sugestão que o utilizador aceita (✓), rejeita (✕) ou corrige.
    Histórico = o valor do mesmo campo noutras verbas (primeiro deste processo, depois dos outros), o mais recente. */
@@ -2368,7 +2369,7 @@ document.addEventListener('click',async e=>{if(!e.target.closest('[data-alrv]'))
 function vRel(){const p=cur();const box=document.createElement('div');box.innerHTML=vRel_relat();
  box.querySelectorAll('.card.chk,details[data-key="r1"],details[data-key="r5"],details[data-key="r2"],details[data-key="r3"],details[data-key="r4"],details[data-key="rr2"]').forEach(e=>e.remove());
  const V=p.anomalias,tot=V.reduce((s,a)=>s+(alNum(a.al?.valor)||0),0),nf=V.reduce((s,a)=>s+relF(a).length,0);
- const b=box.querySelector('.blk');if(b)b.insertAdjacentHTML('afterend',capaSecHTML(p));if(b)b.outerHTML=blk('Resultado',`${V.length} verba(s) · ${V.filter(alFeita).length} com tipo e fotos/valor · ${nf} foto(s)${tot?' · total '+alEur(tot):''}`);
+ const b=box.querySelector('.blk');if(b)b.insertAdjacentHTML('afterend',capaSecHTML(p));if(b)b.outerHTML=blk('Resultado',`${V.length} verba(s) · ${V.filter(alCompleta).length} completa(s) · ${nf} foto(s)${tot?' · total '+alEur(tot):''}`);
  {const c=box.querySelector('.blk');if(c)c.insertAdjacentHTML('afterend',`<div class="card"><b>🔍 Revisão do texto</b><p class="muted">Corrige automaticamente as gralhas mecânicas (espaços, pontuação, maiúscula no início da frase, ponto final) em todos os textos do processo e das verbas; depois pode aceitar cada correção ou manter o original.</p><div class="btns"><button class="green" data-alrv="1">🔍 Rever o texto</button></div></div>`)}
  box.insertAdjacentHTML('beforeend',sec('rf','Fotografias e tamanho dos documentos',`<div class="btns"><button class="secondary" data-dupscan="1">🔍 Procurar fotografias repetidas</button>${camUnsaved(p).length?`<button class="secondary" data-act="saveCam">💾 Guardar ${camUnsaved(p).length} foto(s) tirada(s) na app na Fototeca</button>`:''}</div>`+maxUI().replace('cada anomalia','cada verba')+tamHTML(p)));
  return box.innerHTML}
