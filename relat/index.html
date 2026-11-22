@@ -744,7 +744,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.19.3';const VERSION_DATA='2026-11-21';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.19.4';const VERSION_DATA='2026-11-21';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1590,7 +1590,8 @@ const tempoFrase=(o,txt)=>{const L=TEMPO_R.filter(k=>o?.[k]).map((k,i)=>i?k.char
 const tempoUI=(o,txt,vi)=>`<div class="tempo fz fz-y"><div class="fzh">🟨 Estado do tempo${vi<0?' (1.ª visita)':''} <span class="muted">(pode marcar vários) — sai «Meteorologia: …»</span></div><div class="tks">${TEMPO_R.map(k=>tickBox('',!!o?.[k],k,`data-act="rTempo" data-v="${vi}" data-k="${esc(k)}"`)).join('')}</div><div class="cmpbox"><div class="cmphd">💬 Estado do tempo — texto complementar (opcional)</div><div class="muted" style="font-size:12px">Comentário às opções marcadas (ex.: temperatura, humidade do ar, chuva nos dias anteriores). Se ficar vazio, não sai nada.</div><textarea data-bind="${vi<0?'r.tempoTxt':`vx.${vi}.tempoTxt`}" rows="2">${esc(txt||'')}</textarea></div></div>`;
 const ANEXT_R=['Caderneta predial','Certidão de registo predial','Planta','Lista de assuntos','Outros'];
 const DOCS_R=['Lista de quesitos','Relatório de situações','Cadernetas prediais','Certidões de registo','Levantamento topográfico','Plantas','Projetos','Caderno de encargos','Lista de trabalhos a realizar','Orçamento','Lista de alterações','Lista de queixas','Conjunto de fotos','Outros'];
-const ANEX_R=['Plantas','Medições e orçamento','Análise de anomalias','Levantamento topográfico','Lista de trabalhos a realizar','Outros elementos de base'];
+const ANEX_R=['Medições','Medições e orçamento','Orçamento','Estimativa de custos','Reportagem fotográfica','Planta(s)','Caderneta(s) predial(ais)','Certidão(ões) de registo predial','Relatório(s)','Análise de anomalias','Levantamento topográfico','Lista de trabalhos a realizar','Outros anexos'];
+const ANEX_REN={'Plantas':'Planta(s)','Outros elementos de base':'Outros anexos'};
 const COMP_SINGULAR='Pedro Jorge Fernandes Fonseca, engenheiro, perito-avaliador da Lista Oficial do Ministério da Justiça e do Ministério das Finanças, com formação em avaliação imobiliária e expropriações pelo Centro de Estudos Judiciários do Ministério da Justiça, inscrito na Associação Nacional de Avaliadores Imobiliários sob o número 336 e na CMVM sob o registo PAI 2011 0005, ao serviço da empresa Proficis serviços de engenharia Lda, pessoa coletiva com o número 503 759 813, jura por sua honra desempenhar as funções que lhe foram atribuídas, com lealdade e proficiência.';
 const COMP_COLEGIAL='Os peritos nomeados, melhor identificados no processo, declaram sob compromisso de honra, desempenhar as funções de que estão incumbidos, com isenção, independência, lealdade e proficiência.';
 // particular: o «Do conteúdo» passa para o Termo de encerramento (antes das reservas)
@@ -1645,6 +1646,7 @@ function ensureRel(p){syncUrg(p);const r=p.rel=p.rel||{};const d={ambito:'instit
   if(r.decursoIntro===undefined)r.decursoIntro=String(r.decurso||'').trim()?'':DECURSO_INTRO; // textos antigos já escritos como frase completa
   if(r.ctxIntro===undefined)r.ctxIntro=String(r.ctxNota||'').trim()?'':CTX_INTRO;
   if(r.causasIntro===undefined)r.causasIntro=String(r.causasG||'').trim()?'':CAUSAS_INTRO;
+  if(r.anexos)for(const [a,b] of Object.entries(ANEX_REN))if(a in r.anexos){if(r.anexos[a])r.anexos[b]=true;delete r.anexos[a]}
   if(r.conseq)for(const [a,b] of Object.entries(CONSEQ_REN))if(a in r.conseq){if(r.conseq[a])r.conseq[b]=true;delete r.conseq[a]}
   if(String(r.docsOutros||'').trim()&&r.docs)r.docs['Outros']=true;
   for(const k in d)if(r[k]===undefined)r[k]=clone(d[k]);
@@ -1894,7 +1896,7 @@ function relRelHTML(p,which='rel'){const r=ensureRel(p),col=isCol(r);
   const nr=r.quesitos.filter(q=>String(q.resp||'').trim()).length;
   const termo=`${col?`<label>Conclusão</label>${segR('rUnan',[['1','Por unanimidade'],['0','Com posições discordantes']],r.unan?'1':'0')}${r.unan?'':RT('discord','Posições discordantes (perito e fundamento)',r.discord,4)}`:''}
     ${ZB('termoTxt',r.termoTxt,'Texto do termo (antes de «Terminado em:»)',5,TERMO_TXT_R)}${RL('dataEnc','Terminado em',r.dataEnc,mesAno())}<p class="muted">${col?'Assinam os peritos do colégio.':'Assina o perito (nome em Definições).'}</p>`;
-  const anex=`<div class="tks col">${ANEX_R.map(d=>tickBox('',!!r.anexos[d],d,`data-act="rAnex" data-k="${esc(d)}"`)).join('')}</div>${RT('anexosOutros','Outros anexos (um por linha)',r.anexosOutros,2)}${anexFilesHTML(p)}`;
+  const anex=`<div class="tks col">${ANEX_R.map(d=>tickBox('',!!r.anexos[d],d,`data-act="rAnex" data-k="${esc(d)}"`)).join('')}</div>${r.anexos['Outros anexos']||String(r.anexosOutros||'').trim()?ZB('anexosOutros',r.anexosOutros,'Outros anexos (um por linha — cada um sai com o seu ☒)',2,'Ex.: Relatório de ensaios'):''}${anexFilesHTML(p)}`;
   const oldR=isPart(r)&&r.quesitos.some(q=>String(q.resp||'').trim()||Object.values(q.rp||{}).some(t=>String(t||'').trim()));
   const ANAL=`${isPart(r)&&!oldR?'':sec('rr1',isPart(r)?'Apreciação das queixas — já não sai no relatório':'Resposta ao solicitado (quesitos)',(isPart(r)?'<p class="warn" style="margin-top:0">⚠ Nos relatórios particulares este capítulo deixou de sair (as situações já são comentadas na Análise específica). Passe estes textos para o comentário da situação ou para a Apreciação geral e apague-os aqui.</p>':'')+qs,{cnt:pill(`${nr}/${r.quesitos.length}`,nr&&nr===r.quesitos.length?'ok':'warn')})}
   ${isPart(r)?'':sec('rrC',isPart(r)?'Contextualizando e outras questões':'Nota de contextualização (antes da análise específica)',RT('ctxNota',isPart(r)?'Contextualizando — sai em «Apreciação geral»':'Sai em «Situações a analisar», antes dos tópicos e da análise específica',r.ctxNota,5,'Enquadramento do imóvel, do pedido e das circunstâncias relevantes para a análise…')+(isPart(r)?RT('outrasTxt','«1.2 Outras questões ou situações» — texto quando o perito não acrescentou situações',r.outrasTxt,2,'Nada a acrescentar.'):''),{cnt:mtxt(r,'ctxNota')?pill('✓','ok'):pill('por preencher','warn'),def:false})}
@@ -2118,7 +2120,7 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
   if(r.incReservas!==false){body+=H1('Âmbito de utilização – reservas de análise');for(const l of semConteudo(r.reservas||RESERVAS_R).split('\n'))body+=/^\d+\.\s/.test(l)?H2(l.replace(/^\d+\.\s*/,'')):T(l,{jc:'both'})}
   if(r.incAmbiente!==false){body+=H1('Ambiente, sustentabilidade e conformidade de licenciamento')+T(String(r.ambiente||AMBIENTE_R),{jc:'both'})}
   // 11, 12
-  const ax=ANEX_R.filter(d=>r.anexos[d]).map(d=>CHK(true,d)).join('')+String(r.anexosOutros||'').split('\n').filter(x=>x.trim()).map(x=>CHK(true,x.trim())).join('')+(r.anexF||[]).map((a,i)=>CHK(true,anexLbl(a,i))).join('');
+  const axO=String(r.anexosOutros||'').split('\n').map(x=>x.trim()).filter(Boolean);const ax=ANEX_R.filter(d=>r.anexos[d]&&!(d==='Outros anexos'&&axO.length)).map(d=>CHK(true,d)).join('')+axO.map(x=>CHK(true,x)).join('')+(r.anexF||[]).map((a,i)=>CHK(true,anexLbl(a,i))).join('');
   if(ax)body+=H1('Em anexo')+ax;
   // conteúdo dos anexos (PDF/imagens convertidos em páginas): cada anexo em página nova, título e páginas centradas na página (largura escolhida; por defeito 21 − 2 = 19 cm)
   for(const [i,a] of (r.anexF||[]).entries()){if(a.inc===false||!anexKind(a))continue;
