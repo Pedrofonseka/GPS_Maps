@@ -24,7 +24,8 @@ Ao melhorar uma rotina numa app, atualizar o ficheiro respetivo e a tabela «Ond
 | Revisão do texto antes de exportar (gralhas, ortografia pt-PT, redundâncias, coerência) | ver abaixo | 1.0 |
 | Apoio de análise de fotografias por IA (sugestão, opcional) | ver abaixo | 1.1 |
 | Capas do relatório Word (7 opções, centradas, pré-visualização) | [capas.md](capas.md) | 1.0 |
-| Culturas — capitalização do rendimento (ExPropria → AvaLias) | [culturas.md](culturas.md) | 1.0 |
+| **Terrenos TOF — motor comum `comum/tof.js`** (valores de referência + rendimento das culturas; biblioteca de referências por ficheiro; sincronização `tools/sync_comum.py`) — ExPropria e AvaLias | [culturas.md](culturas.md) | 1.0 |
+| **Motores comuns** (`comum/*.js`, copiados para dentro das apps entre `@comum:<nome>` e `@fim:<nome>`; nunca editar nas apps) | `tools/sync_comum.py` | 1.0 |
 
 ### Imagens no Word — controlo de conteúdo
 Cada imagem gerada para Word vai dentro de um controlo de conteúdo de imagem (`<w:sdt><w:sdtPr><w:alias w:val="Imagem"/><w:id/><w:picture/></w:sdtPr><w:sdtContent>…run com w:drawing…</w:sdtContent></w:sdt>`), para que no Word um clique sobre a imagem permita trocá-la. Aplicado em: Relat_Anomalias 1.0.0; AVA_Input 2.88 (no `JSZip.generateAsync`, para todos os .docx); ExPropria 0.13.6 (passagem final `picSdtAll` antes de gravar: envolve todas as imagens inline sozinhas no parágrafo que ainda não estejam num controlo; id único por controlo).

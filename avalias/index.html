@@ -712,7 +712,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.2';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.3';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1648,6 +1648,7 @@ async function buildRelat(p){ensureRel(p);alVisCapa(p);p.anomalias.forEach(alA);
     kr+=krow('Métodos elegíveis',[Object.keys(x.met||{}).filter(k=>x.met[k]).join(', '),x.metTxt].filter(s=>String(s||'').trim()).join('\n'));
     kr+=krow('Valor estimado',[alNum(x.valor)!=null?alEur(x.valor):'',renda&&alNum(x.renda)!=null?'Renda mensal: '+alEur(x.renda)+'/mês':'',bad?`BAD: redução até ${String(x.bad||'').trim()||AP.badPct||10}%`:'',x.valObs].filter(s=>String(s||'').trim()).join('\n'));
     if(kr)body+=tbl([L1,L2],kr)+E();
+    if(alRefOk(a)&&x.tofRef&&alNum(x.refV)>0){const at=alNum(x.car?.at),vr=alNum(x.refV);body+=P(R('Valor de referência',{b:true}),{keep:1,sp:[120,60]})+T(`Valor unitário de referência para ${alCultTipo(a).toLowerCase()}: ${CULT.fmt(vr)} €/m² – fonte: ${String(x.refF||'').trim().replace(/[.\s]+$/,'')}.`,{jc:'both'})+(at?T(`Valor do terreno = ${CULT.fmt(at,0)} m² × ${CULT.fmt(vr)} €/m² = ${alEur(Math.round(at*vr))}.`,{jc:'both',b:true}):'')+E()}
     if(alCultOk(a)&&x.calc&&Array.isArray(x.calcW)&&x.calcW.length){const at=alNum(x.car?.at),vu=alNum(x.vun);
      body+=P(R('Cálculo pelo rendimento',{b:true}),{keep:1,sp:[120,60]});
      for(const b of x.calcW){if(b.t){const Wc=b.t.pc.map(f=>Math.round(f*TWb));Wc[Wc.length-1]=TWb-Wc.slice(0,-1).reduce((s,y)=>s+y,0);
@@ -1946,7 +1947,7 @@ const AL_CAR={
  sep:[['sepTipo','Tipo','c','sep_tipo'],['cemiterio','Cemitério','t'],['entidade','Entidade gestora','c','sep_entidade'],['regime','Regime','c','sep_regime'],['material','Material','c','sep_material'],['estado','Estado','c','sep_estado'],['fonte','Fonte da informação','m','fonte_sep']],
  out:[['estado','Estado','c','bens_estado']]};
 const AL_SUC={imo:[['env','Envolvente e contexto'],['car','Características'],['est','Estado de conservação']],ter:[['env','Envolvente e contexto'],['car','Características do terreno'],['est','Estado / ocupação']],vei:[['car','Características'],['est','Estado']],mob:[['car','Características'],['est','Estado']],sep:[['car','Características'],['est','Estado']],out:[['car','Descrição / características'],['est','Estado']]};
-const AL_METODOS=['Comparativo de mercado','Rendimento (capitalização)','Custo (reposição depreciado)','Residual','Outro'];
+const AL_METODOS=['Comparativo de mercado','Valores de referência','Rendimento (capitalização)','Custo (reposição depreciado)','Residual','Outro'];
 /* texto do modelo «Ava_Context» (Valor estimado — considerações e BAD) */
 const AL_N=[
  'N1 - O Valor indicado refere-se à totalidade do ativo (100% de quota-parte), não incluindo taxas nem comissões de mediação imobiliária.',
@@ -2013,7 +2014,7 @@ function vFicha(){
  h+=sec('v7','7 · Métodos elegíveis',`<p class="muted" style="margin-top:0">A desenvolver: por agora regista quais os métodos aplicáveis e porquê; os cálculos ainda não estão na app.</p><div class="tks">${AL_METODOS.map(m=>alTk(!!x.met[m],esc(m),`data-alact="met" data-v="${esc(m)}"`)).join('')}</div>${txt('al.metTxt','Fundamentação / notas',x.metTxt,2)}`,{cnt:ok(Object.values(x.met).some(Boolean))});
  /* 8 valor */
  const renda=p.al.base==='Valor de renda de mercado';
- h+=sec('v8','8 · Valor',`${alCultOk(a)?alCultHTML(a):''}<div class="row2">${inp('al.valor','Valor estimado (€)',x.valor,'ex.: 185 000')}${renda?inp('al.renda','Renda mensal (€/mês)',x.renda,'ex.: 650'):''}</div>${p.al.bad?inp('al.bad',`BAD — redução até (%) — vazio = ${p.al.badPct||10}%`,x.bad,String(p.al.badPct||10)):'<p class="muted">BAD não aplicável neste processo (Processo › Contexto da avaliação).</p>'}${txt('al.valObs','Notas ao valor (opcional)',x.valObs,2)}${alNum(x.valor)!=null?`<p><b>${esc(alEur(x.valor))}</b>${renda&&alNum(x.renda)!=null?` · ${esc(alEur(x.renda))}/mês`:''}</p>`:''}`,{cnt:ok(alNum(x.valor)!=null)});
+ h+=sec('v8','8 · Valor',`${alCultOk(a)?alCultHTML(a):''}${alRefOk(a)?alRefHTML(a):''}${alTOF(a)&&!alCultOk(a)&&!alRefOk(a)?'<p class="muted">Terreno não apto para construção (TOF): assinale em «7 · Métodos» «Valores de referência» e/ou «Rendimento (capitalização)» para ter aqui o cálculo.</p>':''}<div class="row2">${inp('al.valor','Valor estimado (€)',x.valor,'ex.: 185 000')}${renda?inp('al.renda','Renda mensal (€/mês)',x.renda,'ex.: 650'):''}</div>${p.al.bad?inp('al.bad',`BAD — redução até (%) — vazio = ${p.al.badPct||10}%`,x.bad,String(p.al.badPct||10)):'<p class="muted">BAD não aplicável neste processo (Processo › Contexto da avaliação).</p>'}${txt('al.valObs','Notas ao valor (opcional)',x.valObs,2)}${alNum(x.valor)!=null?`<p><b>${esc(alEur(x.valor))}</b>${renda&&alNum(x.renda)!=null?` · ${esc(alEur(x.renda))}/mês`:''}</p>`:''}`,{cnt:ok(alNum(x.valor)!=null)});
  h+=`<div class="btns"><button class="green" data-alact="step" data-d="1" ${idx<n-1?'':'disabled'}>Verba seguinte ▶</button><span class="grow"></span><button class="secondary mini" data-act="dupA">⧉ Duplicar</button><button class="del" data-alact="del" data-id="${a.id}">🗑 Eliminar a verba ${esc(code)}</button></div>`;
  return h}
 
@@ -2115,7 +2116,7 @@ function vRel(){const p=cur();const box=document.createElement('div');box.innerH
 
 
 /* ===== Rotina de culturas do ExPropria (0.15.x): capitalização do rendimento — rotação de culturas, olival, vinha/pomar, eucaliptal, pinhal, rendas e soma de rendimentos.
-   Copiada do ExPropria (expropria/index.html, de «Calculadoras do V_Un» até calcUsado) e isolada aqui; regra em docs/regras/culturas.md. ===== */
+   Motor comum comum/tof.js (o mesmo do ExPropria), isolado aqui; regra em docs/regras/culturas.md. ===== */
 const CULT=(()=>{
 const num=v=>{if(v===''||v==null)return 0;const x=parseFloat(String(v).replace(/\s/g,'').replace(',','.'));return isFinite(x)?x:0};
 const fmt=(v,d=2)=>{const n=Number(v||0),s=Math.abs(n).toFixed(d),[i,f]=s.split('.');return (n<0&&+s?'-':'')+i.replace(/\B(?=(\d{3})+(?!\d))/g,'.')+(f?','+f:'')};
@@ -2123,6 +2124,9 @@ const norm=s=>String(s||'').replace(/\s+/g,' ').trim().toLowerCase();
 const openModal=html=>{let m=document.getElementById('cultModal');if(!m){m=document.createElement('div');m.id='cultModal';m.className='modal';m.innerHTML='<div class="box" id="modalBox"></div>';m.addEventListener('click',e=>{if(e.target===m)closeModal()});document.body.appendChild(m)}m.querySelector('#modalBox').innerHTML=html};
 const closeModal=()=>{document.getElementById('cultModal')?.remove()};
 const saveSoon=()=>{};
+/* @comum:tof v1.0 — motor comum dos terrenos TOF (não aptos para construção): capitalização do rendimento das culturas e valores de referência.
+   FONTE ÚNICA: comum/tof.js no repositório GPS_Maps — não editar dentro das apps; editar comum/tof.js e correr `python3 tools/sync_comum.py`.
+   Precisa, na app: num, fmt, norm, esc, $, openModal(html) / closeModal() com #modalBox, settings, saveSettings(), saveSoon(). Opcional: calcXls (folha Excel embutida). */
 /* ---- 0.13.8 · Calculadoras do V_Un (eucaliptal, pinhal, rotação de culturas) e ocupação temporária ----
    Os valores por defeito são os dos relatórios de arbitragem que serviram de exemplo; o perito aceita o valor calculado ou adota outro (o V_Un continua editável). */
 const CALC_MET={euc:'Eucaliptal – valor atual dos cortes (desconto contínuo)',pin:'Pinhal – plano de gestão (desconto discreto)',rot:'Rotação de culturas – rendimento fundiário',comp:'Soma de rendimentos – blocos autónomos (rotação, eucaliptal, pinhal)'};
@@ -2197,7 +2201,7 @@ const CALC_X={
    return {ok,L,W,vun:Math.round(V/100)/100,fund:`capitalização do rendimento – classe ${cl} (${REN_CL[cl].split(':')[0].replace(/^\d – /,'').toLowerCase()}), taxa ${pctTxt(p.taxa)}: ${fmt(V)} €/ha`}}}};
 Object.entries(CALC_X).forEach(([k,o])=>{CALC_MET[k]=o.l;CALC_BLK[k]=o.l.split(' – ')[0];CALC_DEF[k]=o.def});
 
-function calcRun(m,p,temp){return calcRun0(m,p,temp)} // AvaLias: sem folha Excel embutida
+function calcRun(m,p,temp){const R=calcRun0(m,p,temp);try{if(R&&R.ok&&Array.isArray(R.W)&&typeof calcXls==='function')calcXls(m,p,temp,R)}catch(e){console.error(e)}return R} /* calcXls (folha Excel embutida) só existe nas apps que a usam */
 function calcRun0(m,p,temp){if(CALC_X[m])return CALC_X[m].run(p||{},temp);const L=[];let vun=0,ok=true;
  if(m==='euc'){const r=num(p.r)/100,P=num(p.P),n=num(p.n),V=String(p.V||'').split(/[;\/]+/).map(num).filter(x=>x>0),C=num(p.C),a=num(p.idade),tn=num(p.tn);
   const k=V.length,T=n*k,d=String(p.d??'').trim()===''?Math.max(0,T-a):num(p.d);ok=r>0&&P>0&&n>0&&k>0;if(!ok)return {ok,L:['Indique a taxa, o preço, o intervalo entre cortes e os volumes.']};
@@ -2240,8 +2244,6 @@ function calcRun0(m,p,temp){if(CALC_X[m])return CALC_X[m].run(p||{},temp);const 
   const RES={t:{h:['Bloco','Designação','Valor (€/m²)'],pc:[.12,.62,.26],jc:['center','left','right'],r:[...RS.map((R,k)=>[lt(k),nm(BL[k]),fmt(R.vun)]),{c:['','Soma dos rendimentos',fmt(vun)],b:1}]}};
   return {ok,L:L2,W:[...RS.flatMap((R,k)=>[{p:`${lt(k)}) ${nm(BL[k])}`,h:1},...(R.W||[]),{p:`Valor do bloco ${lt(k)}: ${fmt(R.vun)} €/m².`}]),...(p.resumo?[{p:'Soma dos rendimentos',h:1},RES]:[{p:L2[L2.length-1],h:1}])],vun,blocos:RS.map((R,k)=>({l:lt(k),nome:nm(BL[k]),vun:R.vun})),fund:`soma dos rendimentos de ${(a=>a.length>1?a.slice(0,-1).join(', ')+' e '+a[a.length-1]:a[0])(BL.map((b,k)=>`${nm(b).toLowerCase()} (${fmt(RS[k].vun)} €/m²)`))}`}}
  return {ok:false,L:[]}}
-/* título 3 «Cálculos» do 8.3 (modelo MM_261151) */
-function calcHead83(doc){const h=findHeading(doc,'Solo para outros fins');if(!h)return null;let e=h.nextSibling;while(e){if(e.nodeType===1&&e.localName==='p'){const st=e.getElementsByTagNameNS(WNS,'pStyle')[0],sv=st?st.getAttributeNS(WNS,'val'):'';if(/Cabealho[12]$/.test(sv)&&txt(e).trim())return null;if(/Cabealho3/.test(sv)&&/^cálculos/i.test(txt(e).trim()))return e}e=e.nextSibling}return null}
 /* linhas da ocupação temporária (entram na linha 8 do quadro: área × anos × RF €/m²/ano) */
 const ocTempRows=v=>(Array.isArray(v.ocTemp)?v.ocTemp:[]).map((r,i)=>[r,i]).filter(([r])=>r&&String(r.tipo||'').trim()&&num(r.area)>0&&num(r.anos)>0);
 const ocTempDesig=r=>`Ocupação temporária – ${String(r.tipo).trim()} (${fmt(num(r.area))} m² × ${fmt(num(r.anos),num(r.anos)%1?1:0)} ${num(r.anos)===1?'ano':'anos'})`;
@@ -2262,7 +2264,7 @@ function calcModalHTML(st){const {m,p,temp,tipo}=st;const R=calcRun(m,p,temp);
  const f=m==='comp'?(p.blocos||[]).map((b,k)=>`<div class="algrp cmblk" style="grid-column:1/-1"><span>${String.fromCharCode(65+k)}) ${esc(CALC_BLK[b.m]||b.m)}</span><button class="secondary mini" data-blkdel="${k}">✕ Retirar bloco</button></div><label class="cmf" style="grid-column:1/-1"><span>Designação do bloco ${String.fromCharCode(65+k)} (sai no título do quadro)</span><input data-blknome="${k}" value="${esc(b.nome||'')}" placeholder="${esc(CALC_BLK[b.m]||'')}"></label>${calcFields(b.m,b.p,false,`blocos.${k}.p.`)}`).join('')+`<div style="grid-column:1/-1;margin-top:10px" class="btns"><span class="muted">Acrescentar bloco:</span>${Object.entries(CALC_BLK).map(([k,l])=>`<button class="secondary mini" data-blkadd="${k}">+ ${l}</button>`).join('')}</div><label class="chk" style="grid-column:1/-1"><input type="checkbox" id="cmResumo" ${p.resumo?'checked':''}> Incluir quadro-resumo da soma dos rendimentos (opcional)</label><div class="muted" style="grid-column:1/-1">Cada bloco é calculado com o seu método; o valor final é a soma. Nas culturas entre as árvores, a quota deve refletir a parte do ano e da área efetivamente cultivável (fundamente-a).</div>`:calcFields(m,p,temp)+(temp?'':`<div style="grid-column:1/-1;margin-top:10px" class="btns"><span class="muted">Somar outro rendimento neste terreno:</span>${Object.entries(CALC_BLK).map(([k,l])=>`<button class="secondary mini" data-blkadd="${k}">+ ${l}</button>`).join('')}</div>`);
  const un=temp?'€/m²/ano':'€/m²';
  return `<h3>🧮 ${esc(tipo)}</h3>${temp?'':`<label class="cmf" style="display:block;margin-bottom:8px"><span>Método</span><select id="cmMet">${Object.entries(CALC_MET).map(([k,l])=>`<option value="${k}" ${k===m?'selected':''}>${esc(l)}</option>`).join('')}</select></label>`}
-  <div class="muted" style="margin-bottom:8px">Valores por defeito: os dos relatórios de exemplo. Corrija o que não se aplicar a esta verba.</div>
+  <div class="muted" style="margin-bottom:8px">Valores por defeito: os dos relatórios de exemplo. Corrija o que não se aplicar a este terreno.</div>
   <div class="cmgrid">${f}</div>
   ${(CALC_REFS[m]||[]).map(x=>`<div class="muted" style="font-size:.85em;margin-top:4px">📚 ${esc(x)}</div>`).join('')}
   <div class="cmres" id="cmRes">${calcResHtml(R,temp)}</div>
@@ -2270,6 +2272,7 @@ function calcModalHTML(st){const {m,p,temp,tipo}=st;const R=calcRun(m,p,temp);
   <div class="cmgrid"><label class="cmf"><span>Valor de referência (${un})</span><input id="cmRefV" inputmode="decimal" value="${esc(st.ref.v||'')}"></label><label class="cmf" style="grid-column:1/-1"><span>Fonte do valor de referência (obrigatória se o adotar)</span><input id="cmRefF" value="${esc(st.ref.f||'')}"></label></div>
   <div id="cmRefCmp" class="muted" style="margin:4px 0">${calcRefCmp(R,st)}</div>
   <div class="btns"><label class="chk"><input type="radio" name="cmAd" value="calc" ${st.ref.usar!=='ref'?'checked':''}> Adotar o calculado</label><label class="chk"><input type="radio" name="cmAd" value="ref" ${st.ref.usar==='ref'?'checked':''}> Adotar o de referência</label></div>
+  <div class="btns" style="margin-top:6px;flex-wrap:wrap"><span class="muted">📚 Biblioteca de referências (${Object.keys(settings.calcRefs||{}).length}) — partilhada entre apps por ficheiro:</span><button class="secondary mini" id="cmLibExp">⬇ Exportar</button><label class="btn secondary mini" style="cursor:pointer">⬆ Importar<input type="file" id="cmLibImp" accept=".json,application/json" hidden></label></div>
   <div class="btns" style="margin-top:12px;flex-wrap:wrap"><button id="cmUse" ${R.ok||(st.ref.usar==='ref'&&num(st.ref.v)>0)?'':'disabled'}>Usar este valor</button><button class="secondary" id="cmDef">Repor valores por defeito</button><button class="secondary" id="cmCancel">Cancelar</button></div>`}
 function calcOpen(v,tb,i,rerender){const r=(v[tb]||[])[i];if(!r)return;const temp=tb==='ocTemp';
  const sv=r.calc&&r.calc.m?structuredClone(r.calc):null;const st={temp,tipo:temp?ocTempDesig(r):`${r.tipo} · ${fmt(num(r.area))} m²`,m:sv?sv.m:calcMetOf(tb,r),p:null,keep:{}};
@@ -2288,7 +2291,7 @@ function calcOpen(v,tb,i,rerender){const r=(v[tb]||[])[i];if(!r)return;const tem
   box.querySelectorAll('[data-blkadd]').forEach(el=>el.onclick=()=>{if(st.m!=='comp'){const cur={m:st.m,p:st.p};st.m='comp';st.p=st.keep.comp={blocos:[cur]}}(st.p.blocos=st.p.blocos||[]).push({m:el.dataset.blkadd,p:CALC_DEF[el.dataset.blkadd]()});draw()});
   const cr=$('#cmResumo');if(cr)cr.onchange=()=>{st.p.resumo=cr.checked;res()};
   const ms=$('#cmMet');if(ms)ms.onchange=()=>{st.m=ms.value;st.p=st.keep[st.m]||(st.keep[st.m]=CALC_DEF[st.m]());draw()};
-  $('#cmDef').onclick=()=>{st.p=st.keep[st.m]=CALC_DEF[st.m]();draw()};$('#cmCancel').onclick=closeModal;
+  $('#cmDef').onclick=()=>{st.p=st.keep[st.m]=CALC_DEF[st.m]();draw()};const lbE=$('#cmLibExp'),lbI=$('#cmLibImp');if(lbE)lbE.onclick=tofLibExport;if(lbI)lbI.onchange=async e=>{const n=await tofLibImport(e.target.files&&e.target.files[0]);if(n!=null){const k=norm(String(r.tipo||''))+'|'+st.m,x=(settings.calcRefs||{})[k];if(x&&!String(st.ref.v||'').trim())st.ref={...st.ref,v:x.v,f:x.f};draw()}};$('#cmCancel').onclick=closeModal;
   $('#cmUse').onclick=async()=>{const R=calcRun(st.m,st.p,temp);const rv=num(st.ref.v),useRef=st.ref.usar==='ref'&&rv>0;if(!R.ok&&!useRef)return;const fo=String(st.ref.f||'').trim();if(useRef&&!fo){alert('Indique a fonte do valor de referência.');return}
    r.calc={m:st.m,p:structuredClone(st.p),vun:R.ok?R.vun:-1,ref:{v:st.ref.v||'',f:fo,usar:useRef?'ref':'calc'}};r.calcTxt=R.ok?R.L:[];r.calcW=R.ok?R.W:null;r.calcBl=R.blocos||null;
    if(useRef){r.vun=String(rv).replace('.',',');r.fund=`valor de referência – ${fo.replace(/[.\s]+$/,'')}`}else{r.vun=String(R.vun).replace('.',',');r.fund=R.fund}
@@ -2302,20 +2305,43 @@ function calcNota(tb,r){if(!r.calc||!r.calc.m)return '';if(r.calc.ref&&r.calc.re
  return bl+`<span class="cmnote ${Math.abs(vc-va)>1e-9?'dif':''}">Calculado: ${fmt(vc,d)}${Math.abs(vc-va)>1e-9?' · adotado outro valor (o cálculo não sai no relatório)':' · adotado'}</span>`}
 /* o cálculo só sai no relatório se o V_Un adotado for o calculado */
 const calcUsado=(tb,r)=>!!(r&&r.calc&&r.calc.m&&Array.isArray(r.calcTxt)&&Math.abs(num(r.calc.vun)-num(r.vun))<1e-9);
+/* ---- Biblioteca de referências TOF: valores de referência do perito (por cultura | método), com fonte; exporta-se num ficheiro e importa-se noutra app ou aparelho ---- */
+const TOF_LIB_KIND='PFK_TOF_Biblioteca';
+function tofLibExport(){const refs=settings.calcRefs||{};const o={kind:TOF_LIB_KIND,v:1,data:new Date().toISOString(),refs};const b=new Blob([JSON.stringify(o,null,1)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`Biblioteca_TOF_${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500)}
+async function tofLibImport(file){if(!file)return null;try{const o=JSON.parse(await file.text());if(o.kind!==TOF_LIB_KIND||!o.refs||typeof o.refs!=='object')throw new Error('não é uma biblioteca de referências TOF');settings.calcRefs=settings.calcRefs||{};let n=0;for(const [k,x] of Object.entries(o.refs)){if(!x||!String(x.v||'').trim())continue;const y=settings.calcRefs[k];if(!y||y.v!==x.v||y.f!==x.f){settings.calcRefs[k]={v:String(x.v),f:String(x.f||'')};n++}}try{await saveSettings()}catch(e){}alert(`Biblioteca importada: ${n} referência(s) nova(s) ou atualizada(s).`);return n}catch(e){alert('Não foi possível importar: '+e.message);return null}}
+/* referências guardadas para uma cultura (todas as do mesmo tipo, qualquer método) */
+const tofRefsOf=tipo=>{const t=norm(String(tipo||''));return Object.entries(settings.calcRefs||{}).filter(([k])=>k.split('|')[0]===t).map(([k,x])=>({m:k.split('|')[1],...x}))};
+/* @fim:tof */
 
-return {calcOpen,calcRun,calcWHtml,fmt,num,CALC_MET};
+return {calcOpen,calcRun,calcWHtml,fmt,num,norm,CALC_MET,tofRefsOf,tofLibExport,tofLibImport};
 })();
 /* AvaLias: terreno de produção (agrícola, florestal, agroflorestal) avaliado pelo rendimento → cálculo com a rotina de culturas */
 const AL_MET_REND='Rendimento (capitalização)';
-const alCultOk=a=>alFam(a)==='ter'&&['Produção agrícola','Produção florestal','Agroflorestal'].includes(a?.al?.destino)&&!!a?.al?.met?.[AL_MET_REND];
-const alCultTipo=a=>{const t=[String(a.al.cultTipo||'').trim(),alDestTxt(a)].filter(Boolean);return t.join(' – ')||'Terreno'};
+const AL_MET_REF='Valores de referência';
+const alTOF=a=>alFam(a)==='ter'&&['Produção agrícola','Produção florestal','Agroflorestal'].includes(a?.al?.destino); // terreno não apto para construção (TOF)
+const alCultOk=a=>alTOF(a)&&!!a?.al?.met?.[AL_MET_REND];
+const alRefOk=a=>alTOF(a)&&!!a?.al?.met?.[AL_MET_REF];
+const alCultTipo=a=>String(a.al.cultTipo||'').trim()||alDestTxt(a)||'Terreno'; // a mesma chave da biblioteca no ExPropria (cultura | método)
 function alCultHTML(a){const x=a.al,at=alNum(x.car?.at),c=x.calc;const vun=c?alNum(x.vun):null;
  const res=c&&vun!=null?`<div class="cmres"><div><b>${esc(CULT.CALC_MET[c.m]||c.m)}</b></div><div>V_Un = ${esc(CULT.fmt(vun))} €/m²${c.ref?.usar==='ref'?' (valor de referência)':''}</div>${at?`<div>Valor = ${esc(CULT.fmt(at,0))} m² × ${esc(CULT.fmt(vun))} €/m² = <b>${esc(alEur(Math.round(at*vun)))}</b></div>`:'<div class="muted">Indique a área do terreno (5 · Estado) para obter o valor.</div>'}</div>`:'';
  return `<div class="algrp">🧮 Cálculo pelo rendimento — culturas</div><p class="muted" style="margin-top:0">Terreno de produção avaliado pelo rendimento: o mesmo cálculo do ExPropria (rotação de culturas, olival, vinha / pomar, eucaliptal, pinhal, rendas, soma de rendimentos). O resultado (€/m²) multiplica pela área do terreno e passa a valor estimado; o cálculo sai no relatório, na análise da verba.</p>
  ${inp0('al.cultTipo','Cultura / ocupação (orienta o método proposto)',x.cultTipo,'ex.: Olival tradicional de sequeiro · Vinha · Rotação hortícola · Eucaliptal')}
  <div class="btns"><button class="green" data-cult="open">🧮 ${c?'Rever o cálculo':'Calcular'}</button>${c?'<button class="secondary" data-cult="del">✕ Retirar o cálculo</button>':''}</div>${res}`}
+function alRefHTML(a){const x=a.al,at=alNum(x.car?.at),v=alNum(x.refV);const sug=CULT.tofRefsOf(alCultTipo(a)).filter((r,i,L)=>L.findIndex(y=>y.v===r.v&&y.f===r.f)===i);
+ return `<div class="algrp">📚 Valores de referência — TOF</div><p class="muted" style="margin-top:0">Valor unitário de referência (€/m²) com a fonte; valor = área do terreno × valor unitário. As referências guardadas (também as do ExPropria, pela biblioteca) aparecem como sugestão para a mesma cultura.</p>
+ ${alCultOk(a)?'':inp0('al.cultTipo','Cultura / ocupação',x.cultTipo,'ex.: Olival tradicional de sequeiro · Pinhal · Mato')}
+ ${sug.length?`<div class="btns">${sug.map(r=>`<button class="secondary mini" data-cultref="${esc(r.v)}" data-f="${esc(r.f||'')}">${esc(r.v)} €/m² — ${esc(String(r.f||'').slice(0,40))}</button>`).join('')}</div>`:''}
+ <div class="row2">${inp0('al.refV','Valor de referência (€/m²)',x.refV,'ex.: 1,20')}${inp0('al.refF','Fonte (obrigatória)',x.refF,'ex.: transações na freguesia, 2025')}</div>
+ <div class="btns"><button class="green" data-cult="ref">✓ Aplicar ao valor estimado</button><button class="secondary mini" data-cult="libE">⬇ Exportar biblioteca</button><label class="btn secondary mini" style="cursor:pointer">⬆ Importar biblioteca<input type="file" data-cultlib="1" accept=".json,application/json" hidden></label></div>
+ ${v!=null&&at?`<div class="cmres">Valor = ${esc(CULT.fmt(at,0))} m² × ${esc(CULT.fmt(v))} €/m² = <b>${esc(alEur(Math.round(at*v)))}</b>${x.refF?` <span class="muted">(${esc(x.refF)})</span>`:''}</div>`:''}`}
 const inp0=(k,l,v,ph)=>`<label>${esc(l)}</label><input data-bind="${k}" value="${esc(v||'')}" placeholder="${esc(ph||'')}">`;
+document.addEventListener('click',async e=>{const el=e.target.closest('[data-cultref]');if(!el)return;e.preventDefault();const a=curA();if(!a)return;alA(a);a.al.refV=el.dataset.cultref;a.al.refF=el.dataset.f||'';await saveProc();S.scrollTop=window.scrollY;render()});
+document.addEventListener('change',async e=>{const el=e.target.closest('[data-cultlib]');if(!el)return;await CULT.tofLibImport(el.files&&el.files[0]);el.value='';S.scrollTop=window.scrollY;render()});
 document.addEventListener('click',async e=>{const el=e.target.closest('[data-cult]');if(!el)return;e.preventDefault();const p=cur(),a=curA();if(!p||!a)return;alA(a);const x=a.al;
+ if(el.dataset.cult==='libE'){CULT.tofLibExport();return}
+ if(el.dataset.cult==='ref'){const v=alNum(x.refV),fo=String(x.refF||'').trim(),at=alNum(x.car?.at);if(!(v>0)){alert('Indique o valor de referência (€/m²).');return}if(!fo){alert('Indique a fonte do valor de referência.');return}
+  settings.calcRefs=settings.calcRefs||{};settings.calcRefs[CULT.norm(alCultTipo(a))+'|ref']={v:String(x.refV),f:fo};try{await saveSettings()}catch(e){}
+  x.tofRef=1;if(at)x.valor=String(Math.round(at*v));await saveProc();S.scrollTop=window.scrollY;render();toast(at?'Valor estimado = área × valor de referência.':'Guardado — falta a área do terreno.');return}
  if(el.dataset.cult==='del'){if(!await ask('Retirar o cálculo pelo rendimento desta verba? O valor estimado mantém-se.',['Cancelar','Retirar']))return;delete x.calc;delete x.calcW;delete x.calcTxt;delete x.vun;delete x.fund;await saveProc();render();return}
  const at=alNum(x.car?.at)||0;const row={tipo:alCultTipo(a),area:String(at||''),calc:x.calc?structuredClone(x.calc):null};
  CULT.calcOpen({rows:[row]},'rows',0,async()=>{x.calc=row.calc;x.calcW=row.calcW||null;x.calcTxt=row.calcTxt||[];x.vun=row.vun;x.fund=row.fund||'';const v=alNum(row.vun);if(v!=null&&at)x.valor=String(Math.round(at*v));await saveProc();S.scrollTop=window.scrollY;render();toast(at?'Valor estimado atualizado pelo cálculo.':'Cálculo guardado — falta a área do terreno.')})});
