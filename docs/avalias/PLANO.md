@@ -51,3 +51,4 @@ Validar destinos; perguntas de caracterização por tipo; métodos de avaliaçã
 - 1.4.2 (22/11/2026): listas do contexto revistas — Aglomerado de referência, Centralidade, Envolvente, Consolidação, Padrão urbano (com NAP/NAN); valores antigos convertidos.
 - 1.4.3 (22/11/2026): «Pressão urbanística» retirada (vem na consolidação); campo passa a «Consolidação urbanística».
 - 1.5 (22/11/2026): anexos em ficheiro como no Relatório de Peritagem (nome, largura, PDF/imagens dentro do Word, página «ANEXOS», sub-tópicos no índice; cópias e envio levam os anexos); «Em anexo» com Planta(s), Levantamento topográfico, Esquematização de áreas, Extrato do PDM…
+- 1.5.1 (22/11/2026): valor estimado da verba TOF automático (área × valor do cálculo / de referência), recalculado ao mostrar e ao exportar; escrever um valor fixa-o.

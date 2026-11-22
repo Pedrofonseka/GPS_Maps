@@ -713,7 +713,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.5';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.5.1';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1519,7 +1519,7 @@ async function importQuesitos(p,kind,file){const r=ensureRel(p);const u8=new Uin
 async function cropTo(data,ar,maxW=1200){const im=await loadImg(data);const W=im.naturalWidth,H=im.naturalHeight;let sw=W,sh=Math.round(W/ar);if(sh>H){sh=H;sw=Math.round(H*ar)}const sx=Math.round((W-sw)/2),sy=Math.round((H-sh)/2);const ow=Math.min(maxW,sw),oh=Math.round(ow/ar);const c=document.createElement('canvas');c.width=ow;c.height=oh;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,ow,oh);g.drawImage(im,sx,sy,sw,sh,0,0,ow,oh);return c.toDataURL('image/jpeg',.82)}
 function shuffleR(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 // ---------- construção do Word ----------
-async function buildRelat(p){ensureRel(p);alVisCapa(p);p.anomalias.forEach(alA);const r=p.rel,col=isCol(r),part=isPart(r);await loadFotos(p);
+async function buildRelat(p){ensureRel(p);alVisCapa(p);p.anomalias.forEach(a=>{alA(a);alValSync(a)});const r=p.rel,col=isCol(r),part=isPart(r);await loadFotos(p);
   const X=xesc,media=[];let mid=9000;
   const R=(t,o={})=>String(t??'').split('\n').map((ln,i)=>`<w:r><w:rPr>${o.b?'<w:b/>':''}${o.i?'<w:i/>':''}${o.color?`<w:color w:val="${o.color}"/>`:''}${o.sz?`<w:sz w:val="${o.sz*2}"/><w:szCs w:val="${o.sz*2}"/>`:''}</w:rPr>${i?'<w:br/>':''}<w:t xml:space="preserve">${X(ln)}</w:t></w:r>`).join('');
   const P=(runs,o={})=>`<w:p><w:pPr><w:pStyle w:val="${o.st||'1-periTextogeral'}"/>${o.keep?'<w:keepNext/>':''}${o.bdrT?'<w:pBdr><w:top w:val="single" w:sz="6" w:space="1" w:color="808080"/></w:pBdr>':''}${o.sp!=null?`<w:spacing w:before="${o.sp[0]}" w:after="${o.sp[1]}"/>`:''}${o.ind?`<w:ind w:left="${o.ind}"/>`:''}${o.jc?`<w:jc w:val="${o.jc}"/>`:''}</w:pPr>${runs}</w:p>`;
@@ -2085,7 +2085,7 @@ function vFicha(){
  h+=sec('v7','7 · Métodos elegíveis',`<p class="muted" style="margin-top:0">A desenvolver: por agora regista quais os métodos aplicáveis e porquê; os cálculos ainda não estão na app.</p><div class="tks">${AL_METODOS.map(m=>alTk(!!x.met[m],esc(m),`data-alact="met" data-v="${esc(m)}"`)).join('')}</div>${txt('al.metTxt','Fundamentação / notas',x.metTxt,2)}`,{cnt:ok(Object.values(x.met).some(Boolean))});
  /* 8 valor */
  const renda=p.al.base==='Valor de renda de mercado';
- h+=sec('v8','8 · Valor',`${alCultOk(a)?alCultHTML(a):''}${alRefOk(a)?alRefHTML(a):''}${alTOF(a)&&!alCultOk(a)&&!alRefOk(a)?'<p class="muted">Terreno não apto para construção (TOF): assinale em «7 · Métodos» «Valores de referência» e/ou «Rendimento (capitalização)» para ter aqui o cálculo.</p>':''}<div class="row2">${inp('al.valor','Valor estimado (€)',x.valor,'ex.: 185 000')}${renda?inp('al.renda','Renda mensal (€/mês)',x.renda,'ex.: 650'):''}</div>${p.al.bad?inp('al.bad',`BAD — redução até (%) — vazio = ${p.al.badPct||10}%`,x.bad,String(p.al.badPct||10)):'<p class="muted">BAD não aplicável neste processo (Processo › Contexto da avaliação).</p>'}${txt('al.valObs','Notas ao valor (opcional)',x.valObs,2)}${alNum(x.valor)!=null?`<p><b>${esc(alEur(x.valor))}</b>${renda&&alNum(x.renda)!=null?` · ${esc(alEur(x.renda))}/mês`:''}</p>`:''}`,{cnt:ok(alNum(x.valor)!=null)});
+ h+=sec('v8','8 · Valor',`${alCultOk(a)?alCultHTML(a):''}${x.valAuto&&alNum(x.car?.at)?`<p class="muted" style="margin:6px 0 0">🔄 Valor estimado automático = área × ${x.valAuto==='calc'?'valor do cálculo':'valor de referência'} (atualiza-se se mudar a área ou o cálculo). Para fixar outro valor, escreva-o na caixa.</p>`:''}${alRefOk(a)?alRefHTML(a):''}${alTOF(a)&&!alCultOk(a)&&!alRefOk(a)?'<p class="muted">Terreno não apto para construção (TOF): assinale em «7 · Métodos» «Valores de referência» e/ou «Rendimento (capitalização)» para ter aqui o cálculo.</p>':''}<div class="row2">${inp('al.valor','Valor estimado (€)',x.valor,'ex.: 185 000')}${renda?inp('al.renda','Renda mensal (€/mês)',x.renda,'ex.: 650'):''}</div>${p.al.bad?inp('al.bad',`BAD — redução até (%) — vazio = ${p.al.badPct||10}%`,x.bad,String(p.al.badPct||10)):'<p class="muted">BAD não aplicável neste processo (Processo › Contexto da avaliação).</p>'}${txt('al.valObs','Notas ao valor (opcional)',x.valObs,2)}${alNum(x.valor)!=null?`<p><b>${esc(alEur(x.valor))}</b>${renda&&alNum(x.renda)!=null?` · ${esc(alEur(x.renda))}/mês`:''}</p>`:''}`,{cnt:ok(alNum(x.valor)!=null)});
  h+=`<div class="btns"><button class="green" data-alact="step" data-d="1" ${idx<n-1?'':'disabled'}>Verba seguinte ▶</button><span class="grow"></span><button class="secondary mini" data-act="dupA">⧉ Duplicar</button><button class="del" data-alact="del" data-id="${a.id}">🗑 Eliminar a verba ${esc(code)}</button></div>`;
  return h}
 
@@ -2137,7 +2137,7 @@ document.addEventListener('click',async e=>{const el=e.target.closest('[data-ala
 
 /* ---------- campos ligados ---------- */
 document.addEventListener('input',e=>{const el=e.target,b=el.dataset?.bind;if(!b)return;const [scope,k]=b.split('.');if(!['al','alc','als','pal'].includes(scope))return;e.stopImmediatePropagation();const p=cur(),a=curA();
- if(scope==='pal')alP(p)[k]=el.value;else{alA(a);if(scope==='al')a.al[k]=el.value;else if(scope==='alc')a.al.car[k]=el.value;else a.al.suc[k]=el.value}
+ if(scope==='pal')alP(p)[k]=el.value;else{alA(a);if(scope==='al'){a.al[k]=el.value;if(k==='valor')a.al.valAuto=''}else if(scope==='alc')a.al.car[k]=el.value;else a.al.suc[k]=el.value}
  if(typeof autosize==='function')autosize(el);saveProcSoon()},true);
 
 /* ---------- troca por verba (regra sync.md) ---------- */
@@ -2172,7 +2172,7 @@ function alVisCapa(p){const v=p.anomalias.find(a=>a.vis?.gps)?.vis||p.anomalias.
 function alCheck(p){const w=[];alP(p);if(!p.al.finalidade)w.push('Processo › Contexto da avaliação: falta a finalidade.');p.anomalias.forEach(a=>{alA(a);const c=alCode(p,a);if(!a.al.tipo)w.push(`${c}: falta o tipo de ativo.`);if(alNum(a.al.valor)==null)w.push(`${c}: falta o valor estimado.`);if(!relF(a).length)w.push(`${c}: sem fotografias no relatório.`)});return w}
 
 function relCheck(p){alVisCapa(p);const w=relCheck_relat(p).filter(x=>!/Data da visita|Sem coordenadas GPS|Processo › 2/.test(x));if(!p.anomalias.some(a=>a.vis?.gps))w.push('Nenhuma verba tem GPS: a capa sai sem mapa — Verbas › 2 · Localização');p.anomalias.filter(a=>alFam(a)==='ter'&&!String(a.al?.car?.pdmClasse||'').trim()).forEach(a=>w.push(`${alCode(p,a)}: terreno sem enquadramento no PDM (classe de solo) — ver o que o PDM diz para o local (5 · Estado › Ordenamento)`));return [...w,...alCheck(p)]}
-function render(){const p=cur();if(p){p.anomalias.forEach(alA);if(S.sub==='ficha'&&curA())p.visita=curA().vis;else alVisCapa(p)}const r=render_relat();try{alSugHist()}catch(e){console.error(e)}return r}
+function render(){const p=cur();if(p){p.anomalias.forEach(a=>{alA(a);alValSync(a)});if(S.sub==='ficha'&&curA())p.visita=curA().vis;else alVisCapa(p)}const r=render_relat();try{alSugHist()}catch(e){console.error(e)}return r}
 /* Regra geral (docs/regras/sugestoes.md): caixa de texto vazia com valor no histórico → sugestão que o utilizador aceita (✓), rejeita (✕) ou corrige.
    Histórico = o valor do mesmo campo noutras verbas (primeiro deste processo, depois dos outros), o mais recente. */
 const AL_SUG_SKIP=/^(al\.(designacao|idValor|codigo|valor|renda|bad|refV|refF|valObs)|alc\.(at|abp|abd|ac|pisos)|vis\.)/;
@@ -2415,6 +2415,9 @@ function fregOf(conc){return [...new Set([...(PT_FREG[conc]||[]),...((settings.f
 /* @fim:concelhos */
 /* AvaLias: terreno de produção (agrícola, florestal, agroflorestal) avaliado pelo rendimento → cálculo com a rotina de culturas */
 const AL_MET_REND='Rendimento (capitalização)';
+function alValSync(a){const x=a?.al;if(!x)return;const at=alNum(x.car?.at);
+ if(x.valAuto===undefined){const vu=alNum(x.vun),vr=alNum(x.refV),v=alNum(x.valor);x.valAuto=x.calc&&vu!=null&&at&&v===Math.round(at*vu)?'calc':x.tofRef&&vr!=null&&at&&v===Math.round(at*vr)?'ref':''}
+ if(!at||!alTOF(a))return;const u=x.valAuto==='calc'&&x.calc&&alCultOk(a)?alNum(x.vun):x.valAuto==='ref'&&alRefOk(a)?alNum(x.refV):null;if(u!=null){const nv=String(Math.round(at*u));if(x.valor!==nv)x.valor=nv}}
 const AL_MET_REF='Valores de referência';
 const alTOF=a=>alFam(a)==='ter'&&['Produção agrícola','Produção florestal','Agroflorestal'].includes(a?.al?.destino); // terreno não apto para construção (TOF)
 const alCultOk=a=>alTOF(a)&&!!a?.al?.met?.[AL_MET_REND];
@@ -2439,10 +2442,10 @@ document.addEventListener('click',async e=>{const el=e.target.closest('[data-cul
  if(el.dataset.cult==='libE'){CULT.tofLibExport();return}
  if(el.dataset.cult==='ref'){const v=alNum(x.refV),fo=String(x.refF||'').trim(),at=alNum(x.car?.at);if(!(v>0)){alert('Indique o valor de referência (€/m²).');return}if(!fo){alert('Indique a fonte do valor de referência.');return}
   settings.calcRefs=settings.calcRefs||{};settings.calcRefs[CULT.norm(alCultTipo(a))+'|ref']={v:String(x.refV),f:fo};try{await saveSettings()}catch(e){}
-  x.tofRef=1;if(at)x.valor=String(Math.round(at*v));await saveProc();S.scrollTop=window.scrollY;render();toast(at?'Valor estimado = área × valor de referência.':'Guardado — falta a área do terreno.');return}
+  x.tofRef=1;x.valAuto='ref';if(at)x.valor=String(Math.round(at*v));await saveProc();S.scrollTop=window.scrollY;render();toast(at?'Valor estimado = área × valor de referência.':'Guardado — falta a área do terreno.');return}
  if(el.dataset.cult==='del'){if(!await ask('Retirar o cálculo pelo rendimento desta verba? O valor estimado mantém-se.',['Cancelar','Retirar']))return;delete x.calc;delete x.calcW;delete x.calcTxt;delete x.vun;delete x.fund;await saveProc();render();return}
  const at=alNum(x.car?.at)||0;const row={tipo:alCultTipo(a),area:String(at||''),calc:x.calc?structuredClone(x.calc):null};
- CULT.calcOpen({rows:[row]},'rows',0,async()=>{x.calc=row.calc;x.calcW=row.calcW||null;x.calcTxt=row.calcTxt||[];x.vun=row.vun;x.fund=row.fund||'';const v=alNum(row.vun);if(v!=null&&at)x.valor=String(Math.round(at*v));await saveProc();S.scrollTop=window.scrollY;render();toast(at?'Valor estimado atualizado pelo cálculo.':'Cálculo guardado — falta a área do terreno.')})});
+ CULT.calcOpen({rows:[row]},'rows',0,async()=>{x.calc=row.calc;x.valAuto='calc';x.calcW=row.calcW||null;x.calcTxt=row.calcTxt||[];x.vun=row.vun;x.fund=row.fund||'';const v=alNum(row.vun);if(v!=null&&at)x.valor=String(Math.round(at*v));await saveProc();S.scrollTop=window.scrollY;render();toast(at?'Valor estimado atualizado pelo cálculo.':'Cálculo guardado — falta a área do terreno.')})});
 
 document.addEventListener('click',async e=>{
   const el=e.target.closest('[data-act]');if(!el||el.tagName==='INPUT'&&el.type!=='button'||el.tagName==='SELECT')return;
