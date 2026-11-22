@@ -760,7 +760,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.26.0';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.26.1';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):parteLista(p));
@@ -1801,8 +1801,9 @@ function loadSpell(){if(SPELL)return Promise.resolve(SPELL);if(SPELLP)return SPE
     const [a,d]=await Promise.all(['spell/pt_PT.aff','spell/pt_PT.dic'].map(u=>fetch(u).then(r=>{if(!r.ok)throw new Error('dicionário indisponível');return r.arrayBuffer()}).then(b=>new Uint8Array(b))));
     SPELL=await window.SpellPT.init(a,d);return SPELL})().catch(e=>{SPELLP=null;throw e});return SPELLP}
 const SPELL_TECH='rufo rufos eflorescência eflorescências termografia termográfica termográfico termográficas humidímetro humidímetros fissurómetro fissurómetros endoscópio betonilha betonilhas platibanda platibandas lambrim lambrins abobadilha abobadilhas fendilhação fendilhações vigota vigotas capoto ETICS AQS NUF in loco perit Peritava Proficis pfk logradouro alpendre cumeeira cumeeiras algeroz algerozes rufagem soletos telha-canudo tela telas geotêxtil pladur gesso-cartonado azulejaria sancas pingadeiras murete muretes alvenarias tijolo tijolos';
-function reviewTexts(p){const r=ensureRel(p),part=isPart(r),L=[];const add=(sec,lbl,t,go)=>{if(String(t||'').trim())L.push({sec,lbl,t:String(t),go})};
-  const RP=(k,s)=>({view:'proc',open:s,bind:'r.'+k}),RR=(k,s)=>({view:'rel',open:s,bind:'r.'+k});
+function reviewTexts(p){const r=ensureRel(p),part=isPart(r),L=[];const add=(sec,lbl,t,go)=>{const k=(go?.bind||'').replace(/^r\./,'');if(go&&!go.aid&&ZDEF[k]&&String(t||'').trim()===ZDEF[k].trim())return; // só a introdução do modelo: ainda por escrever
+    if(String(t||'').trim())L.push({sec,lbl,t:String(t),go})};
+  const RP=(k,s)=>({view:s==='rp5'?'insp':'proc',open:s,bind:'r.'+k}),RR=(k,s)=>({view:['rrA','rrP','rr1','rrC'].includes(s)?'anal':'rel',open:s==='rr2'?'r5':s,bind:'r.'+k});
   add('Capa','Objeto de análise',r.objeto,RP('objeto','rp2'));add('Capa','Contexto/ finalidade',r.contexto,RP('contexto','rp2'));
   add('1. Objeto da perícia','Frase de abertura',r.objIntro,RP('objIntro','rp3'));add('1. Objeto da perícia','Objetivo do relatório',r.objetivo,RP('objetivo','rp3'));
   r.quesitos.forEach((q,i)=>add('1. Objeto da perícia',`Questão ${i+1}`,q.txt,{view:'proc',open:'rp3',bind:`q.${i}.txt`}));
@@ -1818,7 +1819,7 @@ function reviewTexts(p){const r=ensureRel(p),part=isPart(r),L=[];const add=(sec,
   if(part)add('7. Apreciação geral','Contextualizando',r.ctxNota,RR('ctxNota','rrC'));add('7. Apreciação geral','Possíveis causas',r.causasG,RR('causasG','rrA'));
   add('7. Apreciação geral','Consequências',r.conseqTxt,RR('conseqTxt','rrA'));add('7. Apreciação geral','Consequências — texto complementar',r.conseqComp,RR('conseqComp','rrA'));
   if(r.incApr===true)add('7. Apreciação geral','Comentários e conclusões',r.apreciacao,RR('apreciacao','rrA'));
-  if(!part)r.quesitos.forEach((q,i)=>add('Resposta ao solicitado',`Resposta à questão ${i+1}`,q.resp,{view:'rel',open:'rr1',bind:`q.${i}.resp`}));
+  if(!part)r.quesitos.forEach((q,i)=>add('Resposta ao solicitado',`Resposta à questão ${i+1}`,q.resp,{view:'anal',open:'rr1',bind:`q.${i}.resp`}));
   add('Passos seguintes','Frase de abertura',r.passosIntro,RR('passosIntro','rrP'));add('Passos seguintes','Texto',r.passos,RR('passos','rrP'));
   return L}
 const RV_ABBR=/(?:^|\s)(?:ex|n\.º|art|arts|p|pág|págs|sr|sra|dr|dra|eng|arq|cf|etc|aprox|nº|n|al|v|vs|fl|fls|proc|ref|tel|séc|av|lda|s\.a|cód)\.$/i;
@@ -1874,12 +1875,35 @@ async function rvNext(p){const nav=S.rvNav;await rvRerun(p);const I=S.review.iss
   document.querySelector('.modal')?.remove();await reviewGo(j)}
 function rvBarHTML(){const p=cur();if(!S.rvNav||!S.review||!p||S.review.pid!==p.id||(S.view==='rel'&&!S.sub))return '';const n=S.review.issues.length;
   return `<div class="rvbar"><button class="secondary" data-act="rvBack">◀ Revisão (${n})</button><span class="grow muted" style="font-size:12px;text-align:center">corrija e avance</span><button class="green" data-act="rvNext">Seguinte ▶</button></div>`}
+// ---- gralhas mecânicas: corrigem-se sozinhas; o perito pode «manter» o original de cada texto ----
+function rvRef(p,go){if(!go)return null;const r=ensureRel(p);
+  if(go.aid){const a=p.anomalias.find(x=>x.id===go.aid);if(!a)return null;if(go.foto!==undefined){const f=a.fotos[go.foto];return f?{get:()=>f.legenda||'',set:v=>f.legenda=v,key:go.aid+'#f'+go.foto}:null}
+    const [sc,k]=go.bind.split('.');return {get:()=>sc==='v'?(a.vals?.[k]||''):(a[k]||''),set:v=>{if(sc==='v'){a.vals=a.vals||{};a.vals[k]=v}else a[k]=v},key:go.aid+'#'+go.bind}}
+  const b=go.bind||'',P=b.split('.');if(P[0]==='r')return {get:()=>r[P[1]]||'',set:v=>r[P[1]]=v,key:b};
+  if(P[0]==='q'){const q=r.quesitos[+P[1]];return q?{get:()=>q[P[2]]||'',set:v=>q[P[2]]=v,key:b}:null}
+  if(P[0]==='vx'){const v0=(r.visitas||[])[+P[1]];return v0?{get:()=>v0[P[2]]||'',set:v=>v0[P[2]]=v,key:b}:null}return null}
+function fixMech(t){const ch=[];let x=String(t);const ap=(rx,rep,msg)=>{const y=x.replace(rx,rep);if(y!==x){ch.push(msg);x=y}};
+  ap(/[ \t]+$/gm,'','espaços no fim da linha');
+  ap(/(\S)[ \t]{2,}(?=\S)/g,'$1 ','espaços a mais');
+  ap(/[ \t]+([,.;:!?])(?!\d)/g,'$1','espaço antes da pontuação');
+  ap(/([,;])(?=\p{L})/gu,'$1 ','falta espaço depois da pontuação');
+  ap(/([!?,;:])\1+/g,'$1','pontuação repetida');ap(/(?<!\.)\.\.(?!\.)/g,'.','ponto repetido');
+  {const y=x.replace(/(\S+)/g,tok=>/[@\/]|www|https?|\.(pt|com|org|net|eu)\b/i.test(tok)||!/\p{L}{2,}[.!?]\p{Ll}/u.test(tok)?tok:tok.replace(/(\p{L}{2,})([.!?])(\p{Ll}+)/gu,(m,a,pn,b2)=>RV_ABBR.test(' '+a+pn)?m:a+pn+' '+b2));if(y!==x){ch.push('falta espaço depois do ponto');x=y}}
+  {const y=x.replace(/([.!?])(\s+)(\p{Ll})/gu,(m,a,sp,c,i)=>RV_ABBR.test(' '+x.slice(Math.max(0,i-8),i+1))?m:a+sp+c.toUpperCase());if(y!==x){ch.push('maiúscula no início da frase');x=y}}
+  {const L=x.replace(/\s+$/,'').split('\n'),last=(L[L.length-1]||'').trim();if(x.trim().length>60&&/[\p{L}\d)»]$/u.test(last)&&!/^[-–•]/.test(last)){x=x.replace(/\s+$/,'')+'.';ch.push('ponto final')}}
+  return {t:x,ch}}
+function rvAutoFix(p){const r=ensureRel(p);r.rvKeep=r.rvKeep||{};const done=[];
+  for(const x of reviewTexts(p)){const ref=rvRef(p,x.go);if(!ref)continue;const cur0=String(ref.get());if(r.rvKeep[ref.key]===cur0)continue;const f=fixMech(cur0);if(!f.ch.length)continue;
+    ref.set(f.t);done.push({sec:x.sec,lbl:x.lbl,go:x.go,key:ref.key,before:cur0,after:f.t,ch:f.ch})}
+  return done}
 function reviewHTML(p){const R=S.review&&S.review.pid===p.id?S.review:null;const stale=R&&(p.updatedAt||0)>R.at;
   if(!R)return `<div class="card"><b>Revisão do texto</b><p class="muted">Lê o relatório de cima para baixo e assinala gralhas, erros ortográficos (português europeu, Acordo Ortográfico), redundâncias e textos em falta. É feita antes de exportar.</p><div class="btns"><button class="green" data-act="relReview">🔍 Rever o texto</button></div></div>`;
   const K=['Gralha','Ortografia','Redundância','Coerência'],I=R.issues;
   return `<div class="card"><b>Revisão do texto</b> ${I.length?pill(I.length+' aviso(s)','warn'):pill('sem avisos','ok')} ${stale?'<span class="red" style="font-size:12px">· houve alterações desde a revisão</span>':''}
    ${R.spellErr?`<p class="red" style="font-size:13px">${esc(R.spellErr)}</p>`:''}
    ${K.map(k=>{const G=I.map((x,i)=>[x,i]).filter(([x])=>x.kind===k);if(!G.length)return '';return `<details class="sec" ${G.length<=8?'open':''}><summary>${k} <span class="cnt">${pill(G.length+'')}</span></summary><div class="body">${G.map(([x,i])=>`<div class="rvit"><div class="rvhd"><span class="muted">${esc(x.sec)}${x.lbl?' › '+esc(x.lbl):''}</span>${x.go?`<button class="secondary mini" data-act="rvGo" data-i="${i}">Ir ▶</button>`:''}</div><div><b>${esc(x.msg)}</b>${x.sug?.length?` <span class="muted">→ ${x.sug.map(esc).join(', ')}</span>`:''}</div>${x.ex?`<div class="rvex">${esc(x.ex)}</div>`:''}${x.word?`<button class="secondary mini" data-act="rvOk" data-w="${esc(x.word)}">✓ Aceitar sempre «${esc(x.word)}»</button>`:''}</div>`).join('')}</div></details>`}).join('')}
+   ${(()=>{const n=I.filter(x=>x.kind==='Gralha'&&/Espaço|espaço|Pontuação repetida|ponto final|minúscula/.test(x.msg)).length;return n?`<div class="btns"><button class="green" data-act="rvFix">🪄 Corrigir as gralhas mecânicas (${n})</button><span class="muted" style="font-size:11px">espaços, pontuação, maiúsculas, ponto final — pode manter o original de cada texto</span></div>`:''})()}
+   ${S.autofix&&S.autofix.pid===p.id&&S.autofix.L.length?`<details class="sec" open><summary>🪄 Corrigido automaticamente <span class="cnt">${pill(S.autofix.L.length+'')}</span></summary><div class="body">${S.autofix.L.map((c,i)=>`<div class="rvit"><div class="rvhd"><span class="muted">${esc(c.sec)}${c.lbl?' › '+esc(c.lbl):''}</span><button class="secondary mini" data-act="rvKeep" data-i="${i}">↩ Manter o original</button></div><div><b>${esc(c.ch.join(' · '))}</b></div><div class="rvex"><s>${esc(c.before.slice(0,160))}</s><br>${esc(c.after.slice(0,160))}</div></div>`).join('')}</div></details>`:''}
    <div class="btns"><button class="${stale?'green':'secondary'}" data-act="relReview">🔍 Rever de novo</button></div></div>`}
 async function exportGate(p){const R=S.review&&S.review.pid===p.id?S.review:null;if(R&&(p.updatedAt||0)<=R.at&&!R.issues.length)return true;
   busy(true,'A rever o texto…');let res;try{res=await relReview(p)}finally{busy(false)}S.review={...res,pid:p.id};
@@ -2645,6 +2669,8 @@ document.addEventListener('click',async e=>{{const _x=e.target.closest&&e.target
     case 'aiUrg':{if(!a?.ia)return;a.vals=a.vals||{};a.vals.urg=a.ia.urgencia;await saveProc();S.scrollTop=window.scrollY;break}
     case 'aiTend':{if(!a?.ia)return;a.vals=a.vals||{};a.vals.tend=a.ia.tendencia;await saveProc();S.scrollTop=window.scrollY;break}
     case 'aiAll':{const L=p.anomalias.filter(x=>relF(x).length&&!x.ia);if(!L.length)return toast('Não há situações por analisar.');let ok=0,err='';for(let k=0;k<L.length;k++){busy(true,`A analisar ${k+1} de ${L.length}…`);try{aiGuarda(L[k],await aiAnalyse(p,L[k]));ok++;await saveProc()}catch(e){err=e.message;if(/Chave|internet|Configure/.test(err))break}}busy(false);toast(`${ok} situação(ões) analisada(s).${err?' Erro: '+err:''}`,!!err);S.scrollTop=window.scrollY;break}
+    case 'rvFix':{if(dirty)await saveProc();const L=rvAutoFix(p);S.autofix={pid:p.id,L:[...(S.autofix&&S.autofix.pid===p.id?S.autofix.L:[]),...L]};await saveProc();busy(true,'A rever o texto…');try{S.review={...(await relReview(p)),pid:p.id}}finally{busy(false)}toast(L.length?`${L.length} texto(s) corrigido(s) — pode manter o original em cada um.`:'Nada a corrigir.');S.scrollTop=window.scrollY;break}
+    case 'rvKeep':{const c=S.autofix?.L[+el.dataset.i];if(!c)return;const ref=rvRef(p,c.go);if(ref){ref.set(c.before);const r=ensureRel(p);r.rvKeep=r.rvKeep||{};r.rvKeep[ref.key]=c.before}S.autofix.L.splice(+el.dataset.i,1);await saveProc();busy(true,'A rever o texto…');try{S.review={...(await relReview(p)),pid:p.id}}finally{busy(false)}S.scrollTop=window.scrollY;break}
     case 'relReview':{if(dirty)await saveProc();busy(true,'A rever o texto…');try{S.review={...(await relReview(p)),pid:p.id}}catch(err){toast('Erro na revisão: '+err.message,1)}finally{busy(false)}S.scrollTop=window.scrollY;break}
     case 'rvGo':await reviewGo(+el.dataset.i);document.getElementById('rvbarBox').innerHTML=rvBarHTML();return;
     case 'rvBack':busy(true,'A rever o texto…');try{await rvBack(p)}finally{busy(false)}return;
