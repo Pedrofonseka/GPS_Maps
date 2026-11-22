@@ -15,6 +15,9 @@
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 Calibri,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%}
 #top{position:sticky;top:0;z-index:20}
+/* iPhone/iPad: com o teclado aberto, o cabeçalho fixo deixa de o ser — senão tapa a caixa onde se escreve (o iOS não conta com ele ao deslocar a página) */
+body.kbd #top{position:static}
+input,textarea,select{scroll-margin-top:16px;scroll-margin-bottom:90px}
 #hdr{background:var(--pri);color:#fff;padding:10px 14px;padding-top:max(10px,env(safe-area-inset-top));display:flex;align-items:center;gap:10px}
 #hdr h1{font-size:18px;margin:0;font-weight:700;letter-spacing:.3px;cursor:pointer;white-space:nowrap}
 #hdr .ver{font-size:12px;opacity:.8}
@@ -761,7 +764,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.28.6';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.28.7';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):parteLista(p));
@@ -2970,7 +2973,12 @@ document.addEventListener('change',async e=>{{const _x=e.target.closest&&e.targe
   if(el.dataset.catedit){const ck=el.dataset.catedit,i=+el.dataset.i,v=el.value.trim();if(v)settings[ck][i]=v;else el.value=settings[ck][i];await saveSettings();return}
   if(el.dataset.sf!==undefined){const f=settings.fields[+el.dataset.sf],k=el.dataset.k;if(k==='on'||k==='print'){f[k]=el.checked;await saveSettings();S.scrollTop=window.scrollY;render();return}else if(k==='opts'){const o=parseOpts(el.value);if(o.length)f.opts=o}else f[k]=el.value;await saveSettings();return}
 });
-function autosize(t){if(!t||t.tagName!=='TEXTAREA')return;t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px'}
+function autosize(t){if(!t||t.tagName!=='TEXTAREA')return;const y=window.scrollY;if(t.scrollHeight>t.clientHeight+1)t.style.height=(t.scrollHeight+2)+'px';else if(document.activeElement!==t){t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px'}if(window.scrollY!==y)window.scrollTo(0,y)} // enquanto se escreve só cresce (encolher obrigava a página a saltar no iPhone)
+/* teclado no ecrã tátil: cabeçalho deixa de ser fixo e a caixa fica à vista */
+const KBD_EL=e=>e&&(e.tagName==='TEXTAREA'||e.tagName==='SELECT'||(e.tagName==='INPUT'&&!/^(checkbox|radio|file|button|submit|range|color)$/i.test(e.type)));
+if(window.matchMedia&&matchMedia('(pointer:coarse)').matches){
+ document.addEventListener('focusin',e=>{if(!KBD_EL(e.target))return;document.body.classList.add('kbd');const el=e.target;setTimeout(()=>{if(document.activeElement!==el)return;const vv=window.visualViewport,r=el.getBoundingClientRect(),top=vv?vv.offsetTop:0,h=vv?vv.height:innerHeight;if(r.top<top+8||r.bottom>top+h-8)el.scrollIntoView({block:'center',behavior:'smooth'})},350)});
+ document.addEventListener('focusout',()=>{setTimeout(()=>{if(!KBD_EL(document.activeElement))document.body.classList.remove('kbd')},250)})}
 document.addEventListener('toggle',e=>{if(e.target.open)e.target.querySelectorAll?.('textarea').forEach(autosize)},true);
 document.addEventListener('input',e=>{
   {const _x=e.target.closest&&e.target.closest('[data-aid]');if(_x)S.aid=_x.dataset.aid}autosize(e.target);if(e.target.id==='fq'){S.filt.q=e.target.value;const pos=e.target.selectionStart;S.scrollTop=window.scrollY;render();const f=$('#fq');if(f){f.focus();try{f.setSelectionRange(pos,pos)}catch(_){}}return}const el=e.target,b=el.dataset.bind;if(!b)return;const p=cur(),a=curA();

@@ -54,3 +54,4 @@ Validar destinos; perguntas de caracterização por tipo; métodos de avaliaçã
 - 1.5.1 (22/11/2026): valor estimado da verba TOF automático (área × valor do cálculo / de referência), recalculado ao mostrar e ao exportar; escrever um valor fixa-o.
 - 1.5.2 (22/11/2026): pasta completa (.zip) — Word, PDF, Excel geral das verbas, KML das verbas, e por verba (Verbas/VB_xxx/): ficha em Excel e fotografias (com a reserva); anexos originais.
 - 1.6 (22/11/2026): quadros de cálculo no Word como folha do Excel embutida (editável no PC); a pasta leva também o cálculo em Excel por verba.
+- 1.6.1 (22/11/2026): iPhone — com o teclado aberto o cabeçalho deixa de ser fixo e a caixa fica à vista; caixas de texto sem saltos.
