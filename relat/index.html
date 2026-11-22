@@ -754,7 +754,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.21.4';const VERSION_DATA='2026-11-21';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.21.5';const VERSION_DATA='2026-11-21';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -2178,7 +2178,7 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
   if(ax)body+=H1('Em anexo')+ax;
   // conteúdo dos anexos (PDF/imagens convertidos em páginas): cada anexo em página nova, título e páginas centradas na página (largura escolhida; por defeito 21 − 2 = 19 cm)
   // página de separação «Anexos» antes do conteúdo dos anexos
-  if((r.anexF||[]).some(a=>a.inc!==false&&anexKind(a)))body+=BRK+'<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:spacing w:before="0" w:after="0" w:line="5600" w:lineRule="exact"/></w:pPr></w:p>'+P(R('ANEXOS',{b:true,sz:28}),{jc:'center',sp:[0,0]});
+  if(ax)body+=BRK+'<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:spacing w:before="0" w:after="0" w:line="5600" w:lineRule="exact"/></w:pPr></w:p>'+P(R('ANEXOS',{b:true,sz:28}),{jc:'center',sp:[0,0]});
   for(const [i,a] of (r.anexF||[]).entries()){if(a.inc===false||!anexKind(a))continue;
     if(!(a.pages||[]).length){try{a.pages=await anexPages(a);a.larg=a.larg||ANEX_LARG}catch(e){continue}}
     const L=Math.min(19,+a.larg||ANEX_LARG),MAXH=22.5;let first=true;
