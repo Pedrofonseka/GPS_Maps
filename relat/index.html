@@ -761,7 +761,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.28.3';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.28.4';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):parteLista(p));
@@ -2028,7 +2028,7 @@ function orcXlsx(p){const o=orcE(p);const cn=colName;const X=xesc;let r=1;const 
     {name:'xl/_rels/workbook.xml.rels',data:E('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>')},
     {name:'xl/worksheets/sheet1.xml',data:E(sh1)},{name:'xl/worksheets/sheet2.xml',data:E(sh2)},{name:'xl/styles.xml',data:E(st)}])}
 // tipos de capa (todos com o quadro de identificação por baixo)
-const CAPAS=[['fotosLoc','Mapa + fotos','mapa à largura e 3 ou 6 fotos; quadro de identificação'],['destaque','Uma imagem grande','a vista principal a toda a largura; quadro de identificação'],['fotos','Grelha de fotos','até 9 fotos (3 × 3); quadro de identificação'],['nenhuma','Só texto','só o quadro de identificação'],['titulo','Título em destaque','título grande ao centro, uma imagem e os dados por baixo, sem quadro'],['colunas','Dados e fotografia lado a lado','dados à esquerda, uma fotografia ao alto à direita'],['ficha','Ficha técnica','faixa com o título, dados em caixas e uma tira de 3 fotos']];
+const CAPAS=[['fotosLoc','Mapa + fotos','mapa à largura e 3 ou 6 fotos; quadro de identificação'],['destaque','Uma imagem grande','a vista principal a toda a largura; quadro de identificação'],['fotos','Grelha de fotos','até 9 fotos (3 × 3); quadro de identificação'],['nenhuma','Só texto','só o quadro de identificação, no terço inferior da página'],['titulo','Título em destaque','título grande ao centro, uma imagem e os dados por baixo, sem quadro'],['colunas','Fotografias e dados lado a lado','até 6 miniaturas à esquerda, dados à direita; bloco centrado na página'],['ficha','Ficha técnica','faixa com o título, dados em caixas e uma tira de 3 fotos']];
 const MTOP=g=>g==='proficis'?2268:1701; // twips: 4,0 cm · 3,0 cm
 const relTitulo=r=>r.titulo==='Outro'?(String(r.tituloOutro||'').trim()||'Relatório'):(r.titulo||'Relatório de Peritagem');
 function hdrDefaults(p){const r=p.rel;return {h1:relTitulo(r),h3:r.objeto||p.designacao||'',h4a:r.procJud?`Proc. ${r.procJud}`:'',h4b:p.codigo?` - ${p.codigo}`:''}}
@@ -2166,7 +2166,11 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
   if(!part){id+=irow('Parte 1',vi(r.parte1));id+=irow('Parte 2',vi(r.parte2))}
   if(dlAll)id+=irow(VIS.filter(v=>v.data).length>1?'Datas das visitas':'Data da visita',vi(dlAll));
   id+=irow('Versões/ datas',vi(`${r.versao||'1.00'} – ${new Date().toLocaleDateString('pt-PT')}`,{color:'808080',sz:9}),{t:1});
-  body+=`<w:tbl><w:tblPr><w:tblW w:w="${TW}" w:type="dxa"/><w:tblBorders>${noB}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="60" w:type="dxa"/><w:right w:w="60" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${L1}"/><w:gridCol w:w="${L2}"/></w:tblGrid>${id}</w:tbl>`+BRK;
+  const CAPA_H=(23.2+(MTOP(r.gab)===1701?1:0))-0.6-1.3; // área útil da capa (cm), já sem a linha de intervalo após o cabeçalho e com folga para a quebra de página
+  const frame=(inner,v)=>`<w:tbl><w:tblPr><w:tblW w:w="${TW}" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders>${noB}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${TW}"/></w:tblGrid><w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="${Math.round(CAPA_H*567)}" w:hRule="exact"/></w:trPr><w:tc><w:tcPr><w:tcW w:w="${TW}" w:type="dxa"/><w:vAlign w:val="${v}"/></w:tcPr>${inner}<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/><w:rPr><w:sz w:val="2"/></w:rPr></w:pPr></w:p></w:tc></w:tr></w:tbl>`;
+  const idTbl=`<w:tbl><w:tblPr><w:tblW w:w="${TW}" w:type="dxa"/><w:tblBorders>${noB}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="60" w:type="dxa"/><w:right w:w="60" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${L1}"/><w:gridCol w:w="${L2}"/></w:tblGrid>${id}</w:tbl>`;
+  // «Só texto»: o quadro fica no terço inferior da página (por cima, o espaço onde estariam as imagens)
+  if(CM==='nenhuma')body=frame(idTbl,'bottom')+BRK;else body+=idTbl+BRK;
     // ---- capas de desenho próprio (os mesmos dados, outra composição) ----
   if(['titulo','colunas','ficha'].includes(CM)){const D=[];const pt=r.procJud?`Proc. ${r.procJud}`:'';D.push([part?'Solicitante':'Entidade',[r.entidade,pt].filter(x=>String(x||'').trim()).join(' · ')]);
     if(p.local)D.push(['Local',p.local]);if(r.contexto)D.push(['Contexto / finalidade',r.contexto]);if(!part){D.push(['Parte 1',r.parte1||'']);D.push(['Parte 2',r.parte2||''])}if(dlAll)D.push([VIS.filter(v=>v.data).length>1?'Datas das visitas':'Data da visita',dlAll]);
@@ -2175,18 +2179,23 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
     const tc=(w,c,o={})=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${o.span?`<w:gridSpan w:val="${o.span}"/>`:''}${o.sh?`<w:shd w:val="clear" w:color="auto" w:fill="${o.sh}"/>`:''}${o.bd?`<w:tcBorders>${['top','left','bottom','right'].map(k=>`<w:${k} w:val="single" w:sz="4" w:color="BFBFBF"/>`).join('')}</w:tcBorders>`:''}<w:vAlign w:val="${o.v||'top'}"/></w:tcPr>${c}</w:tc>`;
     const lbv=(l,v)=>cp2(R(l.toUpperCase(),{sz:7,color:'808080'}),{b:60})+cp2(R(v||'—',{sz:10.5}),{a:40});
     let X='';
-    if(CM==='titulo'){X+=cp2('',{b:400})+cp2(R(String(p.codigo||''),{sz:9,color:'808080'}),{jc:'center',a:60})+cp2(R(titulo,{b:true,sz:24}),{jc:'center',a:120})+cp2(R(r.objeto||'',{i:true,sz:14}),{jc:'center',a:200,bd:12});
+    if(CM==='titulo'){X+=cp2('',{b:160})+cp2(R(String(p.codigo||''),{sz:9,color:'808080'}),{jc:'center',a:60})+cp2(R(titulo,{b:true,sz:24}),{jc:'center',a:120})+cp2(R(r.objeto||'',{i:true,sz:14}),{jc:'center',a:200,bd:12});
       if(allF.length)X+=cp2(imgRun(await cropTo(fdOut(allF[0]),16.9/9.5,1600),16.9,9.5,'Capa'),{jc:'center',b:200,a:200});else X+=cp2('',{b:1800});
       X+=D.map(([l,v])=>cp2(R(l+': ',{sz:9,color:'606060'})+R(v||'—',{sz:10.5}),{jc:'center',a:40})).join('')+cp2(R(ver,{sz:8,color:'808080'}),{jc:'center',b:200})}
-    if(CM==='colunas'){const LW=4700,RW=TW-LW,ph=allF.length?imgRun(await cropTo(fdOut(allF[0]),3/4,1200),8.2,10.9,'Capa'):mapData?imgRun(await cropTo(mapData,3/4,1200),8.2,10.9,'Localização'):'';
-      const left=cp2(R(String(p.codigo||''),{sz:9,color:'808080'}),{a:80})+cp2(R(titulo,{b:true,sz:18}),{a:160})+cp2(R(r.objeto||'',{b:true,i:true,sz:12}),{a:200,bd:8})+D.map(([l,v])=>lbv(l,v)).join('')+cp2(R(ver,{sz:8,color:'808080'}),{b:240});
-      X+=cp2('',{b:200})+tb([LW,RW],`<w:tr>${tc(LW,left)}${tc(RW,cp2(ph,{jc:'right'}),{v:'top'})}</w:tr>`)}
+    if(CM==='colunas'){// bloco de 2 colunas: à esquerda até 6 miniaturas empilhadas, à direita os dados; o bloco fica centrado na página (altura e largura)
+      const nT=Math.min(6,allF.length),tw=4.27,th=3.2,LW=Math.round(tw*567)+160,RW=4900;let thumbs='';
+      for(let k=0;k<nT;k++)thumbs+=cp2(imgRun(await cropTo(fdOut(allF[k]),4/3,800),tw,th,'Capa'),{jc:'center',a:k<nT-1?110:0});
+      if(!nT&&mapData)thumbs=cp2(imgRun(await cropTo(mapData,3/4,900),tw,tw*4/3,'Localização'),{jc:'center'});
+      const right=cp2(R(String(p.codigo||''),{sz:9,color:'808080'}),{a:80})+cp2(R(titulo,{b:true,sz:18}),{a:160})+cp2(R(r.objeto||'',{b:true,i:true,sz:12}),{a:200,bd:8})+D.map(([l,v])=>lbv(l,v)).join('')+cp2(R(ver,{sz:8,color:'808080'}),{b:240});
+      const inner=thumbs?`<w:tbl><w:tblPr><w:tblW w:w="${LW+RW}" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders>${noB}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="80" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="80" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${LW}"/><w:gridCol w:w="${RW}"/></w:tblGrid><w:tr>${tc(LW,thumbs,{v:'center'})}${tc(RW,right.replace(/<w:pPr>/g,'<w:pPr><w:ind w:left="240"/>'),{v:'center'})}</w:tr></w:tbl>`
+        :`<w:tbl><w:tblPr><w:tblW w:w="${RW+1200}" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders>${noB}</w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="${RW+1200}"/></w:tblGrid><w:tr>${tc(RW+1200,right,{v:'center'})}</w:tr></w:tbl>`;
+      X+=frame(inner,'center')}
     if(CM==='ficha'){const W2=Math.floor(TW/2);X+=tb([1900,TW-1900],`<w:tr><w:trPr><w:trHeight w:val="1100"/></w:trPr>${tc(1900,cp2(R(String(p.codigo||''),{b:true,sz:11,color:'FFFFFF'}),{jc:'center'}),{sh:'008080',v:'center'})}${tc(TW-1900,cp2(R(titulo,{b:true,sz:18}),{})+cp2(R(r.objeto||'',{i:true,sz:12}),{}),{sh:'EAF4F4',v:'center'})}</w:tr>`,{m:120})+cp2('',{a:160});
       let rr='';for(let k=0;k<D.length;k+=2){rr+=`<w:tr><w:trPr><w:cantSplit/></w:trPr>${tc(W2,lbv(D[k][0],D[k][1]),{bd:1})}${D[k+1]?tc(TW-W2,lbv(D[k+1][0],D[k+1][1]),{bd:1}):tc(TW-W2,lbv('Versão',ver),{bd:1})}</w:tr>`}
       if(D.length%2===0)rr+=`<w:tr>${tc(TW,lbv('Versão',ver),{bd:1,span:2})}</w:tr>`;X+=tb([W2,TW-W2],rr,{m:80});
       const sel=allF.slice(0,3);if(sel.length){let cells='';for(let c=0;c<3;c++){const f=sel[c];cells+=tc(CW,cp2(f?imgRun(await cropTo(fdOut(f),4/3,900),5.55,4.16,'Foto'):'',{jc:'center'}))}X+=cp2('',{a:240})+tb([CW,CW,TW-2*CW],`<w:tr><w:trPr><w:cantSplit/></w:trPr>${cells}</w:tr>`,{m:20})}}
     body=X+BRK}
-  const coverXml=body;body='';
+  const coverXml=P('',{sp:[0,0]})+body;body=''; // uma linha de intervalo entre o cabeçalho e a capa
   // ---- secções ----
   const comp=part||r.incComp===false?'':(col?COMP_COLEGIAL:(String(settings.compSingular||'').trim()||COMP_SINGULAR));
   if(!part){body+=H1('Compromisso de honra')+E()+(comp?T(comp,{jc:'both'}):T('[Texto do compromisso de honra — preencha em Definições › Relatório]',{i:true,color:'C00000'}))+E()}
