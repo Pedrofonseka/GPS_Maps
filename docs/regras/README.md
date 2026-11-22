@@ -26,6 +26,7 @@ Ao melhorar uma rotina numa app, atualizar o ficheiro respetivo e a tabela «Ond
 | Apoio de análise de fotografias por IA (sugestão, opcional) | ver abaixo | 1.1 |
 | Capas do relatório Word (7 opções, centradas, pré-visualização) | [capas.md](capas.md) | 1.0 |
 | **Terrenos TOF — motor comum `comum/tof.js`** (valores de referência + rendimento das culturas com valores por defeito fundamentados; PDM e acessos/infraestruturas do CE nos terrenos; biblioteca de referências por ficheiro; sincronização `tools/sync_comum.py`) — ExPropria e AvaLias | [culturas.md](culturas.md) | 1.0 |
+| **Concelhos → freguesias** (`comum/concelhos.js`: tabela do país, mapa de 2013, + «Outra…» guardada em `settings.fregExtra`) — ExPropria e AvaLias (Localização: Concelho · Freguesia · Endereço) | `comum/concelhos.js` | 1.0 |
 | **Motores comuns** (`comum/*.js`, copiados para dentro das apps entre `@comum:<nome>` e `@fim:<nome>`; nunca editar nas apps) | `tools/sync_comum.py` | 1.0 |
 
 ### Imagens no Word — controlo de conteúdo
