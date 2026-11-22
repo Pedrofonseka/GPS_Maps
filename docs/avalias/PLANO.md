@@ -59,3 +59,4 @@ Validar destinos; perguntas de caracterização por tipo; métodos de avaliaçã
 - 1.8 (22/11/2026): prédio — registo predial, artigos matriciais (freguesia, artigo, designação, AT/ABC/ABP/ABD), documentos com áreas, área a considerar com fundamentação e diferenças (%); base de peritos comum com o ExPropria.
 - 1.8.1 (22/11/2026): revisão do texto (gralhas mecânicas corrigidas automaticamente, aceitar / manter o original) — bloco comum comum/revisao.js.
 - 1.8.3 (22/11/2026): bases de valor segundo as EVS 2025 (acrescentado Valor Seguro e Valor de uso alternativo; Liquidação = venda forçada; referência EVS de cada base).
+- 1.9 (22/11/2026): Diagnóstico (Definições); Fototeca para as fotos tiradas na app; procura de fotografias repetidas com eliminação e aviso na verificação.

@@ -1,4 +1,6 @@
-# Rotina de fotografias — v1.0 (2026-11-14)
+# Rotina de fotografias — v1.1 (2026-11-22)
+
+**REGRA (22/11/2026): em TODAS as apps a rotina de fotos verifica se há fotografias repetidas** (ao juntar, no editor, na verificação antes de exportar e numa procura manual «Procurar fotografias repetidas» com eliminação das que sobram, ficando sempre pelo menos uma por grupo).
 
 ## Onde está aplicada
 | App | Versão | Notas |
@@ -8,6 +10,7 @@
 | Relat_Anomalias | 1.0.0 | herdada do Regi 0.16.4 |
 | Relatório de Peritagem (relat) | 1.19.0 | também nas «Imagens de contextualização» do processo (ponto 3.5), como assunto próprio `p.ctxA` (código IMG C.n); repetidas comparadas em todo o processo |
 | FullTopics | 1.06–1.07 | assinaturas guardadas no registo da foto (store 'fotos') |
+| AvaLias | 1.9 | aviso ao juntar/substituir (do relat); **verificação antes de gerar** e **«🔍 Procurar fotografias repetidas»** (todo o processo, reserva incluída) com eliminação; **Fototeca**: fotos tiradas na app marcadas (`fromCamera`, `libSaved`) até se guardarem no iPhone (partilha › «Guardar imagens»), com aviso na verificação |
 | AVA_Input | 2.88 | portada da FullTopics 1.07 (mesma base de código); fichas Word por verba e capa-mosaico usam só as fotos do relatório |
 
 ## 1. Fotografias em reserva
@@ -42,6 +45,11 @@
   4. ao substituir;
   5. verificação antes de exportar: «n fotografia(s) repetida(s) no relatório» (só fotos do relatório), com atalho para corrigir.
 - A procura manual de repetidas, se existir, passa a usar a mesma cache.
+
+## 3A. Fototeca (fotos tiradas na app)
+- Cada foto tirada com a câmara da app fica com `fromCamera:true, libSaved:false` até ser guardada na Fototeca do iPhone (folha de partilha › «Guardar imagens»; sem partilha, descarrega os ficheiros).
+- Botão «💾 Guardar N foto(s) tirada(s) na app na Fototeca» e aviso na verificação antes de gerar — se a app perder os dados, as fotos não se perdem.
+- Origem: AVA_Input; aplicada na AvaLias 1.9.
 
 ## 4. Máximo de fotos por assunto
 - Ver [tamanho.md](tamanho.md): 2·4·6·8·9·10·sem limite, por defeito 6, excedentes para a reserva.
