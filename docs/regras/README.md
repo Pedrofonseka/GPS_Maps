@@ -29,6 +29,7 @@ Ao melhorar uma rotina numa app, atualizar o ficheiro respetivo e a tabela «Ond
 | Capas do relatório Word (7 opções, centradas, pré-visualização) | [capas.md](capas.md) | 1.0 |
 | **Terrenos TOF — motor comum `comum/tof.js`** (valores de referência + rendimento das culturas com valores por defeito fundamentados; PDM e acessos/infraestruturas do CE nos terrenos; biblioteca de referências por ficheiro; sincronização `tools/sync_comum.py`) — ExPropria e AvaLias | [culturas.md](culturas.md) | 1.0 |
 | **Anexos em ficheiro no Word** (nome por anexo, largura por defeito 19 cm, PDF→páginas com pdf.js, «Em anexo» + página «ANEXOS» + cada anexo como sub-tópico no índice; cópias com os anexos) — Relatório de Peritagem 1.21+, AvaLias 1.5 | ver o relat (`addAnexFiles`, `anexPages`, `anexLbl`) | 1.0 |
+| **Base de peritos e gabinetes** (`comum/peritos.js`; troca por ficheiro) — ExPropria, AvaLias | [peritos.md](peritos.md) | 1.0 |
 | **Concelhos → freguesias** (`comum/concelhos.js`: tabela do país, mapa de 2013, + «Outra…» guardada em `settings.fregExtra`) — ExPropria e AvaLias (Localização: Concelho · Freguesia · Endereço) | `comum/concelhos.js` | 1.0 |
 | **Motores comuns** (`comum/*.js`, copiados para dentro das apps entre `@comum:<nome>` e `@fim:<nome>`; nunca editar nas apps) | `tools/sync_comum.py` | 1.0 |
 

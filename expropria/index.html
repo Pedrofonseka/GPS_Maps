@@ -605,6 +605,7 @@ textarea{min-height:64px;resize:vertical}
 input[readonly]{background:#f1f4f7;color:#333}
 button{font:inherit;padding:8px 13px;border-radius:7px;border:1px solid var(--pri2);background:var(--pri2);color:#fff;cursor:pointer}
 button.secondary{background:#fff;color:var(--pri2)}
+label.btn{display:inline-flex;align-items:center;font:inherit;font-size:.92em;padding:6px 11px;border-radius:7px;border:1px solid var(--pri2);background:#fff;color:var(--pri2);cursor:pointer;margin:0}
 button.green{background:var(--ok);border-color:var(--ok)}
 button.del{background:var(--bad);border-color:var(--bad);color:#fff;font-size:12px;padding:4px 8px}
 button.mini{font-size:12px;padding:4px 8px}
@@ -782,7 +783,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
 <script>
 'use strict';
-const VERSION='0.15.8';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
+const VERSION='0.15.9';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
 function growFit(t){if(!t||!t.classList?.contains('grow')||!t.offsetParent)return;t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px'}
 function growAll(root){(root||document).querySelectorAll('textarea.grow').forEach(growFit)}
 document.addEventListener('input',e=>growFit(e.target),true);
@@ -1929,6 +1930,26 @@ async function exportPastaARB(pp,opt={}){const r=await buildWordARB(!pp,pp,opt);
 
 /* ---------- Definições ---------- */
 const ASPETOS_BASE=['Geral','Envolvente','Acessos','Infraestruturas','Benfeitorias','Parte sobrante','Estado da obra','Condicionantes','Outro'];
+/* @comum:peritos v1.0 — base de peritos e gabinetes partilhada entre apps (troca por ficheiro «Base_Peritos_….json», kind PFK_Peritos).
+   FONTE ÚNICA: comum/peritos.js — não editar dentro das apps; editar e correr `python3 tools/sync_comum.py`.
+   Modelo: settings.peritos = [{nome, esp, tel, email, res}] (o mesmo do ExPropria); settings.gabinetes = [{id, nome}] (se a app o tiver).
+   Precisa, na app: settings, saveSettings(). */
+const PER_KIND='PFK_Peritos';
+const perNorm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ').trim().toLowerCase();
+function perBase(){if(!Array.isArray(settings.peritos))settings.peritos=[];return settings.peritos}
+const perOrd=()=>perBase().filter(p=>p&&String(p.nome||'').trim()).sort((a,b)=>String(a.nome).localeCompare(String(b.nome),'pt',{sensitivity:'base'}));
+/* acrescenta à base um nome escrito num processo (se ainda não existir) */
+function perAddName(nome,extra={}){const n=String(nome||'').trim();if(n.length<3)return false;const L=perBase();if(L.some(p=>perNorm(p.nome)===perNorm(n)))return false;L.push({nome:n,esp:'',tel:'',email:'',res:'',...extra});return true}
+function perLibExport(){const o={kind:PER_KIND,v:1,data:new Date().toISOString(),peritos:perOrd(),gabinetes:Array.isArray(settings.gabinetes)?settings.gabinetes.map(g=>({id:g.id||'',nome:g.nome||String(g)})):[]};
+ const b=new Blob([JSON.stringify(o,null,1)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`Base_Peritos_${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500)}
+/* junta por nome: acrescenta os que faltam e só preenche campos vazios (nunca apaga nem substitui o que já está) */
+async function perLibImport(file){if(!file)return null;try{const o=JSON.parse(await file.text());if(o.kind!==PER_KIND||!Array.isArray(o.peritos))throw new Error('não é uma base de peritos');
+  const L=perBase();let nN=0,nU=0;for(const p of o.peritos){if(!p||!String(p.nome||'').trim())continue;const q=L.find(x=>perNorm(x.nome)===perNorm(p.nome));
+   if(!q){L.push({nome:String(p.nome).trim(),esp:p.esp||'',tel:p.tel||'',email:p.email||'',res:p.res||''});nN++}else{let ch=false;for(const k of ['esp','tel','email','res'])if(!String(q[k]||'').trim()&&String(p[k]||'').trim()){q[k]=p[k];ch=true}if(ch)nU++}}
+  let nG=0;if(Array.isArray(settings.gabinetes)&&Array.isArray(o.gabinetes))for(const g of o.gabinetes){const n=String(g&&g.nome||'').trim();if(n&&!settings.gabinetes.some(x=>perNorm(x.nome||x)===perNorm(n))){settings.gabinetes.push({id:g.id||perNorm(n).replace(/[^a-z0-9]+/g,''),nome:n});nG++}}
+  try{await saveSettings()}catch(e){}alert(`Base de peritos importada: ${nN} perito(s) novo(s), ${nU} completado(s)${nG?`, ${nG} gabinete(s) novo(s)`:''}.`);return nN+nU+nG}
+ catch(e){alert('Não foi possível importar: '+e.message);return null}}
+/* @fim:peritos */
 const PERITOS_BASE=[{nome:'Pedro Jorge Fernandes Fonseca',esp:'',tel:'',email:'',res:''}];
 /* junta a base acima à das Definições (por nome): acrescenta os que faltam e só preenche campos vazios */
 function mergePeritos(s){PERITOS_BASE.forEach(b=>{const x=s.peritos.find(p=>p&&norm(p.nome)===norm(b.nome));if(!x)s.peritos.push(structuredClone(b));else ['esp','tel','email','res'].forEach(k=>{if(!String(x[k]||'').trim()&&b[k])x[k]=b[k]})})}
@@ -3250,7 +3271,7 @@ function renderSettings(M){crumbs();const s=settings;setTimeout(()=>lixoRender()
  <details class="sec" open><summary>1 · Perito</summary><div class="body"><div class="row"><div><label>Nome do perito (para "Inserir-me")</label><input id="sNome" value="${esc(s.peritoNome)}"></div><div><label>Título</label><input id="sTit" value="${esc(s.peritoTitulo)}" placeholder="Eng.º Civil"></div></div></div></details>
  <details class="sec" open><summary>1A · Base de peritos (${peritosOrd().length})</summary><div class="body"><div class="muted">Por ordem alfabética. Na equipa de cada processo escolhe-se da lista; um nome novo escrito na equipa entra aqui automaticamente.</div>
   ${peritosOrd().map(p=>{const i=settings.peritos.indexOf(p);return `<div class="percard"><div><label>Nome</label><input data-per="${i}" data-pk="nome" value="${esc(p.nome)}"></div><div><label>Especialidade</label><input list="dlTitulos" data-per="${i}" data-pk="esp" value="${esc(p.esp||'')}" placeholder="Eng.º Civil, Arq.º, …"></div><div><label>TMV (telemóvel)</label><input data-per="${i}" data-pk="tel" inputmode="tel" value="${esc(p.tel||'')}"></div><div><label>E-mail</label><input data-per="${i}" data-pk="email" inputmode="email" value="${esc(p.email||'')}"></div><div><label>Residência</label><input data-per="${i}" data-pk="res" value="${esc(p.res||'')}" placeholder="Localidade"></div><div class="btns"><button class="del" data-perdel="${i}">Eliminar</button></div></div>`}).join('')}
-  <datalist id="dlTitulos">${TITULOS.map(t=>`<option value="${esc(t)}"></option>`).join('')}</datalist><div class="btns"><button class="secondary" id="perAdd">+ Novo perito</button></div></div></details>
+  <datalist id="dlTitulos">${TITULOS.map(t=>`<option value="${esc(t)}"></option>`).join('')}</datalist><div class="btns"><button class="secondary" id="perAdd">+ Novo perito</button><button class="secondary mini" id="perExp">⬇ Exportar base (para outras apps)</button><label class="btn secondary mini" style="cursor:pointer">⬆ Importar base<input type="file" id="perImp" accept=".json,application/json" hidden></label></div></div></details>
  <details class="sec"><summary>1B · Finalidades do solo para outros fins (${finList().length})</summary><div class="body"><div class="muted">Lista por ordem alfabética usada no 8.3. As que acrescentar numa parcela («+ Outra situação») entram aqui automaticamente.</div>
   ${finList().map(x=>`<div class="row" style="align-items:center"><div>${esc(x)}</div><div style="flex:0 0 auto">${SIT73.sof.includes(x)?'<span class="pill">base</span>':`<button class="del" data-findel="${esc(x)}">✕</button>`}</div></div>`).join('')}
   <div class="btns"><input id="finNew" placeholder="Nova finalidade (ex.: Vinha)" style="max-width:300px"><button class="secondary mini" id="finAdd">+ Finalidade</button></div></div></details>
@@ -3275,7 +3296,8 @@ function renderSettings(M){crumbs();const s=settings;setTimeout(()=>lixoRender()
  $$('[data-gab]').forEach(el=>el.oninput=()=>{s.gabinetes[+el.dataset.gab].nome=el.value;sv()});
  $$('[data-per]').forEach(el=>{el.oninput=()=>{s.peritos[+el.dataset.per][el.dataset.pk]=el.value;sv()};if(el.dataset.pk==='nome')el.onchange=async()=>{sortPeritos(s.peritos);await sv();render()}});
  $$('[data-perdel]').forEach(b=>b.onclick=async()=>{if(!await uiConfirm('Eliminar este perito da base?'))return;s.peritos.splice(+b.dataset.perdel,1);await sv();render()});
- $('#perAdd')&&($('#perAdd').onclick=async()=>{const n=((await uiPrompt('Nome do perito:',''))||'').trim();if(!n)return;if(!s.peritos.some(p=>norm(p.nome)===norm(n)))s.peritos.push({nome:n,esp:'',tel:'',email:'',res:''});sortPeritos(s.peritos);await sv();render()});
+ $('#perExp')&&($('#perExp').onclick=()=>perLibExport());$('#perImp')&&($('#perImp').onchange=async ev=>{const n=await perLibImport(ev.target.files&&ev.target.files[0]);ev.target.value='';if(n!=null){sortPeritos(s.peritos);render()}});
+  $('#perAdd')&&($('#perAdd').onclick=async()=>{const n=((await uiPrompt('Nome do perito:',''))||'').trim();if(!n)return;if(!s.peritos.some(p=>norm(p.nome)===norm(n)))s.peritos.push({nome:n,esp:'',tel:'',email:'',res:''});sortPeritos(s.peritos);await sv();render()});
  $('#qAdd')&&($('#qAdd').onclick=async()=>{const t=((await uiPrompt('Nova questão de análise e reflexão:',''))||'').trim();if(!t)return;s.questoes.push({id:'q'+Date.now().toString(36),t:/[?.]$/.test(t)?t:t+'?',on:true});await sv();render()});
  $('#lgAdd')&&($('#lgAdd').onclick=async()=>{const t=((await uiPrompt('Nova legislação (ex.: Decreto-Lei n.º …/…, de … – assunto):',''))||'').trim();if(!t)return;if(!s.legis.some(q=>norm(q.t)===norm(t)))s.legis.push({id:'lg'+Date.now().toString(36),t,on:true});await sv();render()});
  $$('[data-lgedit]').forEach(e=>e.onchange=async()=>{const t=e.value.trim();if(t){s.legis[+e.dataset.lgedit].t=t;await sv()}});
