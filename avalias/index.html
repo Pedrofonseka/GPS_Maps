@@ -717,7 +717,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.8.1';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.8.2';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1669,7 +1669,7 @@ async function buildRelat(p){ensureRel(p);alVisCapa(p);p.anomalias.forEach(a=>{a
    body+=H2('Considerações sobre o valor estimado')+E();for(const t of AL_N)body+=T(t,{jc:'both'});
    if(bad){body+=E();for(const t of AL_BAD)body+=T(t,{jc:'both'});body+=E();body+=P(R('Nota:',{b:true}),{bdrT:1})+T(`Havendo especial interesse de algum dos intervenientes, considera-se aplicável o conceito de BAD – Benefício económico de adjudicação direta – sugerindo-se uma redução de valor até à percentagem indicada no quadro, para cada verba.`,{jc:'both'})}
    // análise específica de cada verba
-   body+=E()+H1('Análise específica de cada verba');
+   body+=E()+H1('Análise específica');
    const L1=2700,L2=TWb-L1;const krow=(l,v)=>String(v??'').trim()?tr(tc(l,L1,{b:1,fill:'F2F2F2'})+tc(v,L2)):'';
    for(const a of V){const x=a.al,fam=alFam(a),g=a.vis?.gps;
     body+=H2(`${alCode(p,a)}${x.designacao?' – '+x.designacao:''}`)+E();
