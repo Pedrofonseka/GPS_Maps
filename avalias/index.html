@@ -717,7 +717,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.10';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.11';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1699,6 +1699,7 @@ async function buildRelat(p){ensureRel(p);alVisCapa(p);p.anomalias.forEach(a=>{a
    let rows=tr(H.map((h,k)=>tc(h,W[k],{b:1,fill:'D9D9D9',jc:k>=3?'center':''})).join(''),1);let tot=0,totR=0;
    for(const a of V){const x=a.al,v=alNum(x.valor),rr=alNum(x.renda);if(v!=null)tot+=v;if(rr!=null)totR+=rr;
     rows+=tr([alCode(p,a),x.designacao||String(a.descricao||'').split('\n')[0].slice(0,80),[alTipoNome(a),alDestTxt(a)].filter(Boolean).join(' · '),v!=null?alEur(v):'—',...(renda?[rr!=null?alEur(rr)+'/mês':'—']:[]),...(bad?[`${String(x.bad||'').trim()||AP.badPct||10}%`]:[])].map((t,k)=>tc(t,W[k],{jc:k>=3?'center':''})).join(''))}
+   {const G=[...new Set(V.map(alGrp))];if(G.length>1)for(const g of Object.keys(AL_GRUPOS).filter(k=>G.includes(k))){const vv=V.filter(a=>alGrp(a)===g).map(a=>alNum(a.al.valor)).filter(v=>v!=null),st=vv.reduce((s1,v)=>s1+v,0);rows+=tr([tc(`Subtotal ${g} – ${AL_GRUPOS[g]}`,cV+cD+cT,{span:3,fill:'F8F8F8'}),tc(vv.length?alEur(st):'—',cVal,{jc:'center',fill:'F8F8F8'}),...(renda?[tc('',cR,{fill:'F8F8F8'})]:[]),...(bad?[tc('',cB,{fill:'F8F8F8'})]:[])].join(''))}}
    rows+=tr([tc('Total apurado',cV+cD+cT,{b:1,span:3,fill:'F2F2F2'}),tc(alEur(tot)||'—',cVal,{b:1,jc:'center',fill:'F2F2F2'}),...(renda?[tc(totR?alEur(totR)+'/mês':'—',cR,{b:1,jc:'center',fill:'F2F2F2'})]:[]),...(bad?[tc('',cB,{fill:'F2F2F2'})]:[])].join(''));
    body+=tbl(W,rows);
    body+=H2('Considerações sobre o valor estimado')+E();for(const t of AL_N)body+=T(t,{jc:'both'});
@@ -1713,7 +1714,7 @@ async function buildRelat(p){ensureRel(p);alVisCapa(p);p.anomalias.forEach(a=>{a
     kr+=krow('Descrição sumária',a.descricao);
     kr+=krow('Localização',[x.morada,alLocTxt(x),g?`GPS ${g.lat.toFixed(6)}°, ${g.lon.toFixed(6)}°`:''].filter(Boolean).join('\n'));
     kr+=krow('Visita',[a.vis?.data,String(a.vis?.presencas||'').trim()?'Presenças: '+a.vis.presencas:''].filter(Boolean).join('\n'));
-    kr+=krow('Tipo de ativo',alTipoNome(a));kr+=krow('Destino',alDestTxt(a));
+    kr+=krow('Grupo',x.tipo?`${alGrp(a)} – ${AL_GRUPOS[alGrp(a)]}`:'');kr+=krow('Tipo de ativo',alTipoNome(a));kr+=krow('Destino',alDestTxt(a));
     if(fam){if(x.modo==='suc')for(const [k,l] of AL_SUC[fam])kr+=krow(l,x.suc[k]);
      else for(const f of AL_CAR[fam]){if(f[0]==='g')continue;const v=x.car[f[0]];kr+=krow(f[1],Array.isArray(v)?v.map(alOpt).join(', '):(f[2]==='c'?alOpt(v):v))}}
     kr+=krow('Utilidade',[x.atr?'Atratividade: '+x.atr:'',x.util].filter(s=>String(s||'').trim()).join('\n'));
@@ -1832,7 +1833,7 @@ function anexFilesHTML(p){const r=ensureRel(p),L=r.anexF||[];return `<label>Fich
 function alFichaRows(p,a){alA(a);alValSync(a);const x=a.al,fam=alFam(a),g=a.vis?.gps,AP=alP(p),L=[];const add=(l,v)=>{if(Array.isArray(v))v=v.map(alOpt).join(', ');v=String(v??'').trim();if(v)L.push([l,v])};
  add('Código',alCode(p,a));add('Designação',x.designacao);add('Identificação',alIdTxt(x).replace(/\n/g,' · '));for(const [l,v] of alPredioRows(x))add(l,v.replace(/\n/g,' · '));add('Descrição sumária',a.descricao);
  add('Concelho',x.concelho);add('Freguesia',x.freguesia);add('Endereço',x.morada);if(g){L.push(['Latitude',+g.lat.toFixed(6)]);L.push(['Longitude',+g.lon.toFixed(6)])}
- add('Data da visita',a.vis?.data);add('Presenças',a.vis?.presencas);add('Tipo de ativo',alTipoNome(a));add('Destino',alDestTxt(a));
+ add('Data da visita',a.vis?.data);add('Presenças',a.vis?.presencas);add('Grupo',x.tipo?`${alGrp(a)} – ${AL_GRUPOS[alGrp(a)]}`:'');add('Tipo de ativo',alTipoNome(a));add('Destino',alDestTxt(a));
  if(fam){if(x.modo==='suc')for(const [k,l] of AL_SUC[fam])add(l,x.suc[k]);else for(const f of AL_CAR[fam]){if(f[0]==='g')continue;const v=x.car[f[0]];add(f[1],f[2]==='c'?alOpt(v):v)}}
  add('Atratividade',x.atr);add('Utilidade',x.util);add('Métodos elegíveis',Object.keys(x.met||{}).filter(k=>x.met[k]).join(', '));add('Métodos — notas',x.metTxt);
  if(x.calc&&alCultOk(a)){add('Cálculo pelo rendimento — método',CULT.CALC_MET[x.calc.m]||x.calc.m);add('Cálculo pelo rendimento — V_Un (€/m²)',x.vun);add('Cálculo pelo rendimento — fundamentação',x.fund)}
@@ -2057,8 +2058,13 @@ const AL_LISTS={"aglomerado": ["7 - Cap. Distrito", "6 - Cidade", "5 - Vila", "4
    5 Estado (características — Detalhado/Sucinto — e fotos) · 6 Utilidade · 7 Métodos · 8 Valor.
    ===================================================================== */
 const ABC=L=>{const top=L.filter(x=>/^NA[PN] - |^NFN - /.test(x)),end=L.filter(x=>/^Outr[oa]$/.test(x));return [...top,...L.filter(x=>!top.includes(x)&&!end.includes(x)).sort((a,b)=>a.localeCompare(b,'pt')),...end]}; // ordem alfabética, NAP/NAN/NFN no início e «Outro» no fim
-const AL_TIPOS=[['CAP','Construção de apoio','imo'],['ANX','Construção tipo Anexo','imo'],['EDI','Edifício em PV','imo'],['EQP','Equipamento','mob'],['FRA','Fração em PH','imo'],['LUG','Lugar','imo'],['LOT','Lote de Terreno','ter'],['MOB','Mobiliário','mob'],['MBA','Moradia em banda','imo'],['MOR','Moradia isolada','imo'],['MUR','Muro','imo'],['PAV','Pavilhão','imo'],['PIS','Piscina','imo'],['SEP','Sepultura','sep'],['TER','Terreno','ter'],['VEI','Veículo','vei'],['OUT','Outro','out']];
-const AL_TIPO_OLD={GAR:'LUG'};
+const AL_TIPOS=[['AES','Área de estacionamento','imo'],['CAP','Construção de apoio','imo'],['ANX','Construção tipo Anexo','imo'],['EDI','Edifício em PV','imo'],['EQP','Equipamento','mob'],['FRA','Fração em PH','imo'],['MOB','Mobiliário','mob'],['MBA','Moradia em banda','imo'],['MOR','Moradia isolada','imo'],['MUR','Muro','imo'],['PAV','Pavilhão','imo'],['PIS','Piscina','imo'],['SEP','Sepultura','sep'],['TCI','Terreno para construção individual','ter'],['TCM','Terreno para construção múltipla','ter'],['TUR','Terreno para urbanizar','ter'],['TER','Terreno rústico / outras finalidades','ter'],['VEI','Veículo','vei'],['OUT','Outro','out']];
+/* grupos de ativo (como no AVA_Input) — para estatística e para agrupar valores; o grupo sai do tipo */
+const AL_GRUPOS={EDC:'Edifícios e construções',TAC:'Terreno apto para construção',TOF:'Terreno para outras finalidades',MOB:'Mobiliário',MEQ:'Máquinas/Equipamentos',VEI:'Veículos',SEP:'Sepulturas e jazigos',OTS:'Outras situações',NID:'Não identificado'};
+const AL_TIPO_GRP={AES:'EDC',CAP:'EDC',ANX:'EDC',EDI:'EDC',FRA:'EDC',MBA:'EDC',MOR:'EDC',MUR:'EDC',PAV:'EDC',PIS:'EDC',TCI:'TAC',TCM:'TAC',TUR:'TAC',TER:'TOF',EQP:'MEQ',MOB:'MOB',VEI:'VEI',SEP:'SEP',OUT:'OTS'};
+const alGrp=a=>AL_TIPO_GRP[a?.al?.tipo]||'NID';
+const grpChip=g=>`<span style="display:inline-block;font-size:10px;font-weight:700;color:#37474f;background:#eceff1;border:1px solid #b0bec5;border-radius:6px;padding:0 5px;margin-right:4px" title="${esc(AL_GRUPOS[g]||'')}">${g}</span>`;
+const AL_TIPO_OLD={GAR:'AES',LUG:'AES',LOT:'TCI'};
 /* destinos: imóveis — afetações do CIMI (art. 41.º) + as indicadas pelo utilizador; veículos — categorias do Código da Estrada (art. 106.º e ss.) */
 const AL_DEST={
  imo:['Armazéns/ atividade industrial','Arrumos','Aviário','Comércio','Comércio/Serviços','Estacionamento coberto','Estacionamento descoberto','Garagem','Habitação','Serviços','Outro'],
@@ -2194,7 +2200,7 @@ function vFicha(){
  h+=sec('v3','3 · Visita',`${prevVis?`<div class="btns" style="margin-top:0"><button class="secondary mini" data-alact="copyVis">⧉ Igual à ${esc(alCode(p,prev))}</button></div>`:''}<label>Data da visita</label><div class="inrow"><input data-bind="vis.data" value="${esc(a.vis.data||'')}" placeholder="dd/mm/aaaa"><button class="secondary" data-act="visCal">📅</button><button class="secondary" data-act="visHoje">Hoje</button></div>${txt('vis.presencas','Presenças (nome – qualidade)',a.vis.presencas,3)}`,{cnt:ok(a.vis.data)});
  /* 4 tipo e destino */
  h+=sec('v4','4 · Tipo de ativo e destino',`<label>Tipo de ativo</label><div class="tks">${AL_TIPOS.map(([k,t])=>alTk(x.tipo===k,esc(t),`data-alact="tipo" data-v="${k}"`)).join('')}</div>
-  ${fam?`<label>Destino</label><div class="tks">${AL_DEST[fam].map(d=>alTk(x.destino===d,esc(d),`data-alact="set" data-k="destino" data-v="${esc(d)}"`)).join('')}</div>${x.destino==='Outro'||fam==='out'?inp('al.destinoOutro','Destino — descrever',x.destinoOutro):''}`:'<p class="muted">Escolha o tipo de ativo para ver os destinos possíveis.</p>'}`,{cnt:ok(x.tipo&&x.destino)});
+  ${x.tipo?`<p class="muted" style="margin:4px 0">Grupo: ${grpChip(alGrp(a))}${esc(AL_GRUPOS[alGrp(a)])}</p>`:''}${fam?`<label>Destino</label><div class="tks">${AL_DEST[fam].map(d=>alTk(x.destino===d,esc(d),`data-alact="set" data-k="destino" data-v="${esc(d)}"`)).join('')}</div>${x.destino==='Outro'||fam==='out'?inp('al.destinoOutro','Destino — descrever',x.destinoOutro):''}`:'<p class="muted">Escolha o tipo de ativo para ver os destinos possíveis.</p>'}`,{cnt:ok(x.tipo&&x.destino)});
  /* 5 estado */
  {let body='';if(!fam)body='<p class="muted">Escolha primeiro o tipo de ativo (secção 4): as perguntas de caracterização dependem dele.</p>';
   else{body=`<label>Modo de caracterização</label><div class="seg"><button class="${x.modo!=='suc'?'on':''}" data-alact="set" data-k="modo" data-v="det">Detalhado (caixas)</button><button class="${x.modo==='suc'?'on':''}" data-alact="set" data-k="modo" data-v="suc">Sucinto (texto livre)</button></div>`;
@@ -2244,7 +2250,7 @@ function vAnoms(){const p=cur();alP(p);const L=p.anomalias;L.forEach(alA);const 
  return `<h2>Verbas (${L.length})</h2><div class="card"><div class="steps3"><span><b>1</b> Identificar e localizar</span><span><b>2</b> Tipo, estado e fotos</span><span><b>3</b> Utilidade, métodos e valor</span></div>
  <div class="btns"><button class="green" data-alact="nova">+ Nova verba</button><button class="secondary" data-alact="trocar">⇄ Enviar / receber verbas</button></div>
  ${L.length?`<div class="bar"><i style="width:${Math.round(100*done/L.length)}%"></i></div><b>${done}/${L.length}</b> com tipo e fotos ou valor${tot?` · total estimado <b>${esc(alEur(tot))}</b>`:''}`:''}</div>
- <div class="list">${L.map((a,i)=>{const x=a.al;return `<div class="card alcard" data-act="openAnom" data-id="${a.id}"><button class="aldel" data-alact="del" data-id="${a.id}" title="Eliminar a verba ${esc(alCode(p,a))}" aria-label="Eliminar a verba">🗑</button>${stChip(stOf(a))}<b>${esc(alCode(p,a))}</b> ${esc(x.designacao||'')}<div class="muted">${esc([alTipoNome(a),alDestTxt(a)].filter(Boolean).join(' · ')||'Tipo por definir')}${Object.keys(x.ids||{}).length?' · '+esc(alIdTxt(x).replace(/\n/g,' · ')):''}</div><div style="margin-top:4px">${pill('📷 '+relF(a).length)}${a.vis?.gps?pill('GPS','ok'):''}${a.vis?.data?pill(a.vis.data):''}${alNum(x.valor)!=null?pill(alEur(x.valor),'ok'):pill('sem valor','warn')}</div></div>`}).join('')||'<p class="muted">Ainda não há verbas.</p>'}</div>`}
+ <div class="list">${L.map((a,i)=>{const x=a.al;return `<div class="card alcard" data-act="openAnom" data-id="${a.id}"><button class="aldel" data-alact="del" data-id="${a.id}" title="Eliminar a verba ${esc(alCode(p,a))}" aria-label="Eliminar a verba">🗑</button>${stChip(stOf(a))}${a.al.tipo?grpChip(alGrp(a)):''}<b>${esc(alCode(p,a))}</b> ${esc(x.designacao||'')}<div class="muted">${esc([alTipoNome(a),alDestTxt(a)].filter(Boolean).join(' · ')||'Tipo por definir')}${Object.keys(x.ids||{}).length?' · '+esc(alIdTxt(x).replace(/\n/g,' · ')):''}</div><div style="margin-top:4px">${pill('📷 '+relF(a).length)}${a.vis?.gps?pill('GPS','ok'):''}${a.vis?.data?pill(a.vis.data):''}${alNum(x.valor)!=null?pill(alEur(x.valor),'ok'):pill('sem valor','warn')}</div></div>`}).join('')||'<p class="muted">Ainda não há verbas.</p>'}</div>`}
 
 /* ---------- processo ---------- */
 function vProc(){const p=cur(),P=alP(p);
@@ -2692,7 +2698,7 @@ function alValSync(a){const x=a?.al;if(!x)return;const at=alNum(x.car?.at);
  if(x.valAuto===undefined){const vu=alNum(x.vun),vr=alNum(x.refV),v=alNum(x.valor);x.valAuto=x.calc&&vu!=null&&at&&v===Math.round(at*vu)?'calc':x.tofRef&&vr!=null&&at&&v===Math.round(at*vr)?'ref':''}
  if(!at||!alTOF(a))return;const u=x.valAuto==='calc'&&x.calc&&alCultOk(a)?alNum(x.vun):x.valAuto==='ref'&&alRefOk(a)?alNum(x.refV):null;if(u!=null){const nv=String(Math.round(at*u));if(x.valor!==nv)x.valor=nv}}
 const AL_MET_REF='Valores de referência';
-const alTOF=a=>alFam(a)==='ter'&&['Produção agrícola','Produção florestal','Agroflorestal'].includes(a?.al?.destino); // terreno não apto para construção (TOF)
+const alTOF=a=>alGrp(a)==='TOF'&&['Produção agrícola','Produção florestal','Agroflorestal'].includes(a?.al?.destino); // terreno não apto para construção (TOF)
 const alCultOk=a=>alTOF(a)&&!!a?.al?.met?.[AL_MET_REND];
 const alRefOk=a=>alTOF(a)&&!!a?.al?.met?.[AL_MET_REF];
 const alCultTipo=a=>String(a.al.cultTipo||'').trim()||alDestTxt(a)||'Terreno'; // a mesma chave da biblioteca no ExPropria (cultura | método)
