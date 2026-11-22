@@ -162,6 +162,7 @@ table.mx td select,table.mx td input{font-size:12px;padding:3px 4px;margin:0;min
 body.wide #app{max-width:1600px}
 .favbar{display:flex;gap:6px;align-items:center;margin:3px 0 6px;flex-wrap:wrap}.favbar select{flex:1;min-width:0;font-size:12px;padding:4px}
 .stp{font-style:normal;font-size:10px;margin-left:2px}.stp.w{color:#E08000}.stp.k{color:#1E8E3E}
+.capas{display:flex;flex-direction:column;gap:6px;margin:4px 0 8px}.capa{display:flex;gap:6px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:6px 8px;background:#fff}.capa.on{border-color:var(--pri);box-shadow:0 0 0 2px var(--pri) inset}.capasel{flex:1;text-align:left;background:none;border:0;padding:0;color:inherit;cursor:pointer}.capasel small{display:block;color:var(--mute);font-size:11px;font-weight:400}
 </style>
 </head>
 <body>
@@ -756,7 +757,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.24.2';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.25.0';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):parteLista(p));
@@ -1929,6 +1930,8 @@ const RT=(k,lbl,val,rows=3,ph='')=>`${lbl?`<label>${esc(lbl)}</label>`:''}<texta
 const segR=(act,opts,cur)=>`<div class="seg">${opts.map(([k,t])=>`<button class="${cur===k?'on':''}" data-act="${act}" data-v="${k}">${esc(t)}</button>`).join('')}</div>`;
 // título do trabalho: primeira linha da capa, topo da página a seguir à capa e cabeçalho genérico (substitui o antigo campo «Função»)
 const TITULOS=['Relatório de Peritagem','Relatório de inspeção expedita','Relatório de Inspeção','Relatório de Levantamento de anomalias'];
+// tipos de capa (todos com o quadro de identificação por baixo)
+const CAPAS=[['fotosLoc','Mapa + fotos','mapa à largura e 3 ou 6 fotos'],['destaque','Uma imagem grande','a vista principal (ex.: fachada) a toda a largura'],['imgMapa','Imagem + mapa','vista principal e mapa, lado a lado'],['fotos','Grelha de fotos','até 9 fotos (3 × 3)'],['nenhuma','Só texto','sem imagens — título e identificação']];
 const MTOP=g=>g==='proficis'?2268:1701; // twips: 4,0 cm · 3,0 cm
 const relTitulo=r=>r.titulo==='Outro'?(String(r.tituloOutro||'').trim()||'Relatório'):(r.titulo||'Relatório de Peritagem');
 function hdrDefaults(p){const r=p.rel;return {h1:relTitulo(r),h3:r.objeto||p.designacao||'',h4a:r.procJud?`Proc. ${r.procJud}`:'',h4b:p.codigo?` - ${p.codigo}`:''}}
@@ -1947,7 +1950,7 @@ function relProcHTML(p,which='proc'){const r=ensureRel(p),col=isCol(r),part=isPa
     ${RL('objeto','Objeto de análise',r.objeto,'ex.: Moradia – Rua X, n.º 10 (habitação e logradouro)')}
     ${RL('contexto','Contexto/ finalidade',r.contexto,'ex.: Ação de despejo')}
     ${part?'':`${RL('parte1','Parte 1',r.parte1)}${RL('parte2','Parte 2',r.parte2)}`}
-    <label>Tipo de capa <span class="muted">(imagens de contextualização; se não houver, usa as das situações)</span></label>${segR('rCapa',[['fotosLoc','Mapa + fotos'],['destaque','Uma imagem grande'],['fotos','Grelha de fotos'],['nenhuma','Só texto']],r.capa||'fotosLoc')}
+    <label>Tipo de capa <span class="muted">(imagens de contextualização; se não houver, usa as das situações)</span></label><div class="capas">${CAPAS.map(([k,t,d])=>`<div class="capa ${(r.capa||'fotosLoc')===k?'on':''}"><button class="capasel" data-act="rCapa" data-v="${k}"><b>${(r.capa||'fotosLoc')===k?'● ':'○ '}${t}</b><small>${d}</small></button><button class="secondary mini" data-act="capaPrev" data-v="${k}">👁 Ver</button></div>`).join('')}</div>
     ${RL('versao','Versão do relatório',r.versao,'ex.: 1.01VF ou Draft00')}<p class="muted">Nome do ficheiro (e rodapé): <b>${esc(relFileName(p))}</b></p>`;
   const nq=r.quesitos.length;
   const QW=part?['queixa','queixas','Queixa']:['quesito','quesitos','Quesito'];
@@ -2033,15 +2036,17 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
     return `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${id}" name="${name} ${id}"/><wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${id}" name="relat_${id}.jpeg"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rRel${id}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`};
   // ---- capa ----
   const TW=9638,CW=3212;const g=p.visita?.gps;const allF0=()=>p.anomalias.flatMap(a=>relF(a)).filter(f=>fd(f)).length;
-  let mapData=null;if(g&&(r.capa||'fotosLoc')==='fotosLoc'){mapData=await googleMapData(g,1600,Math.round(1600*(allF0()<6?9.2:5.0)/16.9));if(!mapData){try{if(await ensureMap(p,true))mapData=fotoCache.get(p.visita.map.id)}catch(e){}}}
+  let mapData=null;if(g&&['fotosLoc','imgMapa'].includes(r.capa||'fotosLoc')){mapData=await googleMapData(g,1600,Math.round(1600*(allF0()<6?9.2:5.0)/16.9));if(!mapData){try{if(await ensureMap(p,true))mapData=fotoCache.get(p.visita.map.id)}catch(e){}}}
   const ctxF=relF(p.ctxA||{fotos:[]}).filter(f=>fd(f));const allF=ctxF.length?ctxF:shuffleR(p.anomalias.flatMap(a=>relF(a)).filter(f=>fd(f)));
-  const CM=r.capa||'fotosLoc';const nF=CM==='fotos'?Math.min(9,allF.length):(CM==='nenhuma'||CM==='destaque')?0:(allF.length>=6?6:Math.min(3,allF.length));const big=nF<6;
+  const CM=r.capa||'fotosLoc';const nF=CM==='fotos'?Math.min(9,allF.length):(CM==='nenhuma'||CM==='destaque'||CM==='imgMapa')?0:(allF.length>=6?6:Math.min(3,allF.length));const big=nF<6;
   const mapH=big?9.2:5.0,phW=5.55,phH=4.16;
   const cellM=(content,w,o={})=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${o.span?`<w:gridSpan w:val="${o.span}"/>`:''}<w:vAlign w:val="center"/></w:tcPr>${content}</w:tc>`;
   const cpara=runs=>`<w:p><w:pPr><w:spacing w:before="0" w:after="0"/><w:jc w:val="center"/></w:pPr>${runs}</w:p>`;
   let rows='';
   const mapRun=mapData?imgRun(await cropTo(mapData,16.9/mapH,1600),16.9,mapH,'Localização'):R('[Localização — sem coordenadas GPS ou sem rede ao gerar]',{i:true,color:'808080',sz:9});
   if(CM==='destaque'&&allF.length){const dh=12.5;rows+=`<w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="${Math.round(dh*567)+40}" w:hRule="exact"/></w:trPr>${cellM(cpara(imgRun(await cropTo(fdOut(allF[0]),16.9/dh,1600),16.9,dh,'Capa')),TW,{span:3})}</w:tr>`}
+  if(CM==='imgMapa'){const ih=8.4,iw=11.25,mw=16.9-iw-0.15;const ph0=allF.length?imgRun(await cropTo(fdOut(allF[0]),iw/ih,1400),iw,ih,'Capa'):R('[sem imagens]',{i:true,color:'808080',sz:9});const mp=mapData?imgRun(await cropTo(mapData,mw/ih,900),mw,ih,'Localização'):R('[sem mapa]',{i:true,color:'808080',sz:9});
+    rows+=`<w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="${Math.round(ih*567)+40}" w:hRule="exact"/></w:trPr>${cellM(cpara(ph0),CW*2)}${cellM(cpara(mp),TW-2*CW)}</w:tr>`}
   if(CM==='fotosLoc')rows+=`<w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="${Math.round(mapH*567)+40}" w:hRule="exact"/></w:trPr>${cellM(cpara(mapRun),TW,{span:3})}</w:tr>`;
   if(nF){const sel=allF.slice(0,nF);for(let rr=0;rr<Math.ceil(nF/3);rr++){let cells='';for(let c=0;c<3;c++){const f=sel[rr*3+c];cells+=cellM(cpara(f?imgRun(await cropTo(fdOut(f),4/3,900),phW,phH,'Foto'):''),CW)}rows+=`<w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="${Math.round(phH*567)+40}" w:hRule="exact"/></w:trPr>${cells}</w:tr>`}}
   const noB=['top','left','bottom','right','insideH','insideV'].map(s=>`<w:${s} w:val="nil"/>`).join('');
@@ -2065,7 +2070,7 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
   if(dlAll)id+=irow(VIS.filter(v=>v.data).length>1?'Datas das visitas':'Data da visita',vi(dlAll));
   id+=irow('Versões/ datas',vi(`${r.versao||'1.00'} – ${new Date().toLocaleDateString('pt-PT')}`,{color:'808080',sz:9}),{t:1});
   body+=`<w:tbl><w:tblPr><w:tblW w:w="${TW}" w:type="dxa"/><w:tblBorders>${noB}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="60" w:type="dxa"/><w:right w:w="60" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${L1}"/><w:gridCol w:w="${L2}"/></w:tblGrid>${id}</w:tbl>`+BRK;
-  const coverXml=body;body='';
+  const coverXml=(CM==='nenhuma'?'<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="4500" w:lineRule="exact"/></w:pPr></w:p>':'')+body;body=''; // «só texto»: identificação a meio da página
   // ---- secções ----
   const comp=part||r.incComp===false?'':(col?COMP_COLEGIAL:(String(settings.compSingular||'').trim()||COMP_SINGULAR));
   if(!part){body+=H1('Compromisso de honra')+E()+(comp?T(comp,{jc:'both'}):T('[Texto do compromisso de honra — preencha em Definições › Relatório]',{i:true,color:'C00000'}))+E()}
@@ -2419,7 +2424,7 @@ async function avaDocxParaEcra(blob) {
   z.file('word/document.xml', new XMLSerializer().serializeToString(D)); return z.generateAsync({type: 'blob', mimeType: blob.type});
 }
 /* pré-visualização do relatório (tal como sai no Word / PDF), em ecrã inteiro, sem gerar ficheiro */
-async function previewDocx(blob,nome,warns=[]){busy(true,'A preparar a pré-visualização…');document.getElementById('prevOv')?.remove();
+async function previewDocx(blob,nome,warns=[],opt={}){busy(true,'A preparar a pré-visualização…');document.getElementById('prevOv')?.remove();
  const ov=document.createElement('div');ov.id='prevOv';ov.innerHTML=`<div class="pvbar"><b>👁 ${esc(nome||'Pré-visualização')}</b><button type="button" data-pvz="-1" title="Reduzir">－</button><span id="pvZl" style="min-width:42px;text-align:center;font-size:13px">100 %</span><button type="button" data-pvz="1" title="Ampliar">＋</button><button type="button" data-pvz="0">Ajustar</button><button type="button" id="pvClose">Fechar</button></div><div class="pvscroll"><div class="pvzoom" id="pvBox"></div></div>`;document.body.appendChild(ov);
  const close=()=>{ov.remove();document.getElementById('pvCss')?.remove()};ov.querySelector('#pvClose').onclick=close;
  const css=document.createElement('style');css.id='pvCss';css.textContent=AVA_PRCSS('pvBox');document.head.appendChild(css);
@@ -2427,6 +2432,8 @@ async function previewDocx(blob,nome,warns=[]){busy(true,'A preparar a pré-visu
   await lib.renderAsync(await avaDocxParaEcra(blob),box,null,{className:'docx',inWrapper:true,ignoreWidth:false,ignoreHeight:false,ignoreFonts:false,breakPages:true,ignoreLastRenderedPageBreak:true,renderHeaders:true,renderFooters:true,renderFootnotes:true,useBase64URL:true,experimental:true});
   await Promise.all([...box.querySelectorAll('img')].map(im=>im.decode?im.decode().catch(()=>{}):null));if(document.fonts?.ready)await document.fonts.ready;
   const wr=box.querySelector('.docx-wrapper')||box;avaPdfPost(wr);avaPdfPaginate(wr);
+  if(opt.firstOnly)[...wr.querySelectorAll('section.docx')].slice(1).forEach(x=>x.remove());
+  if(opt.useCapa){const bt=document.createElement('button');bt.type='button';bt.textContent='✓ Usar esta capa';bt.className='green';bt.onclick=async()=>{const pp=cur();ensureRel(pp).capa=opt.useCapa;await saveProc();close();render();toast('Capa escolhida.')};ov.querySelector('.pvbar').insertBefore(bt,ov.querySelector('#pvClose'))}
   const sc0=ov.querySelector('.pvscroll'),sec0=wr.querySelector('section.docx'),nw=(sec0?sec0.offsetWidth:wr.offsetWidth)+16;let uz=1,lw=window.innerWidth;const lbl=ov.querySelector('#pvZl');
   const fit=()=>{const f=Math.min(1,sc0.clientWidth/nw);box.style.transform='';box.style.width='';box.style.height='';box.style.zoom=Math.max(.25,Math.min(4,f*uz));if(lbl)lbl.textContent=Math.round(uz*100)+' %'};fit();
   ov.querySelectorAll('[data-pvz]').forEach(b=>b.onclick=()=>{const d=+b.dataset.pvz;uz=d===0?1:Math.max(.5,Math.min(4,Math.round(uz*(d>0?1.25:.8)*100)/100));fit()});
@@ -2542,6 +2549,8 @@ document.addEventListener('click',async e=>{{const _x=e.target.closest&&e.target
     case 'rTkB':{const r=ensureRel(p),k=el.dataset.k;r[k]=!r[k];await saveProc();S.scrollTop=window.scrollY;break}
     case 'rAprDoc':{const r=ensureRel(p);r.aprDocs=r.aprDocs||{};r.aprDocs[el.dataset.k]=!r.aprDocs[el.dataset.k];await saveProc();S.scrollTop=window.scrollY;break}
     case 'rTk':{const r=ensureRel(p),k=el.dataset.k;r[k]=r[k]===false;await saveProc();S.scrollTop=window.scrollY;break}
+    case 'capaPrev':{if(dirty)await saveProc();const k=el.dataset.v,nm=(CAPAS.find(c=>c[0]===k)||['',k])[1];busy(true,'A preparar a capa…');const tp=settings.txtPhotos;
+      try{const q=JSON.parse(JSON.stringify(p));q.rel.capa=k;q.rel.anexF=[];settings.txtPhotos=false;const o=await buildRelat(q);settings.txtPhotos=tp;busy(false);await previewDocx(new Blob([o.bytes],{type:DOCX_MIME}),'Capa — '+nm,[],{firstOnly:true,useCapa:k})}catch(err){settings.txtPhotos=tp;busy(false);toast('Erro na pré-visualização: '+err.message,1)}return}
     case 'relPrev':{if(dirty)await saveProc();try{const d=await relBuildBlob(p);await previewDocx(d.blob,d.name,relCheck(p))}catch(err){busy(false);toast('Erro na pré-visualização: '+err.message,1)}return}
     case 'relPdf':{if(dirty)await saveProc();if(!await exportGate(p))return;try{const x=await relPdf(p);await saveBlob(x.blob,x.name)}catch(err){busy(false);toast('Erro ao gerar o PDF: '+err.message,1)}return}
     case 'relZip':{if(dirty)await saveProc();if(!await exportGate(p))return;try{const x=await relZip(p);await saveBlob(x.blob,x.name)}catch(err){busy(false);toast('Erro ao preparar a pasta: '+err.message,1)}return}
