@@ -717,7 +717,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.8.2';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.8.3';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -2072,7 +2072,7 @@ const alDestTxt=a=>{const d=a?.al?.destino||'';return d==='Outro'?(String(a.al.d
 const alEur=v=>{const n=alNum(v);return n==null?'':n.toLocaleString('pt-PT',{minimumFractionDigits:0,maximumFractionDigits:0})+' €'};
 const alNum=v=>{if(v==null||v==='')return null;const n=Number(String(v).replace(/\s/g,'').replace(/\.(?=\d{3}(\D|$))/g,'').replace(',','.'));return isFinite(n)?n:null};
 function alP(p){const d={finalidade:'',finalidadeOutra:'',base:'Valor de mercado',posse:'Propriedade Plena',bad:false,badPct:'10'};p.al=p.al||{};for(const k in d)if(p.al[k]===undefined)p.al[k]=d[k];
- const P=p.al;if(!P._fin2){P._fin2=1;if(AL_FIN_OLD[P.finalidade])P.finalidade=AL_FIN_OLD[P.finalidade];else if(['Inventário','Arbitramento','Expropriação'].includes(P.finalidade)){const r=ensureRel(p);if(!String(r.contexto||'').trim())r.contexto=P.finalidade==='Expropriação'?'':P.finalidade;P.finalidade=''}else if(P.finalidade==='Outra'){P.finalidade=''}}return P}
+ const P=p.al;if(AL_BASE_OLD[P.base])P.base=AL_BASE_OLD[P.base];if(!P._fin2){P._fin2=1;if(AL_FIN_OLD[P.finalidade])P.finalidade=AL_FIN_OLD[P.finalidade];else if(['Inventário','Arbitramento','Expropriação'].includes(P.finalidade)){const r=ensureRel(p);if(!String(r.contexto||'').trim())r.contexto=P.finalidade==='Expropriação'?'':P.finalidade;P.finalidade=''}else if(P.finalidade==='Outra'){P.finalidade=''}}return P}
 const NAPNAN=['NAP - Não aplicável','NAN - Não analisado'];
 AL_LISTS.acesso_local=[...NAPNAN,'Sem acesso direto','Caminho de pé','Caminho tipo agrícola','Rua não pavimentada','Rua em construção','Rua pavimentada','Estrada não pavimentada','Estrada em construção','Estrada'];
 AL_LISTS.infra_ce=[...NAPNAN,'Passeios','Rede de água','Rede pluvial','Rede de saneamento','Rede de telecomunicações','Rede de energia','Rede de iluminação'];
@@ -2081,6 +2081,10 @@ AL_LISTS.edc2_estado_execucao=[...NAPNAN,'Concluído','Em construção','Não in
 AL_LISTS.dep_rhd=[...NAPNAN,...AL_LISTS.dep_rhd.filter(x=>!/^0-Nap/.test(x))];
 AL_LISTS.edc2_classe_energetica=[...NAPNAN,'NFN - Não fornecido',...AL_LISTS.edc2_classe_energetica.filter(x=>x!=='Não fornecida')];
 AL_LISTS.atratividade=[...NAPNAN,...AL_LISTS.atratividade.filter(x=>!/NAP/.test(x))];
+/* bases de valor — Normas Europeias de Avaliação (EVS 2025, TEGOVA): EVS 1 valor e renda de mercado; EVS 2 bases que não o valor de mercado; pressupostos especiais do EVS 1 */
+AL_LISTS.proc_base=['Valor de mercado','Valor de renda de mercado','Justo Valor','Valor Especial','Valor de Investimento','Valor Hipotecário','Valor Seguro','Valor de uso alternativo','Valor de Liquidação (venda forçada)'];
+const AL_BASE_EVS={'Valor de mercado':'EVS 1 — valor de mercado','Valor de renda de mercado':'EVS 1 — renda de mercado','Justo Valor':'EVS 2 — justo valor (fair value)','Valor Especial':'EVS 2 — valor especial','Valor de Investimento':'EVS 2 — valor de investimento','Valor Hipotecário':'EVS 2 — valor hipotecário (mortgage lending value)','Valor Seguro':'EVS 2 — valor seguro (insurable value)','Valor de uso alternativo':'EVS 1 — pressuposto especial: uso alternativo (não é uma base autónoma; acompanha o valor de mercado)','Valor de Liquidação (venda forçada)':'EVS 1 — pressuposto especial: venda forçada (não é uma base autónoma; acompanha o valor de mercado)'};
+const AL_BASE_OLD={'Valor de Liquidação':'Valor de Liquidação (venda forçada)'};
 AL_LISTS.proc_finalidade=['Arrendamento','Compra/venda','Hipoteca','Particular','Partilha'];
 const AL_TRIBUNAIS=(L=>L.sort((a,b)=>a.replace(/^Tribunal Judicial d[aeo]s? /,'').localeCompare(b.replace(/^Tribunal Judicial d[aeo]s? /,''),'pt')))(['Tribunal Judicial de Viseu','Tribunal Judicial de Coimbra','Tribunal Judicial de Oliveira do Hospital','Tribunal Judicial de Santa Comba Dão','Tribunal Judicial de São Pedro do Sul','Tribunal Judicial de Arganil','Tribunal Judicial de Tábua','Tribunal Judicial de Nelas','Tribunal Judicial de Seia','Tribunal Judicial da Lousã','Tribunal Judicial de Aveiro','Tribunal Judicial da Mealhada','Tribunal Judicial de Gouveia','Tribunal Judicial de Celorico da Beira','Tribunal Judicial da Guarda','Tribunal Judicial de Fornos de Algodres']);
 const AL_CONTEXTO=ABC(['Inventário','Ação de Processo comum','Autorização','Atribuição da Casa de Morada da Família','Divisão de coisa comum','Arbitramento','Ação de Despejo','Execução comum','Execução de sentença','Execução sumária','Penhora','Incidente de liquidação','Anulação de deliberações']);
@@ -2193,7 +2197,7 @@ function vProc(){const p=cur(),P=alP(p);
  ${relProcHTML(p)}
  ${blk('B · Contexto da avaliação','Finalidade, base de valor, posse e BAD — valem para todas as verbas')}
  ${sec('pctx','Contexto da avaliação',`<label>Finalidade</label><div class="tks sm">${fin.map(o=>alTk(P.finalidade===o,esc(o),`data-alact="pset" data-k="finalidade" data-v="${esc(o)}"`)).join('')}</div>
-  <label>Base de valor</label><div class="tks sm">${bases.map(o=>alTk(P.base===o,esc(o),`data-alact="pset" data-k="base" data-v="${esc(o)}"`)).join('')}</div>${P.base==='Valor de renda de mercado'?'<p class="muted">Com renda de mercado, cada verba pede também a renda mensal e o quadro-resumo leva essa coluna.</p>':''}
+  <label>Base de valor</label><div class="tks sm">${bases.map(o=>alTk(P.base===o,esc(o),`data-alact="pset" data-k="base" data-v="${esc(o)}"`)).join('')}</div>${AL_BASE_EVS[P.base]?`<p class="muted" style="margin:4px 0">📘 ${esc(AL_BASE_EVS[P.base])}</p>`:''}${P.base==='Valor de renda de mercado'?'<p class="muted">Com renda de mercado, cada verba pede também a renda mensal e o quadro-resumo leva essa coluna.</p>':''}
   <label>Tipo de posse</label><div class="tks sm">${posse.map(o=>alTk(P.posse===o,esc(o),`data-alact="pset" data-k="posse" data-v="${esc(o)}"`)).join('')}</div>
   <label>BAD — benefício económico de adjudicação direta</label><p class="muted" style="margin-top:0">Aplica-se quando algum dos intervenientes manifesta interesse especial em adquirir o ativo: sugere-se uma redução ao valor estimado.</p><div class="seg"><button class="${!P.bad?'on':''}" data-alact="pset" data-k="bad" data-v="0">Não aplicável</button><button class="${P.bad?'on':''}" data-alact="pset" data-k="bad" data-v="1">Aplicável</button></div>${P.bad?inp('pal.badPct','Redução por defeito, até (%)',P.badPct,'10'):''}`,{cnt:falta([P.finalidade,P.base].filter(x=>!x).length)})}
  ${blk('C · Verbas',`${p.anomalias.length} verba(s)`)}<div class="btns"><button class="green" data-act="go" data-v="anom">Ir para as verbas ▶</button></div>
