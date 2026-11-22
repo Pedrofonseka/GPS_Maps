@@ -20,6 +20,7 @@ Ao melhorar uma rotina numa app, atualizar o ficheiro respetivo e a tabela «Ond
 | Marcas nas fotografias (setas, círculos, letras, texto, balões) | [marcas_fotos.md](marcas_fotos.md) | 1.0 |
 | **Exportação para Word — REGRA SEMPRE** (todas as apps): **fotografias com a rotina das fotos** ([fotos.md](fotos.md), [tamanho.md](tamanho.md), controlo de conteúdo «Imagem») · **tabelas com cálculos em Excel** (folha embutida e editável no Word — [folhas_word.md](folhas_word.md)) | — | 1.0 |
 | **Teclado no iPhone/iPad** (todas as apps com cabeçalho fixo): ao abrir o teclado o cabeçalho deixa de ser fixo (`body.kbd #top{position:static}`), a caixa é trazida para o meio do ecrã se ficar tapada, e as caixas de texto só crescem enquanto se escreve (sem saltos da página) — relat 1.28.7, AvaLias 1.6.1 | — | 1.0 |
+| **Revisão do texto — REGRA PARA TODAS AS APPS** (gralhas mecânicas corrigidas automaticamente; ✓ aceitar / ↶ manter o original) | [revisao.md](revisao.md) · `comum/revisao.js` | 1.0 |
 | **Sugestões nas caixas — REGRA GERAL** (valor fundamentado com fonte ou histórico; ✓ aceitar · ✕ rejeitar · corrigir; «Aceitar todas») | [sugestoes.md](sugestoes.md) | 1.0 |
 | **Página dos documentos Word — REGRA FIXA** (A4; sup. 3,5 cm com cabeçalho a 0,5 cm; inf. 1,5; esq. 2,5; dir. 1,5; igual em todas as apps e gabinetes) | [pagina.md](pagina.md) | 1.0 |
 | Relatórios Word dos gabinetes: fontes do gabinete, títulos sem avanço (margens: ver pagina.md) | ver abaixo | 1.1 |

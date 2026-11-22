@@ -57,3 +57,4 @@ Validar destinos; perguntas de caracterização por tipo; métodos de avaliaçã
 - 1.6.1 (22/11/2026): iPhone — com o teclado aberto o cabeçalho deixa de ser fixo e a caixa fica à vista; caixas de texto sem saltos.
 - 1.7 (22/11/2026): listas revistas (tribunais, contexto processual, finalidade, tipos de ativo, destinos, NAP/NAN, execução, classe energética, utilidade, ordem alfabética); identificação cumulativa (CDP, CRP, BUPI, Outro — cada uma com o número); desfazer/refazer.
 - 1.8 (22/11/2026): prédio — registo predial, artigos matriciais (freguesia, artigo, designação, AT/ABC/ABP/ABD), documentos com áreas, área a considerar com fundamentação e diferenças (%); base de peritos comum com o ExPropria.
+- 1.8.1 (22/11/2026): revisão do texto (gralhas mecânicas corrigidas automaticamente, aceitar / manter o original) — bloco comum comum/revisao.js.
