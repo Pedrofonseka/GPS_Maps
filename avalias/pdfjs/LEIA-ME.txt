@@ -1,0 +1,2 @@
+pdf.js (pdfjs-dist 4.10.38, legacy build) — Mozilla, licença Apache 2.0 (LICENSE.txt).
+Usado pela app Relatório de Peritagem para converter anexos PDF em páginas para o Word. Carregado só quando é preciso.
