@@ -48,3 +48,4 @@ Validar destinos; perguntas de caracterização por tipo; métodos de avaliaçã
 - 1.1: capas do relat 1.28.5 (7 opções, linha após o cabeçalho, limite no quadro, centradas em altura, «👁 Ver» + «✓ Usar esta capa»); fotos das verbas.
 - 1.2 (22/11/2026): terreno de produção avaliado pelo rendimento usa a rotina de culturas do ExPropria (ver `docs/regras/culturas.md`).
 - 1.4.1 (22/11/2026): Localização com Concelho → Freguesia (tabela comum `comum/concelhos.js`, a do ExPropria) e Endereço.
+- 1.4.2 (22/11/2026): listas do contexto revistas — Aglomerado de referência, Centralidade, Envolvente, Consolidação, Padrão urbano (com NAP/NAN); valores antigos convertidos.
