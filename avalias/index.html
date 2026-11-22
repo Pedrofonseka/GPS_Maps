@@ -123,7 +123,7 @@ table.pg{width:100%;border-collapse:collapse;table-layout:fixed}table.pg td{bord
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}@media(max-width:520px){.grid2{grid-template-columns:1fr}}
 .fld{display:block}.fld>span{display:block;font-size:12.5px;color:var(--mute);margin:8px 0 3px}
 
-#prevOv{position:fixed;inset:0;z-index:9000;background:#5f6b62;display:flex;flex-direction:column}#prevOv .capas{display:flex;flex-direction:column;gap:6px;margin:4px 0 8px}.capa{display:flex;gap:6px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:6px 8px;background:#fff}.capa.on{border-color:var(--pri);box-shadow:0 0 0 2px var(--pri) inset}.capasel{flex:1;text-align:left;background:none;border:0;padding:0;color:inherit;cursor:pointer}.capasel small{display:block;color:var(--mute);font-size:11px;font-weight:400}
+#prevOv{position:fixed;inset:0;z-index:9000;background:#5f6b62;display:flex;flex-direction:column}#prevOv .capas{display:flex;flex-direction:column;gap:6px;margin:4px 0 8px}.capa{display:flex;gap:6px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:6px 8px;background:#fff}.capa.on{border-color:var(--pri);box-shadow:0 0 0 2px var(--pri) inset}.capasel{flex:1;display:block!important;min-height:0!important;text-align:left;background:none;border:0;padding:0;color:inherit;cursor:pointer}.capasel small{display:block;color:var(--mute);font-size:11px;font-weight:400}
 .pvbar{display:flex;gap:8px;align-items:center;padding:8px 10px;padding-top:max(8px,env(safe-area-inset-top));background:#E3AE1F;color:#1f2328}#prevOv .pvbar b{flex:1;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#prevOv .pvbar button{background:#fff;color:#E3AE1F;border:0;min-height:40px}#prevOv .pvscroll{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:10px 0 calc(30px + env(safe-area-inset-bottom))}#prevOv .pvzoom{transform-origin:top left}#prevOv .docx-wrapper{background:transparent!important;padding:0!important}#prevOv .docx-wrapper>section.docx{margin:0 auto 12px!important;box-shadow:0 2px 10px #0006!important}
 /* AvaLias — réguas e menus a amarelo médio, texto escuro para contraste */
 :root{--pri:#c2540f;--pri2:#c2540f;--priTx:#9a3d06;--bg:#f1eeeb;--line:#ddd7d1}#hdr{background:#34383d!important;color:#fff!important;border-bottom:3px solid #f28c28}#hdr .ver,#hdr .crumbs{color:#e9e6e3}#hdr .mini{background:#4a4f55;color:#fff;border-color:#4a4f55}#hdr .mini.on{background:#f28c28;color:#202b36;border-color:#f28c28}.secondary,button.sm,.btn:not(.green){border-color:#e3b08a}.algrp{margin:16px 0 4px;font-weight:700;color:#9a3d06;border-bottom:1px solid #ddd7d1;padding-bottom:3px}.vbpos{display:block;font-size:11.5px;font-weight:600;color:var(--mute)}.row2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}@media(max-width:520px){.row2{grid-template-columns:1fr}}.alcard{position:relative;padding-right:58px}.aldel{position:absolute;right:8px;bottom:10px;width:40px;min-height:36px;padding:0;border-radius:9px;background:#fff;color:#c62828;border:1.5px solid #e3a19c;font-size:17px}.allist{max-height:300px;overflow:auto;margin:8px 0}.tks.sm .tk{font-size:13.5px}#hdr{color:#1f2328}#hdr button{background:rgba(255,255,255,.5);color:#1f2328;border-color:rgba(0,0,0,.2)}#hdr button.on{background:#1f2328;color:#fff}h2{color:var(--priTx)}button,.btn{color:#1f2328;border-color:#c99a12}.secondary,button.sm,.btn:not(.green){background:#fff;color:var(--priTx);border-color:#d8c48a}.green,.pri{color:#fff;border-color:var(--ok)}.seg button{color:var(--priTx)}.seg button.on{background:var(--pri);color:#1f2328}.pill{color:var(--priTx)}.blk{color:#1f2328}table.st th{color:#1f2328}.steps3 b{color:#1f2328}.cd.sel{color:#1f2328}.subdesc b{color:var(--priTx)}details.sec>summary:before{color:var(--priTx)}.tk.on{background:#fbf3d6}
@@ -711,7 +711,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.1';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.1.1';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1465,7 +1465,6 @@ function relProcHTML(p){const r=ensureRel(p),col=isCol(r),part=isPart(r),hd=hdrD
     ${RL('objeto','Objeto de análise',r.objeto,'ex.: Moradia – Rua X, n.º 10 (habitação e logradouro)')}
     ${RL('funcao','Função',r.funcao,'Peritagem')}${RL('contexto','Contexto/ finalidade',r.contexto,'ex.: Ação de despejo')}
     ${part?'':`${RL('parte1','Parte 1',r.parte1)}${RL('parte2','Parte 2',r.parte2)}`}
-    <label>Tipo de capa <span class="muted">(fotografias das verbas)</span></label><div class="capas">${CAPAS.map(([k,t,d])=>`<div class="capa ${(r.capa||'fotosLoc')===k?'on':''}"><button class="capasel" data-act="rCapa" data-v="${k}"><b>${(r.capa||'fotosLoc')===k?'● ':'○ '}${t}</b><small>${d}</small></button><button class="secondary mini" data-act="capaPrev" data-v="${k}">👁 Ver</button></div>`).join('')}</div>
     ${RL('versao','Versão do relatório',r.versao,'ex.: 1.01VF ou Draft00')}<p class="muted">Nome do ficheiro (e rodapé): <b>${esc(relFileName(p))}</b></p>`;
   const nq=r.quesitos.length;
   const QW=part?['queixa','queixas','Queixa']:['quesito','quesitos','Quesito'];
@@ -1478,7 +1477,7 @@ function relProcHTML(p){const r=ensureRel(p),col=isCol(r),part=isPart(r),hd=hdrD
   const t5=`${RL('hora','Hora',r.hora,'ex.: 14:30')}<p class="muted">A data e as presenças registam-se em cada verba (3 · Visita).</p>${RT('interv','Outros intervenientes e suas funções',r.interv,2,'Não houve.')}${RT('decurso','Decurso da diligência',r.decurso,3,'Com o acompanhamento dos presentes, foi visitado o interior e exterior do edifício, para analisar as situações que vinham definidas.')}${RT('constrang','Constrangimentos, impedimentos ou dúvidas relevantes',r.constrang,2,'Nada a considerar.')}`;
   return `${blk('R · Relatório','Tipo de peritagem, capa, objeto, documentos e visita')}
   ${sec('rp1','R1 · Tipo de relatório e gabinete',t1,{cnt:pill((r.ambito==='particular'?'Particular':'Institucional')+' · '+(col?'Colegial':'Singular')+' · '+(GABS_R.find(g=>g[0]===r.gab)||['',''])[1].split(' ')[0])})}
-  ${sec('rp2','R2 · Capa — identificação',t2,{cnt:falta([r.entidade,r.parte1].filter(x=>!String(x||'').trim()).length),def:false})}
+  ${sec('rp2','R2 · Identificação (dados da capa)',t2,{cnt:falta([r.entidade,r.parte1].filter(x=>!String(x||'').trim()).length),def:false})}
   ${sec('rp3','R3 · Questões colocadas ao(s) perito(s)',t3,{cnt:pill(nq+' '+(nq===1?QW[0]:QW[1]),nq?'ok':'warn'),def:false})}
   ${sec('rp4','R4 · Elementos de apoio (documentos fornecidos)',t4,{cnt:pill(nd+' ✓'),def:false})}
   ${sec('rp5','R5 · Da visita ao local',t5,{def:false})}`}
@@ -2087,10 +2086,14 @@ function alCheck(p){const w=[];alP(p);if(!p.al.finalidade)w.push('Processo › C
 function relCheck(p){alVisCapa(p);const w=relCheck_relat(p).filter(x=>!/Data da visita|Sem coordenadas GPS|Processo › 2/.test(x));if(!p.anomalias.some(a=>a.vis?.gps))w.push('Nenhuma verba tem GPS: a capa sai sem mapa — Verbas › 2 · Localização');return [...w,...alCheck(p)]}
 function render(){const p=cur();if(p){p.anomalias.forEach(alA);if(S.sub==='ficha'&&curA())p.visita=curA().vis;else alVisCapa(p)}return render_relat()}
 /* ecrã Relatório: só o que serve a avaliação (sem os blocos de anomalias do Regi) */
+// capa: secção própria no Relatório (escolha, «👁 Ver» e «✓ Usar esta capa»); os dados da capa estão em Processo › R2
+function capaSecHTML(p){const r=ensureRel(p);const c=CAPAS.find(x=>x[0]===(r.capa||'fotosLoc'))||CAPAS[0];
+  return sec('rcapa','Capa',`<p class="muted">Escolha o tipo de capa; «👁 Ver» mostra a capa com os dados deste processo. Os dados (entidade, objeto, contexto…) estão em Processo › R2.</p>${CAP_UI(r)}`,{cnt:pill(c[1]),def:true})}
+const CAP_UI=r=>`<label>Tipo de capa <span class="muted">(fotografias das verbas)</span></label><div class="capas">${CAPAS.map(([k,t,d])=>`<div class="capa ${(r.capa||'fotosLoc')===k?'on':''}"><button class="capasel" data-act="rCapa" data-v="${k}"><b>${(r.capa||'fotosLoc')===k?'● ':'○ '}${t}</b><small>${d}</small></button><button class="secondary mini" data-act="capaPrev" data-v="${k}">👁 Ver</button></div>`).join('')}</div>`;
 function vRel(){const p=cur();const box=document.createElement('div');box.innerHTML=vRel_relat();
  box.querySelectorAll('.card.chk,details[data-key="r1"],details[data-key="r5"],details[data-key="r2"],details[data-key="r3"],details[data-key="r4"],details[data-key="rr2"]').forEach(e=>e.remove());
  const V=p.anomalias,tot=V.reduce((s,a)=>s+(alNum(a.al?.valor)||0),0),nf=V.reduce((s,a)=>s+relF(a).length,0);
- const b=box.querySelector('.blk');if(b)b.outerHTML=blk('Resultado',`${V.length} verba(s) · ${V.filter(alFeita).length} com tipo e fotos/valor · ${nf} foto(s)${tot?' · total '+alEur(tot):''}`);
+ const b=box.querySelector('.blk');if(b)b.insertAdjacentHTML('afterend',capaSecHTML(p));if(b)b.outerHTML=blk('Resultado',`${V.length} verba(s) · ${V.filter(alFeita).length} com tipo e fotos/valor · ${nf} foto(s)${tot?' · total '+alEur(tot):''}`);
  box.insertAdjacentHTML('beforeend',sec('rf','Fotografias e tamanho dos documentos',maxUI().replace('cada anomalia','cada verba')+tamHTML(p)));
  return box.innerHTML}
 

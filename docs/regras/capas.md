@@ -20,6 +20,8 @@ Rotina comum às apps que geram relatório Word com capa (Relatório de Peritage
 - Imagens: as de contextualização, se a app as tiver; senão, as das unidades (situações, verbas), baralhadas.
 - Cada opção tem «👁 Ver» (pré-visualiza só a 1.ª página, com os dados do processo) e, na pré-visualização, «✓ Usar esta capa».
 
+- A escolha da capa fica numa **secção própria «Capa»**, com o tipo escolhido no resumo da secção; os dados da capa ficam com os dados do processo.
+
 ## Testes mínimos
 1. Gerar o Word com cada opção, converter para PDF (LibreOffice) e confirmar que a página 2 é o índice (sem página em branco).
 2. «Lado a lado» com 2 e com 6 fotos: bloco centrado. «Só texto»: quadro no fundo da área útil.
@@ -28,4 +30,4 @@ Rotina comum às apps que geram relatório Word com capa (Relatório de Peritage
 | App | Versão |
 |---|---|
 | Relatório de Peritagem (relat) | 1.28.5 |
-| AvaLias (avalias) — fotos das verbas; título «Função – Relatório» | 1.1 |
+| AvaLias (avalias) — fotos das verbas; título «Função – Relatório»; escolha em **Relatório › Capa** (secção própria, aberta), dados em Processo › R2 | 1.1.1 |
