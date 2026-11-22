@@ -42,3 +42,7 @@ Validar destinos; perguntas de caracterização por tipo; métodos de avaliaçã
 - Construída a partir de `relat/index.html` com `docs/avalias/build/build.py` (+ `avalias_ext.js`, `body.js`, `lists.js`): `python3 build.py <versão> <AAAA-MM-DD>`.
 - Feito: processo (enquadramento do Relatório de Peritagem + Contexto da avaliação: finalidade, base de valor, posse, BAD); n.º de verbas ao criar; lista de verbas com eliminar no cartão; ficha em 8 secções (Detalhado/Sucinto, copiar da verba anterior, setas na mesma secção); relatório Word/PDF/ZIP com contexto, visitas, quadro-resumo (renda e BAD condicionais), notas N1–N3/BAD e análise de cada verba com fotos; troca por verba.
 - Por fazer (depois do teste): validar destinos e perguntas por tipo; métodos e cálculos; importar processos do AVA_Input 2.91; capa com mapa (precisa de rede ao gerar).
+
+## v1.1 (22/11/2026) — capas
+- A AvaLias 1.0 foi construída a partir do Relatório de Peritagem **1.3.2**; o `build.py` já não corre sobre o relat atual (1.28.x), cujas âncoras mudaram. A partir da 1.1, as melhorias do relat passam para a AvaLias **por rotina**, diretamente em `avalias/index.html`, com registo em `docs/regras/` (ex.: `capas.md`).
+- 1.1: capas do relat 1.28.5 (7 opções, linha após o cabeçalho, limite no quadro, centradas em altura, «👁 Ver» + «✓ Usar esta capa»); fotos das verbas.
