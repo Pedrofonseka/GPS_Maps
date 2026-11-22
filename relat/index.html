@@ -166,6 +166,7 @@ body.wide #app{max-width:1600px}
 .orccap{border:1px solid var(--line);border-radius:10px;padding:6px;margin:8px 0;background:#fff}.orch{display:flex;gap:6px;align-items:center}.orch input{flex:1;font-weight:600}.orct{font-weight:700;white-space:nowrap}
 table.orc td textarea{min-width:220px;font-size:12px}.orcv{text-align:right;font-weight:600}.orcres{width:100%;border-collapse:collapse;margin:8px 0;font-size:13px}.orcres th{text-align:left;background:#FFF8D6;padding:5px}.orcres td{padding:4px 6px;border-bottom:1px solid #eee}.orcres td:last-child{text-align:right;white-space:nowrap}.orcres tr.st td{font-weight:700;background:#f4f4f4}.orcres tr.tt td{font-weight:700;background:#FFF2CC}
 .orcres{table-layout:auto}.orcres select{width:auto!important;display:inline-block;padding:2px 4px;margin:0 0 0 6px;font-size:12px}
+#steps{display:flex;overflow-x:auto;scrollbar-width:none}#steps::-webkit-scrollbar{display:none}#steps button{flex:1 1 0;min-width:0;padding:6px 2px;font-size:12px;display:flex;flex-direction:column;align-items:center;line-height:1.2}#steps button b{display:block;font-size:10.5px}
 </style>
 </head>
 <body>
@@ -760,7 +761,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.28.0';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.28.1';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):parteLista(p));
@@ -1093,7 +1094,7 @@ function render(){
   const p=cur();if(!p&&PVIEWS.includes(S.view))S.view='home';
   const crumbs=p&&S.view!=='home'&&S.view!=='defs'?`${esc(p.codigo||'(sem código)')}${S.sub==='ficha'&&curA()?' › '+anCode(p,curA()):''}`:'';
   $('#hdr').innerHTML=`<h1 data-act="go" data-v="home">Relatório de Peritagem</h1><span class="ver">v${VERSION} · ${VERSION_DATA.split('-').reverse().join('/')}</span><div class="crumbs">${crumbs}</div>${p&&S.view!=='home'&&S.view!=='defs'?`<button class="mini undobtn" data-act="undo" title="Desfazer (Ctrl/⌘+Z)" aria-label="Desfazer" ${hk(p).u.length?'':'disabled'}>↶</button><button class="mini undobtn" data-act="redo" title="Refazer (Ctrl/⌘+Y)" aria-label="Refazer" ${hk(p).r.length?'':'disabled'}>↷</button>`:''}<button class="mini menubtn ${bkWarn()?'dot':''}" data-act="menu" aria-label="Menu">☰ Menu</button>`;
-  const ST=p&&PVIEWS.includes(S.view)?stepState(p):{};const OPT=v=>v==='orc'&&!orcHas(p);$('#steps').innerHTML=p&&PVIEWS.includes(S.view)?PSTEPS.map(([v,n,t])=>`<button class="${S.view===v?'on':''}" data-act="go" data-v="${v}" title="${ST[v]?ST[v]+' por completar':'completo'}"><b>${n} <i class="stp ${OPT(v)?'':ST[v]?'w':'k'}">${OPT(v)?'○':ST[v]?'●':'✓'}</i></b> ${t}</button>`).join(''):'';
+  const ST=p&&PVIEWS.includes(S.view)?stepState(p):{};const OPT=v=>v==='orc'&&!orcHas(p);$('#steps').innerHTML=p&&PVIEWS.includes(S.view)?PSTEPS.map(([v,n,t])=>`<button class="${S.view===v?'on':''}" data-act="go" data-v="${v}" title="${ST[v]?ST[v]+' por completar':'completo'}"><b>${n} <i class="stp ${OPT(v)?'':ST[v]?'w':'k'}">${OPT(v)?'○':ST[v]?'●':'✓'}</i></b> ${t}</button>`).join(''):'';{const on=document.querySelector('#steps button.on');if(on&&on.scrollIntoView)on.scrollIntoView({inline:'nearest',block:'nearest'})}
   $('#steps').style.display=$('#steps').innerHTML?'':'none';
   let html;
   if(S.sub==='ficha'&&curA())html=vFicha();else if(S.sub==='imp'&&p)html=vImport();
