@@ -18,13 +18,14 @@ Ao melhorar uma rotina numa app, atualizar o ficheiro respetivo e a tabela «Ond
 | Verificação de gralhas e coerência (Word gerado e importado) | [verificacao.md](verificacao.md) | 1.0 |
 | Cálculos no Word como folha de cálculo embutida (editável) | [folhas_word.md](folhas_word.md) | 1.0 |
 | Marcas nas fotografias (setas, círculos, letras, texto, balões) | [marcas_fotos.md](marcas_fotos.md) | 1.0 |
+| **Sugestões nas caixas — REGRA GERAL** (valor fundamentado com fonte ou histórico; ✓ aceitar · ✕ rejeitar · corrigir; «Aceitar todas») | [sugestoes.md](sugestoes.md) | 1.0 |
 | **Página dos documentos Word — REGRA FIXA** (A4; sup. 3,5 cm com cabeçalho a 0,5 cm; inf. 1,5; esq. 2,5; dir. 1,5; igual em todas as apps e gabinetes) | [pagina.md](pagina.md) | 1.0 |
 | Relatórios Word dos gabinetes: fontes do gabinete, títulos sem avanço (margens: ver pagina.md) | ver abaixo | 1.1 |
 | Prioridade GUT (Gravidade × Urgência × Tendência) | ver abaixo | 1.0 |
 | Revisão do texto antes de exportar (gralhas, ortografia pt-PT, redundâncias, coerência) | ver abaixo | 1.0 |
 | Apoio de análise de fotografias por IA (sugestão, opcional) | ver abaixo | 1.1 |
 | Capas do relatório Word (7 opções, centradas, pré-visualização) | [capas.md](capas.md) | 1.0 |
-| **Terrenos TOF — motor comum `comum/tof.js`** (valores de referência + rendimento das culturas; biblioteca de referências por ficheiro; sincronização `tools/sync_comum.py`) — ExPropria e AvaLias | [culturas.md](culturas.md) | 1.0 |
+| **Terrenos TOF — motor comum `comum/tof.js`** (valores de referência + rendimento das culturas com valores por defeito fundamentados; PDM e acessos/infraestruturas do CE nos terrenos; biblioteca de referências por ficheiro; sincronização `tools/sync_comum.py`) — ExPropria e AvaLias | [culturas.md](culturas.md) | 1.0 |
 | **Motores comuns** (`comum/*.js`, copiados para dentro das apps entre `@comum:<nome>` e `@fim:<nome>`; nunca editar nas apps) | `tools/sync_comum.py` | 1.0 |
 
 ### Imagens no Word — controlo de conteúdo
