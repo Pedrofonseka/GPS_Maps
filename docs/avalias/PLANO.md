@@ -46,3 +46,4 @@ Validar destinos; perguntas de caracterização por tipo; métodos de avaliaçã
 ## v1.1 (22/11/2026) — capas
 - A AvaLias 1.0 foi construída a partir do Relatório de Peritagem **1.3.2**; o `build.py` já não corre sobre o relat atual (1.28.x), cujas âncoras mudaram. A partir da 1.1, as melhorias do relat passam para a AvaLias **por rotina**, diretamente em `avalias/index.html`, com registo em `docs/regras/` (ex.: `capas.md`).
 - 1.1: capas do relat 1.28.5 (7 opções, linha após o cabeçalho, limite no quadro, centradas em altura, «👁 Ver» + «✓ Usar esta capa»); fotos das verbas.
+- 1.2 (22/11/2026): terreno de produção avaliado pelo rendimento usa a rotina de culturas do ExPropria (ver `docs/regras/culturas.md`).
