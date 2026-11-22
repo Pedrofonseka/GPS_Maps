@@ -760,7 +760,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.27.0';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.28.0';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):parteLista(p));
@@ -1084,22 +1084,22 @@ async function rotateFoto(f){const i=await loadImg(fd(f));const c=document.creat
 // ---------- Render ----------
 // Ecrãs: home (Processos) · proc (Processo) · anom (Anomalias) · rel (Relatório) · defs (Definições); sub: ficha | imp
 // fases do trabalho (separadores do processo)
-const PSTEPS=[['proc','1','Processo'],['anom','2','Situações'],['insp','3','Inspeção'],['anal','4','Análise'],['rel','5','Relatório']];const PVIEWS=PSTEPS.map(x=>x[0]);
+const PSTEPS=[['proc','1','Processo'],['anom','2','Situações'],['insp','3','Inspeção'],['anal','4','Análise'],['orc','5','Custos'],['rel','6','Relatório']];const PVIEWS=PSTEPS.map(x=>x[0]);
 // estado de cada fase (régua): n.º de coisas por completar
-function stepState(p){const r=ensureRel(p),W=relCheck(p),o={proc:0,anom:0,insp:0,anal:0,rel:0};for(const w of W){if(/1 · Processo/.test(w))o.proc++;else if(/3 · Inspeção/.test(w))o.insp++;else if(/2 · Situações/.test(w))o.anom++;else if(/4 · Análise/.test(w))o.anal++;else o.rel++}
+function stepState(p){const r=ensureRel(p),W=relCheck(p),o={proc:0,anom:0,insp:0,anal:0,orc:0,rel:0};for(const w of W){if(/1 · Processo/.test(w))o.proc++;else if(/3 · Inspeção/.test(w))o.insp++;else if(/2 · Situações/.test(w))o.anom++;else if(/4 · Análise/.test(w))o.anal++;else o.rel++}
   const an=p.anomalias;if(an.some(a=>!String(a.descricao||'').trim()))o.anom++;o.anal+=an.filter(a=>!isDone(a)).length;if(!mtxt(r,'passos')&&r.incPassos!==false)o.anal++;return o}
 function render(){
   document.title=`Relatório de Peritagem · ${VERSION}`;
   const p=cur();if(!p&&PVIEWS.includes(S.view))S.view='home';
   const crumbs=p&&S.view!=='home'&&S.view!=='defs'?`${esc(p.codigo||'(sem código)')}${S.sub==='ficha'&&curA()?' › '+anCode(p,curA()):''}`:'';
   $('#hdr').innerHTML=`<h1 data-act="go" data-v="home">Relatório de Peritagem</h1><span class="ver">v${VERSION} · ${VERSION_DATA.split('-').reverse().join('/')}</span><div class="crumbs">${crumbs}</div>${p&&S.view!=='home'&&S.view!=='defs'?`<button class="mini undobtn" data-act="undo" title="Desfazer (Ctrl/⌘+Z)" aria-label="Desfazer" ${hk(p).u.length?'':'disabled'}>↶</button><button class="mini undobtn" data-act="redo" title="Refazer (Ctrl/⌘+Y)" aria-label="Refazer" ${hk(p).r.length?'':'disabled'}>↷</button>`:''}<button class="mini menubtn ${bkWarn()?'dot':''}" data-act="menu" aria-label="Menu">☰ Menu</button>`;
-  const ST=p&&PVIEWS.includes(S.view)?stepState(p):{};$('#steps').innerHTML=p&&PVIEWS.includes(S.view)?PSTEPS.map(([v,n,t])=>`<button class="${S.view===v?'on':''}" data-act="go" data-v="${v}" title="${ST[v]?ST[v]+' por completar':'completo'}"><b>${n} <i class="stp ${ST[v]?'w':'k'}">${ST[v]?'●':'✓'}</i></b> ${t}</button>`).join(''):'';
+  const ST=p&&PVIEWS.includes(S.view)?stepState(p):{};const OPT=v=>v==='orc'&&!orcHas(p);$('#steps').innerHTML=p&&PVIEWS.includes(S.view)?PSTEPS.map(([v,n,t])=>`<button class="${S.view===v?'on':''}" data-act="go" data-v="${v}" title="${ST[v]?ST[v]+' por completar':'completo'}"><b>${n} <i class="stp ${OPT(v)?'':ST[v]?'w':'k'}">${OPT(v)?'○':ST[v]?'●':'✓'}</i></b> ${t}</button>`).join(''):'';
   $('#steps').style.display=$('#steps').innerHTML?'':'none';
   let html;
   if(S.sub==='ficha'&&curA())html=vFicha();else if(S.sub==='imp'&&p)html=vImport();
-  else{S.sub=null;html=({home:vHome,proc:vProc,anom:vAnoms,insp:vInsp,anal:vAnal,rel:vRel,defs:vDefs,bk:vBk}[S.view]||vHome)()}
+  else{S.sub=null;html=({home:vHome,proc:vProc,anom:vAnoms,insp:vInsp,anal:vAnal,orc:vOrc,rel:vRel,defs:vDefs,bk:vBk}[S.view]||vHome)()}
   $('#sub').innerHTML=S.sub==='ficha'?(S.subNav||''):'';$('#sub').style.display=S.sub==='ficha'?'':'none';
-  document.body.classList.toggle('wide',S.view==='anal'&&(S.theme==='mx'||S.open.orc)&&S.sub!=='ficha');
+  document.body.classList.toggle('wide',(S.view==='orc'||S.view==='anal'&&S.theme==='mx')&&S.sub!=='ficha');
   $('#app').innerHTML=html;{let b=document.getElementById('rvbarBox');if(!b){b=document.createElement('div');b.id='rvbarBox';document.body.appendChild(b)}b.innerHTML=rvBarHTML()}
   document.querySelectorAll('#app textarea').forEach(autosize);
   if(S.keepSec){const d=document.querySelector(`#app details.sec[data-key="${S.keepSec}"]`);if(d){d.open=true;window.scrollTo(0,Math.max(0,window.scrollY+d.getBoundingClientRect().top-(S.keepOff||0)))}else window.scrollTo(0,0);S.keepSec=null;S.scrollTop=undefined}
@@ -1112,10 +1112,10 @@ function fieldOn(p,f){return !!p.use?.[f.id]}
 function inp(bind,label,val,ph=''){return `<label>${esc(label)}</label><input data-bind="${bind}" value="${esc(val)}" placeholder="${esc(ph)}">`}
 function txt(bind,label,val,rows=3,fav){return `${label?`<label>${esc(label)}</label>`:''}<textarea data-bind="${bind}" rows="${rows}">${esc(val)}</textarea>${fav?favBar(fav,bind):''}`}
 // frases guardadas por campo (biblioteca técnica do perito, para todos os processos): inserir com um toque; guardar o texto selecionado
-const FAV_LBL={'f:causas':'Causas hipotéticas','f:medidas':'Solução proposta','f:sondagens':'Medições e sondagens','f:obs':'Observações','com':'Comentário da análise','r:causasG':'Possíveis causas (apreciação geral)','r:conseqComp':'Consequências — texto complementar','r:passos':'Passos seguintes','r:constrang':'Constrangimentos','r:ctxNota':'Contextualização','r:decurso':'Percurso da inspeção','r:docsCom':'Outros elementos ou fundamentos','r:interv':'Outros intervenientes'};
+const FAV_LBL={'orc:desc':'Descrição dos trabalhos sugeridos','f:causas':'Causas hipotéticas','f:medidas':'Solução proposta','f:sondagens':'Medições e sondagens','f:obs':'Observações','com':'Comentário da análise','r:causasG':'Possíveis causas (apreciação geral)','r:conseqComp':'Consequências — texto complementar','r:passos':'Passos seguintes','r:constrang':'Constrangimentos','r:ctxNota':'Contextualização','r:decurso':'Percurso da inspeção','r:docsCom':'Outros elementos ou fundamentos','r:interv':'Outros intervenientes'};
 function favBar(k,bind){const L=(settings.fav||{})[k]||[];return `<div class="favbar">${L.length?`<select data-act="favIns" data-k="${k}" data-tgt="${bind}"><option value="">📚 Inserir frase guardada (${L.length})…</option>${L.map((t,i)=>`<option value="${i}">${esc(t.length>90?t.slice(0,88)+'…':t)}</option>`).join('')}</select>`:''}<button class="secondary mini" data-act="favAdd" data-k="${k}" data-tgt="${bind}" title="Guarda o texto selecionado (ou a última linha) para usar noutros processos">＋ Guardar frase</button></div>`}
-function bindGet(p,a,b){const [sc,k]=b.split('.');return sc==='r'?ensureRel(p)[k]:sc==='a'?a?.[k]:sc==='v'?a?.vals?.[k]:''}
-function bindSet(p,a,b,v){const [sc,k]=b.split('.');if(sc==='r')ensureRel(p)[k]=v;else if(sc==='a')a[k]=v;else if(sc==='v'){a.vals=a.vals||{};a.vals[k]=v}}
+function bindGet(p,a,b){const [sc,k]=b.split('.');return sc==='orc'?orcE(p)[k]:sc==='r'?ensureRel(p)[k]:sc==='a'?a?.[k]:sc==='v'?a?.vals?.[k]:''}
+function bindSet(p,a,b,v){const [sc,k]=b.split('.');if(sc==='orc')orcE(p)[k]=v;else if(sc==='r')ensureRel(p)[k]=v;else if(sc==='a')a[k]=v;else if(sc==='v'){a.vals=a.vals||{};a.vals[k]=v}}
 // secção recolhível (estado guardado em S.open)
 function sec(key,title,body,{cnt='',def=true}={}){const open=S.open[key]??def;return `<details class="sec" data-key="${key}" ${open?'open':''}><summary>${title}<span class="cnt">${cnt}</span></summary><div class="body">${body}</div></details>`}
 const pill=(t,c='')=>`<span class="pill ${c}">${t}</span>`;
@@ -1212,7 +1212,7 @@ function vAnal(){const p=cur(),an=p.anomalias,done=an.filter(isDone).length;cons
       const inner=S.theme==='fotos'?fotosSecHTML(a,true):S.theme==='com'?txt('a.comentario','',a.comentario,3):f?(f.id==='conf'&&a.origem==='local'?'<p class="muted">Sem status — constatada pelo perito.</p>':fieldUI(f,a)):'';
       return `<div class="card thc" data-aid="${a.id}"><div class="thh"><b>${anCode(p,a)}</b> <span class="muted">${hh}</span><button class="secondary mini" data-act="openAnom" data-id="${a.id}" style="float:right">ficha ›</button>${a.descricao?`<div class="muted clamp">${esc(a.descricao)}</div>`:''}</div>${inner}</div>`}).join('')}
   return head+body+`<details class="sec" data-key="aCfg" ${S.open.aCfg?'open':''}><summary>⚙ Configuração da análise (campos a atender e títulos)</summary><div class="body">${secCampos(p)}${secLogica(p)}</div></details>`
-    +blk('Conclusões','Apreciação geral, passos seguintes e estimativa de custos')+relRelHTML(p,'anal')+orcSecHTML(p)+nextBtn('rel','5 · Relatório')}
+    +blk('Conclusões','Apreciação geral e passos seguintes')+relRelHTML(p,'anal')+nextBtn('orc','5 · Custos')}
 function anomCard(a,i,n,mode){
   const p=cur();const st=isDone(a)?pill('✓ analisada','ok'):pill('por analisar','warn');
   const vals=[];if(useK(p,'conf')&&a.vals?.conf)vals.push(esc(a.vals.conf));if(useK(p,'cons')&&a.vals?.cons?.length)vals.push(esc(a.vals.cons.filter(x=>x!=='OUT').join(', ')));if(useK(p,'tipo')&&a.vals?.tipo?.length)vals.push(esc(a.vals.tipo.join(', ')));
@@ -1355,7 +1355,7 @@ function vRel(){const p=cur();const nf=p.anomalias.reduce((s,a)=>s+relF(a).lengt
   const RC=relCheck(p);
   const chk=W.length||RC.length?`<div class="card chk"><b>Antes de gerar, confirme:</b>${W.map(([t,act,sub])=>{const [ac,id]=act.split(':');return `<div class="chkrow"><span>⚠︎ ${esc(t)}${sub?`<br><small>${esc(sub)}</small>`:''}</span><button class="secondary mini" data-act="${ac}" ${id?`data-id="${id}"`:''}>Ver ›</button></div>`}).join('')}${RC.map(t=>`<div class="chkrow"><span>⚠︎ ${esc(t)}</span></div>`).join('')}${S.imgOk?`<div class="muted" style="margin-top:6px">${esc(S.imgOk)}</div>`:''}</div>`:`<div class="card chk ok">✓ Tudo analisado e preenchido.${S.imgOk?'<br>'+esc(S.imgOk):''}</div>`;
   const r=ensureRel(p);
-  return `<h2>5 · Relatório</h2>${blk('Resultado da análise',`${an.length} situaç${an.length===1?'ão':'ões'} · ${done} analisada${done===1?'':'s'} · ${nf} foto${nf===1?'':'s'}`)}${chk}
+  return `<h2>6 · Relatório</h2>${blk('Resultado da análise',`${an.length} situaç${an.length===1?'ão':'ões'} · ${done} analisada${done===1?'':'s'} · ${nf} foto${nf===1?'':'s'}`)}${chk}
   ${sec('r5','Resumo de análise',`${tickBox('',!!p.printStats,'Incluir o «Resumo de análise» no relatório','data-act="tkStats"')}
       ${p.printStats?`<label>Quadros que saem (pela ordem do relatório)</label><div class="tks col">${(()=>{const av=computeStats(p).map(t=>t.key),N={qtd:'Quantidade de situações → confirmadas',tipo:'Tipo de situações',flash:'Relevância (quadro-resumo de prioridades: importância, consequência, urgência)',gut:'Prioridade',cons:'Gravidade',urg:'Urgência',hier:'Local (NUF / Piso / Local / Elemento)'};return RESUMO_ORD.filter(k=>['qtd','flash','hier'].includes(k)||av.includes(k)).map(k=>[k,N[k]])})().map(([k,t])=>tickBox('',statOn(p,k),t,`data-act="tkStat" data-k="${k}"`)).join('')}</div>
       ${RL('resumoIntro','Frase de abertura',r.resumoIntro,RESUMO_INTRO)}`:''}${RT('nota','Nota (sai a seguir aos quadros)',r.nota,3)}
@@ -1482,7 +1482,7 @@ function vDefs(){
   ${sec('dr','Fotografias e valores no Word',`<div class="tks col">${tickBox('',settings.txtPhotos!==false,'Análise com fotografias','data-act="tkExp" data-k="txtPhotos"')}</div><label>Grelha de fotografias</label><div class="seg">${[1,2,3].map(n=>`<button class="${settings.photoCols==n?'on':''}" data-act="setCols" data-v="${n}">${n} coluna${n>1?'s':''}</button>`).join('')}</div>${maxUI()}
     <label>Valores de escolha no Word</label><select data-set="printStyle"><option value="both" ${settings.printStyle==='both'?'selected':''}>Código (descrição) — ex.: 2-EPR (Estético pouco relevante)</option><option value="code" ${settings.printStyle==='code'?'selected':''}>Só código — ex.: 2-EPR</option><option value="text" ${settings.printStyle==='text'?'selected':''}>Só descrição — ex.: Estético pouco relevante</option></select>`)}
   ${blk('D · Fotografias')}
-  ${sec('dp','Resolução',`<label>Resolução das fotos</label><div class="seg">${[[50,'50 KB'],[150,'150 KB'],[300,'300 KB'],[500,'500 KB']].map(([v,t])=>`<button class="${settings.photoKB==v?'on':''}" data-act="setNum" data-k="photoKB" data-v="${v}">${t}</button>`).join('')}</div><p class="muted">50 mínima · 150 baixa (recomendada) · 300 razoável · 500 média. O número máximo de fotos por assunto escolhe-se em «Fotografias e valores no Word» (acima) ou em 5 · Relatório.</p>`)}
+  ${sec('dp','Resolução',`<label>Resolução das fotos</label><div class="seg">${[[50,'50 KB'],[150,'150 KB'],[300,'300 KB'],[500,'500 KB']].map(([v,t])=>`<button class="${settings.photoKB==v?'on':''}" data-act="setNum" data-k="photoKB" data-v="${v}">${t}</button>`).join('')}</div><p class="muted">50 mínima · 150 baixa (recomendada) · 300 razoável · 500 média. O número máximo de fotos por assunto escolhe-se em «Fotografias e valores no Word» (acima) ou em 6 · Relatório.</p>`)}
   ${blk('E · Cópias de segurança')}${bkBarHTML()}
   <p class="muted center">Relatório de Peritagem · v${VERSION} · ${VERSION_DATA.split('-').reverse().join('/')}</p>`;
 }
@@ -1923,7 +1923,7 @@ function relCheck(p){const r=ensureRel(p),col=isCol(r),part=isPart(r),w=[];const
   if(!r.quesitos.length)w.push((part?'Sem queixas':'Sem quesitos')+' — 1 · Processo › R3');
   const sr=r.quesitos.filter(q=>!v(q.resp)&&!(col&&r.peritos.some((_,j)=>v(q.rp?.[j])))).length;if(sr)w.push(`${sr} quesito(s) sem resposta — 4 · Análise › Resposta ao solicitado`);
   if(col){if(r.peritos.length<2)w.push('Peritagem colegial com menos de 2 peritos — 1 · Processo › R1');if(r.peritos.some(x=>!v(x.nome)))w.push('Há peritos sem nome — 1 · Processo › R1');
-    const semC=r.quesitos.filter(q=>!v(q.resp)).length;if(semC&&r.quesitos.length)w.push(`${semC} quesito(s) sem resposta de consenso (saem as respostas de cada perito)`);if(!r.unan&&!v(r.discord))w.push('Posições discordantes por descrever — 5 · Relatório › Termo')}
+    const semC=r.quesitos.filter(q=>!v(q.resp)).length;if(semC&&r.quesitos.length)w.push(`${semC} quesito(s) sem resposta de consenso (saem as respostas de cada perito)`);if(!r.unan&&!v(r.discord))w.push('Posições discordantes por descrever — 6 · Relatório › Termo')}
   if(!p.anomalias.length)w.push('Sem situações registadas — 2 · Situações');
   return w}
 const isCol=r=>r.modo==='colegial',isPart=r=>r.ambito==='particular';
@@ -1967,6 +1967,27 @@ const qfmt=v=>n2(v);
 const artT=a=>Math.round(numPT(a.q)*numPT(a.pu)*100)/100,capT=c=>c.arts.reduce((t,a)=>t+artT(a),0);
 function orcTot(p){const o=orcE(p),sub=o.caps.reduce((t,c)=>t+capT(c),0),iva=Math.round(sub*(+o.iva||0))/100;return {sub,iva,tot:sub+iva}}
 const orcHas=p=>!!(p.orc&&p.orc.caps.some(c=>c.arts.length));
+// ===== 5 · Custos: descrição dos trabalhos sugeridos · medição · estimativa de custo =====
+function vOrc(){const p=cur(),o=orcE(p),T=orcTot(p),V=S.orcV||'med';
+  const sols=p.anomalias.filter(a=>String(a.vals?.medidas||'').trim()).length;
+  const tabs=[['med','📐 Medição'],['est','💶 Estimativa de custo'],['res','Σ Resumo']];
+  const capHead=(c,ci)=>`<div class="orch"><b>${ci+1}</b><input data-act="orcSet" data-c="${ci}" data-k="t" value="${esc(c.t||'')}" placeholder="Capítulo (ex.: Impermeabilização do terraço)"><span class="orct">${V==='med'?c.arts.length+' art.':eur(capT(c))}</span><button class="secondary mini" data-act="orcMv" data-c="${ci}" data-d="-1" ${ci?'':'disabled'}>▲</button><button class="del mini" data-act="orcDelCap" data-c="${ci}">✕</button></div>`;
+  const medT=(c,ci)=>`<div class="mxw orcw"><table class="mx orc"><thead><tr><th>Art.</th><th>Descrição do trabalho</th><th>Un</th><th>Quantidade</th><th>Situações</th><th></th></tr></thead><tbody>${c.arts.map((a,ai)=>`<tr><td><b>${ci+1}.${ai+1}</b></td><td><textarea rows="2" data-act="orcSet" data-c="${ci}" data-a="${ai}" data-k="d" placeholder="Descrição do trabalho">${esc(a.d||'')}</textarea></td><td><select data-act="orcSet" data-c="${ci}" data-a="${ai}" data-k="un">${ORC_UN.map(u=>`<option ${a.un===u?'selected':''}>${u}</option>`).join('')}</select></td><td><input inputmode="decimal" data-act="orcSet" data-c="${ci}" data-a="${ai}" data-k="q" value="${esc(a.q??'')}" style="width:80px"></td><td><input data-act="orcSet" data-c="${ci}" data-a="${ai}" data-k="sit" value="${esc(a.sit||'')}" placeholder="S.001" style="width:70px"></td><td><button class="del mini" data-act="orcDelArt" data-c="${ci}" data-a="${ai}">✕</button></td></tr>`).join('')}</tbody></table></div><div class="btns"><button class="secondary mini" data-act="orcAddArt" data-c="${ci}">+ Artigo</button><button class="secondary mini" data-act="orcPaste" data-c="${ci}">📋 Colar do Excel</button></div>`;
+  const estT=(c,ci)=>`<div class="mxw orcw"><table class="mx orc"><thead><tr><th>Art.</th><th>Descrição</th><th>Un</th><th>Qtd</th><th>Preço unit. (€)</th><th>Total</th></tr></thead><tbody>${c.arts.map((a,ai)=>`<tr><td><b>${ci+1}.${ai+1}</b></td><td style="white-space:normal;min-width:200px">${esc(a.d||'—')}</td><td>${esc(a.un||'')}</td><td class="orcv">${qfmt(numPT(a.q))}</td><td><input inputmode="decimal" data-act="orcSet" data-c="${ci}" data-a="${ai}" data-k="pu" value="${esc(a.pu??'')}" style="width:90px"></td><td class="orcv">${eur(artT(a))}</td></tr>`).join('')}<tr><td></td><td colspan="4" style="text-align:right"><b>Total do capítulo ${ci+1}</b></td><td class="orcv">${eur(capT(c))}</td></tr></tbody></table></div>`;
+  const resumo=`<table class="orcres"><tr><th colspan="2">Resumo por capítulos</th></tr>${o.caps.map((c,ci)=>`<tr><td>${ci+1}. ${esc(c.t||'(sem título)')}</td><td>${eur(capT(c))}</td></tr>`).join('')}<tr class="st"><td>Total (sem IVA)</td><td>${eur(T.sub)}</td></tr><tr><td>IVA <select data-act="orcSet" data-k="iva">${[0,6,13,23].map(v=>`<option value="${v}" ${+o.iva===v?'selected':''}>${v} %</option>`).join('')}</select></td><td>${eur(T.iva)}</td></tr><tr class="tt"><td>Total (com IVA)</td><td>${eur(T.tot)}</td></tr></table>`;
+  return `<h2>5 · Custos</h2><p class="muted" style="margin-top:-6px">Opcional — quando é pedida a descrição dos trabalhos, a medição ou a estimativa de custo.</p>
+  ${blk('1 · Descrição dos trabalhos sugeridos','Texto e capítulos dos trabalhos')}
+  <div class="card"><label>Descrição dos trabalhos sugeridos <span class="muted">(sai antes do quadro)</span></label><textarea data-act="orcSet" data-k="desc" rows="4" placeholder="Ex.: Os trabalhos de reparação compreendem a remoção do revestimento do terraço, a reformulação da impermeabilização…">${esc(o.desc||'')}</textarea>${favBar('orc:desc','orc.desc')}
+   <div class="btns"><button class="secondary mini" data-act="orcFromSol" ${sols?'':'disabled'}>⤵ Criar capítulos a partir das soluções propostas (${sols})</button><button class="green mini" data-act="orcAddCap">+ Capítulo</button></div></div>
+  ${blk('2 · Medição e 3 · Estimativa de custo','Capítulos › artigos')}
+  <div class="seg" style="margin:6px 0">${tabs.map(([k,t])=>`<button class="${V===k?'on':''}" data-act="orcV" data-v="${k}">${t}</button>`).join('')}</div>
+  ${!o.caps.length?'<p class="muted">Ainda não há capítulos — use «+ Capítulo» ou crie-os a partir das soluções propostas.</p>':V==='res'?resumo:o.caps.map((c,ci)=>`<div class="orccap">${capHead(c,ci)}${V==='med'?medT(c,ci):estT(c,ci)}</div>`).join('')}
+  ${o.caps.length&&V!=='res'?`<div class="card" style="text-align:right"><b>${V==='med'?o.caps.reduce((n,c)=>n+c.arts.length,0)+' artigo(s)':'Total (sem IVA): '+eur(T.sub)+' · com IVA: '+eur(T.tot)}</b></div>`:''}
+  ${blk('No relatório','O que sai e onde')}
+  <div class="card"><label>Conteúdo</label>${segR('orcMode',[['med','Só medição (sem preços)'],['orc','Medição e estimativa de custo']],o.modo||'orc')}<label>Onde</label>${segR('orcOut',[['cap','Capítulo próprio (antes do termo)'],['anexo','Em anexo'],['nao','Não sai']],o.out||'cap')}
+   ${o.out!=='nao'?`<label>Frase de abertura</label><input data-act="orcSet" data-k="intro" value="${esc(o.intro||'')}">`:''}${(o.modo||'orc')==='orc'?`<label>Nota (por baixo do resumo)</label><textarea rows="2" data-act="orcSet" data-k="nota">${esc(o.nota||'')}</textarea>`:''}
+   <div class="btns">${orcHas(p)?'<button class="secondary" data-act="orcXlsx">📊 Excel (com fórmulas)</button>':''}</div></div>
+  ${nextBtn('rel','6 · Relatório')}`}
 function orcSecHTML(p){const o=orcE(p),T=orcTot(p);
   const head=`<p class="muted" style="margin-top:0">Capítulos e artigos com quantidade, unidade e preço; os totais e o resumo por capítulos calculam-se sozinhos. Números com vírgula (ex.: 12,5).</p>
    <label>No relatório</label>${segR('orcOut',[['cap','Capítulo próprio (antes do termo)'],['anexo','Em anexo'],['nao','Não sai (só Excel)']],o.out||'cap')}
@@ -2299,11 +2320,12 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
   const sign=()=>col?r.peritos.map(pe=>P('',{sp:[360,0]})+P(R('_______________________________________'))+P(R(pe.nome||'',{b:true}))+P(R(represR(r,pe),{i:true,sz:9}))).join(''):P('',{sp:[360,0]})+P(R('_______________________________________'))+P(R(String(settings.peritoNome||'').trim()||'Pedro Fonseca, Eng.',{b:true}));
   const dEnc=(()=>{const d=String(r.dataEnc||'').trim()||mesAno();return d.charAt(0).toUpperCase()+d.slice(1)})();
   // medições e orçamento (estimativa de custos): quadro de artigos por capítulo + resumo por capítulos + IVA
-  const orcXml=()=>{const o=orcE(p),OT=orcTot(p),W=[850,4700,600,950,1200,1338];const fx=(t,o2={})=>`<w:p><w:pPr><w:spacing w:before="20" w:after="20"/>${o2.jc?`<w:jc w:val="${o2.jc}"/>`:''}</w:pPr>${R(t,{sz:8.5,b:o2.b})}</w:p>`;
+  const orcXml=()=>{const o=orcE(p),OT=orcTot(p),MED=(o.modo||'orc')==='med',W=MED?[850,6450,900,1438]:[850,4700,600,950,1200,1338];const fx=(t,o2={})=>`<w:p><w:pPr><w:spacing w:before="20" w:after="20"/>${o2.jc?`<w:jc w:val="${o2.jc}"/>`:''}</w:pPr>${R(t,{sz:8.5,b:o2.b})}</w:p>`;
     const tc=(w,c,o2={})=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${o2.span?`<w:gridSpan w:val="${o2.span}"/>`:''}${o2.sh?`<w:shd w:val="clear" w:color="auto" w:fill="${o2.sh}"/>`:''}<w:vAlign w:val="center"/></w:tcPr>${c}</w:tc>`;
     const brd=`<w:tblBorders><w:top w:val="single" w:sz="4" w:color="808080"/><w:bottom w:val="single" w:sz="4" w:color="808080"/><w:insideH w:val="single" w:sz="2" w:color="BFBFBF"/><w:left w:val="nil"/><w:right w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders>`;
-    let rows=`<w:tr><w:trPr><w:tblHeader/><w:cantSplit/></w:trPr>${['Art.','Descrição','Un','Qtd','Preço unit.','Total'].map((h,j)=>tc(W[j],fx(h,{b:true,jc:j>2?'right':j===2?'center':''}),{sh:'D9D9D9'})).join('')}</w:tr>`;
-    o.caps.forEach((c,ci)=>{if(!c.arts.length)return;rows+=`<w:tr><w:trPr><w:cantSplit/></w:trPr>${tc(W[0],fx(String(ci+1),{b:true}),{sh:'F2F2F2'})}${tc(W[1]+W[2]+W[3]+W[4]+W[5],fx(c.t||'',{b:true}),{span:5,sh:'F2F2F2'})}</w:tr>`;
+    let rows=`<w:tr><w:trPr><w:tblHeader/><w:cantSplit/></w:trPr>${(MED?['Art.','Descrição','Un','Quantidade']:['Art.','Descrição','Un','Qtd','Preço unit.','Total']).map((h,j)=>tc(W[j],fx(h,{b:true,jc:j>2?'right':j===2?'center':''}),{sh:'D9D9D9'})).join('')}</w:tr>`;
+    const SW=W.slice(1).reduce((a,b)=>a+b,0);o.caps.forEach((c,ci)=>{if(!c.arts.length)return;rows+=`<w:tr><w:trPr><w:cantSplit/></w:trPr>${tc(W[0],fx(String(ci+1),{b:true}),{sh:'F2F2F2'})}${tc(SW,fx(c.t||'',{b:true}),{span:W.length-1,sh:'F2F2F2'})}</w:tr>`;
+      if(MED){c.arts.forEach((a,ai)=>{rows+=`<w:tr><w:trPr><w:cantSplit/></w:trPr>${tc(W[0],fx(`${ci+1}.${ai+1}`))}${tc(W[1],fx(a.d||''))}${tc(W[2],fx(a.un||'',{jc:'center'}))}${tc(W[3],fx(qfmt(numPT(a.q)),{jc:'right'}))}</w:tr>`});return}
       c.arts.forEach((a,ai)=>{rows+=`<w:tr><w:trPr><w:cantSplit/></w:trPr>${tc(W[0],fx(`${ci+1}.${ai+1}`))}${tc(W[1],fx(a.d||''))}${tc(W[2],fx(a.un||'',{jc:'center'}))}${tc(W[3],fx(qfmt(numPT(a.q)),{jc:'right'}))}${tc(W[4],fx(eur(numPT(a.pu)),{jc:'right'}))}${tc(W[5],fx(eur(artT(a)),{jc:'right'}))}</w:tr>`});
       rows+=`<w:tr><w:trPr><w:cantSplit/></w:trPr>${tc(W[0]+W[1]+W[2]+W[3]+W[4],fx(`Total do capítulo ${ci+1}`,{b:true,jc:'right'}),{span:5})}${tc(W[5],fx(eur(capT(c)),{b:true,jc:'right'}))}</w:tr>`});
     const tb=`<w:tbl><w:tblPr><w:tblW w:w="${TW}" w:type="dxa"/>${brd}<w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="50" w:type="dxa"/><w:right w:w="50" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${W.map(w=>`<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>${rows}</w:tbl>`;
@@ -2311,20 +2333,22 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
     o.caps.forEach((c,ci)=>{if(c.arts.length)rs+=`<w:tr>${tc(R1,fx(`${ci+1}. ${c.t||''}`))}${tc(2000,fx(eur(capT(c)),{jc:'right'}))}</w:tr>`});
     rs+=`<w:tr>${tc(R1,fx('Total (sem IVA)',{b:true}),{sh:'F2F2F2'})}${tc(2000,fx(eur(OT.sub),{b:true,jc:'right'}),{sh:'F2F2F2'})}</w:tr><w:tr>${tc(R1,fx(`IVA (${+o.iva||0} %)`))}${tc(2000,fx(eur(OT.iva),{jc:'right'}))}</w:tr><w:tr>${tc(R1,fx('Total (com IVA)',{b:true}),{sh:'FFF2CC'})}${tc(2000,fx(eur(OT.tot),{b:true,jc:'right'}),{sh:'FFF2CC'})}</w:tr>`;
     const tr=`<w:tbl><w:tblPr><w:tblW w:w="${TW}" w:type="dxa"/>${brd}<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="${R1}"/><w:gridCol w:w="2000"/></w:tblGrid>${rs}</w:tbl>`;
-    return (String(o.intro||'').trim()?T(o.intro,{jc:'both'})+E():'')+H2('Medições e orçamento')+tb+E()+H2('Resumo por capítulos')+tr+(String(o.nota||'').trim()?E()+T(o.nota,{jc:'both',i:true,sz:9}):'')+E()};
-  if(orcHas(p)&&orcE(p).out==='cap')body+=E()+H1('Estimativa de custos')+orcXml();
+    const DS=String(o.desc||'').trim()?H2('Descrição dos trabalhos sugeridos')+T(o.desc,{jc:'both'})+E():'';
+    if(MED){const it=o.intro==='Para a execução dos trabalhos de reparação propostos, estima-se o seguinte custo:'?'Os trabalhos sugeridos e as respetivas quantidades são os seguintes:':o.intro;return (String(it||'').trim()?T(it,{jc:'both'})+E():'')+DS+H2('Medição')+tb+E()}
+    return (String(o.intro||'').trim()?T(o.intro,{jc:'both'})+E():'')+DS+H2('Medição e estimativa de custo')+tb+E()+H2('Resumo por capítulos')+tr+(String(o.nota||'').trim()?E()+T(o.nota,{jc:'both',i:true,sz:9}):'')+E()};
+  if(orcHas(p)&&orcE(p).out==='cap')body+=E()+H1((orcE(p).modo||'orc')==='med'?'Trabalhos sugeridos e medição':'Estimativa de custos')+orcXml();
   // todos os relatórios: termo de encerramento logo a seguir aos passos seguintes; o que vem depois (reservas, ambiente, anexos) é opcional
   body+=H1('Termo de encerramento')+E()+T(String(r.termoTxt||'').trim()||TERMO_TXT_R,{jc:'both'})+E()+(col?T(r.unan?'O presente relatório foi elaborado por unanimidade dos peritos.':'O presente relatório não reúne unanimidade, manifestando-se as seguintes posições discordantes:',{jc:'both'})+(!r.unan&&String(r.discord||'').trim()?T(r.discord,{jc:'both'}):'')+E():'')+T('Terminado em:')+T(dEnc)+sign()+E();
   // 8, 9
   if(r.incReservas!==false){body+=H1('Âmbito de utilização – reservas de análise');for(const l of semConteudo(r.reservas||RESERVAS_R).split('\n'))body+=/^\d+\.\s/.test(l)?H2(l.replace(/^\d+\.\s*/,'')):T(l,{jc:'both'})}
   if(r.incAmbiente!==false){body+=H1('Ambiente, sustentabilidade e conformidade de licenciamento')+T(String(r.ambiente||AMBIENTE_R),{jc:'both'})}
   // 11, 12
-  const axO=String(r.anexosOutros||'').split('\n').map(x=>x.trim()).filter(Boolean);const orcAx=orcHas(p)&&orcE(p).out==='anexo';const ax=(orcAx?CHK(true,'Anexo – Medições e orçamento (estimativa de custos)'):'')+ANEX_R.filter(d=>r.anexos[d]&&!(d==='Outros anexos'&&axO.length)).map(d=>CHK(true,d)).join('')+axO.map(x=>CHK(true,x)).join('')+(r.anexF||[]).map((a,i)=>CHK(true,anexLbl(a,i))).join('');
+  const axO=String(r.anexosOutros||'').split('\n').map(x=>x.trim()).filter(Boolean);const orcAx=orcHas(p)&&orcE(p).out==='anexo';const ax=(orcAx?CHK(true,(orcE(p).modo||'orc')==='med'?'Anexo – Medições':'Anexo – Medições e orçamento (estimativa de custos)'):'')+ANEX_R.filter(d=>r.anexos[d]&&!(d==='Outros anexos'&&axO.length)).map(d=>CHK(true,d)).join('')+axO.map(x=>CHK(true,x)).join('')+(r.anexF||[]).map((a,i)=>CHK(true,anexLbl(a,i))).join('');
   if(ax)body+=H1('Em anexo')+ax;
   // conteúdo dos anexos (PDF/imagens convertidos em páginas): cada anexo em página nova, título e páginas centradas na página (largura escolhida; por defeito 21 − 2 = 19 cm)
   // página de separação «Anexos» antes do conteúdo dos anexos
   if(ax)body+=BRK+'<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:spacing w:before="0" w:after="0" w:line="5600" w:lineRule="exact"/></w:pPr></w:p>'+P(R('ANEXOS',{b:true,sz:28}),{jc:'center',sp:[0,0]});
-  if(orcAx)body+=BRK+H2('Anexo – Medições e orçamento (estimativa de custos)')+orcXml();
+  if(orcAx)body+=BRK+H2((orcE(p).modo||'orc')==='med'?'Anexo – Medições':'Anexo – Medições e orçamento (estimativa de custos)')+orcXml();
   for(const [i,a] of (r.anexF||[]).entries()){if(a.inc===false||!anexKind(a))continue;
     if(!(a.pages||[]).length){try{a.pages=await anexPages(a);a.larg=a.larg||ANEX_LARG}catch(e){continue}}
     const L=Math.min(19,+a.larg||ANEX_LARG),MAXH=22.5;let first=true;
@@ -2647,6 +2671,10 @@ document.addEventListener('click',async e=>{{const _x=e.target.closest&&e.target
       if(!G.size)return toast('Nenhuma situação tem «Solução proposta» preenchida.',1);const L=[...G.values()].map((g,i,arr)=>` - ${g.c.join(', ')} – ${g.t}${i<arr.length-1?';':'.'}`);
       const cur0=mtxt(r,'passos');if(cur0&&!await ask('Os passos seguintes já têm texto. Acrescentar a lista das soluções no fim?',['Cancelar','Acrescentar']))return;
       r.passos=(cur0?String(r.passos).replace(/\s+$/,'')+'\n':ZDEF.passos)+L.join('\n');await saveProc();toast(`${G.size} solução(ões) juntada(s) — ${p.anomalias.filter(x=>String(x.vals?.medidas||'').trim()).length} situação(ões).`);S.scrollTop=window.scrollY;break}
+    case 'orcV':S.orcV=el.dataset.v;S.scrollTop=window.scrollY;break;
+    case 'orcFromSol':{const o=orcE(p);const G=new Map();for(const x of p.anomalias){const t=String(x.vals?.medidas||'').trim().replace(/[.;]+$/,'');if(!t)continue;const k=t.toLowerCase();if(!G.has(k))G.set(k,{t,c:[]});G.get(k).c.push(anCode(p,x))}
+      const ex=new Set(o.caps.map(c=>String(c.t||'').toLowerCase()));let n=0;for(const g of G.values()){if(ex.has(g.t.toLowerCase()))continue;o.caps.push({id:uid(),t:g.t,arts:[{id:uid(),d:'',un:'m²',q:'',pu:'',sit:g.c.join(', ')}]});n++}
+      await saveProc();toast(n?`${n} capítulo(s) criado(s) — descreva os artigos e as quantidades.`:'Os capítulos destas soluções já existem.');S.scrollTop=window.scrollY;break}
     case 'orcAddCap':{const o=orcE(p);o.caps.push({id:uid(),t:'',arts:[{id:uid(),d:'',un:'m²',q:'',pu:''}]});await saveProc();S.open.orc=true;S.scrollTop=window.scrollY;break}
     case 'orcAddArt':{const c=orcE(p).caps[+el.dataset.c];c.arts.push({id:uid(),d:'',un:c.arts.length?c.arts[c.arts.length-1].un:'m²',q:'',pu:''});await saveProc();S.scrollTop=window.scrollY;break}
     case 'orcDelArt':{const c=orcE(p).caps[+el.dataset.c];c.arts.splice(+el.dataset.a,1);await saveProc();S.scrollTop=window.scrollY;break}
@@ -2826,6 +2854,7 @@ document.addEventListener('change',async e=>{{const _x=e.target.closest&&e.targe
   if(act==='orcSet'){const o=orcE(p),k=el.dataset.k;let tgt=o;if(el.dataset.c!==undefined){tgt=o.caps[+el.dataset.c];if(el.dataset.a!==undefined)tgt=tgt.arts[+el.dataset.a]}
     tgt[k]=k==='iva'?+el.value:el.value;await saveProc();S.scrollTop=window.scrollY;const sx=[...document.querySelectorAll('.orcw')].map(w=>w.scrollLeft);render();document.querySelectorAll('.orcw').forEach((w,i)=>w.scrollLeft=sx[i]||0);return}
   if(act==='orcOut'){orcE(p).out=el.dataset.v;await saveProc();S.scrollTop=window.scrollY;render();return}
+  if(act==='orcMode'){orcE(p).modo=el.dataset.v;await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='rTitulo'){const r=ensureRel(p);r.titulo=el.dataset.v;await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='mxSet'||act==='mxGut'||act==='mxAll'){let v=el.value;if(v==='')return;
     const C=mxCols(p),c=C.find(x=>x.k===el.dataset.k);
