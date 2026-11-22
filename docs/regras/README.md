@@ -18,7 +18,8 @@ Ao melhorar uma rotina numa app, atualizar o ficheiro respetivo e a tabela «Ond
 | Verificação de gralhas e coerência (Word gerado e importado) | [verificacao.md](verificacao.md) | 1.0 |
 | Cálculos no Word como folha de cálculo embutida (editável) | [folhas_word.md](folhas_word.md) | 1.0 |
 | Marcas nas fotografias (setas, círculos, letras, texto, balões) | [marcas_fotos.md](marcas_fotos.md) | 1.0 |
-| Relatórios Word dos gabinetes: cabeçalho a 0,7 cm, fontes do gabinete, títulos sem avanço | ver abaixo | 1.0 |
+| **Página dos documentos Word — REGRA FIXA** (A4; sup. 3,5 cm com cabeçalho a 0,5 cm; inf. 1,5; esq. 2,5; dir. 1,5; igual em todas as apps e gabinetes) | [pagina.md](pagina.md) | 1.0 |
+| Relatórios Word dos gabinetes: fontes do gabinete, títulos sem avanço (margens: ver pagina.md) | ver abaixo | 1.1 |
 | Prioridade GUT (Gravidade × Urgência × Tendência) | ver abaixo | 1.0 |
 | Revisão do texto antes de exportar (gralhas, ortografia pt-PT, redundâncias, coerência) | ver abaixo | 1.0 |
 | Apoio de análise de fotografias por IA (sugestão, opcional) | ver abaixo | 1.1 |
@@ -68,7 +69,7 @@ Cada app mostra na régua (cabeçalho) a versão **e a data da release**, ex.: `
 
 ## Relatórios Word dos gabinetes — página, fontes e títulos
 
-- **Margem do limite superior da folha ao cabeçalho = 0,7 cm** (`w:pgMar w:header="397"`), igual para todos os gabinetes (Proficis, Peritava, pfk, NID). Restantes margens do modelo: sup. 4 cm, inf. 1,5 cm, esq. 2,5 cm, dir. 1,5 cm, rodapé 0,5 cm.
+- ~~Margem do limite superior da folha ao cabeçalho = 0,7 cm; sup. 4 cm (Proficis) / 3 cm~~ — **substituído em 22/11/2026 pela regra fixa [pagina.md](pagina.md)**: margem superior 3,5 cm e cabeçalho a 0,5 cm em todos os documentos e gabinetes.
 - **Não alterar as fontes definidas para os gabinetes** (regra geral). Texto gerado pela app que entre no corpo do relatório sem estilo próprio (ex.: análise específica e resumo estatístico vindos do Regi) recebe o estilo de texto do modelo (`1-periTextogeral`), para herdar a fonte do gabinete; dentro de tabelas acrescenta-se `w:shd` sem preenchimento, para não tapar o fundo das células.
 - **Resumo de análise — ordem dos quadros** (Relatório de Peritagem): Quantidade de situações → Tipo de situações → Relevância (quadro-resumo de prioridades; a seguir, Prioridade GUT se usada) → Gravidade → Urgência → Local (NUF / Piso / Local / Elemento). Cada quadro pode ser desligado por processo; a ordem é fixa (`RESUMO_ORD`).
 - **Relatório particular — sem repetições** (Relatório de Peritagem 1.14): as situações apresentam-se no 1. Objeto da perícia (1.1 Colocadas pelo solicitante = lista das situações alegadas, seguida das questões escritas à mão; 1.2 Outras questões ou situações = constatadas pelo perito ou texto livre). Não há capítulo «Situações a analisar» nem «Apreciação das queixas» (as situações já são comentadas na Análise específica); respostas antigas nesse campo dão aviso na verificação antes de gerar. Tribunal mantém «Situações a analisar» e «Resposta ao solicitado».
