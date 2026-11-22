@@ -713,7 +713,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.5.2';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.6';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1520,7 +1520,7 @@ async function cropTo(data,ar,maxW=1200){const im=await loadImg(data);const W=im
 function shuffleR(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 // ---------- construção do Word ----------
 async function buildRelat(p){ensureRel(p);alVisCapa(p);p.anomalias.forEach(a=>{alA(a);alValSync(a)});const r=p.rel,col=isCol(r),part=isPart(r);await loadFotos(p);
-  const X=xesc,media=[];let mid=9000;
+  const X=xesc,media=[],oleParts=[];let mid=9000;
   const R=(t,o={})=>String(t??'').split('\n').map((ln,i)=>`<w:r><w:rPr>${o.b?'<w:b/>':''}${o.i?'<w:i/>':''}${o.color?`<w:color w:val="${o.color}"/>`:''}${o.sz?`<w:sz w:val="${o.sz*2}"/><w:szCs w:val="${o.sz*2}"/>`:''}</w:rPr>${i?'<w:br/>':''}<w:t xml:space="preserve">${X(ln)}</w:t></w:r>`).join('');
   const P=(runs,o={})=>`<w:p><w:pPr><w:pStyle w:val="${o.st||'1-periTextogeral'}"/>${o.keep?'<w:keepNext/>':''}${o.bdrT?'<w:pBdr><w:top w:val="single" w:sz="6" w:space="1" w:color="808080"/></w:pBdr>':''}${o.sp!=null?`<w:spacing w:before="${o.sp[0]}" w:after="${o.sp[1]}"/>`:''}${o.ind?`<w:ind w:left="${o.ind}"/>`:''}${o.jc?`<w:jc w:val="${o.jc}"/>`:''}</w:pPr>${runs}</w:p>`;
   const T=(t,o={})=>String(t??'').split('\n').map(l=>P(R(l,o),o)).join('');
@@ -1659,7 +1659,8 @@ async function buildRelat(p){ensureRel(p);alVisCapa(p);p.anomalias.forEach(a=>{a
     if(alRefOk(a)&&x.tofRef&&alNum(x.refV)>0){const at=alNum(x.car?.at),vr=alNum(x.refV);body+=P(R('Valor de referência',{b:true}),{keep:1,sp:[120,60]})+T(`Valor unitário de referência para ${alCultTipo(a).toLowerCase()}: ${CULT.fmt(vr)} €/m² – fonte: ${String(x.refF||'').trim().replace(/[.\s]+$/,'')}.`,{jc:'both'})+(at?T(`Valor do terreno = ${CULT.fmt(at,0)} m² × ${CULT.fmt(vr)} €/m² = ${alEur(Math.round(at*vr))}.`,{jc:'both',b:true}):'')+E()}
     if(alCultOk(a)&&x.calc&&Array.isArray(x.calcW)&&x.calcW.length){const at=alNum(x.car?.at),vu=alNum(x.vun);
      body+=P(R('Cálculo pelo rendimento',{b:true}),{keep:1,sp:[120,60]});
-     for(const b of x.calcW){if(b.t){const Wc=b.t.pc.map(f=>Math.round(f*TWb));Wc[Wc.length-1]=TWb-Wc.slice(0,-1).reduce((s,y)=>s+y,0);
+     let WW=x.calcW;try{const R2=CULT.calcRun(x.calc.m,x.calc.p,false);if(R2&&R2.ok&&Array.isArray(R2.W)&&Math.abs(R2.vun-(+x.calc.vun))<1e-9)WW=R2.W}catch(e){}
+     for(const b of WW){if(b.t&&b.x&&!S.noOle){body+=alOlePara(b.x,oleParts);continue}if(b.t){const Wc=b.t.pc.map(f=>Math.round(f*TWb));Wc[Wc.length-1]=TWb-Wc.slice(0,-1).reduce((s,y)=>s+y,0);
        let rr=tr(b.t.h.map((h,k)=>tc(h,Wc[k],{b:1,fill:'F2F2F2',jc:b.t.jc[k]||'left',sz:8})).join(''),1);
        for(const x2 of b.t.r){const c=Array.isArray(x2)?x2:x2.c,bb=!Array.isArray(x2)&&x2.b;rr+=tr(c.map((t,k)=>tc(t,Wc[k],{b:bb,jc:b.t.jc[k]||'left',sz:8})).join(''))}
        body+=tbl(Wc,rr)+P('',{sp:[0,60]})}else body+=T(b.p,{jc:'both',b:!!b.h})}
@@ -1713,7 +1714,7 @@ async function buildRelat(p){ensureRel(p);alVisCapa(p);p.anomalias.forEach(a=>{a
   doc=doc.replace(/(<w:pgMar w:top=")\d+"/,'$1'+MTOP(r.gab)+'"'); // margem superior 3,5 cm (todos os gabinetes)
   {const st=F('word/styles.xml');st.data=_enc.encode(TX(st).replace(/(<w:style [^>]*w:styleId="Cabealho[123]"[\s\S]*?<\/w:style>)/g,m=>m.replace(/<w:ind [^>]*\/>/,'').replace('</w:pPr>','<w:ind w:left="0" w:firstLine="0"/></w:pPr>').replace(/(<w:jc [^>]*\/>)?(<w:outlineLvl [^>]*\/>)?<w:ind w:left="0" w:firstLine="0"\/><\/w:pPr>/,(x,jc,ol)=>'<w:ind w:left="0" w:firstLine="0"/>'+(jc||'')+(ol||'')+'</w:pPr>')));
    const nb=F('word/numbering.xml');if(nb)nb.data=_enc.encode(TX(nb).replace(/<w:lvl w:ilvl="[012]"[^>]*>(?:(?!<\/w:lvl>)[\s\S])*?<w:pStyle w:val="Cabealho[123]"\/>[\s\S]*?<\/w:lvl>/g,m=>m.replace(/<w:tabs>[\s\S]*?<\/w:tabs>/,'').replace(/<w:ind [^>]*\/>/,'<w:tabs><w:tab w:val="left" w:pos="567"/></w:tabs><w:ind w:left="0" w:firstLine="0"/>')))}
-  for(const [k,u] of Object.entries({wp:'http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing',a:'http://schemas.openxmlformats.org/drawingml/2006/main',pic:'http://schemas.openxmlformats.org/drawingml/2006/picture',r:'http://schemas.openxmlformats.org/officeDocument/2006/relationships',w14:'http://schemas.microsoft.com/office/word/2010/wordml'}))if(!new RegExp('xmlns:'+k+'=').test(doc.slice(0,3000)))doc=doc.replace(/<w:document\b/,`<w:document xmlns:${k}="${u}"`);
+  for(const [k,u] of Object.entries({v:'urn:schemas-microsoft-com:vml',o:'urn:schemas-microsoft-com:office:office',wp:'http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing',a:'http://schemas.openxmlformats.org/drawingml/2006/main',pic:'http://schemas.openxmlformats.org/drawingml/2006/picture',r:'http://schemas.openxmlformats.org/officeDocument/2006/relationships',w14:'http://schemas.microsoft.com/office/word/2010/wordml'}))if(!new RegExp('xmlns:'+k+'=').test(doc.slice(0,3000)))doc=doc.replace(/<w:document\b/,`<w:document xmlns:${k}="${u}"`);
   doc=doc.replace(/<w:p><w:r><w:t>\{\{CORPO\}\}<\/w:t><\/w:r><\/w:p>/,()=>full);
   F('word/document.xml').data=_enc.encode(doc);
   F('word/header1.xml').data=_enc.encode(H.xml.replace(/\{\{(H1|H3|H4A|H4B)\}\}/g,(m,k)=>X(HV[k]||'')));
@@ -1723,6 +1724,8 @@ async function buildRelat(p){ensureRel(p);alVisCapa(p);p.anomalias.forEach(a=>{a
   F('docProps/core.xml').data=_enc.encode(TX(F('docProps/core.xml')).replace('{{TITULO}}',X(`${titulo} — ${r.objeto||p.designacao||''}`)));
   const relsF=F('word/_rels/document.xml.rels');relsF.data=_enc.encode(TX(relsF).replace('</Relationships>',media.map(m=>`<Relationship Id="${m.rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="${m.name.slice(5)}"/>`).join('')+'</Relationships>'));
   for(const m of media)files.push({name:m.name,data:m.data});
+  if(oleParts.length){relsF.data=_enc.encode(TX(relsF).replace('</Relationships>',oleParts.map(m=>`<Relationship Id="${m.rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/${m.type}" Target="${m.name.slice(5)}"/>`).join('')+'</Relationships>'));
+   for(const m of oleParts)files.push({name:m.name,data:m.data});const ct=F('[Content_Types].xml');let t=TX(ct);for(const [e,c] of [['png','image/png'],['xlsx','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']])if(!new RegExp(`Extension="${e}"`,'i').test(t))t=t.replace(/(<Types[^>]*>)/,`$1<Default Extension="${e}" ContentType="${c}"/>`);ct.data=_enc.encode(t)}
   return {bytes:zipStore(files),name:fileName}}
 // ---------- AvaLias — pré-visualização, PDF, pasta ZIP, anexos em ficheiro, modelos, mapa Google ----------
 function busy(on,msg){let el=document.getElementById('avaBusy');if(!on){el&&el.remove();return}if(!el){el=document.createElement('div');el.id='avaBusy';el.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:9999;display:flex;align-items:center;justify-content:center';el.innerHTML='<div style="background:#fff;padding:16px 20px;border-radius:12px;font-weight:600;max-width:80%;text-align:center"></div>';document.body.appendChild(el)}el.firstChild.textContent=msg||'A trabalhar…'}
@@ -1783,6 +1786,7 @@ async function relZip(p){const r=ensureRel(p);const x=await relPdf(p);busy(true,
   const km=alKml(p);if(km)files.push({name:`${base}/${safeName(p.codigo)}_Verbas.kml`,data:km});
   await loadFotos(p);
   for(const [k,a] of V.entries()){const c=safeName(alCode(p,a)),dir=`${base}/Verbas/${c}`;files.push({name:`${dir}/${c}_Ficha.xlsx`,data:buildXlsx(c.slice(0,31),[['Campo','Valor'],...R[k]],[34,70])});
+    if(a.al?.calc&&alCultOk(a)){try{const R2=CULT.calcRun(a.al.calc.m,a.al.calc.p,false);let n=0;if(R2&&R2.ok)for(const b of R2.W||[])if(b&&b.x){n++;files.push({name:`${dir}/${c}_Calculo${n>1?'_'+n:''}.xlsx`,data:alXlsx(b.x)})}}catch(e){}}
     const nR=relF(a).length;for(const [i,f] of a.fotos.entries()){const d=fd(f);if(!d)continue;files.push({name:inRel(f)?`${dir}/Fotos/${imgCode(p,a,i).replace(/\s+/g,'_')}.jpg`:`${dir}/Fotos/Reserva/Reserva_${c}_${i-nR+1}.jpg`,data:b64ToU8(await outData(d,'foto',f.id))})}}
   for(const [i,a] of (r.anexF||[]).entries()){const d=await anexData(a);if(!d)continue;files.push({name:`${base}/Anexos/${String(i+1).padStart(2,'0')}_${safeName(a.nome.replace(/\.[^.]+$/,''))}${(a.nome.match(/\.[A-Za-z0-9]{1,5}$/)||[''])[0].toLowerCase()}`,data:b64ToU8(d)})}
   return {blob:new Blob([zipStore(files)],{type:'application/zip'}),name:base+'.zip'}}finally{busy(false)}}
@@ -2228,7 +2232,7 @@ const norm=s=>String(s||'').replace(/\s+/g,' ').trim().toLowerCase();
 const openModal=html=>{let m=document.getElementById('cultModal');if(!m){m=document.createElement('div');m.id='cultModal';m.className='modal';m.innerHTML='<div class="box" id="modalBox"></div>';m.addEventListener('click',e=>{if(e.target===m)closeModal()});document.body.appendChild(m)}m.querySelector('#modalBox').innerHTML=html};
 const closeModal=()=>{document.getElementById('cultModal')?.remove()};
 const saveSoon=()=>{};
-/* @comum:tof v1.1 — motor comum dos terrenos TOF (não aptos para construção): capitalização do rendimento das culturas e valores de referência.
+/* @comum:tof v1.2 — motor comum dos terrenos TOF (não aptos para construção): capitalização do rendimento das culturas e valores de referência.
    FONTE ÚNICA: comum/tof.js no repositório GPS_Maps — não editar dentro das apps; editar comum/tof.js e correr `python3 tools/sync_comum.py`.
    Precisa, na app: num, fmt, norm, esc, $, openModal(html) / closeModal() com #modalBox, settings, saveSettings(), saveSoon(). Opcional: calcXls (folha Excel embutida). */
 /* ---- 0.13.8 · Calculadoras do V_Un (eucaliptal, pinhal, rotação de culturas) e ocupação temporária ----
@@ -2420,6 +2424,35 @@ function calcNota(tb,r){if(!r.calc||!r.calc.m)return '';if(r.calc.ref&&r.calc.re
  return bl+`<span class="cmnote ${Math.abs(vc-va)>1e-9?'dif':''}">Calculado: ${fmt(vc,d)}${Math.abs(vc-va)>1e-9?' · adotado outro valor (o cálculo não sai no relatório)':' · adotado'}</span>`}
 /* o cálculo só sai no relatório se o V_Un adotado for o calculado */
 const calcUsado=(tb,r)=>!!(r&&r.calc&&r.calc.m&&Array.isArray(r.calcTxt)&&Math.abs(num(r.calc.vun)-num(r.vun))<1e-9);
+/* ---- folha de cálculo (Excel) de cada quadro: x = {cols, rows} com fórmulas — para embutir no Word (regra folhas_word.md) ---- */
+function calcXls(m,p,temp,R){const tb=R.W.filter(b=>b&&b.t);if(!tb.length)return;const H=h=>h.map(x=>({v:x,s:2}));const E=n=>Array(n).fill('');
+ if(m==='rot'){const an=Math.max(1,num(p.anos)),tx=num(p.taxa)/100;const CU=(Array.isArray(p.cult)?p.cult:[]).map(x=>({n:String(x.n||'').trim()||'Cultura',ano:String(x.ano||'').trim(),q:String(x.q??'').trim()===''?1:num(x.q),prod:num(x.prod),pr:num(x.pr),de:num(x.de)})).filter(x=>x.prod>0);
+  const rows=[H(['Cultura','Ano','Quota','Produção (kg/ha)','Preço (€/kg)','RB (€/ha)','DE','RF (€/ha)'])];let RFt=0;
+  CU.forEach((x,i)=>{const r=i+2,rb=x.prod*x.pr,rf=x.q*(rb-rb*x.de/100);RFt+=rf;rows.push([x.n,x.ano||'—',{v:x.q,s:3},{v:x.prod,s:7},{v:x.pr,s:3},{f:`D${r}*E${r}`,v:rb,s:3},{v:x.de/100,s:5},{f:`C${r}*(F${r}-F${r}*G${r})`,v:rf,s:3}])});
+  const tr=rows.length+1;rows.push([{v:'Total da rotação',s:1},...E(6),{f:`SUM(H2:H${tr-1})`,v:RFt,s:4}]);rows.push([]);
+  const a=rows.length+1,RFa=RFt/an,RFm=RFa/10000;rows.push(['Duração da rotação (anos)',...E(6),{v:an,s:7}]);rows.push(['Rendimento fundiário médio anual (€/ha/ano)',...E(6),{f:`H${tr}/H${a}`,v:RFa,s:3}]);
+  rows.push([{v:`Rendimento fundiário médio anual (€/m²/ano)`,s:temp?1:0},...E(6),{f:`H${a+1}/10000`,v:RFm,s:temp?8:6}]);
+  if(!temp){rows.push(['Taxa de capitalização',...E(6),{v:tx,s:5}]);rows.push([{v:'Valor do solo = RF / taxa (€/m²)',s:1},...E(6),{f:`H${a+2}/H${a+3}`,v:RFm/tx,s:8}])}
+  tb[0].x={cols:[Math.max(12,...CU.map(x=>x.n.length))+2,6,7,11,9,11,7,12],rows};return}
+ if(m==='euc'){const r=num(p.r)/100,P=num(p.P),n=num(p.n),V=String(p.V||'').split(/[;\/]+/).map(num).filter(x=>x>0),C=num(p.C),a=num(p.idade),tn=num(p.tn);const k=V.length,T=n*k,d=String(p.d??'').trim()===''?Math.max(0,T-a):num(p.d);
+  const cortes=V.map((v,i)=>({i:i+1,t:n*(i+1),v})).filter(x=>x.t>=a);const Vm=V.reduce((s,x)=>s+x,0)/k;const val2=(P*Vm/(Math.exp(r*n)-1)-C*Math.exp(r*T)/(Math.exp(r*T)-1))*Math.exp(-r*d);
+  const rows=[['Taxa de atualização r',...E(4),{v:r,s:5}],['Preço da madeira em pé P (€/m³)',...E(4),{v:P,s:3}],['Idade atual do povoamento (anos)',...E(4),{v:a,s:7}],[],H(['Corte','Ano do ciclo','Anos a descontar','Volume (m³/ha)','P × V (€/ha)','Valor atual (€/ha)'])];let val1=0;
+  cortes.forEach(x=>{const R0=rows.length+1,va=P*x.v*Math.exp(-r*(x.t-a));val1+=va;rows.push([`${x.i}.º corte`,{v:x.t,s:7},{f:`B${R0}-$F$3`,v:x.t-a,s:7},{v:x.v,s:3},{f:`$F$2*D${R0}`,v:P*x.v,s:3},{f:`E${R0}/EXP($F$1*C${R0})`,v:va,s:3}])});
+  const tr=rows.length+1;rows.push([{v:'VAL do ciclo em curso',s:1},...E(4),{f:cortes.length?`SUM(F6:F${tr-1})`:'0',v:val1,s:4}]);rows.push([]);
+  const b=rows.length+1;rows.push(['VAL dos ciclos seguintes (€/ha)',...E(4),{v:val2,s:3}]);if(tn)rows.push(['Terra nua (€/ha)',...E(4),{v:tn,s:3}]);
+  const e=rows.length;rows.push([{v:'Total (€/ha)',s:1},...E(4),{f:`F${tr}+SUM(F${b}:F${e})`,v:val1+val2+tn,s:4}]);rows.push([{v:'Valor unitário (€/m²)',s:1},...E(4),{f:`F${e+1}/10000`,v:(val1+val2+tn)/10000,s:8}]);
+  tb[0].x={cols:[22,10,11,12,12,14],rows};return}
+ if(m==='pin'){const q=1+num(p.q)/100,pr=num(p.pr),man=num(p.man)/100,C=num(p.C),a=num(p.idade),tn=num(p.tn);const PL=(Array.isArray(p.plano)?p.plano:[]).map(x=>({l:String(x.l||'').trim()||'Corte',t:num(x.t),v:num(x.v)})).filter(x=>x.t>0).sort((x,y)=>x.t-y.t);
+  const T=PL[PL.length-1].t;let VAL=-C;const rows=[['Taxa de atualização',...E(4),{v:q-1,s:5}],['Preço da madeira (€/m³)',...E(4),{v:pr,s:3}],['Despesas de manutenção (% do RB)',...E(4),{v:man,s:5}],[],H(['Operação','Idade (anos)','Volume (m³/ha)','RB (€/ha)','RF (€/ha)','RF atualizado (€/ha)'])];
+  PL.forEach(x=>{const R0=rows.length+1,rf=x.v*pr*(1-man),at=rf/Math.pow(q,x.t);VAL+=at;rows.push([x.l,{v:x.t,s:7},{v:x.v,s:3},{f:`C${R0}*$F$2`,v:x.v*pr,s:3},{f:`D${R0}*(1-$F$3)`,v:rf,s:3},{f:`E${R0}/(1+$F$1)^B${R0}`,v:at,s:3}])});
+  rows.push(['Investimento inicial',{v:0,s:7},'','','',{v:-C,s:3}]);const tr=rows.length+1;rows.push([{v:'VAL da rotação',s:1},...E(4),{f:`SUM(F6:F${tr-1})`,v:VAL,s:4}]);rows.push([]);
+  const vf=PL.filter(x=>x.t>=a).reduce((s,x)=>s+x.v*pr*(1-man)/Math.pow(q,x.t-a),0),vs=VAL*Math.pow(q,T)/(Math.pow(q,T)-1)/Math.pow(q,T-a);
+  const b=rows.length+1;rows.push([`Valor aos ${fmt(a,0)} anos (€/ha)`,...E(4),{v:vf+vs,s:3}]);if(tn)rows.push(['Terra nua (€/ha)',...E(4),{v:tn,s:3}]);const e=rows.length;
+  rows.push([{v:'Total (€/ha)',s:1},...E(4),{f:`SUM(F${b}:F${e})`,v:vf+vs+tn,s:4}]);rows.push([{v:'Valor unitário (€/m²)',s:1},...E(4),{f:`F${e+1}/10000`,v:(vf+vs+tn)/10000,s:8}]);
+  tb[0].x={cols:[Math.max(18,...PL.map(x=>x.l.length))+2,10,12,11,11,15],rows};return}
+ if(m==='comp'&&p.resumo&&Array.isArray(R.blocos)&&R.W[R.W.length-1]&&R.W[R.W.length-1].t){const res=R.W[R.W.length-1];const rows=[H(['Bloco','Designação','Valor (€/m²)'])];const BL=(Array.isArray(p.blocos)?p.blocos:[]).filter(b=>b&&CALC_BLK[b.m]);
+  R.blocos.forEach((x,k)=>rows.push([x.l,x.nome,{v:x.vun,s:3}]));const n=rows.length;rows.push(['',{v:'Soma dos rendimentos',s:1},{f:`SUM(C2:C${n})`,v:R.vun,s:4}]);
+  res.x={cols:[7,Math.max(20,...R.blocos.map(x=>String(x.nome).length))+2,13],rows}}}
 /* ---- Biblioteca de referências TOF: valores de referência do perito (por cultura | método), com fonte; exporta-se num ficheiro e importa-se noutra app ou aparelho ---- */
 const TOF_LIB_KIND='PFK_TOF_Biblioteca';
 function tofLibExport(){const refs=settings.calcRefs||{};const o={kind:TOF_LIB_KIND,v:1,data:new Date().toISOString(),refs,hist:settings.calcHist||{}};const b=new Blob([JSON.stringify(o,null,1)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`Biblioteca_TOF_${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500)}
@@ -2436,6 +2469,34 @@ const PT_FREG = {"Abrantes":["Bemposta","Carvalhal","Fontes","Martinchel","Mouri
 function fregOf(conc){return [...new Set([...(PT_FREG[conc]||[]),...((settings.fregExtra||{})[conc]||[])])].sort((a,b)=>a.localeCompare(b,'pt'))}
 /* @fim:concelhos */
 /* AvaLias: terreno de produção (agrícola, florestal, agroflorestal) avaliado pelo rendimento → cálculo com a rotina de culturas */
+/* ---- quadros de cálculo como folha do Excel embutida no Word (regra docs/regras/folhas_word.md; folha x={cols,rows} do motor TOF) ---- */
+const XL_COL=n=>{let s='';n++;while(n){const m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=Math.floor((n-1)/26)}return s};
+function alXlsx(sh){const E=t=>xesc(String(t));const rowsX=sh.rows.map((r,i)=>`<row r="${i+1}">${(r||[]).map((c,j)=>{if(c==null||c==='')return '';const o=typeof c==='object'?c:{v:c};const ref=`${XL_COL(j)}${i+1}`,st=o.s?` s="${o.s}"`:'';
+  if(o.f)return `<c r="${ref}"${st}><f>${E(o.f)}</f>${typeof o.v==='number'&&isFinite(o.v)?`<v>${o.v}</v>`:''}</c>`;if(typeof o.v==='number')return isFinite(o.v)?`<c r="${ref}"${st}><v>${o.v}</v></c>`:'';
+  return `<c r="${ref}"${st} t="inlineStr"><is><t xml:space="preserve">${E(o.v)}</t></is></c>`}).join('')}</row>`).join('');
+ const nc=Math.max(...sh.rows.map(r=>(r||[]).length),1),last=`${XL_COL(nc-1)}${sh.rows.length}`;
+ const Fn=b=>`<font>${b?'<b/>':''}<sz val="10"/><name val="Calibri"/><family val="2"/></font>`,Xf=(nf,font,bd,al)=>`<xf numFmtId="${nf}" fontId="${font}" fillId="0" borderId="${bd}" xfId="0"${nf?' applyNumberFormat="1"':''}${font?' applyFont="1"':''}${bd?' applyBorder="1"':''}${al?` applyAlignment="1"><alignment ${al}/></xf>`:'/>'}`;
+ const cols=(sh.cols||[]).map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('');
+ return zipStore([{name:'[Content_Types].xml',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>'},
+  {name:'_rels/.rels',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'},
+  {name:'xl/workbook.xml',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Cálculo" sheetId="1" r:id="rId1"/></sheets><calcPr calcId="191029" fullCalcOnLoad="1"/><oleSize ref="A1:${last}"/></workbook>`},
+  {name:'xl/_rels/workbook.xml.rels',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'},
+  {name:'xl/styles.xml',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="5"><numFmt numFmtId="164" formatCode="#,##0.00"/><numFmt numFmtId="165" formatCode="0.00%"/><numFmt numFmtId="166" formatCode="#,##0.0000"/><numFmt numFmtId="167" formatCode="#,##0"/><numFmt numFmtId="168" formatCode="0%"/></numFmts><fonts count="2">${Fn(0)}${Fn(1)}</fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left/><right/><top/><bottom style="thin"><color auto="1"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="10">${Xf(0,0,0)}${Xf(0,1,0)}${Xf(0,1,1,'wrapText="1" vertical="center"')}${Xf(164,0,0)}${Xf(164,1,0)}${Xf(165,0,0)}${Xf(166,0,0)}${Xf(167,0,0)}${Xf(166,1,0)}${Xf(168,0,0)}</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`},
+  {name:'xl/worksheets/sheet1.xml',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><dimension ref="A1:${last}"/><sheetViews><sheetView workbookViewId="0" showGridLines="0"/></sheetViews><sheetFormatPr defaultRowHeight="13.5"/>${cols?`<cols>${cols}</cols>`:''}<sheetData>${rowsX}</sheetData><pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/></worksheet>`}])}
+/* imagem da folha (o Word mostra-a até se abrir o objeto) — formato pt-PT, como no ExPropria */
+function alXlsPng(sh,ptW,ptH){const fmt=CULT.fmt,fc=c=>{if(c==null||c==='')return '';const o=typeof c==='object'?c:{v:c};const v=o.v;if(typeof v!=='number')return String(v??'');switch(o.s){case 5:return fmt(v*100,2)+' %';case 9:return fmt(v*100,0)+' %';case 6:case 8:return fmt(v,4);case 7:return fmt(v,0);case 3:case 4:return fmt(v,2);default:return String(v).replace('.',',')}};
+ const rows=sh.rows.map(r=>{const cs=r||[];const b=cs.some(c=>c&&typeof c==='object'&&[1,2,4,8].includes(c.s)),hd=cs.some(c=>c&&typeof c==='object'&&c.s===2);return {c:Array.from({length:sh.cols.length},(_,j)=>fc(cs[j])),b,hd,al:Array.from({length:sh.cols.length},(_,j)=>{const c=cs[j];const o=c&&typeof c==='object'?c:{v:c};return typeof o.v==='number'?'r':''})}});rows.forEach((r,i)=>{r.line=i>0&&rows[i-1].hd});
+ const S=2,Wd=Math.round(ptW*S),Hd=Math.round(ptH*S),cv=document.createElement('canvas');cv.width=Wd;cv.height=Hd;const g=cv.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,Wd,Hd);
+ const tot=sh.cols.reduce((a,b)=>a+b,0),pad=6*S,cw=sh.cols.map(w=>w/tot*(Wd-2*pad));let y=pad*0.5;const lh=Math.min(15*S,(Hd-pad)/Math.max(rows.length,1)),fs=Math.max(7*S,lh*0.62);
+ for(const r of rows){let x=pad;if(r.line){g.strokeStyle='#000';g.lineWidth=S*0.7;g.beginPath();g.moveTo(pad,y);g.lineTo(Wd-pad,y);g.stroke()}
+  r.c.forEach((v,i)=>{if(v==null||v===''){x+=cw[i];return}g.font=`${r.b?'bold ':''}${fs}px Calibri, Arial`;g.fillStyle='#000';const al=r.al[i];let avail=cw[i];if(al!=='r'){for(let j=i+1;j<r.c.length&&(r.c[j]==null||r.c[j]==='');j++)avail+=cw[j]}let s2=String(v);while(g.measureText(s2).width>avail-4*S&&s2.length>3)s2=s2.slice(0,-2);
+   const tw=g.measureText(s2).width;g.fillText(s2,al==='r'?x+cw[i]-tw-2*S:x+2*S,y+lh*0.72);x+=cw[i]});y+=lh}
+ return cv.toDataURL('image/png')}
+const AL_T75='<v:shapetype id="_x0000_t75" coordsize="21600,21600" o:spt="75" o:preferrelative="t" path="m@4@5l@4@11@9@11@9@5xe" filled="f" stroked="f"><v:stroke joinstyle="miter"/><v:formulas><v:f eqn="if lineDrawn pixelLineWidth 0"/><v:f eqn="sum @0 1 0"/><v:f eqn="sum 0 0 @1"/><v:f eqn="prod @2 1 2"/><v:f eqn="prod @3 21600 pixelWidth"/><v:f eqn="prod @3 21600 pixelHeight"/><v:f eqn="sum @0 0 1"/><v:f eqn="prod @6 1 2"/><v:f eqn="prod @7 21600 pixelWidth"/><v:f eqn="sum @8 21600 0"/><v:f eqn="prod @7 21600 pixelHeight"/><v:f eqn="sum @10 21600 0"/></v:formulas><v:path o:extrusionok="f" gradientshapeok="t" o:connecttype="rect"/><o:lock v:ext="edit" aspectratio="t"/></v:shapetype>';
+/* parágrafo com a folha embutida; as partes (xlsx + png) ficam em «parts» para o zip */
+function alOlePara(sh,parts){const n=parts.length/2+1,wPt=Math.min(481,Math.round(sh.cols.reduce((a,b)=>a+b,0)*5.6+10)),hPt=Math.round(sh.rows.length*14.2+6);
+ const xr=`rIdXL${n}`,ir=`rIdXP${n}`,sid=`_x0000_i${2000+n}`;parts.push({rid:xr,name:`word/embeddings/avalias_calc_${n}.xlsx`,data:alXlsx(sh),type:'package'},{rid:ir,name:`word/media/avalias_calc_${n}.png`,data:b64ToU8(alXlsPng(sh,wPt,hPt)),type:'image'});
+ return `<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:spacing w:before="60" w:after="120"/><w:jc w:val="left"/></w:pPr><w:r><w:object w:dxaOrig="${wPt*20}" w:dyaOrig="${hPt*20}">${n===1?AL_T75:''}<v:shape id="${sid}" type="#_x0000_t75" style="width:${wPt}pt;height:${hPt}pt" o:ole=""><v:imagedata r:id="${ir}" o:title=""/></v:shape><o:OLEObject Type="Embed" ProgID="Excel.Sheet.12" ShapeID="${sid}" DrawAspect="Content" ObjectID="_${1900000000+n}" r:id="${xr}"/></w:object></w:r></w:p>`}
 const AL_MET_REND='Rendimento (capitalização)';
 function alValSync(a){const x=a?.al;if(!x)return;const at=alNum(x.car?.at);
  if(x.valAuto===undefined){const vu=alNum(x.vun),vr=alNum(x.refV),v=alNum(x.valor);x.valAuto=x.calc&&vu!=null&&at&&v===Math.round(at*vu)?'calc':x.tofRef&&vr!=null&&at&&v===Math.round(at*vr)?'ref':''}

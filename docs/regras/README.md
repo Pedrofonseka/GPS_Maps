@@ -18,6 +18,7 @@ Ao melhorar uma rotina numa app, atualizar o ficheiro respetivo e a tabela «Ond
 | Verificação de gralhas e coerência (Word gerado e importado) | [verificacao.md](verificacao.md) | 1.0 |
 | Cálculos no Word como folha de cálculo embutida (editável) | [folhas_word.md](folhas_word.md) | 1.0 |
 | Marcas nas fotografias (setas, círculos, letras, texto, balões) | [marcas_fotos.md](marcas_fotos.md) | 1.0 |
+| **Exportação para Word — REGRA SEMPRE** (todas as apps): **fotografias com a rotina das fotos** ([fotos.md](fotos.md), [tamanho.md](tamanho.md), controlo de conteúdo «Imagem») · **tabelas com cálculos em Excel** (folha embutida e editável no Word — [folhas_word.md](folhas_word.md)) | — | 1.0 |
 | **Sugestões nas caixas — REGRA GERAL** (valor fundamentado com fonte ou histórico; ✓ aceitar · ✕ rejeitar · corrigir; «Aceitar todas») | [sugestoes.md](sugestoes.md) | 1.0 |
 | **Página dos documentos Word — REGRA FIXA** (A4; sup. 3,5 cm com cabeçalho a 0,5 cm; inf. 1,5; esq. 2,5; dir. 1,5; igual em todas as apps e gabinetes) | [pagina.md](pagina.md) | 1.0 |
 | Relatórios Word dos gabinetes: fontes do gabinete, títulos sem avanço (margens: ver pagina.md) | ver abaixo | 1.1 |

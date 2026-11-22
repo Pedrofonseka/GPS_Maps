@@ -1,4 +1,4 @@
-/* @comum:tof v1.1 — motor comum dos terrenos TOF (não aptos para construção): capitalização do rendimento das culturas e valores de referência.
+/* @comum:tof v1.2 — motor comum dos terrenos TOF (não aptos para construção): capitalização do rendimento das culturas e valores de referência.
    FONTE ÚNICA: comum/tof.js no repositório GPS_Maps — não editar dentro das apps; editar comum/tof.js e correr `python3 tools/sync_comum.py`.
    Precisa, na app: num, fmt, norm, esc, $, openModal(html) / closeModal() com #modalBox, settings, saveSettings(), saveSoon(). Opcional: calcXls (folha Excel embutida). */
 /* ---- 0.13.8 · Calculadoras do V_Un (eucaliptal, pinhal, rotação de culturas) e ocupação temporária ----
@@ -190,6 +190,35 @@ function calcNota(tb,r){if(!r.calc||!r.calc.m)return '';if(r.calc.ref&&r.calc.re
  return bl+`<span class="cmnote ${Math.abs(vc-va)>1e-9?'dif':''}">Calculado: ${fmt(vc,d)}${Math.abs(vc-va)>1e-9?' · adotado outro valor (o cálculo não sai no relatório)':' · adotado'}</span>`}
 /* o cálculo só sai no relatório se o V_Un adotado for o calculado */
 const calcUsado=(tb,r)=>!!(r&&r.calc&&r.calc.m&&Array.isArray(r.calcTxt)&&Math.abs(num(r.calc.vun)-num(r.vun))<1e-9);
+/* ---- folha de cálculo (Excel) de cada quadro: x = {cols, rows} com fórmulas — para embutir no Word (regra folhas_word.md) ---- */
+function calcXls(m,p,temp,R){const tb=R.W.filter(b=>b&&b.t);if(!tb.length)return;const H=h=>h.map(x=>({v:x,s:2}));const E=n=>Array(n).fill('');
+ if(m==='rot'){const an=Math.max(1,num(p.anos)),tx=num(p.taxa)/100;const CU=(Array.isArray(p.cult)?p.cult:[]).map(x=>({n:String(x.n||'').trim()||'Cultura',ano:String(x.ano||'').trim(),q:String(x.q??'').trim()===''?1:num(x.q),prod:num(x.prod),pr:num(x.pr),de:num(x.de)})).filter(x=>x.prod>0);
+  const rows=[H(['Cultura','Ano','Quota','Produção (kg/ha)','Preço (€/kg)','RB (€/ha)','DE','RF (€/ha)'])];let RFt=0;
+  CU.forEach((x,i)=>{const r=i+2,rb=x.prod*x.pr,rf=x.q*(rb-rb*x.de/100);RFt+=rf;rows.push([x.n,x.ano||'—',{v:x.q,s:3},{v:x.prod,s:7},{v:x.pr,s:3},{f:`D${r}*E${r}`,v:rb,s:3},{v:x.de/100,s:5},{f:`C${r}*(F${r}-F${r}*G${r})`,v:rf,s:3}])});
+  const tr=rows.length+1;rows.push([{v:'Total da rotação',s:1},...E(6),{f:`SUM(H2:H${tr-1})`,v:RFt,s:4}]);rows.push([]);
+  const a=rows.length+1,RFa=RFt/an,RFm=RFa/10000;rows.push(['Duração da rotação (anos)',...E(6),{v:an,s:7}]);rows.push(['Rendimento fundiário médio anual (€/ha/ano)',...E(6),{f:`H${tr}/H${a}`,v:RFa,s:3}]);
+  rows.push([{v:`Rendimento fundiário médio anual (€/m²/ano)`,s:temp?1:0},...E(6),{f:`H${a+1}/10000`,v:RFm,s:temp?8:6}]);
+  if(!temp){rows.push(['Taxa de capitalização',...E(6),{v:tx,s:5}]);rows.push([{v:'Valor do solo = RF / taxa (€/m²)',s:1},...E(6),{f:`H${a+2}/H${a+3}`,v:RFm/tx,s:8}])}
+  tb[0].x={cols:[Math.max(12,...CU.map(x=>x.n.length))+2,6,7,11,9,11,7,12],rows};return}
+ if(m==='euc'){const r=num(p.r)/100,P=num(p.P),n=num(p.n),V=String(p.V||'').split(/[;\/]+/).map(num).filter(x=>x>0),C=num(p.C),a=num(p.idade),tn=num(p.tn);const k=V.length,T=n*k,d=String(p.d??'').trim()===''?Math.max(0,T-a):num(p.d);
+  const cortes=V.map((v,i)=>({i:i+1,t:n*(i+1),v})).filter(x=>x.t>=a);const Vm=V.reduce((s,x)=>s+x,0)/k;const val2=(P*Vm/(Math.exp(r*n)-1)-C*Math.exp(r*T)/(Math.exp(r*T)-1))*Math.exp(-r*d);
+  const rows=[['Taxa de atualização r',...E(4),{v:r,s:5}],['Preço da madeira em pé P (€/m³)',...E(4),{v:P,s:3}],['Idade atual do povoamento (anos)',...E(4),{v:a,s:7}],[],H(['Corte','Ano do ciclo','Anos a descontar','Volume (m³/ha)','P × V (€/ha)','Valor atual (€/ha)'])];let val1=0;
+  cortes.forEach(x=>{const R0=rows.length+1,va=P*x.v*Math.exp(-r*(x.t-a));val1+=va;rows.push([`${x.i}.º corte`,{v:x.t,s:7},{f:`B${R0}-$F$3`,v:x.t-a,s:7},{v:x.v,s:3},{f:`$F$2*D${R0}`,v:P*x.v,s:3},{f:`E${R0}/EXP($F$1*C${R0})`,v:va,s:3}])});
+  const tr=rows.length+1;rows.push([{v:'VAL do ciclo em curso',s:1},...E(4),{f:cortes.length?`SUM(F6:F${tr-1})`:'0',v:val1,s:4}]);rows.push([]);
+  const b=rows.length+1;rows.push(['VAL dos ciclos seguintes (€/ha)',...E(4),{v:val2,s:3}]);if(tn)rows.push(['Terra nua (€/ha)',...E(4),{v:tn,s:3}]);
+  const e=rows.length;rows.push([{v:'Total (€/ha)',s:1},...E(4),{f:`F${tr}+SUM(F${b}:F${e})`,v:val1+val2+tn,s:4}]);rows.push([{v:'Valor unitário (€/m²)',s:1},...E(4),{f:`F${e+1}/10000`,v:(val1+val2+tn)/10000,s:8}]);
+  tb[0].x={cols:[22,10,11,12,12,14],rows};return}
+ if(m==='pin'){const q=1+num(p.q)/100,pr=num(p.pr),man=num(p.man)/100,C=num(p.C),a=num(p.idade),tn=num(p.tn);const PL=(Array.isArray(p.plano)?p.plano:[]).map(x=>({l:String(x.l||'').trim()||'Corte',t:num(x.t),v:num(x.v)})).filter(x=>x.t>0).sort((x,y)=>x.t-y.t);
+  const T=PL[PL.length-1].t;let VAL=-C;const rows=[['Taxa de atualização',...E(4),{v:q-1,s:5}],['Preço da madeira (€/m³)',...E(4),{v:pr,s:3}],['Despesas de manutenção (% do RB)',...E(4),{v:man,s:5}],[],H(['Operação','Idade (anos)','Volume (m³/ha)','RB (€/ha)','RF (€/ha)','RF atualizado (€/ha)'])];
+  PL.forEach(x=>{const R0=rows.length+1,rf=x.v*pr*(1-man),at=rf/Math.pow(q,x.t);VAL+=at;rows.push([x.l,{v:x.t,s:7},{v:x.v,s:3},{f:`C${R0}*$F$2`,v:x.v*pr,s:3},{f:`D${R0}*(1-$F$3)`,v:rf,s:3},{f:`E${R0}/(1+$F$1)^B${R0}`,v:at,s:3}])});
+  rows.push(['Investimento inicial',{v:0,s:7},'','','',{v:-C,s:3}]);const tr=rows.length+1;rows.push([{v:'VAL da rotação',s:1},...E(4),{f:`SUM(F6:F${tr-1})`,v:VAL,s:4}]);rows.push([]);
+  const vf=PL.filter(x=>x.t>=a).reduce((s,x)=>s+x.v*pr*(1-man)/Math.pow(q,x.t-a),0),vs=VAL*Math.pow(q,T)/(Math.pow(q,T)-1)/Math.pow(q,T-a);
+  const b=rows.length+1;rows.push([`Valor aos ${fmt(a,0)} anos (€/ha)`,...E(4),{v:vf+vs,s:3}]);if(tn)rows.push(['Terra nua (€/ha)',...E(4),{v:tn,s:3}]);const e=rows.length;
+  rows.push([{v:'Total (€/ha)',s:1},...E(4),{f:`SUM(F${b}:F${e})`,v:vf+vs+tn,s:4}]);rows.push([{v:'Valor unitário (€/m²)',s:1},...E(4),{f:`F${e+1}/10000`,v:(vf+vs+tn)/10000,s:8}]);
+  tb[0].x={cols:[Math.max(18,...PL.map(x=>x.l.length))+2,10,12,11,11,15],rows};return}
+ if(m==='comp'&&p.resumo&&Array.isArray(R.blocos)&&R.W[R.W.length-1]&&R.W[R.W.length-1].t){const res=R.W[R.W.length-1];const rows=[H(['Bloco','Designação','Valor (€/m²)'])];const BL=(Array.isArray(p.blocos)?p.blocos:[]).filter(b=>b&&CALC_BLK[b.m]);
+  R.blocos.forEach((x,k)=>rows.push([x.l,x.nome,{v:x.vun,s:3}]));const n=rows.length;rows.push(['',{v:'Soma dos rendimentos',s:1},{f:`SUM(C2:C${n})`,v:R.vun,s:4}]);
+  res.x={cols:[7,Math.max(20,...R.blocos.map(x=>String(x.nome).length))+2,13],rows}}}
 /* ---- Biblioteca de referências TOF: valores de referência do perito (por cultura | método), com fonte; exporta-se num ficheiro e importa-se noutra app ou aparelho ---- */
 const TOF_LIB_KIND='PFK_TOF_Biblioteca';
 function tofLibExport(){const refs=settings.calcRefs||{};const o={kind:TOF_LIB_KIND,v:1,data:new Date().toISOString(),refs,hist:settings.calcHist||{}};const b=new Blob([JSON.stringify(o,null,1)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`Biblioteca_TOF_${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500)}

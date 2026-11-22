@@ -53,3 +53,4 @@ Validar destinos; perguntas de caracterização por tipo; métodos de avaliaçã
 - 1.5 (22/11/2026): anexos em ficheiro como no Relatório de Peritagem (nome, largura, PDF/imagens dentro do Word, página «ANEXOS», sub-tópicos no índice; cópias e envio levam os anexos); «Em anexo» com Planta(s), Levantamento topográfico, Esquematização de áreas, Extrato do PDM…
 - 1.5.1 (22/11/2026): valor estimado da verba TOF automático (área × valor do cálculo / de referência), recalculado ao mostrar e ao exportar; escrever um valor fixa-o.
 - 1.5.2 (22/11/2026): pasta completa (.zip) — Word, PDF, Excel geral das verbas, KML das verbas, e por verba (Verbas/VB_xxx/): ficha em Excel e fotografias (com a reserva); anexos originais.
+- 1.6 (22/11/2026): quadros de cálculo no Word como folha do Excel embutida (editável no PC); a pasta leva também o cálculo em Excel por verba.

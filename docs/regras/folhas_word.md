@@ -19,4 +19,5 @@
 ## Onde está aplicada
 | App | Versão | Notas |
 |---|---|---|
+| AvaLias | 1.6 | motor comum `comum/tof.js` v1.2 (`calcXls` passou para o motor) · `alXlsx` (zip próprio) · `alXlsPng` · `alOlePara`; o cálculo é refeito ao exportar e só se embute se der o mesmo V_Un; a pasta ZIP leva também `VB_xxx_Calculo.xlsx` |
 | ExPropria | 0.14.0 | `calcXls` (rotação, eucaliptal, pinhal, soma de rendimentos) · `xlsxBuild` · `oleInsert` · `xlsEmbedAll` |
