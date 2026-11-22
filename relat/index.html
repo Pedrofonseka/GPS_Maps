@@ -152,6 +152,14 @@ body:has(.rvbar){padding-bottom:70px}
 .newver{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;background:#222;color:#fff;padding:8px 12px;border-radius:10px;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.3)}.newver button{margin-left:8px}
 .mprocs{max-height:42vh;overflow:auto;display:flex;flex-direction:column;gap:6px;margin:4px 0}.mproc{border:1px solid var(--line);border-radius:10px;padding:6px 8px;background:#fff}.mproc.on{border-color:var(--pri);box-shadow:0 0 0 2px var(--pri) inset}
 .mproc .mpt{cursor:pointer}.mproc .mpt small{display:block;color:var(--mute);font-size:11px}.mproc .mpb{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap}
+.mxcols{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}.mxw{overflow:auto;max-height:75vh;border:1px solid var(--line);border-radius:10px;background:#fff;margin-top:8px}
+table.mx{border-collapse:separate;border-spacing:0;font-size:13px;min-width:100%}table.mx th,table.mx td{border-bottom:1px solid #eee;border-right:1px solid #f2f2f2;padding:4px 5px;vertical-align:top;text-align:left;white-space:nowrap}
+table.mx thead th{position:sticky;top:0;background:#FFF8D6;z-index:2;font-size:12px}table.mx th select{display:block;margin-top:3px;font-size:11px;padding:2px;min-width:70px}
+table.mx td:first-child,table.mx th:first-child{position:sticky;left:0;background:#fff;z-index:1;min-width:84px;max-width:120px;white-space:normal}table.mx thead th:first-child{z-index:3;background:#FFF8D6}
+table.mx td select,table.mx td input{font-size:12px;padding:3px 4px;margin:0;min-width:90px;width:auto}.mxcode{cursor:pointer;color:var(--ink);text-decoration:underline dotted}.mxd{font-size:11px;color:var(--mute);white-space:normal;line-height:1.2}
+.mxch{display:flex;flex-wrap:wrap;gap:3px;align-items:center;min-width:120px;white-space:normal}.mxc{background:#FFF2CC;border:1px solid #E0B000;border-radius:8px;padding:1px 5px;font-size:11px;cursor:pointer}.mxch select.mxadd{min-width:40px;width:44px}
+.mxgut{display:flex;gap:2px;align-items:center}.mxgut select{min-width:38px!important;width:40px}
+body.wide #app{max-width:1600px}
 </style>
 </head>
 <body>
@@ -746,7 +754,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.19.7';const VERSION_DATA='2026-11-21';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.20.0';const VERSION_DATA='2026-11-21';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1079,6 +1087,7 @@ function render(){
   if(S.sub==='ficha'&&curA())html=vFicha();else if(S.sub==='imp'&&p)html=vImport();
   else{S.sub=null;html=({home:vHome,proc:vProc,anom:vAnoms,insp:vInsp,anal:vAnal,rel:vRel,defs:vDefs,bk:vBk}[S.view]||vHome)()}
   $('#sub').innerHTML=S.sub==='ficha'?(S.subNav||''):'';$('#sub').style.display=S.sub==='ficha'?'':'none';
+  document.body.classList.toggle('wide',S.view==='anal'&&S.theme==='mx'&&S.sub!=='ficha');
   $('#app').innerHTML=html;{let b=document.getElementById('rvbarBox');if(!b){b=document.createElement('div');b.id='rvbarBox';document.body.appendChild(b)}b.innerHTML=rvBarHTML()}
   document.querySelectorAll('#app textarea').forEach(autosize);
   if(S.keepSec){const d=document.querySelector(`#app details.sec[data-key="${S.keepSec}"]`);if(d){d.open=true;window.scrollTo(0,Math.max(0,window.scrollY+d.getBoundingClientRect().top-(S.keepOff||0)))}else window.scrollTo(0,0);S.keepSec=null;S.scrollTop=undefined}
@@ -1147,14 +1156,36 @@ function vInsp(){const p=cur();
   ${sec('ctxF','3.5 · Imagens de contextualização',`<p class="muted" style="margin-top:0">Vistas gerais do edifício, da envolvente e dos acessos — saem no relatório no ponto 3.5, antes da análise. Seguem a rotina das fotografias (reserva, legendas, marcações, repetidas, máximo por assunto).</p><div data-aid="${CTXID}">${fotosSecHTML(ensureCtx(p),true)}</div>`,{cnt:pill(relF(ensureCtx(p)).length+' 📷',relF(ensureCtx(p)).length?'ok':''),def:true})}
   <div class="card"><b>📷 Fotografias da inspeção</b><p class="muted" style="font-size:12px;margin:4px 0">Tire ou carregue as fotos de todas as situações de seguida, sem sair deste modo.</p><div class="btns"><button class="green" data-act="theme" data-v="fotos">📷 Fotografar todas as situações ▶</button></div></div>
   ${nextBtn('anal','4 · Análise')}`}
+// ----- 4 · Análise — matriz: situações em linhas, classificações em colunas (coerência entre situações) -----
+const MX_ID=[['zona','NUF','catZona'],['piso','Piso','catPiso'],['local','Local',null],['elemento','Elemento','catElem']];
+function mxCols(p){const fs=settings.fields.filter(f=>fieldOn(p,f)&&!['long'].includes(f.type));return [...MX_ID.map(([k,l])=>({k,l,id:true})),...fs.map(f=>({k:f.id,l:f.label,f}))]}
+function mxOn(p,c){S.mcols=S.mcols||{};return S.mcols[c.k]??(c.id||['conf','tipo','cons','tend','urg','gut'].includes(c.k))}
+function mxCell(p,a,c){const v=c.id?a[c.k]:a.vals?.[c.k];
+  const sel=(k,opts,cur,extra='')=>`<select data-act="mxSet" data-k="${k}" ${extra}><option value=""></option>${opts.map(([o,t])=>`<option value="${esc(o)}" ${o===cur?'selected':''}>${esc(t)}</option>`).join('')}${cur&&!opts.some(o=>o[0]===cur)?`<option selected value="${esc(cur)}">${esc(cur)}</option>`:''}<option value="__new">✎ outro…</option></select>`;
+  if(c.id){const cat=c.k==='local'?(settings[usoOf(p,a)[2]]||[]):(settings[MX_ID.find(x=>x[0]===c.k)[2]]||[]);return sel(c.k,cat.map(x=>[x,x]),v||'')}
+  const f=c.f;
+  if(f.id==='urg'&&urgAuto(p)){const u=urgFromGut(a.vals?.gut);return `<span class="muted" title="automática, pela prioridade">${esc(u||'—')}</span>`}
+  if(f.id==='conf'&&a.origem==='local')return '<span class="muted">—</span>';
+  if(f.type==='choice')return sel(f.id,(f.opts||[]).map(([o,t])=>[o,o===t?t:o]),v||'').replace('<option value="__new">✎ outro…</option>','');
+  if(f.type==='multi'||f.type==='catalog'){const arr=Array.isArray(v)?v:[];const opts=f.type==='catalog'?settings.catalog.map(x=>[x,x]):(f.opts||[]).map(([o,t])=>[o,o]);
+    return `<div class="mxch">${arr.map(x=>`<span class="mxc" data-act="mxDel" data-k="${f.id}" data-v="${esc(x)}" title="tirar">${esc(x)} ✕</span>`).join('')}<select data-act="mxSet" data-k="${f.id}" class="mxadd"><option value="">＋</option>${opts.filter(o=>!arr.includes(o[0])).map(([o,t])=>`<option value="${esc(o)}">${esc(t)}</option>`).join('')}${f.type==='catalog'?'<option value="__new">✎ outro…</option>':''}</select></div>`}
+  if(f.type==='gut'){const g=v||{};const n=gutScore(g);return `<div class="mxgut">${GUT_K.map(([k,lb])=>`<select data-act="mxGut" data-k="${k}" title="${lb}"><option value="">${lb[0]}</option>${[1,2,3,4,5].map(i=>`<option ${+g[k]===i?'selected':''}>${i}</option>`).join('')}</select>`).join('')}<b>${n||''}</b></div>`}
+  return `<input data-bind="v.${f.id}" value="${esc(v||'')}" placeholder="${esc(f.ph||'')}" style="min-width:80px">`}
+function matrixHTML(p){const C=mxCols(p),on=C.filter(c=>mxOn(p,c)),an=p.anomalias;
+  const fillOpts=c=>{if(c.id){const cat=c.k==='local'?(settings[usoOf(p,null)[2]]||[]):(settings[MX_ID.find(x=>x[0]===c.k)[2]]||[]);return cat.map(x=>[x,x])}const f=c.f;if(f.type==='choice')return (f.opts||[]).map(([o,t])=>[o,o===t?t:o]);if(f.type==='catalog')return settings.catalog.map(x=>[x,x]);if(f.type==='multi')return (f.opts||[]).map(([o])=>[o,o]);return null};
+  return `<div class="card"><b>Colunas</b> <span class="muted" style="font-size:12px">(toque para mostrar/esconder)</span><div class="mxcols">${C.map(c=>`<button class="mini ${mxOn(p,c)?'green':'secondary'}" data-act="mxCol" data-k="${c.k}">${esc(c.l)}</button>`).join('')}</div>
+   <p class="muted" style="font-size:12px;margin:6px 0 0">Cada linha é uma situação; escolha em cada célula. «⇣ vazias» no cabeçalho preenche de uma vez as células ainda em branco dessa coluna. Pode desfazer com ↶.</p></div>
+   <div class="mxw"><table class="mx"><thead><tr><th>Situação</th>${on.map(c=>{const o=fillOpts(c);return `<th>${esc(c.l)}${o?`<select data-act="mxAll" data-k="${c.k}" title="Preencher as vazias"><option value="">⇣ vazias</option>${o.map(([v,t])=>`<option value="${esc(v)}">${esc(t)}</option>`).join('')}</select>`:''}</th>`}).join('')}</tr></thead>
+   <tbody>${an.map(a=>`<tr data-aid="${a.id}"><td><b data-act="openAnom" data-id="${a.id}" class="mxcode">${anCode(p,a)}</b><div class="mxd">${esc(String(a.descricao||'').slice(0,60))}</div></td>${on.map(c=>`<td>${mxCell(p,a,c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`}
 // ----- 4 · Análise -----
-function themesOf(p){const fs=settings.fields.filter(f=>fieldOn(p,f)&&f.type!=='long');return [['','📋 Ficha a ficha'],['fotos','📷 Fotografias'],...fs.map(f=>[f.id,f.label]),['com','💬 Comentário']]}
+function themesOf(p){const fs=settings.fields.filter(f=>fieldOn(p,f)&&f.type!=='long');return [['','📋 Ficha a ficha'],['mx','▦ Matriz'],['fotos','📷 Fotografias'],...fs.map(f=>[f.id,f.label]),['com','💬 Comentário']]}
 function vAnal(){const p=cur(),an=p.anomalias,done=an.filter(isDone).length;const T=S.theme||'';const TH=themesOf(p);if(!TH.some(t=>t[0]===T))S.theme='';
   const head=`<h2>4 · Análise</h2><div class="card"><div class="bar"><i style="width:${an.length?Math.round(100*done/an.length):0}%"></i></div><b>${done}/${an.length}</b> analisadas
     <label style="margin-top:8px">Preencher por tema — o mesmo campo em todas as situações, de seguida</label><div class="seg wrap">${TH.map(([k,t])=>`<button class="${(S.theme||'')===k?'on':''}" data-act="theme" data-v="${k}">${esc(t)}</button>`).join('')}</div></div>`;
   let body='';
   if(!an.length)body='<p class="muted">Ainda não há situações — crie-as em «2 · Situações».</p>';
   else if(!S.theme)body=`<div class="list">${an.map((a,i)=>anomCard(a,i,an.length,'analise')).join('')}</div>`;
+  else if(S.theme==='mx')body=matrixHTML(p);
   else{const f=settings.fields.find(x=>x.id===S.theme);
     body=an.map(a=>{const hh=[a.zona,a.piso,a.local,a.elemento].filter(Boolean).map(esc).join(' / ');
       const inner=S.theme==='fotos'?fotosSecHTML(a,true):S.theme==='com'?txt('a.comentario','',a.comentario,3):f?(f.id==='conf'&&a.origem==='local'?'<p class="muted">Sem status — acrescentada no local.</p>':fieldUI(f,a)):'';
@@ -2439,6 +2470,8 @@ document.addEventListener('click',async e=>{{const _x=e.target.closest&&e.target
     case 'rDoc':case 'rAnex':case 'rRec':case 'rCons':{const r=ensureRel(p),o=act==='rDoc'?r.docs:act==='rAnex'?r.anexos:act==='rRec'?(r.recursos=r.recursos||{}):(r.conseq=r.conseq||{}),k=el.dataset.k;o[k]=!o[k];await saveProc();S.scrollTop=window.scrollY;break}
     case 'rDefTxt':case 'rSug':{const r=ensureRel(p),k=el.dataset.k;if(el.dataset.cf&&String(r[k]||'').trim()&&!confirm('Substituir o texto atual pela introdução do modelo? (pode desfazer com ↶)'))return;r[k]=el.dataset.v;await saveProc();S.scrollTop=window.scrollY;render();
       setTimeout(()=>{const t=document.querySelector(`[data-bind="r.${k}"]`);if(!t)return;t.focus();const a=t.value.indexOf('['),b=t.value.indexOf(']',a);if(a>=0&&b>a)t.setSelectionRange(a,b+1);else t.setSelectionRange(t.value.length,t.value.length)},60);return}
+    case 'mxCol':{const c=mxCols(p).find(x=>x.k===el.dataset.k);S.mcols=S.mcols||{};S.mcols[c.k]=!mxOn(p,c);S.scrollTop=window.scrollY;break}
+    case 'mxDel':{a.vals=a.vals||{};const k=el.dataset.k;a.vals[k]=(a.vals[k]||[]).filter(x=>x!==el.dataset.v);await saveProc();S.scrollTop=window.scrollY;const sx=document.querySelector('.mxw')?.scrollLeft||0;render();const w=document.querySelector('.mxw');if(w)w.scrollLeft=sx;return}
     case 'consAdd':{const r=ensureRel(p),v=String(document.getElementById('consNew')?.value||'').trim().replace(/[;.]+$/,'');if(!v)return toast('Escreva a consequência a acrescentar.');
       const t=v.charAt(0).toUpperCase()+v.slice(1),ex=conseqList().find(x=>x.toLowerCase()===t.toLowerCase());
       if(!ex){settings.conseqExtra=[...(settings.conseqExtra||[]),t];await saveSettings()}r.conseq=r.conseq||{};r.conseq[ex||t]=true;await saveProc();toast(ex?'Já existia na lista — ficou marcada.':'Acrescentada à lista e marcada.');S.scrollTop=window.scrollY;break}
@@ -2590,6 +2623,15 @@ function setImport(rows,sheets,si){if(rows.length&&rows.every(r=>r.length===1)&&
 document.addEventListener('change',async e=>{{const _x=e.target.closest&&e.target.closest('[data-aid]');if(_x)S.aid=_x.dataset.aid}S.histBreak=true;setTimeout(()=>{S.histBreak=false},700);
   const el=e.target,act=el.dataset.act,p=cur(),a=curA();
   if(el.id==='gps'){const t=el.value.trim();if(!t){p.visita.gps=null;await saveProc();setGpsStatus('');return}if(!parseGpsTxt(t)){setGpsStatus('Não reconheço estas coordenadas. Aceito, por exemplo: 41.1579, -8.6291 · 41°09\'28"N 8°37\'45"W · ou um link do Google Maps / Apple Maps.');return}await gpsSet(p,t);return}
+  if(act==='mxSet'||act==='mxGut'||act==='mxAll'){let v=el.value;if(v==='')return;
+    const C=mxCols(p),c=C.find(x=>x.k===el.dataset.k);
+    if(v==='__new'){v=String(prompt('Escreva o valor:')||'').trim();if(!v){render();return}if(c&&c.f?.type==='catalog'&&!settings.catalog.includes(v)){settings.catalog.push(v);await saveSettings()}}
+    const put=(x,force)=>{x.vals=x.vals||{};if(act==='mxGut'){const g={...(x.vals.gut||{})};g[el.dataset.k]=+v;x.vals.gut=g;if(urgAuto(p))x.vals.urg=urgFromGut(g);return}
+      if(c.id){if(force||!String(x[c.k]||'').trim())x[c.k]=v;return}const f=c.f;
+      if(f.type==='multi'||f.type==='catalog'){let arr=Array.isArray(x.vals[f.id])?x.vals[f.id]:[];if(!force&&arr.length)return;const grp=k=>(/^\d+-([A-Z])/.exec(k)||[])[1];if(f.excl&&grp(v))arr=arr.filter(y=>grp(y)!==grp(v));if(!arr.includes(v))arr=[...arr,v];if(f.type==='multi')arr.sort((y,z)=>f.opts.findIndex(o=>o[0]===y)-f.opts.findIndex(o=>o[0]===z));x.vals[f.id]=arr;return}
+      if(force||!x.vals[f.id])x.vals[f.id]=v};
+    if(act==='mxAll'){const L=p.anomalias.filter(x=>!(c.f?.id==='conf'&&x.origem==='local'));L.forEach(x=>put(x,false))}else{if(!a)return;put(a,true)}
+    syncUrg(p);await saveProc();S.scrollTop=window.scrollY;const sx=document.querySelector('.mxw')?.scrollLeft||0;render();const w=document.querySelector('.mxw');if(w)w.scrollLeft=sx;return}
   if(act==='rTk'||act==='rTkB'){const r=ensureRel(p);r[el.dataset.k]=el.checked;await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='aiOkTk'){settings.aiOk=el.checked;await saveSettings();S.scrollTop=window.scrollY;render();return}
   if(act==='rTempo'){const r=ensureRel(p),vi=+el.dataset.v,o=vi<0?(r.tempo=r.tempo||{}):(r.visitas[vi].tempo=r.visitas[vi].tempo||{});o[el.dataset.k]=el.checked;await saveProc();S.scrollTop=window.scrollY;render();return}
