@@ -128,6 +128,7 @@ table.pg{width:100%;border-collapse:collapse;table-layout:fixed}table.pg td{bord
 
 #prevOv{position:fixed;inset:0;z-index:9000;background:#5f6b62;display:flex;flex-direction:column}#prevOv .cmgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;min-width:0}.cmgrid>*{min-width:0}@media(max-width:560px){.cmgrid{grid-template-columns:1fr}}.cmf{display:flex;flex-direction:column;gap:3px;font-size:13px}.cmf input,.cmf select{width:100%}.cmtw{overflow-x:auto;max-width:100%}.cmt{width:auto;border-collapse:collapse}.cmt th{font-size:11.5px;padding:2px 3px;white-space:nowrap}.cmt td{padding:2px 3px}.cmt input{min-width:0;box-sizing:content-box;padding:5px 3px;font-size:14px}.cmt .del{padding:2px 6px;min-height:0}.cmq{border-collapse:collapse;width:100%;font-size:12.5px;margin:4px 0 8px;background:#fff}.cmq th{border-bottom:1px solid #444;padding:3px 5px;font-weight:700;white-space:nowrap}.cmq td{padding:3px 5px;white-space:nowrap}.cmq tr.b td{font-weight:700}.cmh{font-weight:700;margin-top:10px;color:#2f5d3a}.cmblk{display:flex;justify-content:space-between;align-items:center;gap:8px}.cmres{margin-top:12px;padding:10px;border-radius:10px;background:#f3f6f4;font-size:13px;line-height:1.45}.cmv{margin-top:6px;font-size:15px}#cultModal .box{max-width:760px;max-height:92vh;overflow:auto}#cultModal label.chk{background:none;border:0}
 .alsug{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:12.5px;color:#2f5d3a;margin:3px 0 6px}.alsug b{font-weight:600}
+.undobtn{min-width:34px;font-size:17px;padding:2px 6px;margin-right:4px}.undobtn:disabled{opacity:.35}
 .capas{display:flex;flex-direction:column;gap:6px;margin:4px 0 8px}.capa{display:flex;gap:6px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:6px 8px;background:#fff}.capa.on{border-color:var(--pri);box-shadow:0 0 0 2px var(--pri) inset}.capasel{flex:1;display:block!important;min-height:0!important;text-align:left;background:none;border:0;padding:0;color:inherit;cursor:pointer}.capasel small{display:block;color:var(--mute);font-size:11px;font-weight:400}
 .pvbar{display:flex;gap:8px;align-items:center;padding:8px 10px;padding-top:max(8px,env(safe-area-inset-top));background:#E3AE1F;color:#1f2328}#prevOv .pvbar b{flex:1;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#prevOv .pvbar button{background:#fff;color:#E3AE1F;border:0;min-height:40px}#prevOv .pvscroll{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:10px 0 calc(30px + env(safe-area-inset-bottom))}#prevOv .pvzoom{transform-origin:top left}#prevOv .docx-wrapper{background:transparent!important;padding:0!important}#prevOv .docx-wrapper>section.docx{margin:0 auto 12px!important;box-shadow:0 2px 10px #0006!important}
 /* AvaLias — réguas e menus a amarelo médio, texto escuro para contraste */
@@ -716,7 +717,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.6.1';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.7';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -876,7 +877,19 @@ function migrateSettings(s){
 const saveSettings=()=>{S.prevStale=true;return kvSet('settings',settings)};
 let saveT=null,dirty=false,lastErrShown=0;
 function saveProcSoon(){dirty=true;clearTimeout(saveT);saveT=setTimeout(saveProc,500)}
-async function saveProc(){clearTimeout(saveT);S.prevStale=true;const p=cur();if(!p){dirty=false;return}p.updatedAt=Date.now();
+// ---------- desfazer / refazer (por processo; passos de edição juntam-se quando seguidos, < 1,5 s) ----------
+const HIST={};const snap=p=>JSON.stringify(p,(k,v)=>k==='updatedAt'?undefined:v);
+const hk=p=>HIST[p.id]||(HIST[p.id]={u:[],r:[],last:snap(p),t:0});
+function histBtns(){const p=cur(),h=p&&HIST[p.id];const u=document.querySelector('[data-act=undo]'),r=document.querySelector('[data-act=redo]');if(u)u.disabled=!(h&&h.u.length);if(r)r.disabled=!(h&&h.r.length)}
+async function doUndo(dir){const p=cur();if(!p)return;if(dirty)await saveProc();const h=hk(p),from=dir<0?h.u:h.r,to=dir<0?h.r:h.u;
+  if(!from.length)return toast(dir<0?'Nada para desfazer.':'Nada para refazer.');const st=from.pop();to.push(h.last);const o=JSON.parse(st);
+  for(const k of Object.keys(p))if(!(k in o)&&k!=='updatedAt')delete p[k];Object.assign(p,o);h.last=st;h.t=0;S.noHist=true;try{await saveProc()}finally{S.noHist=false}
+  if(S.sub==='ficha'&&!curA())S.sub=null;S.scrollTop=window.scrollY;render();toast(dir<0?'↶ Desfeito.':'↷ Refeito.')}
+document.addEventListener('keydown',e=>{if(!(e.ctrlKey||e.metaKey)||!/^[zy]$/i.test(e.key))return;const t=e.target;if(t&&t.matches&&t.matches('input,textarea,select,[contenteditable]'))return; // dentro de um campo, vale o desfazer do próprio campo
+  e.preventDefault();doUndo(e.key.toLowerCase()==='y'||e.shiftKey?1:-1)});
+async function saveProc(){clearTimeout(saveT);S.prevStale=true;const p=cur();if(!p){dirty=false;return}
+  if(!S.noHist){const h=hk(p),j=snap(p);if(j!==h.last){if(S.histBreak||!h.u.length||Date.now()-h.t>1500){h.u.push(h.last);if(h.u.length>60)h.u.shift()}h.r=[];h.last=j;h.t=S.histBreak?0:Date.now();S.histBreak=false;setTimeout(histBtns,0)}}
+  p.updatedAt=Date.now();
   try{await dbPut(p);dirty=false}
   catch(e){dirty=true;if(Date.now()-lastErrShown>8000){lastErrShown=Date.now();toast('Não foi possível gravar ('+errTxt(e)+'). Os dados continuam no ecrã; volte a tentar ou faça "Guardar cópia".',1)}}}
 const cur=()=>procs.find(p=>p.id===S.pid);
@@ -944,7 +957,7 @@ function render_relat(){
   document.title=`AvaLias · ${VERSION}`;
   const p=cur();if(!p&&['proc','anom','rel'].includes(S.view))S.view='home';
   const crumbs=p&&S.view!=='home'&&S.view!=='defs'?`${esc(p.codigo||'(sem código)')}${S.sub==='ficha'&&curA()?' › '+anCode(p,curA()):''}`:'';
-  $('#hdr').innerHTML=`<h1 data-act="go" data-v="home">AvaLias</h1><span class="ver">v${VERSION} · ${VERSION_DATA.split('-').reverse().join('/')}</span><div class="crumbs">${crumbs}</div><button class="mini ${S.view==='home'?'on':''}" data-act="go" data-v="home">Processos</button><button class="mini ${S.view==='defs'?'on':''}" data-act="go" data-v="defs">Definições</button><button class="mini" data-act="help" aria-label="Ajuda">?</button>`;
+  $('#hdr').innerHTML=`<h1 data-act="go" data-v="home">AvaLias</h1><span class="ver">v${VERSION} · ${VERSION_DATA.split('-').reverse().join('/')}</span><div class="crumbs">${crumbs}</div>${p&&S.view!=='home'&&S.view!=='defs'?`<button class="mini undobtn" data-act="undo" title="Desfazer (Ctrl/⌘+Z)" aria-label="Desfazer" ${hk(p).u.length?'':'disabled'}>↶</button><button class="mini undobtn" data-act="redo" title="Refazer (Ctrl/⌘+Y)" aria-label="Refazer" ${hk(p).r.length?'':'disabled'}>↷</button>`:''}<button class="mini ${S.view==='home'?'on':''}" data-act="go" data-v="home">Processos</button><button class="mini ${S.view==='defs'?'on':''}" data-act="go" data-v="defs">Definições</button><button class="mini" data-act="help" aria-label="Ajuda">?</button>`;
   $('#steps').innerHTML=p&&['proc','anom','rel'].includes(S.view)?[['proc','Processo'],['anom','Verbas'],['rel','Relatório']].map(([v,t])=>`<button class="${S.view===v?'on':''}" data-act="go" data-v="${v}">${t}</button>`).join(''):'';
   $('#steps').style.display=$('#steps').innerHTML?'':'none';
   let html;
@@ -1461,6 +1474,7 @@ const isCol=r=>r.modo==='colegial',isPart=r=>r.ambito==='particular';
 function represR(r,pe){const q=pe.qual||'';if(/tribunal/i.test(q))return 'Perito nomeado pelo Tribunal';const m=q.match(/Parte (\d)/);if(m){const nm=String(r['parte'+m[1]]||'').trim();return `Perito indicado pela Parte ${m[1]}${nm?' — '+nm:''}`}return 'Perito'}
 const qCode=i=>`1.${String(i+1).padStart(3,'0')}`;
 const mesAno=()=>{const d=new Date();return `${MESES_R[d.getMonth()]} de ${d.getFullYear()}`};
+const RPICK=(k,L,val,lbl)=>`<select data-rpick="${k}" style="margin-top:4px"><option value="">${esc(lbl)}</option>${L.map(o=>`<option ${o===val?'selected':''}>${esc(o)}</option>`).join('')}</select>`;
 const RL=(k,lbl,val,ph='')=>`<label>${esc(lbl)}</label><input data-bind="r.${k}" value="${esc(val||'')}" placeholder="${esc(ph)}">`;
 const RT=(k,lbl,val,rows=3,ph='')=>`${lbl?`<label>${esc(lbl)}</label>`:''}<textarea data-bind="r.${k}" rows="${rows}" placeholder="${esc(ph)}">${esc(val||'')}</textarea>`;
 const segR=(act,opts,cur)=>`<div class="seg">${opts.map(([k,t])=>`<button class="${cur===k?'on':''}" data-act="${act}" data-v="${k}">${esc(t)}</button>`).join('')}</div>`;
@@ -1476,9 +1490,9 @@ function relProcHTML(p){const r=ensureRel(p),col=isCol(r),part=isPart(r),hd=hdrD
     ${col?`<label>Peritos do colégio</label><div class="rows">${r.peritos.map((x,i)=>`<div class="rw"><input data-bind="pe.${i}.nome" value="${esc(x.nome||'')}" placeholder="Nome do perito" style="flex:1 1 55%;min-width:0"><select data-act="rQual" data-i="${i}" style="flex:1 1 40%;min-width:0">${QUAL_R.map(q=>`<option ${x.qual===q?'selected':''}>${q}</option>`).join('')}</select><button class="del" data-act="rDelPer" data-i="${i}">✕</button></div>`).join('')}</div><div class="btns"><button class="secondary mini" data-act="rAddPer">+ Perito</button></div>`:''}`;
   const t2=`<p class="muted">N_Ref (código interno): <b>${esc(p.codigo||'— preencha em «1 · Dados do processo»')}</b></p>${RL('procJud','N.º do processo (tribunal)',r.procJud,part?'Em situações particulares, normalmente não existe':'ex.: 1407/25.6T8CBR')}
     <p class="muted">O local está em «1 · Dados do processo».</p>
-    ${RL('entidade',part?'Solicitante (entidade / nome)':'Tribunal / entidade',r.entidade,part?'':'ex.: Tribunal Judicial de Coimbra')}
+    ${RL('entidade',part?'Solicitante (entidade / nome)':'Tribunal / entidade',r.entidade,part?'':'ex.: Tribunal Judicial de Coimbra')}${part?'':RPICK('entidade',AL_TRIBUNAIS,r.entidade,'📋 Escolher o tribunal da lista…')}
     ${RL('objeto','Objeto de análise',r.objeto,'ex.: Moradia – Rua X, n.º 10 (habitação e logradouro)')}
-    ${RL('funcao','Função',r.funcao,'Peritagem')}${RL('contexto','Contexto/ finalidade',r.contexto,'ex.: Ação de despejo')}
+    ${RL('funcao','Função',r.funcao,'Peritagem')}${RL('contexto','Contexto processual',r.contexto,'ex.: Ação de Despejo')}${RPICK('contexto',AL_CONTEXTO,r.contexto,'📋 Escolher da lista…')}
     ${part?'':`${RL('parte1','Parte 1',r.parte1)}${RL('parte2','Parte 2',r.parte2)}`}
     ${RL('versao','Versão do relatório',r.versao,'ex.: 1.01VF ou Draft00')}<p class="muted">Nome do ficheiro (e rodapé): <b>${esc(relFileName(p))}</b></p>`;
   const nq=r.quesitos.length;
@@ -1555,7 +1569,7 @@ async function buildRelat(p){ensureRel(p);alVisCapa(p);p.anomalias.forEach(a=>{a
   let body=!rows?'':`<w:tbl><w:tblPr><w:tblW w:w="${TW}" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders>${noB}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="20" w:type="dxa"/><w:left w:w="20" w:type="dxa"/><w:bottom w:w="20" w:type="dxa"/><w:right w:w="20" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${CW}"/><w:gridCol w:w="${CW}"/><w:gridCol w:w="${TW-2*CW}"/></w:tblGrid>${rows}</w:tbl>`;
   if(rows)body+=P(R(g?`${g.lat.toFixed(6)}°, ${g.lon.toFixed(6)}°`:'',{sz:8,color:'404040'}),{sp:[20,0]})+P('',{sp:[0,0]})+P('',{sp:[0,0]});
   // quadro de identificação
-  const part0=isPart(r);const LBL=[`N_Ref: ${p.codigo||''}`,part0?'Proc. / Solicitante':'Proc. / Entidade','Objeto de análise',p.local?'Local':'',r.contexto?'Contexto/ finalidade':'',part0?'':'Parte 1',part0?'':'Parte 2',p.visita?.data?'Data da visita':'','Versões/ datas'].filter(Boolean);
+  const part0=isPart(r);const LBL=[`N_Ref: ${p.codigo||''}`,part0?'Proc. / Solicitante':'Proc. / Entidade','Objeto de análise',p.local?'Local':'',r.contexto?'Contexto processual':'',part0?'':'Parte 1',part0?'':'Parte 2',p.visita?.data?'Data da visita':'','Versões/ datas'].filter(Boolean);
   const L1=Math.max(1300,Math.min(3400,Math.round((Math.max(...LBL.map(l=>l.length))+4)*100))),L2=TW-L1;const bd=(t,b)=>`<w:tcBorders>${t?'<w:top w:val="single" w:sz="6" w:space="0" w:color="404040"/>':''}${b?'<w:bottom w:val="single" w:sz="6" w:space="0" w:color="404040"/>':''}</w:tcBorders>`;
   const ip=(runs,jc)=>`<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:spacing w:before="30" w:after="30"/>${jc?`<w:jc w:val="${jc}"/>`:''}</w:pPr>${runs}</w:p>`;
   const irow=(lbl,val,o={})=>`<w:tr><w:trPr><w:cantSplit/></w:trPr><w:tc><w:tcPr><w:tcW w:w="${L1}" w:type="dxa"/>${bd(o.t,o.b)}<w:vAlign w:val="center"/></w:tcPr>${ip(R(lbl,{b:true,sz:9}))}</w:tc><w:tc><w:tcPr><w:tcW w:w="${L2}" w:type="dxa"/>${bd(o.t,o.b)}<w:vAlign w:val="center"/></w:tcPr>${val}</w:tc></w:tr>`;
@@ -1567,7 +1581,7 @@ async function buildRelat(p){ensureRel(p);alVisCapa(p);p.anomalias.forEach(a=>{a
    id+=irow(part?'Proc. / Solicitante':'Proc. / Entidade',`<w:tbl><w:tblPr><w:tblW w:w="${L2}" w:type="dxa"/><w:tblBorders>${noB}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${pw}"/><w:gridCol w:w="${ew}"/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:w="${pw}" w:type="dxa"/><w:noWrap/></w:tcPr>${vi(pt)}</w:tc><w:tc><w:tcPr><w:tcW w:w="${ew}" w:type="dxa"/><w:noWrap/></w:tcPr>${vi(et,{jc:'right',sz:esz})}</w:tc></w:tr></w:tbl>${ip('')}`)}
   id+=irow('Objeto de análise',vi(r.objeto,{b:true,sz:13,color:'000000'}));
   if(p.local)id+=irow('Local',vi(p.local));
-  if(r.contexto)id+=irow('Contexto/ finalidade',vi(r.contexto));
+  if(r.contexto)id+=irow('Contexto processual',vi(r.contexto));
   if(!part){id+=irow('Parte 1',vi(r.parte1));id+=irow('Parte 2',vi(r.parte2))}
   if(dl)id+=irow('Data da visita',vi(dl));
   id+=irow('Versões/ datas',vi(`${r.versao||'1.00'} – ${new Date().toLocaleDateString('pt-PT')}`,{color:'808080',sz:9}),{t:1});
@@ -1578,7 +1592,7 @@ async function buildRelat(p){ensureRel(p);alVisCapa(p);p.anomalias.forEach(a=>{a
   if(CM==='nenhuma')body=frame(idTbl,'bottom')+BRK;else body+=idTbl+BRK;
     // ---- capas de desenho próprio (os mesmos dados, outra composição) ----
   if(['titulo','colunas','ficha'].includes(CM)){const D=[];const pt=r.procJud?`Proc. ${r.procJud}`:'';D.push([part?'Solicitante':'Entidade',[r.entidade,pt].filter(x=>String(x||'').trim()).join(' · ')]);
-    if(p.local)D.push(['Local',p.local]);if(r.contexto)D.push(['Contexto / finalidade',r.contexto]);if(!part){D.push(['Parte 1',r.parte1||'']);D.push(['Parte 2',r.parte2||''])}if(dl)D.push(['Data da visita',dl]);
+    if(p.local)D.push(['Local',p.local]);if(r.contexto)D.push(['Contexto processual',r.contexto]);if(!part){D.push(['Parte 1',r.parte1||'']);D.push(['Parte 2',r.parte2||''])}if(dl)D.push(['Data da visita',dl]);
     const ver=`Versão ${r.versao||'1.00'} – ${new Date().toLocaleDateString('pt-PT')}`;const cp2=(runs,o={})=>`<w:p><w:pPr><w:spacing w:before="${o.b||0}" w:after="${o.a||0}"/>${o.jc?`<w:jc w:val="${o.jc}"/>`:''}${o.bd?`<w:pBdr><w:bottom w:val="single" w:sz="${o.bd}" w:space="4" w:color="${o.bc||'008080'}"/></w:pBdr>`:''}</w:pPr>${runs}</w:p>`;
     const tb=(grid,rows,o={})=>`<w:tbl><w:tblPr><w:tblW w:w="${o.w||TW}" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders>${o.borders||noB}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="${o.m??40}" w:type="dxa"/><w:left w:w="${o.m??80}" w:type="dxa"/><w:bottom w:w="${o.m??40}" w:type="dxa"/><w:right w:w="${o.m??80}" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${grid.map(w=>`<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>${rows}</w:tbl>`;
     const tc=(w,c,o={})=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${o.span?`<w:gridSpan w:val="${o.span}"/>`:''}${o.sh?`<w:shd w:val="clear" w:color="auto" w:fill="${o.sh}"/>`:''}${o.bd?`<w:tcBorders>${['top','left','bottom','right'].map(k=>`<w:${k} w:val="single" w:sz="4" w:color="BFBFBF"/>`).join('')}</w:tcBorders>`:''}<w:vAlign w:val="${o.v||'top'}"/></w:tcPr>${c}</w:tc>`;
@@ -1648,7 +1662,7 @@ async function buildRelat(p){ensureRel(p);alVisCapa(p);p.anomalias.forEach(a=>{a
    for(const a of V){const x=a.al,fam=alFam(a),g=a.vis?.gps;
     body+=H2(`${alCode(p,a)}${x.designacao?' – '+x.designacao:''}`)+E();
     let kr='';
-    kr+=krow('Identificação',[x.idTipo,x.idValor].filter(s=>String(s||'').trim()).join(': '));
+    kr+=krow('Identificação',alIdTxt(x));
     kr+=krow('Descrição sumária',a.descricao);
     kr+=krow('Localização',[x.morada,alLocTxt(x),g?`GPS ${g.lat.toFixed(6)}°, ${g.lon.toFixed(6)}°`:''].filter(Boolean).join('\n'));
     kr+=krow('Visita',[a.vis?.data,String(a.vis?.presencas||'').trim()?'Presenças: '+a.vis.presencas:''].filter(Boolean).join('\n'));
@@ -1769,7 +1783,7 @@ function anexFilesHTML(p){const r=ensureRel(p),L=r.anexF||[];return `<label>Fich
   <p class="muted" style="font-size:11px">PDF e imagens entram no Word, cada anexo em página própria a seguir à lista «Em anexo», com o seu título. As imagens seguem a rotina das fotografias (compressão e qualidade de Definições, com um mínimo para leitura em página inteira).</p>`}
 /* ficha da verba em linhas «campo · valor» (para o Excel; a mesma informação do quadro da verba no Word) */
 function alFichaRows(p,a){alA(a);alValSync(a);const x=a.al,fam=alFam(a),g=a.vis?.gps,AP=alP(p),L=[];const add=(l,v)=>{if(Array.isArray(v))v=v.map(alOpt).join(', ');v=String(v??'').trim();if(v)L.push([l,v])};
- add('Código',alCode(p,a));add('Designação',x.designacao);add('Identificação',[x.idTipo,x.idValor].filter(s=>String(s||'').trim()).join(': '));add('Descrição sumária',a.descricao);
+ add('Código',alCode(p,a));add('Designação',x.designacao);add('Identificação',alIdTxt(x).replace(/\n/g,' · '));add('Descrição sumária',a.descricao);
  add('Concelho',x.concelho);add('Freguesia',x.freguesia);add('Endereço',x.morada);if(g){L.push(['Latitude',+g.lat.toFixed(6)]);L.push(['Longitude',+g.lon.toFixed(6)])}
  add('Data da visita',a.vis?.data);add('Presenças',a.vis?.presencas);add('Tipo de ativo',alTipoNome(a));add('Destino',alDestTxt(a));
  if(fam){if(x.modo==='suc')for(const [k,l] of AL_SUC[fam])add(l,x.suc[k]);else for(const f of AL_CAR[fam]){if(f[0]==='g')continue;const v=x.car[f[0]];add(f[1],f[2]==='c'?alOpt(v):v)}}
@@ -1995,16 +2009,22 @@ const AL_LISTS={"aglomerado": ["7 - Cap. Distrito", "6 - Cidade", "5 - Vila", "4
    Processo → Verbas: 1 Identificação · 2 Localização · 3 Visita · 4 Tipo de ativo e destino ·
    5 Estado (características — Detalhado/Sucinto — e fotos) · 6 Utilidade · 7 Métodos · 8 Valor.
    ===================================================================== */
-const AL_TIPOS=[['EDI','Edifício','imo'],['MOR','Moradia','imo'],['ANX','Construção anexa','imo'],['GAR','Garagem autónoma','imo'],['FRA','Fração','imo'],['VEI','Veículo','vei'],['MOB','Conjunto de mobiliário','mob'],['TER','Terreno','ter'],['SEP','Sepultura','sep'],['OUT','Outra situação','out']];
+const ABC=L=>{const top=L.filter(x=>/^NA[PN] - |^NFN - /.test(x)),end=L.filter(x=>/^Outr[oa]$/.test(x));return [...top,...L.filter(x=>!top.includes(x)&&!end.includes(x)).sort((a,b)=>a.localeCompare(b,'pt')),...end]}; // ordem alfabética, NAP/NAN/NFN no início e «Outro» no fim
+const AL_TIPOS=[['CAP','Construção de apoio','imo'],['ANX','Construção tipo Anexo','imo'],['EDI','Edifício em PV','imo'],['EQP','Equipamento','mob'],['FRA','Fração em PH','imo'],['LUG','Lugar','imo'],['LOT','Lote de Terreno','ter'],['MOB','Mobiliário','mob'],['MBA','Moradia em banda','imo'],['MOR','Moradia isolada','imo'],['MUR','Muro','imo'],['PAV','Pavilhão','imo'],['PIS','Piscina','imo'],['SEP','Sepultura','sep'],['TER','Terreno','ter'],['VEI','Veículo','vei'],['OUT','Outro','out']];
+const AL_TIPO_OLD={GAR:'LUG'};
 /* destinos: imóveis — afetações do CIMI (art. 41.º) + as indicadas pelo utilizador; veículos — categorias do Código da Estrada (art. 106.º e ss.) */
 const AL_DEST={
- imo:['Habitação','Comércio','Serviços','Comércio e serviços','Armazéns e atividade industrial','Aviário','Estacionamento coberto','Estacionamento não coberto','Arrecadações e arrumos','Outro'],
+ imo:['Armazéns/ atividade industrial','Arrumos','Aviário','Comércio','Comércio/Serviços','Estacionamento coberto','Estacionamento descoberto','Garagem','Habitação','Serviços','Outro'],
  ter:['Construção','Produção agrícola','Produção florestal','Agroflorestal','Outro'],
  vei:['Ligeiro de passageiros — uso particular','Ligeiro de passageiros — transporte de passageiros','Ligeiro de mercadorias','Ligeiro misto','Pesado de passageiros','Pesado de mercadorias','Motociclo / ciclomotor','Trator agrícola / florestal','Máquina industrial','Reboque / semirreboque','Outro'],
  mob:['Habitação','Escritório','Comércio','Outro'],
  sep:['Uso funerário','Outro'],
  out:['Outro']};
-const AL_IDTIPO={imo:['Artigo matricial','Descrição predial (CRP)','Outro'],ter:['Artigo matricial','Descrição predial (CRP)','Outro'],vei:['Matrícula','N.º de quadro (VIN)'],mob:['Referência / inventário'],sep:['N.º da sepultura','Alvará de concessão'],out:['Referência']};
+const AL_IDTIPO={imo:['CDP','CRP','BUPI','Outro'],ter:['CDP','CRP','BUPI','Outro'],vei:['Matrícula','N.º de quadro (VIN)'],mob:['Referência / inventário'],sep:['N.º da sepultura','Alvará de concessão'],out:['Referência']};
+const AL_IDLBL={CDP:'CDP – Caderneta predial',CRP:'CRP – Registo predial',BUPI:'BUPI',Outro:'Outro'};
+const AL_IDPH=(k,x)=>({CDP:`ex.: art.º 1234 da freguesia de ${x.freguesia||'…'}`,CRP:'ex.: registo 1234/20091010',BUPI:'ex.: n.º do processo / RGG',Outro:'documento e número'})[k]||'n.º';
+const AL_IDOLD={'Artigo matricial':'CDP','Descrição predial (CRP)':'CRP'};
+const alIdTxt=x=>Object.entries(x.ids||{}).map(([k,v])=>`${k}${String(v||'').trim()?' – '+String(v).trim():''}`).join('\n');
 const AL_CTX=[['aglomerado','Aglomerado de referência','c','aglomerado'],['centralidade','Centralidade','c','centralidade'],['envolvente','Envolvente','c','envolvente'],['consolidacao','Consolidação urbanística','c','consolidacao'],['padrao','Padrão urbano','c','padrao_urbano'],['acesso','Acesso ao local','c','acesso_local'],['infraCE','Disponibilidade, em frente ao local, de','m','infra_ce']]; // lógica do Código das Expropriações (art. 25.º e 26.º): acesso escalonado + infraestruturas em frente ao local
 const AL_CAR={
  imo:[['g','Contexto'],...AL_CTX,['g','Construção'],['tipologia','Tipologia (ex.: T3)','t'],['pisos','N.º de pisos','n'],['ano','Ano de construção (aprox.)','t'],['sist','Sistema construtivo','c','sist_construtivo'],['cob','Cobertura','c','cobertura'],['exec','Estado de execução','c','edc2_estado_execucao'],['estado','Estado de conservação','c','dep_rhd'],['energ','Classe energética','c','edc2_classe_energetica'],['inspecao','Inspeção','c','edc2_tipo_inspecao'],['g','Áreas'],['at','Área de terreno — AT (m²)','n'],['ai','Área de implantação — AI (m²)','n'],['abp','Área bruta privativa — Abp (m²)','n'],['abd','Área bruta dependente — Abd (m²)','n'],['fonteArea','Fonte das áreas','m','fonte_info']],
@@ -2030,9 +2050,23 @@ const alTipoNome=a=>(AL_TIPOS.find(t=>t[0]===a?.al?.tipo)||[])[1]||'';
 const alDestTxt=a=>{const d=a?.al?.destino||'';return d==='Outro'?(String(a.al.destinoOutro||'').trim()||'Outro'):d};
 const alEur=v=>{const n=alNum(v);return n==null?'':n.toLocaleString('pt-PT',{minimumFractionDigits:0,maximumFractionDigits:0})+' €'};
 const alNum=v=>{if(v==null||v==='')return null;const n=Number(String(v).replace(/\s/g,'').replace(/\.(?=\d{3}(\D|$))/g,'').replace(',','.'));return isFinite(n)?n:null};
-function alP(p){const d={finalidade:'',finalidadeOutra:'',base:'Valor de mercado',posse:'Propriedade Plena',bad:false,badPct:'10'};p.al=p.al||{};for(const k in d)if(p.al[k]===undefined)p.al[k]=d[k];return p.al}
-AL_LISTS.acesso_local=['Sem acesso direto','Caminho de pé','Caminho tipo agrícola','Rua não pavimentada','Rua em construção','Rua pavimentada','Estrada não pavimentada','Estrada em construção','Estrada'];
-AL_LISTS.infra_ce=['Passeios','Rede de água','Rede pluvial','Rede de saneamento','Rede de telecomunicações','Rede de energia','Rede de iluminação'];
+function alP(p){const d={finalidade:'',finalidadeOutra:'',base:'Valor de mercado',posse:'Propriedade Plena',bad:false,badPct:'10'};p.al=p.al||{};for(const k in d)if(p.al[k]===undefined)p.al[k]=d[k];
+ const P=p.al;if(!P._fin2){P._fin2=1;if(AL_FIN_OLD[P.finalidade])P.finalidade=AL_FIN_OLD[P.finalidade];else if(['Inventário','Arbitramento','Expropriação'].includes(P.finalidade)){const r=ensureRel(p);if(!String(r.contexto||'').trim())r.contexto=P.finalidade==='Expropriação'?'':P.finalidade;P.finalidade=''}else if(P.finalidade==='Outra'){P.finalidade=''}}return P}
+const NAPNAN=['NAP - Não aplicável','NAN - Não analisado'];
+AL_LISTS.acesso_local=[...NAPNAN,'Sem acesso direto','Caminho de pé','Caminho tipo agrícola','Rua não pavimentada','Rua em construção','Rua pavimentada','Estrada não pavimentada','Estrada em construção','Estrada'];
+AL_LISTS.infra_ce=[...NAPNAN,'Passeios','Rede de água','Rede pluvial','Rede de saneamento','Rede de telecomunicações','Rede de energia','Rede de iluminação'];
+AL_LISTS.sist_construtivo=ABC([...NAPNAN,'Betão armado','Betão e alvenaria','Alvenaria portante','Aço leve','Madeira','Aço','Alvenaria e Madeira','Modular','Construção precária','Construção amovível']);
+AL_LISTS.edc2_estado_execucao=[...NAPNAN,'Concluído','Em construção','Não iniciado'];
+AL_LISTS.dep_rhd=[...NAPNAN,...AL_LISTS.dep_rhd.filter(x=>!/^0-Nap/.test(x))];
+AL_LISTS.edc2_classe_energetica=[...NAPNAN,'NFN - Não fornecido',...AL_LISTS.edc2_classe_energetica.filter(x=>x!=='Não fornecida')];
+AL_LISTS.atratividade=[...NAPNAN,...AL_LISTS.atratividade.filter(x=>!/NAP/.test(x))];
+AL_LISTS.proc_finalidade=['Arrendamento','Compra/venda','Hipoteca','Particular','Partilha'];
+const AL_TRIBUNAIS=(L=>L.sort((a,b)=>a.replace(/^Tribunal Judicial d[aeo]s? /,'').localeCompare(b.replace(/^Tribunal Judicial d[aeo]s? /,''),'pt')))(['Tribunal Judicial de Viseu','Tribunal Judicial de Coimbra','Tribunal Judicial de Oliveira do Hospital','Tribunal Judicial de Santa Comba Dão','Tribunal Judicial de São Pedro do Sul','Tribunal Judicial de Arganil','Tribunal Judicial de Tábua','Tribunal Judicial de Nelas','Tribunal Judicial de Seia','Tribunal Judicial da Lousã','Tribunal Judicial de Aveiro','Tribunal Judicial da Mealhada','Tribunal Judicial de Gouveia','Tribunal Judicial de Celorico da Beira','Tribunal Judicial da Guarda','Tribunal Judicial de Fornos de Algodres']);
+const AL_CONTEXTO=ABC(['Inventário','Ação de Processo comum','Autorização','Atribuição da Casa de Morada da Família','Divisão de coisa comum','Arbitramento','Ação de Despejo','Execução comum','Execução de sentença','Execução sumária','Penhora','Incidente de liquidação','Anulação de deliberações']);
+const AL_LIST_OLD={sist:{},exec:{'Por concluir':'Em construção','Em ruína':''},estado:{'0-Nap — Não aplicável':'NAP - Não aplicável'},energ:{'Não fornecida':'NFN - Não fornecido'}};
+const AL_ATR_OLD={'x- NAP':'NAP - Não aplicável'};
+const AL_DEST_OLD={'Comércio e serviços':'Comércio/Serviços','Armazéns e atividade industrial':'Armazéns/ atividade industrial','Estacionamento não coberto':'Estacionamento descoberto','Arrecadações e arrumos':'Arrumos'};
+const AL_FIN_OLD={'Aquisição':'Compra/venda','Crédito Hipotecário':'Hipoteca'};
 /* PDM — enquadramento do terreno nos instrumentos de gestão territorial (como no ExPropria, 2.6) */
 AL_LISTS.pdm_igt=['PDM – Plano Diretor Municipal','PU – Plano de Urbanização','PP – Plano de Pormenor','AL – Alvará de loteamento','UE – Unidade de execução','Outro'];
 AL_LISTS.pdm_classe=['Rústico','Urbano'];
@@ -2040,7 +2074,6 @@ AL_LISTS.pdm_cat=['Espaços agrícolas','Espaços florestais','Espaço florestal
 AL_LISTS.ranren=['Não sujeito','Parcialmente sujeito','Sujeito','Integralmente sujeito','Não verificado'];
 AL_LISTS.perig_inc=['Muito baixa','Baixa','Média','Alta','Muito alta','Não identificada'];
 /* contexto do local — listas revistas (22/11/2026) */
-const NAPNAN=['NAP - Não aplicável','NAN - Não analisado'];
 AL_LISTS.aglomerado=[...NAPNAN,'Capital','Capital de distrito','Cidade','Vila','Aldeia','Lugar','Fora do aglomerado'];
 AL_LISTS.centralidade=[...NAPNAN,'Núcleo antigo','Zona central','1ª Coroa','2ª Coroa','3ª Coroa','Periferia'];
 AL_LISTS.envolvente=[...NAPNAN,'Urbanização Edif. Uso múltiplo','Urbanização Moradias','Edif. Uso múltiplo','Moradias','Moradias com quintal','Indústria','Rural/Natural','Equipamentos de utilidade pública','Zonas de lazer','Praia','Turística'];
@@ -2060,14 +2093,19 @@ const AL_ACESSO_OLD={'Estrada Nacional':'Estrada','Estrada Local':'Estrada','Rua
 function alLocSel(x){const C=Object.keys(PT_FREG).sort((a,b)=>a.localeCompare(b,'pt')),L=x.concelho?fregOf(x.concelho):[],inL=!x.freguesia||L.includes(x.freguesia);
  return `<div class="row2"><div><label>Concelho</label><select data-alloc="concelho"><option value="">— escolher —</option>${C.map(o=>`<option ${o===x.concelho?'selected':''}>${esc(o)}</option>`).join('')}</select></div><div><label>Freguesia</label><select data-alloc="freguesia" ${x.concelho?'':'disabled'}><option value="">${x.concelho?'— escolher —':'(escolha primeiro o concelho)'}</option>${L.map(o=>`<option ${o===x.freguesia?'selected':''}>${esc(o)}</option>`).join('')}${!inL?`<option selected>${esc(x.freguesia)}</option>`:''}${x.concelho?'<option value="_outra">Outra… (freguesia reposta / não listada)</option>':''}</select></div></div>`}
 const alLocTxt=x=>[x.freguesia?`Freguesia de ${x.freguesia}`:'',x.concelho?`Concelho de ${x.concelho}`:''].filter(Boolean).join(', ');
+document.addEventListener('click',()=>{S.histBreak=true;setTimeout(()=>{S.histBreak=false},700)},true);document.addEventListener('change',()=>{S.histBreak=true;setTimeout(()=>{S.histBreak=false},700)},true);
+document.addEventListener('change',async e=>{const el=e.target.closest('select[data-rpick]');if(!el)return;e.stopImmediatePropagation();const p=cur();if(!p||!el.value)return;ensureRel(p)[el.dataset.rpick]=el.value;await saveProc();S.scrollTop=window.scrollY;render()},true);
 document.addEventListener('change',async e=>{const el=e.target.closest('select[data-alloc]');if(!el)return;e.stopImmediatePropagation();const a=curA();if(!a)return;alA(a);const x=a.al,k=el.dataset.alloc;
  if(k==='freguesia'&&el.value==='_outra'){const n=(prompt('Nome da freguesia (fica guardada para este concelho):','')||'').trim();if(n){settings.fregExtra=settings.fregExtra||{};const L=settings.fregExtra[x.concelho]=settings.fregExtra[x.concelho]||[];if(!L.includes(n))L.push(n);try{await saveSettings()}catch(_){}x.freguesia=n}}
  else{x[k]=el.value;if(k==='concelho'&&x.freguesia&&!fregOf(x.concelho).includes(x.freguesia))x.freguesia=''}
  await saveProc();S.scrollTop=window.scrollY;render()},true);
-function alA(a){const d={codigo:'',designacao:'',idTipo:'',idValor:'',concelho:'',freguesia:'',morada:'',tipo:'',destino:'',destinoOutro:'',modo:'det',car:{},suc:{},atr:'',util:'',met:{},metTxt:'',valor:'',renda:'',bad:'',valObs:''};a.al=a.al||{};for(const k in d)if(a.al[k]===undefined)a.al[k]=clone(d[k]);{const c=a.al.car;alCtxMig(c);if(c&&c.acessos&&!c.acesso){const t=alOpt(c.acessos);if(AL_ACESSO_OLD[t])c.acesso=AL_ACESSO_OLD[t]}}a.vis=a.vis||{data:'',presencas:'',gps:null};return a.al}
+function alA(a){const d={codigo:'',designacao:'',idTipo:'',idValor:'',concelho:'',freguesia:'',morada:'',tipo:'',destino:'',destinoOutro:'',modo:'det',car:{},suc:{},atr:'',util:'',met:{},metTxt:'',valor:'',renda:'',bad:'',valObs:''};a.al=a.al||{};for(const k in d)if(a.al[k]===undefined)a.al[k]=clone(d[k]);{const x0=a.al;if(AL_TIPO_OLD[x0.tipo])x0.tipo=AL_TIPO_OLD[x0.tipo];if(AL_DEST_OLD[x0.destino])x0.destino=AL_DEST_OLD[x0.destino];if(AL_ATR_OLD[x0.atr]!==undefined)x0.atr=AL_ATR_OLD[x0.atr];
+  if(!x0.ids){x0.ids={};const t=String(x0.idTipo||'').trim(),v=String(x0.idValor||'').trim();if(t||v)x0.ids[AL_IDOLD[t]||t||'Outro']=v}
+  const c0=x0.car;if(c0)for(const [k,M] of Object.entries(AL_LIST_OLD))if(typeof c0[k]==='string'&&M[c0[k]]!==undefined)c0[k]=M[c0[k]]}
+ {const c=a.al.car;alCtxMig(c);if(c&&c.acessos&&!c.acesso){const t=alOpt(c.acessos);if(AL_ACESSO_OLD[t])c.acesso=AL_ACESSO_OLD[t]}}a.vis=a.vis||{data:'',presencas:'',gps:null};return a.al}
 function alCode(p,a){const c=String(a?.al?.codigo||'').trim();if(c)return c;const i=(p?.anomalias||[]).indexOf(a);return 'VB_'+String((i<0?0:i)+1).padStart(3,'0')}
 function alNew(p){const a=newAnom('local',1);alA(a);return a}
-function alTemDados(a){const x=a.al||{};return !!(a.fotos?.length||String(a.descricao||'').trim()||x.tipo||x.valor||x.designacao||x.idValor||x.morada||a.vis?.gps||Object.values(x.car||{}).some(v=>Array.isArray(v)?v.length:String(v||'').trim())||Object.values(x.suc||{}).some(v=>String(v||'').trim()))}
+function alTemDados(a){const x=a.al||{};return !!(a.fotos?.length||String(a.descricao||'').trim()||x.tipo||x.valor||x.designacao||Object.keys(x.ids||{}).length||x.morada||a.vis?.gps||Object.values(x.car||{}).some(v=>Array.isArray(v)?v.length:String(v||'').trim())||Object.values(x.suc||{}).some(v=>String(v||'').trim()))}
 function alFeita(a){const x=a.al||{};return !!(x.tipo&&(a.fotos?.length||alNum(x.valor)!=null))}
 
 /* ---------- ficha da verba ---------- */
@@ -2083,9 +2121,9 @@ function vFicha(){
  const ok=(c)=>pill(c?'✓':'—',c?'ok':'');
  let h='';
  /* 1 identificação */
- const idOpts=fam?AL_IDTIPO[fam]:[...new Set(Object.values(AL_IDTIPO).flat())];
+ const idOpts=fam?AL_IDTIPO[fam]:AL_IDTIPO.imo;
  h+=sec('v1','1 · Identificação',`<div class="row2">${inp('al.codigo',`Código da verba (vazio = ${'VB_'+String(idx+1).padStart(3,'0')})`,x.codigo,'VB_001')}${inp('al.designacao','Designação (curta — sai no quadro-resumo)',x.designacao,'ex.: Moradia T3, Ligeiro Renault Clio…')}</div>
-  <label>Identificação do ativo (ID)</label><div class="tks sm">${idOpts.map(o=>alTk(x.idTipo===o,esc(o),`data-alact="set" data-k="idTipo" data-v="${esc(o)}"`)).join('')}</div><input data-bind="al.idValor" value="${esc(x.idValor)}" placeholder="${esc(x.idTipo||'Artigo / matrícula / n.º…')}">
+  <label>Identificação do ativo <span class="muted">(pode assinalar vários documentos, cada um com o seu número)</span></label><div class="tks sm">${idOpts.map(o=>alTk(o in (x.ids||{}),esc(AL_IDLBL[o]||o),`data-alact="idtog" data-v="${esc(o)}"`)).join('')}</div>${idOpts.map((o,i)=>o in (x.ids||{})?`<div class="inrow" style="margin-top:4px"><b style="min-width:52px">${esc(o.length>8?o.slice(0,8)+'…':o)}</b><input data-bind="alid.${i}" value="${esc(x.ids[o]||'')}" placeholder="${esc(AL_IDPH(o,x))}"></div>`:'').join('')}
   ${txt('a.descricao','Descrição sumária',a.descricao,3)}`,{cnt:ok(x.designacao||a.descricao)});
  /* 2 localização */
  const prevLoc=prev&&(prev.vis?.gps||prev.al?.morada);
@@ -2123,7 +2161,7 @@ function vAnoms(){const p=cur();alP(p);const L=p.anomalias;L.forEach(alA);const 
  return `<h2>Verbas (${L.length})</h2><div class="card"><div class="steps3"><span><b>1</b> Identificar e localizar</span><span><b>2</b> Tipo, estado e fotos</span><span><b>3</b> Utilidade, métodos e valor</span></div>
  <div class="btns"><button class="green" data-alact="nova">+ Nova verba</button><button class="secondary" data-alact="trocar">⇄ Enviar / receber verbas</button></div>
  ${L.length?`<div class="bar"><i style="width:${Math.round(100*done/L.length)}%"></i></div><b>${done}/${L.length}</b> com tipo e fotos ou valor${tot?` · total estimado <b>${esc(alEur(tot))}</b>`:''}`:''}</div>
- <div class="list">${L.map((a,i)=>{const x=a.al;return `<div class="card alcard" data-act="openAnom" data-id="${a.id}"><button class="aldel" data-alact="del" data-id="${a.id}" title="Eliminar a verba ${esc(alCode(p,a))}" aria-label="Eliminar a verba">🗑</button><b>${esc(alCode(p,a))}</b> ${esc(x.designacao||'')}<div class="muted">${esc([alTipoNome(a),alDestTxt(a)].filter(Boolean).join(' · ')||'Tipo por definir')}${x.idValor?' · '+esc((x.idTipo?x.idTipo+' ':'')+x.idValor):''}</div><div style="margin-top:4px">${pill('📷 '+relF(a).length)}${a.vis?.gps?pill('GPS','ok'):''}${a.vis?.data?pill(a.vis.data):''}${alNum(x.valor)!=null?pill(alEur(x.valor),'ok'):pill('sem valor','warn')}</div></div>`}).join('')||'<p class="muted">Ainda não há verbas.</p>'}</div>`}
+ <div class="list">${L.map((a,i)=>{const x=a.al;return `<div class="card alcard" data-act="openAnom" data-id="${a.id}"><button class="aldel" data-alact="del" data-id="${a.id}" title="Eliminar a verba ${esc(alCode(p,a))}" aria-label="Eliminar a verba">🗑</button><b>${esc(alCode(p,a))}</b> ${esc(x.designacao||'')}<div class="muted">${esc([alTipoNome(a),alDestTxt(a)].filter(Boolean).join(' · ')||'Tipo por definir')}${Object.keys(x.ids||{}).length?' · '+esc(alIdTxt(x).replace(/\n/g,' · ')):''}</div><div style="margin-top:4px">${pill('📷 '+relF(a).length)}${a.vis?.gps?pill('GPS','ok'):''}${a.vis?.data?pill(a.vis.data):''}${alNum(x.valor)!=null?pill(alEur(x.valor),'ok'):pill('sem valor','warn')}</div></div>`}).join('')||'<p class="muted">Ainda não há verbas.</p>'}</div>`}
 
 /* ---------- processo ---------- */
 function vProc(){const p=cur(),P=alP(p);
@@ -2132,7 +2170,7 @@ function vProc(){const p=cur(),P=alP(p);
  ${sec('p1','1 · Dados do processo',`${inp('p.codigo','N_Ref — código interno do processo',p.codigo,'ex.: Ava 2611')}${inp('p.designacao','Designação',p.designacao)}${inp('p.local','Local / morada (geral, se houver)',p.local)}`,{cnt:falta([p.codigo,p.designacao].filter(x=>!String(x||'').trim()).length)})}
  ${relProcHTML(p)}
  ${blk('B · Contexto da avaliação','Finalidade, base de valor, posse e BAD — valem para todas as verbas')}
- ${sec('pctx','Contexto da avaliação',`<label>Finalidade</label><div class="tks sm">${[...fin,'Outra'].map(o=>alTk(P.finalidade===o,esc(o),`data-alact="pset" data-k="finalidade" data-v="${esc(o)}"`)).join('')}</div>${P.finalidade==='Outra'?inp('pal.finalidadeOutra','Finalidade — descrever',P.finalidadeOutra):''}
+ ${sec('pctx','Contexto da avaliação',`<label>Finalidade</label><div class="tks sm">${fin.map(o=>alTk(P.finalidade===o,esc(o),`data-alact="pset" data-k="finalidade" data-v="${esc(o)}"`)).join('')}</div>
   <label>Base de valor</label><div class="tks sm">${bases.map(o=>alTk(P.base===o,esc(o),`data-alact="pset" data-k="base" data-v="${esc(o)}"`)).join('')}</div>${P.base==='Valor de renda de mercado'?'<p class="muted">Com renda de mercado, cada verba pede também a renda mensal e o quadro-resumo leva essa coluna.</p>':''}
   <label>Tipo de posse</label><div class="tks sm">${posse.map(o=>alTk(P.posse===o,esc(o),`data-alact="pset" data-k="posse" data-v="${esc(o)}"`)).join('')}</div>
   <label>BAD — benefício económico de adjudicação direta</label><p class="muted" style="margin-top:0">Aplica-se quando algum dos intervenientes manifesta interesse especial em adquirir o ativo: sugere-se uma redução ao valor estimado.</p><div class="seg"><button class="${!P.bad?'on':''}" data-alact="pset" data-k="bad" data-v="0">Não aplicável</button><button class="${P.bad?'on':''}" data-alact="pset" data-k="bad" data-v="1">Aplicável</button></div>${P.bad?inp('pal.badPct','Redução por defeito, até (%)',P.badPct,'10'):''}`,{cnt:falta([P.finalidade,P.base].filter(x=>!x).length)})}
@@ -2145,7 +2183,8 @@ document.addEventListener('click',async e=>{const el=e.target.closest('[data-ala
  const keep=async()=>{S.scrollTop=window.scrollY;await saveProc();render()};
  switch(act){
   case 'set':{alA(a);const k=el.dataset.k,v=el.dataset.v;a.al[k]=(k==='modo')?v:(a.al[k]===v?'':v);return keep()}
-  case 'tipo':{alA(a);const v=el.dataset.v;if(a.al.tipo===v)return;if(a.al.tipo&&alFam(a)!==(AL_TIPOS.find(t=>t[0]===v)||[])[2]&&(Object.keys(a.al.car).length)&&!await ask('Mudar o tipo de ativo? A caracterização detalhada já registada fica guardada, mas só aparece a do novo tipo.',['Cancelar','Mudar'],1))return;a.al.tipo=v;if(!AL_DEST[alFam(a)].includes(a.al.destino))a.al.destino='';if(!a.al.idTipo||!AL_IDTIPO[alFam(a)].includes(a.al.idTipo))a.al.idTipo=AL_IDTIPO[alFam(a)][0];S.open.v5=true;return keep()}
+  case 'idtog':{alA(a);const v=el.dataset.v;a.al.ids=a.al.ids||{};if(v in a.al.ids)delete a.al.ids[v];else a.al.ids[v]='';return keep()}
+  case 'tipo':{alA(a);const v=el.dataset.v;if(a.al.tipo===v)return;if(a.al.tipo&&alFam(a)!==(AL_TIPOS.find(t=>t[0]===v)||[])[2]&&(Object.keys(a.al.car).length)&&!await ask('Mudar o tipo de ativo? A caracterização detalhada já registada fica guardada, mas só aparece a do novo tipo.',['Cancelar','Mudar'],1))return;a.al.tipo=v;if(!AL_DEST[alFam(a)].includes(a.al.destino))a.al.destino='';S.open.v5=true;return keep()}
   case 'car1':{alA(a);const k=el.dataset.k,v=el.dataset.v;a.al.car[k]=a.al.car[k]===v?'':v;return keep()}
   case 'carM':{alA(a);const k=el.dataset.k,v=el.dataset.v;const arr=Array.isArray(a.al.car[k])?a.al.car[k]:[];a.al.car[k]=arr.includes(v)?arr.filter(x=>x!==v):[...arr,v];return keep()}
   case 'met':{alA(a);const v=el.dataset.v;a.al.met[v]=!a.al.met[v];return keep()}
@@ -2165,8 +2204,8 @@ document.addEventListener('click',async e=>{const el=e.target.closest('[data-ala
  }},true);
 
 /* ---------- campos ligados ---------- */
-document.addEventListener('input',e=>{const el=e.target,b=el.dataset?.bind;if(!b)return;const [scope,k]=b.split('.');if(!['al','alc','als','pal'].includes(scope))return;e.stopImmediatePropagation();const p=cur(),a=curA();
- if(scope==='pal')alP(p)[k]=el.value;else{alA(a);if(scope==='al'){a.al[k]=el.value;if(k==='valor')a.al.valAuto=''}else if(scope==='alc')a.al.car[k]=el.value;else a.al.suc[k]=el.value}
+document.addEventListener('input',e=>{const el=e.target,b=el.dataset?.bind;if(!b)return;const [scope,k]=b.split('.');if(!['al','alc','als','pal','alid'].includes(scope))return;e.stopImmediatePropagation();const p=cur(),a=curA();
+ if(scope==='pal')alP(p)[k]=el.value;else if(scope==='alid'){alA(a);const key=(AL_IDTIPO[alFam(a)]||AL_IDTIPO.imo)[+k];a.al.ids=a.al.ids||{};if(key)a.al.ids[key]=el.value}else{alA(a);if(scope==='al'){a.al[k]=el.value;if(k==='valor')a.al.valAuto=''}else if(scope==='alc')a.al.car[k]=el.value;else a.al.suc[k]=el.value}
  if(typeof autosize==='function')autosize(el);saveProcSoon()},true);
 
 /* ---------- troca por verba (regra sync.md) ---------- */
@@ -2537,6 +2576,7 @@ document.addEventListener('click',async e=>{
   const el=e.target.closest('[data-act]');if(!el||el.tagName==='INPUT'&&el.type!=='button'||el.tagName==='SELECT')return;
   const act=el.dataset.act,p=cur(),a=curA();
   switch(act){
+    case 'undo':return doUndo(-1);case 'redo':return doUndo(1);
     case 'go':{e.preventDefault();if(dirty)await saveProc();const v=el.dataset.v;if(['proc','anom','rel'].includes(v)&&!p)return toast('Escolha ou crie primeiro um processo.',1);S.view=v;S.sub=null;S.gpsMsg='';S.scrollTop=0;break}
     case 'backList':if(dirty)await saveProc();S.sub=null;if(S.view!=='anom'){S.view='anom'}S.scrollTop=S.listScroll||0;break;
     case 'selF':case 'pmSel':{const i=+el.dataset.i;const f=a.fotos[i];if(!f)return;

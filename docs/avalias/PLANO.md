@@ -55,3 +55,4 @@ Validar destinos; perguntas de caracterização por tipo; métodos de avaliaçã
 - 1.5.2 (22/11/2026): pasta completa (.zip) — Word, PDF, Excel geral das verbas, KML das verbas, e por verba (Verbas/VB_xxx/): ficha em Excel e fotografias (com a reserva); anexos originais.
 - 1.6 (22/11/2026): quadros de cálculo no Word como folha do Excel embutida (editável no PC); a pasta leva também o cálculo em Excel por verba.
 - 1.6.1 (22/11/2026): iPhone — com o teclado aberto o cabeçalho deixa de ser fixo e a caixa fica à vista; caixas de texto sem saltos.
+- 1.7 (22/11/2026): listas revistas (tribunais, contexto processual, finalidade, tipos de ativo, destinos, NAP/NAN, execução, classe energética, utilidade, ordem alfabética); identificação cumulativa (CDP, CRP, BUPI, Outro — cada uma com o número); desfazer/refazer.
