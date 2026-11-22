@@ -105,3 +105,7 @@ Linhas com Vref (da tabela), K1, K2, QTD → `parcela = QTD × Vref × K1 × K2 
 4. VRF com K_Aju ponderado (aproveitando a caracterização sucinta já existente).
 5. RND/DCF para edifícios; RES.
 Cada cálculo sai no Word como Excel embutido (regra das tabelas de cálculo).
+
+## 10. Resumo do processo (feito na 1.12)
+
+Como a folha OUT_Resumo: por verba — valor apurado e % relativa ao total; total apurado; por grupo — Qtd, parciais e %. Sai no Word como Excel embutido editável e no ZIP como `<codigo>_Resumo.xlsx`. Quando houver métodos, o valor de cada verba é o do método adotado + BFT.

@@ -1,6 +1,6 @@
 // AvaLias — service worker: guarda a app no aparelho para funcionar sem rede.
 // Estratégia "rede primeiro": com rede, vai sempre buscar a versão mais recente; sem rede, usa a cópia guardada.
-const CACHE = 'avalias-v25';
+const CACHE = 'avalias-v26';
 const ASSETS = ['./', 'index.html', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
