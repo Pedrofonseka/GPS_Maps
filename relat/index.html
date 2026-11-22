@@ -163,6 +163,9 @@ body.wide #app{max-width:1600px}
 .favbar{display:flex;gap:6px;align-items:center;margin:3px 0 6px;flex-wrap:wrap}.favbar select{flex:1;min-width:0;font-size:12px;padding:4px}
 .stp{font-style:normal;font-size:10px;margin-left:2px}.stp.w{color:#E08000}.stp.k{color:#1E8E3E}
 .capas{display:flex;flex-direction:column;gap:6px;margin:4px 0 8px}.capa{display:flex;gap:6px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:6px 8px;background:#fff}.capa.on{border-color:var(--pri);box-shadow:0 0 0 2px var(--pri) inset}.capasel{flex:1;text-align:left;background:none;border:0;padding:0;color:inherit;cursor:pointer}.capasel small{display:block;color:var(--mute);font-size:11px;font-weight:400}
+.orccap{border:1px solid var(--line);border-radius:10px;padding:6px;margin:8px 0;background:#fff}.orch{display:flex;gap:6px;align-items:center}.orch input{flex:1;font-weight:600}.orct{font-weight:700;white-space:nowrap}
+table.orc td textarea{min-width:220px;font-size:12px}.orcv{text-align:right;font-weight:600}.orcres{width:100%;border-collapse:collapse;margin:8px 0;font-size:13px}.orcres th{text-align:left;background:#FFF8D6;padding:5px}.orcres td{padding:4px 6px;border-bottom:1px solid #eee}.orcres td:last-child{text-align:right;white-space:nowrap}.orcres tr.st td{font-weight:700;background:#f4f4f4}.orcres tr.tt td{font-weight:700;background:#FFF2CC}
+.orcres{table-layout:auto}.orcres select{width:auto!important;display:inline-block;padding:2px 4px;margin:0 0 0 6px;font-size:12px}
 </style>
 </head>
 <body>
@@ -757,7 +760,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.25.0';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.26.0';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):parteLista(p));
@@ -1096,7 +1099,7 @@ function render(){
   if(S.sub==='ficha'&&curA())html=vFicha();else if(S.sub==='imp'&&p)html=vImport();
   else{S.sub=null;html=({home:vHome,proc:vProc,anom:vAnoms,insp:vInsp,anal:vAnal,rel:vRel,defs:vDefs,bk:vBk}[S.view]||vHome)()}
   $('#sub').innerHTML=S.sub==='ficha'?(S.subNav||''):'';$('#sub').style.display=S.sub==='ficha'?'':'none';
-  document.body.classList.toggle('wide',S.view==='anal'&&S.theme==='mx'&&S.sub!=='ficha');
+  document.body.classList.toggle('wide',S.view==='anal'&&(S.theme==='mx'||S.open.orc)&&S.sub!=='ficha');
   $('#app').innerHTML=html;{let b=document.getElementById('rvbarBox');if(!b){b=document.createElement('div');b.id='rvbarBox';document.body.appendChild(b)}b.innerHTML=rvBarHTML()}
   document.querySelectorAll('#app textarea').forEach(autosize);
   if(S.keepSec){const d=document.querySelector(`#app details.sec[data-key="${S.keepSec}"]`);if(d){d.open=true;window.scrollTo(0,Math.max(0,window.scrollY+d.getBoundingClientRect().top-(S.keepOff||0)))}else window.scrollTo(0,0);S.keepSec=null;S.scrollTop=undefined}
@@ -1209,7 +1212,7 @@ function vAnal(){const p=cur(),an=p.anomalias,done=an.filter(isDone).length;cons
       const inner=S.theme==='fotos'?fotosSecHTML(a,true):S.theme==='com'?txt('a.comentario','',a.comentario,3):f?(f.id==='conf'&&a.origem==='local'?'<p class="muted">Sem status — constatada pelo perito.</p>':fieldUI(f,a)):'';
       return `<div class="card thc" data-aid="${a.id}"><div class="thh"><b>${anCode(p,a)}</b> <span class="muted">${hh}</span><button class="secondary mini" data-act="openAnom" data-id="${a.id}" style="float:right">ficha ›</button>${a.descricao?`<div class="muted clamp">${esc(a.descricao)}</div>`:''}</div>${inner}</div>`}).join('')}
   return head+body+`<details class="sec" data-key="aCfg" ${S.open.aCfg?'open':''}><summary>⚙ Configuração da análise (campos a atender e títulos)</summary><div class="body">${secCampos(p)}${secLogica(p)}</div></details>`
-    +blk('Conclusões','Apreciação geral e passos seguintes')+relRelHTML(p,'anal')+nextBtn('rel','5 · Relatório')}
+    +blk('Conclusões','Apreciação geral, passos seguintes e estimativa de custos')+relRelHTML(p,'anal')+orcSecHTML(p)+nextBtn('rel','5 · Relatório')}
 function anomCard(a,i,n,mode){
   const p=cur();const st=isDone(a)?pill('✓ analisada','ok'):pill('por analisar','warn');
   const vals=[];if(useK(p,'conf')&&a.vals?.conf)vals.push(esc(a.vals.conf));if(useK(p,'cons')&&a.vals?.cons?.length)vals.push(esc(a.vals.cons.filter(x=>x!=='OUT').join(', ')));if(useK(p,'tipo')&&a.vals?.tipo?.length)vals.push(esc(a.vals.tipo.join(', ')));
@@ -1930,6 +1933,54 @@ const RT=(k,lbl,val,rows=3,ph='')=>`${lbl?`<label>${esc(lbl)}</label>`:''}<texta
 const segR=(act,opts,cur)=>`<div class="seg">${opts.map(([k,t])=>`<button class="${cur===k?'on':''}" data-act="${act}" data-v="${k}">${esc(t)}</button>`).join('')}</div>`;
 // título do trabalho: primeira linha da capa, topo da página a seguir à capa e cabeçalho genérico (substitui o antigo campo «Função»)
 const TITULOS=['Relatório de Peritagem','Relatório de inspeção expedita','Relatório de Inspeção','Relatório de Levantamento de anomalias'];
+// ===== Medições e orçamento (estimativa de custos): capítulos › artigos (descrição, un, qtd, preço) =====
+const ORC_UN=['m²','m','m³','un','vg','kg','h','dia','l','cj'];
+const orcE=p=>p.orc||(p.orc={caps:[],iva:23,out:'cap',nota:'Valores estimados com base em preços correntes de mercado, sujeitos a confirmação em consulta a empresas da especialidade.',intro:'Para a execução dos trabalhos de reparação propostos, estima-se o seguinte custo:'});
+const numPT=v=>{const n=parseFloat(String(v??'').replace(/\s|€/g,'').replace(/\.(?=\d{3}(\D|$))/g,'').replace(',','.'));return isFinite(n)?n:0};
+const n2=v=>{const t=(Math.round((+v||0)*100)/100).toFixed(2),[i,d]=t.replace('-','').split('.');return (t[0]==='-'?'-':'')+i.replace(/\B(?=(\d{3})+(?!\d))/g,'\u00a0')+','+d}; // 1 234,56 (espaço inseparável)
+const eur=v=>n2(v)+'\u00a0€';
+const qfmt=v=>n2(v);
+const artT=a=>Math.round(numPT(a.q)*numPT(a.pu)*100)/100,capT=c=>c.arts.reduce((t,a)=>t+artT(a),0);
+function orcTot(p){const o=orcE(p),sub=o.caps.reduce((t,c)=>t+capT(c),0),iva=Math.round(sub*(+o.iva||0))/100;return {sub,iva,tot:sub+iva}}
+const orcHas=p=>!!(p.orc&&p.orc.caps.some(c=>c.arts.length));
+function orcSecHTML(p){const o=orcE(p),T=orcTot(p);
+  const head=`<p class="muted" style="margin-top:0">Capítulos e artigos com quantidade, unidade e preço; os totais e o resumo por capítulos calculam-se sozinhos. Números com vírgula (ex.: 12,5).</p>
+   <label>No relatório</label>${segR('orcOut',[['cap','Capítulo próprio (antes do termo)'],['anexo','Em anexo'],['nao','Não sai (só Excel)']],o.out||'cap')}
+   ${o.out!=='nao'?`<label>Frase de abertura</label><input data-act="orcSet" data-k="intro" value="${esc(o.intro||'')}">`:''}`;
+  const caps=o.caps.map((c,ci)=>`<div class="orccap"><div class="orch"><b>${ci+1}</b><input data-act="orcSet" data-c="${ci}" data-k="t" value="${esc(c.t||'')}" placeholder="Título do capítulo (ex.: Impermeabilização do terraço)"><span class="orct">${eur(capT(c))}</span><button class="secondary mini" data-act="orcMv" data-c="${ci}" data-d="-1" ${ci?'':'disabled'}>▲</button><button class="del mini" data-act="orcDelCap" data-c="${ci}">✕</button></div>
+    <div class="mxw orcw"><table class="mx orc"><thead><tr><th>Art.</th><th>Descrição</th><th>Un</th><th>Qtd</th><th>Preço unit.</th><th>Total</th><th>Situações</th><th></th></tr></thead><tbody>
+    ${c.arts.map((a,ai)=>`<tr><td><b>${ci+1}.${ai+1}</b></td><td><textarea rows="2" data-act="orcSet" data-c="${ci}" data-a="${ai}" data-k="d" placeholder="Descrição do trabalho">${esc(a.d||'')}</textarea></td>
+      <td><select data-act="orcSet" data-c="${ci}" data-a="${ai}" data-k="un">${ORC_UN.map(u=>`<option ${a.un===u?'selected':''}>${u}</option>`).join('')}</select></td>
+      <td><input inputmode="decimal" data-act="orcSet" data-c="${ci}" data-a="${ai}" data-k="q" value="${esc(a.q??'')}" style="width:70px"></td>
+      <td><input inputmode="decimal" data-act="orcSet" data-c="${ci}" data-a="${ai}" data-k="pu" value="${esc(a.pu??'')}" style="width:80px"></td>
+      <td class="orcv">${eur(artT(a))}</td><td><input data-act="orcSet" data-c="${ci}" data-a="${ai}" data-k="sit" value="${esc(a.sit||'')}" placeholder="S.001" style="width:70px"></td>
+      <td><button class="del mini" data-act="orcDelArt" data-c="${ci}" data-a="${ai}">✕</button></td></tr>`).join('')}</tbody></table></div>
+    <div class="btns"><button class="secondary mini" data-act="orcAddArt" data-c="${ci}">+ Artigo</button><button class="secondary mini" data-act="orcPaste" data-c="${ci}" title="Colar linhas copiadas do Excel: Descrição · Un · Qtd · Preço">📋 Colar do Excel</button></div></div>`).join('');
+  const resumo=o.caps.length?`<table class="orcres"><tr><th colspan="2">Resumo por capítulos</th></tr>${o.caps.map((c,ci)=>`<tr><td>${ci+1}. ${esc(c.t||'(sem título)')}</td><td>${eur(capT(c))}</td></tr>`).join('')}
+    <tr class="st"><td>Total (sem IVA)</td><td>${eur(T.sub)}</td></tr><tr><td>IVA <select data-act="orcSet" data-k="iva">${[0,6,13,23].map(v=>`<option value="${v}" ${+o.iva===v?'selected':''}>${v} %</option>`).join('')}</select></td><td>${eur(T.iva)}</td></tr><tr class="tt"><td>Total (com IVA)</td><td>${eur(T.tot)}</td></tr></table>`:'';
+  return sec('orc','Medições e orçamento — estimativa de custos',head+caps+`<div class="btns"><button class="green mini" data-act="orcAddCap">+ Capítulo</button>${orcHas(p)?'<button class="secondary mini" data-act="orcXlsx">📊 Excel (com fórmulas)</button>':''}</div>`+resumo+`<label>Nota (sai por baixo do resumo)</label><textarea rows="2" data-act="orcSet" data-k="nota">${esc(o.nota||'')}</textarea>`,{cnt:pill(orcHas(p)?eur(T.tot):'—',orcHas(p)?'ok':''),def:false})}
+// Excel com fórmulas: folha «Orçamento» (artigos e subtotais) e «Resumo» (capítulos, IVA, total)
+function orcXlsx(p){const o=orcE(p);const cn=colName;const X=xesc;let r=1;const rows=[];const capRows=[];
+  const c=(ref,v,st,f)=>f?`<c r="${ref}" s="${st}"><f>${X(f)}</f></c>`:typeof v==='number'?`<c r="${ref}" s="${st}"><v>${v}</v></c>`:`<c r="${ref}" t="inlineStr" s="${st}"><is><t xml:space="preserve">${X(v??'')}</t></is></c>`;
+  rows.push(`<row r="1">${['Art.','Descrição','Un','Qtd','Preço unit. (€)','Total (€)','Situações'].map((h,j)=>c(cn(j)+1,h,1)).join('')}</row>`);r=2;
+  o.caps.forEach((cp,ci)=>{rows.push(`<row r="${r}">${c('A'+r,String(ci+1),3)}${c('B'+r,cp.t||'',3)}${['C','D','E','F','G'].map(k=>c(k+r,'',3)).join('')}</row>`);const r0=r+1;r++;
+    cp.arts.forEach((a,ai)=>{rows.push(`<row r="${r}">${c('A'+r,`${ci+1}.${ai+1}`,2)}${c('B'+r,a.d||'',2)}${c('C'+r,a.un||'',2)}${c('D'+r,numPT(a.q),4)}${c('E'+r,numPT(a.pu),5)}${c('F'+r,null,5,`ROUND(D${r}*E${r},2)`)}${c('G'+r,a.sit||'',2)}</row>`);r++});
+    rows.push(`<row r="${r}">${c('A'+r,'',6)}${c('B'+r,`Total do capítulo ${ci+1}`,6)}${['C','D','E'].map(k=>c(k+r,'',6)).join('')}${c('F'+r,null,7,cp.arts.length?`SUM(F${r0}:F${r-1})`:'0')}${c('G'+r,'',6)}</row>`);capRows.push([ci,cp.t||'',r]);r+=2});
+  const sh1=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols><col min="1" max="1" width="7" customWidth="1"/><col min="2" max="2" width="60" customWidth="1"/><col min="3" max="3" width="6" customWidth="1"/><col min="4" max="4" width="10" customWidth="1"/><col min="5" max="6" width="14" customWidth="1"/><col min="7" max="7" width="14" customWidth="1"/></cols><sheetData>${rows.join('')}</sheetData></worksheet>`;
+  let rr=1;const R2=[`<row r="1">${c('A1','Cap.',1)}${c('B1','Designação',1)}${c('C1','Total (€)',1)}</row>`];rr=2;
+  for(const [ci,t,row] of capRows){R2.push(`<row r="${rr}">${c('A'+rr,String(ci+1),2)}${c('B'+rr,t,2)}${c('C'+rr,null,5,`Orçamento!F${row}`)}</row>`);rr++}
+  const s0=2,s1=rr-1;R2.push(`<row r="${rr}">${c('A'+rr,'',6)}${c('B'+rr,'Total (sem IVA)',6)}${c('C'+rr,null,7,capRows.length?`SUM(C${s0}:C${s1})`:'0')}</row>`);const rs=rr;rr++;
+  R2.push(`<row r="${rr}">${c('A'+rr,'',2)}${c('B'+rr,'Taxa de IVA',2)}${c('C'+rr,(+o.iva||0)/100,8)}</row>`);const ri=rr;rr++;
+  R2.push(`<row r="${rr}">${c('A'+rr,'',2)}${c('B'+rr,'IVA',2)}${c('C'+rr,null,5,`ROUND(C${rs}*C${ri},2)`)}</row>`);rr++;
+  R2.push(`<row r="${rr}">${c('A'+rr,'',6)}${c('B'+rr,'Total (com IVA)',6)}${c('C'+rr,null,7,`C${rs}+C${rr-1}`)}</row>`);
+  const sh2=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cols><col min="1" max="1" width="7" customWidth="1"/><col min="2" max="2" width="50" customWidth="1"/><col min="3" max="3" width="16" customWidth="1"/></cols><sheetData>${R2.join('')}</sheetData></worksheet>`;
+  const st=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="2"><numFmt numFmtId="164" formatCode="#,##0.00"/><numFmt numFmtId="165" formatCode="#,##0.00 &quot;€&quot;"/></numFmts><fonts count="3"><font><sz val="10"/><name val="Arial"/></font><font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Arial"/></font><font><b/><sz val="10"/><name val="Arial"/></font></fonts><fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF404040"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE7E6E6"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFFF2CC"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="9"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf><xf numFmtId="0" fontId="2" fillId="3" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="164" fontId="0" fillId="4" borderId="0" xfId="0" applyNumberFormat="1" applyFill="1"/><xf numFmtId="165" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="165" fontId="2" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/><xf numFmtId="10" fontId="0" fillId="4" borderId="0" xfId="0" applyNumberFormat="1" applyFill="1"/></cellXfs></styleSheet>`;
+  const E=t=>_enc.encode(t);
+  return zipStore([{name:'[Content_Types].xml',data:E('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>')},
+    {name:'_rels/.rels',data:E('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>')},
+    {name:'xl/workbook.xml',data:E('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Orçamento" sheetId="1" r:id="rId1"/><sheet name="Resumo" sheetId="2" r:id="rId2"/></sheets><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>')},
+    {name:'xl/_rels/workbook.xml.rels',data:E('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>')},
+    {name:'xl/worksheets/sheet1.xml',data:E(sh1)},{name:'xl/worksheets/sheet2.xml',data:E(sh2)},{name:'xl/styles.xml',data:E(st)}])}
 // tipos de capa (todos com o quadro de identificação por baixo)
 const CAPAS=[['fotosLoc','Mapa + fotos','mapa à largura e 3 ou 6 fotos'],['destaque','Uma imagem grande','a vista principal (ex.: fachada) a toda a largura'],['imgMapa','Imagem + mapa','vista principal e mapa, lado a lado'],['fotos','Grelha de fotos','até 9 fotos (3 × 3)'],['nenhuma','Só texto','sem imagens — título e identificação']];
 const MTOP=g=>g==='proficis'?2268:1701; // twips: 4,0 cm · 3,0 cm
@@ -2204,17 +2255,33 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
   // particular: termo de encerramento antes das reservas, com o texto «do conteúdo»
   const sign=()=>col?r.peritos.map(pe=>P('',{sp:[360,0]})+P(R('_______________________________________'))+P(R(pe.nome||'',{b:true}))+P(R(represR(r,pe),{i:true,sz:9}))).join(''):P('',{sp:[360,0]})+P(R('_______________________________________'))+P(R(String(settings.peritoNome||'').trim()||'Pedro Fonseca, Eng.',{b:true}));
   const dEnc=(()=>{const d=String(r.dataEnc||'').trim()||mesAno();return d.charAt(0).toUpperCase()+d.slice(1)})();
+  // medições e orçamento (estimativa de custos): quadro de artigos por capítulo + resumo por capítulos + IVA
+  const orcXml=()=>{const o=orcE(p),OT=orcTot(p),W=[850,4700,600,950,1200,1338];const fx=(t,o2={})=>`<w:p><w:pPr><w:spacing w:before="20" w:after="20"/>${o2.jc?`<w:jc w:val="${o2.jc}"/>`:''}</w:pPr>${R(t,{sz:8.5,b:o2.b})}</w:p>`;
+    const tc=(w,c,o2={})=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${o2.span?`<w:gridSpan w:val="${o2.span}"/>`:''}${o2.sh?`<w:shd w:val="clear" w:color="auto" w:fill="${o2.sh}"/>`:''}<w:vAlign w:val="center"/></w:tcPr>${c}</w:tc>`;
+    const brd=`<w:tblBorders><w:top w:val="single" w:sz="4" w:color="808080"/><w:bottom w:val="single" w:sz="4" w:color="808080"/><w:insideH w:val="single" w:sz="2" w:color="BFBFBF"/><w:left w:val="nil"/><w:right w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders>`;
+    let rows=`<w:tr><w:trPr><w:tblHeader/><w:cantSplit/></w:trPr>${['Art.','Descrição','Un','Qtd','Preço unit.','Total'].map((h,j)=>tc(W[j],fx(h,{b:true,jc:j>2?'right':j===2?'center':''}),{sh:'D9D9D9'})).join('')}</w:tr>`;
+    o.caps.forEach((c,ci)=>{if(!c.arts.length)return;rows+=`<w:tr><w:trPr><w:cantSplit/></w:trPr>${tc(W[0],fx(String(ci+1),{b:true}),{sh:'F2F2F2'})}${tc(W[1]+W[2]+W[3]+W[4]+W[5],fx(c.t||'',{b:true}),{span:5,sh:'F2F2F2'})}</w:tr>`;
+      c.arts.forEach((a,ai)=>{rows+=`<w:tr><w:trPr><w:cantSplit/></w:trPr>${tc(W[0],fx(`${ci+1}.${ai+1}`))}${tc(W[1],fx(a.d||''))}${tc(W[2],fx(a.un||'',{jc:'center'}))}${tc(W[3],fx(qfmt(numPT(a.q)),{jc:'right'}))}${tc(W[4],fx(eur(numPT(a.pu)),{jc:'right'}))}${tc(W[5],fx(eur(artT(a)),{jc:'right'}))}</w:tr>`});
+      rows+=`<w:tr><w:trPr><w:cantSplit/></w:trPr>${tc(W[0]+W[1]+W[2]+W[3]+W[4],fx(`Total do capítulo ${ci+1}`,{b:true,jc:'right'}),{span:5})}${tc(W[5],fx(eur(capT(c)),{b:true,jc:'right'}))}</w:tr>`});
+    const tb=`<w:tbl><w:tblPr><w:tblW w:w="${TW}" w:type="dxa"/>${brd}<w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="50" w:type="dxa"/><w:right w:w="50" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${W.map(w=>`<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>${rows}</w:tbl>`;
+    const R1=TW-2000;let rs=`<w:tr><w:trPr><w:tblHeader/></w:trPr>${tc(R1,fx('Resumo por capítulos',{b:true}),{sh:'D9D9D9'})}${tc(2000,fx('Total',{b:true,jc:'right'}),{sh:'D9D9D9'})}</w:tr>`;
+    o.caps.forEach((c,ci)=>{if(c.arts.length)rs+=`<w:tr>${tc(R1,fx(`${ci+1}. ${c.t||''}`))}${tc(2000,fx(eur(capT(c)),{jc:'right'}))}</w:tr>`});
+    rs+=`<w:tr>${tc(R1,fx('Total (sem IVA)',{b:true}),{sh:'F2F2F2'})}${tc(2000,fx(eur(OT.sub),{b:true,jc:'right'}),{sh:'F2F2F2'})}</w:tr><w:tr>${tc(R1,fx(`IVA (${+o.iva||0} %)`))}${tc(2000,fx(eur(OT.iva),{jc:'right'}))}</w:tr><w:tr>${tc(R1,fx('Total (com IVA)',{b:true}),{sh:'FFF2CC'})}${tc(2000,fx(eur(OT.tot),{b:true,jc:'right'}),{sh:'FFF2CC'})}</w:tr>`;
+    const tr=`<w:tbl><w:tblPr><w:tblW w:w="${TW}" w:type="dxa"/>${brd}<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="${R1}"/><w:gridCol w:w="2000"/></w:tblGrid>${rs}</w:tbl>`;
+    return (String(o.intro||'').trim()?T(o.intro,{jc:'both'})+E():'')+H2('Medições e orçamento')+tb+E()+H2('Resumo por capítulos')+tr+(String(o.nota||'').trim()?E()+T(o.nota,{jc:'both',i:true,sz:9}):'')+E()};
+  if(orcHas(p)&&orcE(p).out==='cap')body+=E()+H1('Estimativa de custos')+orcXml();
   // todos os relatórios: termo de encerramento logo a seguir aos passos seguintes; o que vem depois (reservas, ambiente, anexos) é opcional
   body+=H1('Termo de encerramento')+E()+T(String(r.termoTxt||'').trim()||TERMO_TXT_R,{jc:'both'})+E()+(col?T(r.unan?'O presente relatório foi elaborado por unanimidade dos peritos.':'O presente relatório não reúne unanimidade, manifestando-se as seguintes posições discordantes:',{jc:'both'})+(!r.unan&&String(r.discord||'').trim()?T(r.discord,{jc:'both'}):'')+E():'')+T('Terminado em:')+T(dEnc)+sign()+E();
   // 8, 9
   if(r.incReservas!==false){body+=H1('Âmbito de utilização – reservas de análise');for(const l of semConteudo(r.reservas||RESERVAS_R).split('\n'))body+=/^\d+\.\s/.test(l)?H2(l.replace(/^\d+\.\s*/,'')):T(l,{jc:'both'})}
   if(r.incAmbiente!==false){body+=H1('Ambiente, sustentabilidade e conformidade de licenciamento')+T(String(r.ambiente||AMBIENTE_R),{jc:'both'})}
   // 11, 12
-  const axO=String(r.anexosOutros||'').split('\n').map(x=>x.trim()).filter(Boolean);const ax=ANEX_R.filter(d=>r.anexos[d]&&!(d==='Outros anexos'&&axO.length)).map(d=>CHK(true,d)).join('')+axO.map(x=>CHK(true,x)).join('')+(r.anexF||[]).map((a,i)=>CHK(true,anexLbl(a,i))).join('');
+  const axO=String(r.anexosOutros||'').split('\n').map(x=>x.trim()).filter(Boolean);const orcAx=orcHas(p)&&orcE(p).out==='anexo';const ax=(orcAx?CHK(true,'Anexo – Medições e orçamento (estimativa de custos)'):'')+ANEX_R.filter(d=>r.anexos[d]&&!(d==='Outros anexos'&&axO.length)).map(d=>CHK(true,d)).join('')+axO.map(x=>CHK(true,x)).join('')+(r.anexF||[]).map((a,i)=>CHK(true,anexLbl(a,i))).join('');
   if(ax)body+=H1('Em anexo')+ax;
   // conteúdo dos anexos (PDF/imagens convertidos em páginas): cada anexo em página nova, título e páginas centradas na página (largura escolhida; por defeito 21 − 2 = 19 cm)
   // página de separação «Anexos» antes do conteúdo dos anexos
   if(ax)body+=BRK+'<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:spacing w:before="0" w:after="0" w:line="5600" w:lineRule="exact"/></w:pPr></w:p>'+P(R('ANEXOS',{b:true,sz:28}),{jc:'center',sp:[0,0]});
+  if(orcAx)body+=BRK+H2('Anexo – Medições e orçamento (estimativa de custos)')+orcXml();
   for(const [i,a] of (r.anexF||[]).entries()){if(a.inc===false||!anexKind(a))continue;
     if(!(a.pages||[]).length){try{a.pages=await anexPages(a);a.larg=a.larg||ANEX_LARG}catch(e){continue}}
     const L=Math.min(19,+a.larg||ANEX_LARG),MAXH=22.5;let first=true;
@@ -2537,6 +2604,15 @@ document.addEventListener('click',async e=>{{const _x=e.target.closest&&e.target
       if(!G.size)return toast('Nenhuma situação tem «Solução proposta» preenchida.',1);const L=[...G.values()].map((g,i,arr)=>` - ${g.c.join(', ')} – ${g.t}${i<arr.length-1?';':'.'}`);
       const cur0=mtxt(r,'passos');if(cur0&&!await ask('Os passos seguintes já têm texto. Acrescentar a lista das soluções no fim?',['Cancelar','Acrescentar']))return;
       r.passos=(cur0?String(r.passos).replace(/\s+$/,'')+'\n':ZDEF.passos)+L.join('\n');await saveProc();toast(`${G.size} solução(ões) juntada(s) — ${p.anomalias.filter(x=>String(x.vals?.medidas||'').trim()).length} situação(ões).`);S.scrollTop=window.scrollY;break}
+    case 'orcAddCap':{const o=orcE(p);o.caps.push({id:uid(),t:'',arts:[{id:uid(),d:'',un:'m²',q:'',pu:''}]});await saveProc();S.open.orc=true;S.scrollTop=window.scrollY;break}
+    case 'orcAddArt':{const c=orcE(p).caps[+el.dataset.c];c.arts.push({id:uid(),d:'',un:c.arts.length?c.arts[c.arts.length-1].un:'m²',q:'',pu:''});await saveProc();S.scrollTop=window.scrollY;break}
+    case 'orcDelArt':{const c=orcE(p).caps[+el.dataset.c];c.arts.splice(+el.dataset.a,1);await saveProc();S.scrollTop=window.scrollY;break}
+    case 'orcDelCap':{const o=orcE(p),c=o.caps[+el.dataset.c];if(c.arts.some(a=>String(a.d||'').trim())&&!await ask(`Eliminar o capítulo «${c.t||'sem título'}» e os seus artigos?`,['Cancelar','Eliminar'],1))return;o.caps.splice(+el.dataset.c,1);await saveProc();S.scrollTop=window.scrollY;break}
+    case 'orcMv':{const o=orcE(p),i=+el.dataset.c;if(i>0){[o.caps[i-1],o.caps[i]]=[o.caps[i],o.caps[i-1]];await saveProc()}S.scrollTop=window.scrollY;break}
+    case 'orcPaste':{const t=prompt('Cole aqui as linhas copiadas do Excel (colunas: Descrição · Un · Qtd · Preço unit.):','');if(!t)return;const c=orcE(p).caps[+el.dataset.c];let n=0;
+      for(const ln of t.split(/\r?\n/)){const f=ln.split('\t').map(x=>x.trim());if(!f[0])continue;c.arts=c.arts.filter(a=>String(a.d||'').trim()||a.q||a.pu);c.arts.push({id:uid(),d:f[0],un:f[1]||'un',q:f[2]||'',pu:f[3]||''});n++}
+      await saveProc();toast(n+' artigo(s) colado(s).');S.scrollTop=window.scrollY;break}
+    case 'orcXlsx':{try{await saveBlob(new Blob([orcXlsx(p)],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),`${safeName(p.codigo)}_Medicoes_Orcamento.xlsx`)}catch(err){toast('Erro ao gerar o Excel: '+err.message,1)}return}
     case 'rAnLay':{const r=ensureRel(p);r.anLay=el.dataset.v;await saveProc();S.scrollTop=window.scrollY;break}
     case 'rTitulo':{const r=ensureRel(p);r.titulo=el.dataset.v;await saveProc();S.scrollTop=window.scrollY;break}
     case 'consAdd':{const r=ensureRel(p),v=String(document.getElementById('consNew')?.value||'').trim().replace(/[;.]+$/,'');if(!v)return toast('Escreva a consequência a acrescentar.');
@@ -2702,6 +2778,9 @@ document.addEventListener('change',async e=>{{const _x=e.target.closest&&e.targe
   if(el.id==='gps'){const t=el.value.trim();if(!t){p.visita.gps=null;await saveProc();setGpsStatus('');return}if(!parseGpsTxt(t)){setGpsStatus('Não reconheço estas coordenadas. Aceito, por exemplo: 41.1579, -8.6291 · 41°09\'28"N 8°37\'45"W · ou um link do Google Maps / Apple Maps.');return}await gpsSet(p,t);return}
   if(act==='favIns'){const L=(settings.fav||{})[el.dataset.k]||[],t=L[+el.value];el.value='';if(!t)return;const b=el.dataset.tgt,cur0=String(bindGet(p,a,b)||'');
     bindSet(p,a,b,cur0.trim()?cur0.replace(/\s+$/,'')+(/[:\n]$/.test(cur0.trim())?'\n':'\n')+t:t);await saveProc();S.scrollTop=window.scrollY;render();return}
+  if(act==='orcSet'){const o=orcE(p),k=el.dataset.k;let tgt=o;if(el.dataset.c!==undefined){tgt=o.caps[+el.dataset.c];if(el.dataset.a!==undefined)tgt=tgt.arts[+el.dataset.a]}
+    tgt[k]=k==='iva'?+el.value:el.value;await saveProc();S.scrollTop=window.scrollY;const sx=[...document.querySelectorAll('.orcw')].map(w=>w.scrollLeft);render();document.querySelectorAll('.orcw').forEach((w,i)=>w.scrollLeft=sx[i]||0);return}
+  if(act==='orcOut'){orcE(p).out=el.dataset.v;await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='rTitulo'){const r=ensureRel(p);r.titulo=el.dataset.v;await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='mxSet'||act==='mxGut'||act==='mxAll'){let v=el.value;if(v==='')return;
     const C=mxCols(p),c=C.find(x=>x.k===el.dataset.k);
