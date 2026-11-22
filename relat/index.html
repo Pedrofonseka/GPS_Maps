@@ -754,7 +754,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.23.1';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.23.2';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):parteLista(p));
@@ -1345,7 +1345,7 @@ function vRel(){const p=cur();const nf=p.anomalias.reduce((s,a)=>s+relF(a).lengt
       ${p.printStats?`<label>Quadros que saem (pela ordem do relatório)</label><div class="tks col">${(()=>{const av=computeStats(p).map(t=>t.key),N={qtd:'Quantidade de situações → confirmadas',tipo:'Tipo de situações',flash:'Relevância (quadro-resumo de prioridades: importância, consequência, urgência)',gut:'Prioridade',cons:'Gravidade',urg:'Urgência',hier:'Local (NUF / Piso / Local / Elemento)'};return RESUMO_ORD.filter(k=>['qtd','flash','hier'].includes(k)||av.includes(k)).map(k=>[k,N[k]])})().map(([k,t])=>tickBox('',statOn(p,k),t,`data-act="tkStat" data-k="${k}"`)).join('')}</div>
       ${RL('resumoIntro','Frase de abertura',r.resumoIntro,RESUMO_INTRO)}`:''}${RT('nota','Nota (sai a seguir aos quadros)',r.nota,3)}
       <details class="sec" data-key="r5v" ${S.open.r5v?'open':''}><summary>Ver os números no ecrã</summary><div class="body">${statsHTML(computeStats(p))}</div></details>`,{cnt:pill(p.printStats?'no Word':'não sai',p.printStats?'ok':''),def:false})}
-  ${sec('r2','Análise das situações no Word',`<div class="tks col">${tickBox('',settings.dateCom!==false,`Data da vistoria antes de «${esc(lblC(p))}» (ex.: ${esc(p.visita?.data||'19/11/2026')} - ${esc(lblC(p))}:)`,'data-act="tkExp" data-k="dateCom"')}${tickBox('',settings.txtPhotos!==false,'Com fotografias','data-act="tkExp" data-k="txtPhotos"')}</div><label>Ordenar as situações por</label><select data-act="setOrdem">${ORDENS.map(([k,t])=>`<option value="${k}" ${(p.ordem||'lista')===k?'selected':''}>${t}</option>`).join('')}</select><label>Grelha de fotografias</label><div class="seg">${[1,2,3].map(n=>`<button class="${settings.photoCols==n?'on':''}" data-act="setCols" data-v="${n}">${n} coluna${n>1?'s':''}</button>`).join('')}</div>${maxUI()}`,{def:false})}
+  ${sec('r2','Análise das situações no Word',`<label>Formato da análise no relatório</label>${segR('rAnLay',[['texto','Texto corrido'],['grelha','Fichas de análise (grelha)']],r.anLay==='grelha'?'grelha':'texto')}${r.anLay==='grelha'?`<div class="tks col">${tickBox('',settings.fitPage!==false,'Ajustar cada ficha a uma página (reduz a altura das fotos)','data-act="tkExp" data-k="fitPage"')}${tickBox('',!!r.anOnePage,'Começar cada ficha numa página nova','data-act="rTk" data-k="anOnePage"')}</div>`:''}<div class="tks col">${tickBox('',settings.dateCom!==false,`Data da vistoria antes de «${esc(lblC(p))}» (ex.: ${esc(p.visita?.data||'19/11/2026')} - ${esc(lblC(p))}:)`,'data-act="tkExp" data-k="dateCom"')}${tickBox('',settings.txtPhotos!==false,'Com fotografias','data-act="tkExp" data-k="txtPhotos"')}</div><label>Ordenar as situações por</label><select data-act="setOrdem">${ORDENS.map(([k,t])=>`<option value="${k}" ${(p.ordem||'lista')===k?'selected':''}>${t}</option>`).join('')}</select><label>Grelha de fotografias</label><div class="seg">${[1,2,3].map(n=>`<button class="${settings.photoCols==n?'on':''}" data-act="setCols" data-v="${n}">${n} coluna${n>1?'s':''}</button>`).join('')}</div>${maxUI()}`,{def:false})}
   ${relRelHTML(p)}
   ${sec('r4','4 · Exportar o relatório',`<p class="muted" style="margin-top:0">O relatório completo: capa (mapa + fotos), índice, todos os capítulos, a análise das situações em texto corrido e os anexos. Cabeçalho do gabinete ${esc((GABS_R.find(g=>g[0]===ensureRel(p).gab)||['',''])[1])}.</p>${tickBox('',settings.txtPhotos!==false,'Análise com fotografias','data-act="tkExp" data-k="txtPhotos"')}
     ${tamHTML(p)}<label>Relatório completo</label><div class="exp"><button class="secondary" data-act="relPrev">👁 Pré-visualizar</button><button class="green" data-act="relWord">📘 Word</button><button class="green" data-act="relPdf">📕 PDF</button></div>
@@ -2060,8 +2060,9 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
   if(!part){body+=H1('Compromisso de honra')+E()+(comp?T(comp,{jc:'both'}):T('[Texto do compromisso de honra — preencha em Definições › Relatório]',{i:true,color:'C00000'}))+E()}
   // 1 — objeto: primeiro conta-se o problema (frase de abertura + objetivo), depois as questões e os seus autores (1.1, 1.2…)
   // corpo das situações (Regi) preparado antes, para o ponto 1 do particular poder listar as situações por ordem
-  const o=await docOpts(p,'texto','.docx');
-  const A=buildDocx({...o,bodyOnly:true,withIndex:false,stats:null,withResumo:false,withVistoria:false,mapImg:null,onePerPage:false,layout:'texto'});
+  const anLay=r.anLay==='grelha'?'grelha':'texto'; // análise no relatório: texto corrido ou fichas (grelha)
+  const o=await docOpts(p,anLay,'.docx');
+  const A=buildDocx({...o,bodyOnly:true,withIndex:false,stats:null,withResumo:false,withVistoria:false,mapImg:null,onePerPage:anLay==='grelha'&&!!r.anOnePage,layout:anLay});
   const topLine=x=>{const z=zonaTxt(x);return P(R(`${x._code}  –  ${[x.ref?'Item '+x.ref:'',z,x.elemento].filter(Boolean).join(' · ')}`),{sp:[20,20]})};
   const B0=body.length; // início do texto (1.ª página a seguir ao índice, com o título do trabalho)
   body+=H1(part?'Objeto de análise':'Objeto da perícia')+E();
@@ -2510,6 +2511,7 @@ document.addEventListener('click',async e=>{{const _x=e.target.closest&&e.target
       setTimeout(()=>{const t=document.querySelector(`[data-bind="r.${k}"]`);if(!t)return;t.focus();const a=t.value.indexOf('['),b=t.value.indexOf(']',a);if(a>=0&&b>a)t.setSelectionRange(a,b+1);else t.setSelectionRange(t.value.length,t.value.length)},60);return}
     case 'mxCol':{const c=mxCols(p).find(x=>x.k===el.dataset.k);S.mcols=S.mcols||{};S.mcols[c.k]=!mxOn(p,c);S.scrollTop=window.scrollY;break}
     case 'mxDel':{a.vals=a.vals||{};const k=el.dataset.k;a.vals[k]=(a.vals[k]||[]).filter(x=>x!==el.dataset.v);await saveProc();S.scrollTop=window.scrollY;const sx=document.querySelector('.mxw')?.scrollLeft||0;render();const w=document.querySelector('.mxw');if(w)w.scrollLeft=sx;return}
+    case 'rAnLay':{const r=ensureRel(p);r.anLay=el.dataset.v;await saveProc();S.scrollTop=window.scrollY;break}
     case 'rTitulo':{const r=ensureRel(p);r.titulo=el.dataset.v;await saveProc();S.scrollTop=window.scrollY;break}
     case 'consAdd':{const r=ensureRel(p),v=String(document.getElementById('consNew')?.value||'').trim().replace(/[;.]+$/,'');if(!v)return toast('Escreva a consequência a acrescentar.');
       const t=v.charAt(0).toUpperCase()+v.slice(1),ex=conseqList().find(x=>x.toLowerCase()===t.toLowerCase());
