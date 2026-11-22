@@ -754,7 +754,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.21.3';const VERSION_DATA='2026-11-21';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.21.4';const VERSION_DATA='2026-11-21';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -2044,6 +2044,7 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
   const o=await docOpts(p,'texto','.docx');
   const A=buildDocx({...o,bodyOnly:true,withIndex:false,stats:null,withResumo:false,withVistoria:false,mapImg:null,onePerPage:false,layout:'texto'});
   const topLine=x=>{const z=zonaTxt(x);return P(R(`${x._code}  –  ${[x.ref?'Item '+x.ref:'',z,x.elemento].filter(Boolean).join(' · ')}`),{sp:[20,20]})};
+  const B0=body.length; // início do texto (1.ª página a seguir ao índice, com o título do trabalho)
   body+=H1(part?'Objeto de análise':'Objeto da perícia')+E();
   {const ob=mtxt(r,'objetivo');if(ob)body+=T(ob,{jc:'both'})+E();else if(String(r.contexto||'').trim())body+=GT(OBJ_INTRO,r.contexto)+E()}
   if(part){const AL=o.anoms.filter(x=>x.origem!=='local'),OU=o.anoms.filter(x=>x.origem==='local'),QT=r.quesitos.map(q=>String(q.txt||'').trim()).filter(Boolean);
@@ -2058,9 +2059,14 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
   body+=H1('Elementos de apoio e fundamentação')+H2('Lista de documentos fornecidos')+E()+(DOCS_R.filter(d=>r.docs[d]).map(d=>d==='Outros'?CHK(true,'Outros:')+String(r.docsOutros||'').split('\n').map(x=>x.trim()).filter(Boolean).map(x=>P('<w:r><w:tab/></w:r>'+R(x))).join(''):CHK(true,d)).join('')||T('—'))+E();
   body+=H2('Outros elementos ou fundamentos')+T(String(r.docsCom||'').trim()||'Nada a considerar.',{jc:'both'});
   // capítulo próprio «Localização» (morada, mapa GPS e coordenadas), antes da «Inspeção»
+  // altura do mapa a conferir: estima o espaço que resta na página (texto desde a última quebra) e reduz o mapa para caber; se não couber um mapa legível (≥ 5 cm), o capítulo começa na página seguinte
+  const estH=xml=>{const k=xml.lastIndexOf('w:type="page"');const seg=k>=B0?xml.slice(k):xml.slice(B0);let h=k>=B0?0:1.2,pb=false;for(const m of seg.matchAll(/<w:p[ >][\s\S]*?<\/w:p>/g)){const px=m[0];if(/<w:drawing>/.test(px)){const e=/<wp:extent cx="\d+" cy="(\d+)"/.exec(px);h+=e?+e[1]/360000+0.2:5;continue}
+      const t=(px.match(/<w:t[^>]*>[^<]*<\/w:t>/g)||[]).map(x=>x.replace(/<[^>]+>/g,'')).join('');if(!t.trim()&&!/<w:sdt>/.test(px)){if(!pb)h+=0.42;pb=true;continue}pb=false;const hd=/Cabealho1/.test(px)?0.5:/Cabealho2/.test(px)?0.2:0;h+=Math.max(1,Math.ceil(t.length/100))*0.45+hd+0.06}return h};
+  const PAGE_H=23.2,usedH=estH(body)%PAGE_H,restH=PAGE_H-usedH-1.6-(String(p.local||'').trim()?0.6:0)-(g?0.6:0)-1.0;let locH=Math.max(5,Math.min(8,restH));
+  if(g&&restH<5){body+=BRK;locH=8}
   body+=E()+H1('Localização');if(String(p.local||'').trim())body+=P(R('Morada / local:')+'<w:r><w:tab/></w:r>'+R(String(p.local).trim()),{sp:[60,60]});if(!g&&!String(p.local||'').trim())body+=T('[Localização por preencher — morada em 1 · Processo e GPS em 3 · Inspeção]',{i:true,color:'C00000'});
   if(g){let mL=mapData;if(!mL){mL=await googleMapData(g,1600,Math.round(1600*9.2/16.9));if(!mL){try{if(await ensureMap(p,true))mL=fotoCache.get(p.visita.map.id)}catch(e){}}}
-    if(mL)body+=`<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:keepNext/><w:spacing w:before="0" w:after="0"/><w:jc w:val="center"/></w:pPr>${imgRun(await cropTo(mL,16.9/9.2,1600),16.9,9.2,'Localização')}</w:p>`;
+    if(mL)body+=`<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:keepNext/><w:spacing w:before="0" w:after="0"/><w:jc w:val="center"/></w:pPr>${imgRun(await cropTo(mL,16.9/locH,1600),16.9,locH,'Localização')}</w:p>`;
     body+=P(R(`${mL?'':'Coordenadas: '}${g.lat.toFixed(6)}°, ${g.lon.toFixed(6)}°`,{sz:8,color:'404040'}),{sp:[20,60],jc:mL?'center':undefined})}
   body+=E()+H1('Inspeção')+H2('Data, estado do tempo e presenças')+E();
   VIS.forEach((v,k)=>{if(VIS.length>1)body+=P(R(`${k+1}.ª visita`,{b:true}),{sp:[k?160:40,40],keep:1});
