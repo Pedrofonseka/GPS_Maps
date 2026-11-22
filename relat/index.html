@@ -150,6 +150,8 @@ body:has(.rvbar){padding-bottom:70px}
 .vias{margin-top:8px;border:1px dashed var(--line);border-radius:10px;padding:8px}.via{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}.via .vn{font-weight:700;font-size:11px;background:var(--pri);border-radius:6px;padding:2px 6px}.via .muted{font-size:12px}
 .seg.wrap{flex-wrap:wrap}.seg.wrap button{flex:0 0 auto}.thc .thh{margin-bottom:6px}.thc .thh .clamp{font-size:12px}
 .newver{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;background:#222;color:#fff;padding:8px 12px;border-radius:10px;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.3)}.newver button{margin-left:8px}
+.mprocs{max-height:42vh;overflow:auto;display:flex;flex-direction:column;gap:6px;margin:4px 0}.mproc{border:1px solid var(--line);border-radius:10px;padding:6px 8px;background:#fff}.mproc.on{border-color:var(--pri);box-shadow:0 0 0 2px var(--pri) inset}
+.mproc .mpt{cursor:pointer}.mproc .mpt small{display:block;color:var(--mute);font-size:11px}.mproc .mpb{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -744,7 +746,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.19.5';const VERSION_DATA='2026-11-21';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.19.6';const VERSION_DATA='2026-11-21';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1374,7 +1376,9 @@ const bkWarn=()=>{const t=settings.lastBackup;return procs.length&&(!t||procs.so
 function openMenu(){document.querySelector('.menusheet')?.remove();const m=document.createElement('div');m.className='modal menusheet';const p=cur();
   const it=(act,v,ic,t,sub,cls='')=>`<button class="mitem ${cls}" data-act="${act}" ${v?`data-v="${v}"`:''}><span class="mic">${ic}</span><span class="mtx"><b>${t}</b><small>${sub}</small></span></button>`;
   m.innerHTML=`<div class="box"><div class="mhd"><b>Menu</b><button class="secondary mini" data-act="menuClose">✕</button></div>
-   <div class="mgrp">Trabalho</div>${it('go','home','📁','Processos','Lista, novo processo, abrir')}${p?`<div class="mgrp">Processo atual · ${esc(p.codigo||'(sem código)')}</div>`+it('go','proc','1️⃣','Processo','Solicitante, tipo de relatório, capa, objeto, documentos')+it('go','anom','2️⃣','Situações','Criar a lista: Word, Excel, n.º de cartões, acrescentar/eliminar')+it('go','insp','3️⃣','Inspeção','Data, tempo, presenças, localização, tipo de inspeção, fotos')+it('go','anal','4️⃣','Análise','Ficha a ficha ou por tema; apreciação geral e passos seguintes')+it('go','rel','5️⃣','Relatório','Resumo, reservas, termo, anexos, pré-visualização, exportar'):''}
+   <div class="mgrp">Processos (${procs.length})</div>
+   <div class="mprocs">${[...procs].sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).map(x=>{const n=x.anomalias.length,ok=x.anomalias.filter(isDone).length;return `<div class="mproc ${x.id===S.pid?'on':''}"><div class="mpt" data-act="openProc" data-id="${x.id}"><b>${esc(x.codigo||'(sem código)')}</b> <span class="muted">${esc(x.designacao||'')}</span><small>${x.visita?.data?'vistoria '+esc(x.visita.data)+' · ':''}${n} situaç${n===1?'ão':'ões'} · ${ok} analisada${ok===1?'':'s'}</small></div><div class="mpb"><button class="secondary mini" data-act="openProc" data-id="${x.id}">Abrir</button><button class="secondary mini" data-act="dupProc" data-id="${x.id}" title="Duplicar">⧉</button><button class="secondary mini" data-act="sendProc" data-id="${x.id}" title="Enviar">📤</button><button class="del mini" data-act="delProcId" data-id="${x.id}" title="Eliminar">🗑</button></div></div>`}).join('')||'<p class="muted" style="margin:6px 4px">Ainda não há processos.</p>'}</div>
+   <div class="btns" style="margin:6px 0 2px"><button class="green mini" data-act="newProc">+ Novo processo</button><button class="secondary mini" data-act="go" data-v="home">Ver em página inteira</button></div>${p?`<div class="mgrp">Processo atual · ${esc(p.codigo||'(sem código)')}</div>`+it('go','proc','1️⃣','Processo','Solicitante, tipo de relatório, capa, objeto, documentos')+it('go','anom','2️⃣','Situações','Criar a lista: Word, Excel, n.º de cartões, acrescentar/eliminar')+it('go','insp','3️⃣','Inspeção','Data, tempo, presenças, localização, tipo de inspeção, fotos')+it('go','anal','4️⃣','Análise','Ficha a ficha ou por tema; apreciação geral e passos seguintes')+it('go','rel','5️⃣','Relatório','Resumo, reservas, termo, anexos, pré-visualização, exportar'):''}
    <div class="mgrp">Geral</div>${it('go','defs','6️⃣','Configurações e opções','Relatório e gabinetes, bases de dados, campos, impressão, IA')}${it('go','bk','7️⃣','Cópias de segurança','Backup OUT/IN, enviar e receber processos',bkWarn()?'warn':'')}
    <div class="mgrp">Outros</div>${it('help','','❓','Ajuda','Como usar a app')}${it('quit','','⏻','Sair','Confirma que está tudo gravado')}</div>`;
   m.addEventListener('click',e=>{if(e.target===m||e.target.closest('[data-act]'))m.remove()});document.body.appendChild(m)}
