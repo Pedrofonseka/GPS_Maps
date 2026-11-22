@@ -744,7 +744,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.19.2';const VERSION_DATA='2026-11-21';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.19.3';const VERSION_DATA='2026-11-21';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1893,7 +1893,7 @@ function relRelHTML(p,which='rel'){const r=ensureRel(p),col=isCol(r);
     return `<div class="qbox"><div class="qhd"><b>${isPart(r)?'Queixa':'Quesito'} ${qCode(i)}</b></div><div class="muted qtxt">${esc(q.txt||'')}</div>${resp}</div>`}).join('')||'<p class="muted">Sem quesitos — acrescente-os em Processo › R3.</p>';
   const nr=r.quesitos.filter(q=>String(q.resp||'').trim()).length;
   const termo=`${col?`<label>Conclusão</label>${segR('rUnan',[['1','Por unanimidade'],['0','Com posições discordantes']],r.unan?'1':'0')}${r.unan?'':RT('discord','Posições discordantes (perito e fundamento)',r.discord,4)}`:''}
-    ${isPart(r)?ZB('termoTxt',r.termoTxt,'Texto do termo (antes de «Terminado em:»)',5,TERMO_TXT_R):''}${RL('dataEnc',isPart(r)?'Terminado em':'Concluído em',r.dataEnc,mesAno())}<p class="muted">${col?'Assinam os peritos do colégio.':'Assina o perito (nome em Definições).'}</p>`;
+    ${ZB('termoTxt',r.termoTxt,'Texto do termo (antes de «Terminado em:»)',5,TERMO_TXT_R)}${RL('dataEnc','Terminado em',r.dataEnc,mesAno())}<p class="muted">${col?'Assinam os peritos do colégio.':'Assina o perito (nome em Definições).'}</p>`;
   const anex=`<div class="tks col">${ANEX_R.map(d=>tickBox('',!!r.anexos[d],d,`data-act="rAnex" data-k="${esc(d)}"`)).join('')}</div>${RT('anexosOutros','Outros anexos (um por linha)',r.anexosOutros,2)}${anexFilesHTML(p)}`;
   const oldR=isPart(r)&&r.quesitos.some(q=>String(q.resp||'').trim()||Object.values(q.rp||{}).some(t=>String(t||'').trim()));
   const ANAL=`${isPart(r)&&!oldR?'':sec('rr1',isPart(r)?'Apreciação das queixas — já não sai no relatório':'Resposta ao solicitado (quesitos)',(isPart(r)?'<p class="warn" style="margin-top:0">⚠ Nos relatórios particulares este capítulo deixou de sair (as situações já são comentadas na Análise específica). Passe estes textos para o comentário da situação ou para a Apreciação geral e apague-os aqui.</p>':'')+qs,{cnt:pill(`${nr}/${r.quesitos.length}`,nr&&nr===r.quesitos.length?'ok':'warn')})}
@@ -1909,9 +1909,8 @@ function relRelHTML(p,which='rel'){const r=ensureRel(p),col=isCol(r);
   ${aiReady()?(()=>{const A=p.anomalias.filter(x=>relF(x).length),D=A.filter(x=>x.ia);return `<div class="card"><b>🤖 Apoio de análise das fotografias</b> ${pill(D.length+'/'+A.length,D.length===A.length&&A.length?'ok':'')}<p class="muted" style="font-size:12px">Sugestões por situação (validar sempre). Abra cada ficha para ver e aplicar.</p>${(()=>{const G=p.anomalias.reduce((t,x)=>t+(x.iaGasto||0),0),N=p.anomalias.reduce((t,x)=>t+(x.iaN||0),0);return N?`<p style="font-size:13px;margin:4px 0">💶 Gasto neste processo: <b>${aiUSD(G)}</b> em ${N} análise(s) (estimativa a partir dos tokens que o serviço indica; o valor faturado vê-se na consola Anthropic).</p>`:''})()}${D.map(x=>`<div class="rvit"><div class="rvhd"><b>${anCode(p,x)}</b><span class="muted">${esc([x.local||x.zona,x.elemento].filter(Boolean).join(' · '))}</span></div><div style="font-size:13px">${esc((x.ia.tipos||[]).join(', ')||'—')}${x.ia.gravidade?' · '+esc(x.ia.gravidade):''}${x.ia.urgencia?' · urgência '+esc(x.ia.urgencia):''}</div><div class="muted" style="font-size:12px">${esc(x.ia.resumo.slice(0,160))}${x.ia.resumo.length>160?'…':''}</div></div>`).join('')}${A.length>D.length?`<div class="btns"><button class="secondary" data-act="aiAll">🤖 Analisar as ${A.length-D.length} situação(ões) em falta</button></div>`:''}</div>`})():''}`;
   const RR3=`${sec('rr3','Reservas e ambiente',`${tickBox('',r.incReservas!==false,'Incluir «Âmbito de utilização – reservas de análise»','data-act="rTk" data-k="incReservas"')}${RT('reservas','',r.reservas||RESERVAS_R,6)}${tickBox('',r.incAmbiente!==false,'Incluir «Ambiente, sustentabilidade e conformidade de licenciamento»','data-act="rTk" data-k="incAmbiente"')}${RT('ambiente','',r.ambiente||AMBIENTE_R,6)}`,{def:false})}`;
   const REL=`${sec('rr2','Resumo de análise — nota',RL('resumoIntro','Frase de abertura',r.resumoIntro,RESUMO_INTRO)+RT('nota','Nota (sai a seguir aos gráficos)',r.nota,3)+'<p class="muted">Os quadros e gráficos vêm do «Resumo estatístico» (abaixo). Sem estatística e sem nota, a secção não sai no relatório.</p>',{def:false})}
-  ${isPart(r)?'':RR3}
   ${sec('rr4','Termo de encerramento',termo,{cnt:col?pill(r.unan?'unanimidade':'discordâncias',r.unan?'ok':'warn'):'',def:false})}
-  ${isPart(r)?RR3:''}
+  ${RR3}
   ${sec('rr5','Em anexo',anex,{cnt:pill(ANEX_R.filter(d=>r.anexos[d]).length+(r.anexF||[]).length+' ✓'),def:false})}
   <div id="rvCard">${reviewHTML(p)}</div>
   ${(()=>{const w=relCheck(p);return `<div class="card"><b>Verificação antes de gerar</b>${w.length?`<ul class="muted" style="margin:6px 0 0 18px;padding:0">${w.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'<p class="muted">✓ Tudo preenchido.</p>'}</div>`})()}
@@ -2113,15 +2112,11 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
   // particular: termo de encerramento antes das reservas, com o texto «do conteúdo»
   const sign=()=>col?r.peritos.map(pe=>P('',{sp:[360,0]})+P(R('_______________________________________'))+P(R(pe.nome||'',{b:true}))+P(R(represR(r,pe),{i:true,sz:9}))).join(''):P('',{sp:[360,0]})+P(R('_______________________________________'))+P(R(String(settings.peritoNome||'').trim()||'Pedro Fonseca, Eng.',{b:true}));
   const dEnc=(()=>{const d=String(r.dataEnc||'').trim()||mesAno();return d.charAt(0).toUpperCase()+d.slice(1)})();
-  if(part){body+=H1('Termo de encerramento')+E()+T(String(r.termoTxt||'').trim()||TERMO_TXT_R,{jc:'both'})+E()+T('Terminado em:')+T(dEnc)+sign()+E()}
+  // todos os relatórios: termo de encerramento logo a seguir aos passos seguintes; o que vem depois (reservas, ambiente, anexos) é opcional
+  body+=H1('Termo de encerramento')+E()+T(String(r.termoTxt||'').trim()||TERMO_TXT_R,{jc:'both'})+E()+(col?T(r.unan?'O presente relatório foi elaborado por unanimidade dos peritos.':'O presente relatório não reúne unanimidade, manifestando-se as seguintes posições discordantes:',{jc:'both'})+(!r.unan&&String(r.discord||'').trim()?T(r.discord,{jc:'both'}):'')+E():'')+T('Terminado em:')+T(dEnc)+sign()+E();
   // 8, 9
-  if(r.incReservas!==false){body+=H1('Âmbito de utilização – reservas de análise');for(const l of (part?semConteudo(r.reservas||RESERVAS_R):String(r.reservas||RESERVAS_R)).split('\n'))body+=/^\d+\.\s/.test(l)?H2(l.replace(/^\d+\.\s*/,'')):T(l,{jc:'both'})}
+  if(r.incReservas!==false){body+=H1('Âmbito de utilização – reservas de análise');for(const l of semConteudo(r.reservas||RESERVAS_R).split('\n'))body+=/^\d+\.\s/.test(l)?H2(l.replace(/^\d+\.\s*/,'')):T(l,{jc:'both'})}
   if(r.incAmbiente!==false){body+=H1('Ambiente, sustentabilidade e conformidade de licenciamento')+T(String(r.ambiente||AMBIENTE_R),{jc:'both'})}
-  // 10 termo (tribunal)
-  if(!part){body+=H1('Termo de encerramento')+E()+T('Em face do exposto, o relatório dá-se por concluído em:')+T(String(r.dataEnc||'').trim()||mesAno())+E();
-  if(col){body+=T(r.unan?'O presente relatório foi elaborado por unanimidade dos peritos.':'O presente relatório não reúne unanimidade, manifestando-se as seguintes posições discordantes:',{jc:'both'});if(!r.unan&&String(r.discord||'').trim())body+=T(r.discord,{jc:'both'});body+=E();
-    for(const pe of r.peritos)body+=P('',{sp:[360,0]})+P(R('_______________________________________'))+P(R(pe.nome||'',{b:true}))+P(R(represR(r,pe),{i:true,sz:9}))}
-  else body+=P('',{sp:[360,0]})+P(R('_______________________________________'))+P(R(String(settings.peritoNome||'').trim()||'Pedro Fonseca, Eng.',{b:true}))}
   // 11, 12
   const ax=ANEX_R.filter(d=>r.anexos[d]).map(d=>CHK(true,d)).join('')+String(r.anexosOutros||'').split('\n').filter(x=>x.trim()).map(x=>CHK(true,x.trim())).join('')+(r.anexF||[]).map((a,i)=>CHK(true,anexLbl(a,i))).join('');
   if(ax)body+=H1('Em anexo')+ax;
