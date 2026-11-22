@@ -744,7 +744,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.19.4';const VERSION_DATA='2026-11-21';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.19.5';const VERSION_DATA='2026-11-21';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -896,6 +896,16 @@ async function loadFotos(p){if(!p)return;const m=p.visita?.map;if(m&&!fotoCache.
 async function procFull(pp){await loadFotos(pp);const withF=a=>({...a,fotos:a.fotos.map(f=>({...f,data:fd(f)}))});const r=pp.rel?{...pp.rel}:pp.rel;
   if(r&&r.anexF)r.anexF=await Promise.all(r.anexF.map(async a=>({...a,data:await anexData(a),pages:await Promise.all((a.pages||[]).map(async pg=>({...pg,data:await anexData({id:pg.id})})))})));
   return {...pp,rel:r,visita:pp.visita?.map?{...pp.visita,map:{...pp.visita.map,data:fotoCache.get(pp.visita.map.id)||''}}:pp.visita,anomalias:pp.anomalias.map(withF),...(pp.ctxA?{ctxA:withF(pp.ctxA)}:{})}}
+// duplicar processo: «tudo» copia também as fotos e anexos (novos ids); «só a configuração» guarda tipo, gabinete, campos e textos-modelo
+async function dupProcess(src,full){await loadFotos(src);const np=JSON.parse(JSON.stringify(src));np.id=uid();np.codigo=(String(src.codigo||'').trim()||'Processo')+' (cópia)';np.updatedAt=Date.now();delete np.lastExport;
+  const cp=async id=>{const d=fotoCache.get(id)||(await fotoGet(id))?.data;const n=uid();if(d)await fotoPut(n,d);return n};
+  if(full){for(const a of holders(np)){a.id=a.id===CTXID?CTXID:uid();for(const f of a.fotos)f.id=await cp(f.id)}
+    if(np.visita?.map?.id)np.visita.map.id=await cp(np.visita.map.id);
+    for(const a of np.rel?.anexF||[]){a.id='anx_'+uid();const o=src.rel.anexF.find(x=>x.nome===a.nome&&x.tam===a.tam);if(o){const d=await anexData(o);if(d)await fotoPut(a.id,d);a.pages=await Promise.all((o.pages||[]).map(async(g,k)=>({...g,id:await cp(g.id)})))}}}
+  else{np.anomalias=[];delete np.ctxA;np.designacao='';np.local='';np.nSit=0;np.resumo='';np.visita={data:'',presencas:'',gps:null};
+    const r=np.rel;if(r){for(const k of ['procJud','entidade','parte1','parte2','objeto','contexto','ctxNota','causasG','passos','decurso','constrang','interv','conseqComp','conseqOutros','docsOutros','docsCom','anexosOutros','dataEnc','hora','tempoTxt','outrasTxt','nota','apreciacao','termoTxt'])r[k]='';
+      Object.assign(r,{quesitos:[],visitas:[],tempo:{},conseq:{},docs:{},anexos:{},recursos:{},anexF:[],aprDocs:{}});r.mzv=0;for(const k of ['objIntro','decursoIntro','ctxIntro','causasIntro','passosIntro'])delete r[k];r.objetivo='';ensureRel(np)}}
+  return np}
 async function migrateFotos(p){let ch=false;const m=p.visita?.map;if(m&&m.data){await fotoPut(m.id,m.data);delete m.data;ch=true}for(const a of holders(p))for(const f of a.fotos||[]){if(!f.id)f.id=uid();if(f.data){await fotoPut(f.id,f.data);delete f.data;ch=true}}
   for(const a of p.rel?.anexF||[]){if(a.data){await fotoPut(a.id,a.data);delete a.data;ch=true}for(const pg of a.pages||[])if(pg.data){await fotoPut(pg.id,pg.data);delete pg.data;ch=true}}
   if(ch)await dbPut(p);return p}
@@ -1099,8 +1109,8 @@ const HELP_HTML=`
 <details><summary>Instalação e atualizações</summary><p>Abra pelo ícone do ecrã principal (não pela app Ficheiros). As versões novas instalam-se sozinhas quando abre a app com rede. Os dados ficam só neste aparelho.</p></details>`;
 function vHome(){
   const list=[...procs].sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
-  return `${installTip()}${bkWarn()?`<div class="bkbar warn" data-act="go" data-v="bk"><div class="bktxt"><b>Cópia de segurança em atraso</b><span>Toque para abrir «Cópias de segurança».</span></div></div>`:''}<h2>Processos (${procs.length})</h2><div class="btns"><button class="green" data-act="newProc">+ Novo processo</button></div>
-  <div class="list">${list.map(x=>{const n=x.anomalias.length,ok=x.anomalias.filter(isDone).length;return `<div class="card ${x.id===S.pid?'active':''}" data-act="openProc" data-id="${x.id}"><b>${esc(x.codigo||'(sem código)')}</b> ${esc(x.designacao||'')}<div class="muted">${esc(x.local||'')}${x.visita?.data?' · vistoria '+esc(x.visita.data):''}</div><div style="margin-top:4px"><button class="secondary mini" style="float:right" data-act="sendProc" data-id="${x.id}">📤 Enviar</button>${pill(n+' anomalia'+(n===1?'':'s'))}${n?pill(ok+' analisada'+(ok===1?'':'s'),ok===n?'ok':'warn'):''}</div></div>`}).join('')||'<p class="muted">Ainda não há processos.</p>'}</div>`;
+  return `${installTip()}${bkWarn()?`<div class="bkbar warn" data-act="go" data-v="bk"><div class="bktxt"><b>Cópia de segurança em atraso</b><span>Toque para abrir «Cópias de segurança».</span></div></div>`:''}<h2>Processos (${procs.length})</h2><div class="btns"><button class="green" data-act="newProc">+ Novo processo</button></div><p class="muted" style="font-size:12px;margin:-4px 0 8px">Toque num processo para o abrir. Em cada um: ⧉ Duplicar · 📤 Enviar · 🗑 Eliminar.</p>
+  <div class="list">${list.map(x=>{const n=x.anomalias.length,ok=x.anomalias.filter(isDone).length;return `<div class="card ${x.id===S.pid?'active':''}" data-act="openProc" data-id="${x.id}"><b>${esc(x.codigo||'(sem código)')}</b> ${esc(x.designacao||'')}<div class="muted">${esc(x.local||'')}${x.visita?.data?' · vistoria '+esc(x.visita.data):''}</div><div style="margin-top:4px"><span style="float:right;display:flex;gap:4px"><button class="secondary mini" data-act="dupProc" data-id="${x.id}" title="Duplicar">⧉ Duplicar</button><button class="secondary mini" data-act="sendProc" data-id="${x.id}">📤 Enviar</button><button class="del mini" data-act="delProcId" data-id="${x.id}" title="Eliminar">🗑</button></span>${pill(n+' anomalia'+(n===1?'':'s'))}${n?pill(ok+' analisada'+(ok===1?'':'s'),ok===n?'ok':'warn'):''}</div></div>`}).join('')||'<p class="muted">Ainda não há processos.</p>'}</div>`;
 }
 // ----- Processo -----
 const MODOS=[['livre','Levantamento livre','O perito observa, descreve, fotografa e classifica as situações que encontra no local.'],['confirma','Confirmação','As situações vêm alegadas (lista importada ou escrita). No local, o perito confirma ou não (Status), comenta e classifica.'],['misto','Misto','Situações alegadas a confirmar + outras situações constatadas livremente no local.']];
@@ -2480,6 +2490,11 @@ document.addEventListener('click',async e=>{{const _x=e.target.closest&&e.target
     case 'delParte':{const x=p.partes[+el.dataset.i];const k=p.anomalias.filter(a=>parteOf(p,a)==x.n).length;if(k)return toast(`A parte ${x.n} tem ${k} anomalia(s) — mude-as primeiro de parte.`,1);if(p.partes.length<2)return;p.partes.splice(+el.dataset.i,1);await saveProc();S.scrollTop=window.scrollY;break}
     case 'sortParte':{const order=new Map(p.anomalias.map((a,i)=>[a,i]));p.anomalias.sort((x,y)=>parteOf(p,x)-parteOf(p,y)||(p.lockNum?(x.num||0)-(y.num||0):order.get(x)-order.get(y)));await saveProc();toast('Lista ordenada por parte e número.');break}
     case 'useAll':{for(const f of settings.fields){p.use[f.id]=el.dataset.v==='1'}await saveProc();S.scrollTop=window.scrollY;break}
+    case 'dupProc':{if(dirty)await saveProc();const src=procs.find(x=>x.id===el.dataset.id);if(!src)return;
+      const c=await ask(`Duplicar o processo ${src.codigo||''}:`,['Cancelar','Só a configuração (sem situações, fotos nem dados do caso)','Tudo (situações, fotos e anexos)']);if(!c)return;
+      busy(true,'A duplicar…');try{const np=await dupProcess(src,c===2);procs.push(np);await dbPut(np);S.pid=np.id;S.aid=null;S.view='proc';S.sub=null;S.open.p1=true;S.scrollTop=0;toast('Processo duplicado — altere o N_Ref.')}finally{busy(false)}break}
+    case 'delProcId':{const pp=procs.find(x=>x.id===el.dataset.id);if(!pp)return;if(!await ask(`Eliminar o processo ${pp.codigo||''} e todas as fichas e fotos?\nSugestão: faça antes uma cópia de segurança.`,['Cancelar','Eliminar'],1))return;
+      holders(pp).forEach(x=>x.fotos.forEach(f=>fotoDel(f.id)));(pp.rel?.anexF||[]).forEach(a=>{fotoDel(a.id);(a.pages||[]).forEach(g=>fotoDel(g.id))});procs=procs.filter(x=>x!==pp);await dbDel(pp.id);if(S.pid===pp.id){S.pid=null}S.view='home';toast('Processo eliminado.');break}
     case 'newProc':{const np=newProc();procs.push(np);await dbPut(np);S.pid=np.id;S.aid=null;S.view='proc';S.sub=null;S.open.p1=true;S.scrollTop=0;break}
     case 'openProc':if(dirty)await saveProc();S.pid=el.dataset.id;S.aid=null;S.prevNode=null;await loadFotos(cur());S.view='proc';S.sub=null;S.scrollTop=0;break;
     case 'backProc':if(dirty)await saveProc();S.sub=null;break;
