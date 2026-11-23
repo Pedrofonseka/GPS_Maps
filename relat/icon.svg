@@ -1,18 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#24476a"/><stop offset="1" stop-color="#132a42"/></linearGradient></defs>
  <rect width="1024" height="1024" fill="url(#bg)"/>
- <!-- linhas de projeto (grelha subtil) -->
  <g stroke="#ffffff" stroke-opacity=".06" stroke-width="4"><path d="M0 256H1024M0 512H1024M0 768H1024M256 0V1024M512 0V1024M768 0V1024"/></g>
- <!-- monograma: «p» -->
- <text x="232" y="640" font-family="DejaVu Sans" font-weight="bold" font-size="520" fill="#ffffff">p</text>
- <!-- «T» desenhado como perfil estrutural (viga + alma) -->
- <g fill="#E3AE1F">
-  <rect x="540" y="236" width="300" height="70" rx="10"/>
-  <rect x="655" y="300" width="70" height="420" rx="8"/>
-  <rect x="610" y="700" width="160" height="40" rx="8"/>
+ <!-- «P» -->
+ <text x="170" y="740" font-family="DejaVu Sans" font-weight="bold" font-size="560" fill="#ffffff">P</text>
+ <!-- «t» desenhado como perfil estrutural (pilar + travessa + sapata) -->
+ <g fill="#E3AE1F" transform="translate(40 0)">
+  <rect x="640" y="300" width="72" height="440" rx="8"/>
+  <rect x="580" y="410" width="210" height="64" rx="10"/>
+  <rect x="640" y="676" width="170" height="64" rx="10"/>
  </g>
- <!-- lupa discreta no T -->
- <circle cx="690" cy="236" r="0" fill="none"/>
- <!-- palavra -->
  <text x="512" y="900" text-anchor="middle" font-family="DejaVu Sans" font-weight="bold" font-size="120" fill="#ffffff" letter-spacing="2">peri<tspan fill="#E3AE1F">T</tspan>ext</text>
 </svg>
