@@ -5,7 +5,7 @@ Rotina comum às apps com vários itens no mesmo processo (verbas, parcelas, ano
 ## Regra (decidida pelo perito, 23/11/2026)
 
 - Cada item tem **dois números separados**: o **código do processo** (VB_xxx, P_xx…), que nunca muda e segue a ordem da relação/listagem, e a **ordem de visita** `OV_xxx` = ordem real no terreno.
-- **Sugestão automática**: o primeiro registo no local (fotografia tirada na app, GPS, botão «Hoje» da data de visita, ou «Visitada agora») sugere o número seguinte. A sugestão fica marcada (OV_003?) até o utilizador **aceitar** ou **corrigir**.
+- **Sugestão automática**: o primeiro registo no local (fotografia tirada na app, GPS, botão «Hoje» da data de visita, ou «Visitada agora») sugere o número seguinte. O botão «Data-hora» (não «Hoje») regista data e hora — no mesmo dia vêem-se coisas diferentes com minutos de diferença — e fica para aceitar, corrigir ou anular («não era esta verba»: começou-se a ver um assunto que afinal era outro). A sugestão fica marcada (OV_003?) até o utilizador **aceitar** ou **corrigir**.
 - **Correção**: escrevendo outro n.º, o item entra nessa posição e os restantes reajustam-se — sem números repetidos nem buracos. «Limpar» devolve o item a «por visitar».
 - **Sugestão pelas fotografias** (fotos importadas): propõe a ordem pela hora da primeira foto de cada item ainda sem OV (para aceitar ou corrigir).
 - **Lista**: alternar «Ordem: Processo | Visita (OV)»; os itens por visitar ficam no fim.
