@@ -750,6 +750,7 @@ button:not(.tiny):not([data-tldel]):not([data-del]){min-height:44px!important}
 #updToast{position:fixed;left:10px;right:10px;top:calc(10px + env(safe-area-inset-top));z-index:9500;background:#2f5d3a;color:#fff;border-radius:12px;padding:10px 12px;display:flex;gap:10px;align-items:center;justify-content:space-between;box-shadow:0 6px 20px #0005;font-size:14px}
 #updToast button{background:#a8452c;border-color:#a8452c;color:#fff}
 @media (pointer:coarse){input,select,textarea{font-size:16px!important}} /* iPhone: abaixo de 16px amplia o ecrã ao tocar na caixa e o ecrã salta */
+body.kbd header,body.kbd #nav{position:static}body.kbd #totBar{display:none} /* teclado aberto: cabeçalho e barra do total deixam de tapar a caixa */
 </style>
 </head>
 <body>
@@ -784,7 +785,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
 <script>
 'use strict';
-const VERSION='0.16';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
+const VERSION='0.16.1';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
 function growFit(t){if(!t||!t.classList?.contains('grow')||!t.offsetParent)return;t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px'}
 function growAll(root){(root||document).querySelectorAll('textarea.grow').forEach(growFit)}
 document.addEventListener('input',e=>growFit(e.target),true);
@@ -3534,6 +3535,18 @@ $('#btnSettings').onclick=()=>{view='settings';render()};$('#btnModelos').onclic
   for(const p of processos){normProc(p);if(p._dirty){delete p._dirty;await put('processos',p)}}}
  catch(e){$('#main').innerHTML=`<div class="badbox">Não foi possível abrir a base de dados: ${esc(e.message)}</div>`;return}
  render()})();
+
+
+/* teclado no iPhone: cabeçalho não fixo e caixa trazida para o meio do ecrã (como no Relatório/AvaLias) */
+(function(){const KB=e=>e&&(e.tagName==='TEXTAREA'||e.tagName==='SELECT'||(e.tagName==='INPUT'&&!/^(checkbox|radio|file|button|submit|range|color)$/i.test(e.type)));if(!(window.matchMedia&&matchMedia('(pointer:coarse)').matches))return;
+ document.addEventListener('focusin',e=>{if(!KB(e.target))return;document.body.classList.add('kbd');const el=e.target;setTimeout(()=>{if(document.activeElement!==el)return;const vv=window.visualViewport,r=el.getBoundingClientRect(),top=vv?vv.offsetTop:0,h=vv?vv.height:innerHeight;if(r.top<top+8||r.bottom>top+h-8)el.scrollIntoView({block:'center',behavior:'smooth'})},350)});
+ document.addEventListener('focusout',()=>setTimeout(()=>{if(!KB(document.activeElement))document.body.classList.remove('kbd')},250))})();
+/* @comum:teclado v1.0 — iPhone/iPad: não redesenhar o ecrã enquanto se escreve. Quando se passa de uma caixa de texto para outra, a mudança da primeira dispara «change»; se a app redesenhar nesse momento, o teclado fecha e reabre e o ecrã salta. O redesenho fica pendente e faz-se quando o foco sai das caixas. Regra: docs/regras/README.md (Teclado no iPhone). */
+(function(){const txtEl=e=>!!e&&(e.tagName==='TEXTAREA'||(e.tagName==='INPUT'&&!/^(checkbox|radio|file|button|submit|range|color)$/i.test(e.type)));
+ let chgT=0,pend=false;window.addEventListener('change',e=>{if(txtEl(e.target))chgT=Date.now()},true);
+ const R0=render;render=function(...a){if(Date.now()-chgT<2500&&txtEl(document.activeElement)){pend=true;return}pend=false;return R0.apply(this,a)};
+ document.addEventListener('focusout',()=>setTimeout(()=>{if(pend&&!txtEl(document.activeElement)){pend=false;try{if(typeof S==='object'&&S)S.scrollTop=window.scrollY}catch(_){}render()}},300))})();
+/* @fim:teclado */
 </script>
 <script>/* app instalável (GitHub Pages), como o FullTopics e o Regi: guarda-se no aparelho e abre sem rede; versão nova → aviso «Atualizar». No ficheiro local não faz nada. */
 async function checkAppUpdate(){try{if(!navigator.onLine||!window.caches)return;const r=await fetch('index.html?chk='+Date.now(),{cache:'no-store'});if(!r.ok)return;const txt=await r.text(),m=/const VERSION='([^']+)'/.exec(txt),v=m&&m[1];if(v&&v!==VERSION){const c=await caches.open('expropria-app');await c.put(new URL('index.html',location.href).href,new Response(txt,{headers:{'Content-Type':'text/html; charset=utf-8'}}));for(const f of ['manifest.webmanifest','icon-180.png','icon-192.png','icon-512.png']){try{const x=await fetch(f+'?chk='+Date.now(),{cache:'no-store'});if(x.ok)await c.put(new URL(f,location.href).href,x)}catch(e){}}showUpdateToast(v)}}catch(e){}}

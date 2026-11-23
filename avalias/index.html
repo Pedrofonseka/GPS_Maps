@@ -727,7 +727,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.21.2';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.21.3';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -3284,6 +3284,13 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
   if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 })();
 
+
+/* @comum:teclado v1.0 — iPhone/iPad: não redesenhar o ecrã enquanto se escreve. Quando se passa de uma caixa de texto para outra, a mudança da primeira dispara «change»; se a app redesenhar nesse momento, o teclado fecha e reabre e o ecrã salta. O redesenho fica pendente e faz-se quando o foco sai das caixas. Regra: docs/regras/README.md (Teclado no iPhone). */
+(function(){const txtEl=e=>!!e&&(e.tagName==='TEXTAREA'||(e.tagName==='INPUT'&&!/^(checkbox|radio|file|button|submit|range|color)$/i.test(e.type)));
+ let chgT=0,pend=false;window.addEventListener('change',e=>{if(txtEl(e.target))chgT=Date.now()},true);
+ const R0=render;render=function(...a){if(Date.now()-chgT<2500&&txtEl(document.activeElement)){pend=true;return}pend=false;return R0.apply(this,a)};
+ document.addEventListener('focusout',()=>setTimeout(()=>{if(pend&&!txtEl(document.activeElement)){pend=false;try{if(typeof S==='object'&&S)S.scrollTop=window.scrollY}catch(_){}render()}},300))})();
+/* @fim:teclado */
 </script>
 </body>
 </html>
