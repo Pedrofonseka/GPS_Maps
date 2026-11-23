@@ -726,7 +726,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.17';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.18';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -2332,6 +2332,7 @@ document.addEventListener('click',async e=>{const el=e.target.closest('[data-ala
   case 'tabDel':{const l=el.dataset.l;(l==='bft'?a.al.bftL:a.al.rnd.L).splice(+el.dataset.i,1);alValSync(a);return keep()}
   case 'rndOn':{alA(a);if(!a.al.rnd)rndInit(a);else a.al.rnd.on=1;return keep()}
   case 'rndOff':{if(a.al.rnd)a.al.rnd.on=0;return keep()}
+  case 'exeTog':{const e2=a.al.cst.ed[+el.dataset.i];if(e2.exe)delete e2.exe;else e2.exe=exeNew(exeTipOf(a));alValSync(a);return keep()}
   case 'cstOn':{alA(a);if(!a.al.cst)cstInit(a);else a.al.cst.on=1;return keep()}
   case 'cstOff':{if(a.al.cst)a.al.cst.on=0;return keep()}
   case 'cstAdd':{a.al.cst.ed.push({d:'Construção',area:'',k1:'1',cnv:'1000',r:'',est:'5-Rg',adot:''});return keep()}
@@ -2356,12 +2357,13 @@ document.addEventListener('click',async e=>{const el=e.target.closest('[data-ala
 /* ---------- campos ligados ---------- */
 document.addEventListener('input',e=>{const el=e.target,b=el.dataset?.bind;if(!b)return;const [scope,k]=b.split('.');if(scope==='cr'){e.stopImmediatePropagation();const p0=cur(),r0=ensureRel(p0),it=(r0.crono||[])[+k],k2=b.split('.')[2];if(it){it[k2]=el.value;saveProcSoon()}return}
   if(scope==='altab'){e.stopImmediatePropagation();const a0=curA();if(!a0)return;const P=b.split('.'),L=P[1]==='bft'?a0.al.bftL:a0.al.rnd?.L,it=L&&L[+P[2]];if(it)it[P[3]]=el.value;if(a0.al.mAdot&&a0.al.valAuto!=='')a0.al.valAuto='met';saveProcSoon();return}
-  if(scope==='alcst'){e.stopImmediatePropagation();const a0=curA(),c=a0?.al?.cst;if(!c)return;const P=b.split('.');if(P[1]==='ed'){const it=c.ed[+P[2]];if(it)it[P[3]]=el.value}else c[P[1]]=el.value;if(a0.al.mAdot&&a0.al.valAuto!=='')a0.al.valAuto='met';saveProcSoon();return}
+  if(scope==='alcst'){e.stopImmediatePropagation();const a0=curA(),c=a0?.al?.cst;if(!c)return;const P=b.split('.');if(P[1]==='ed'){const it=c.ed[+P[2]];if(it){if(P[3]==='exe'){const cp=it.exe?.caps?.[+P[5]];if(cp)cp[P[4]]=el.value}else it[P[3]]=el.value}}else c[P[1]]=el.value;if(a0.al.mAdot&&a0.al.valAuto!=='')a0.al.valAuto='met';saveProcSoon();return}
   if(scope==='almv'){e.stopImmediatePropagation();const a0=curA();alA(a0);a0.al.mv=a0.al.mv||{};a0.al.mv[AL_METODOS[+k]]=el.value;if(a0.al.mAdot&&a0.al.valAuto!=='')a0.al.valAuto='met';saveProcSoon();return}
   if(!['al','alc','als','pal','alid','alart','aldoc'].includes(scope))return;e.stopImmediatePropagation();const p=cur(),a=curA();
  if(scope==='pal')alP(p)[k]=el.value;else if(scope==='alart'||scope==='aldoc'){alA(a);const L=scope==='alart'?a.al.artigos:a.al.docsArea,k2=b.split('.')[2];if(L&&L[+k])L[+k][k2]=el.value}else if(scope==='alid'){alA(a);const key=(AL_IDTIPO[alFam(a)]||AL_IDTIPO.imo)[+k];a.al.ids=a.al.ids||{};if(key)a.al.ids[key]=el.value}else{alA(a);if(scope==='al'){a.al[k]=el.value;if(k==='valor')a.al.valAuto=''}else if(scope==='alc')a.al.car[k]=el.value;else a.al.suc[k]=el.value}
  if(typeof autosize==='function')autosize(el);saveProcSoon()},true);
 
+document.addEventListener('change',async e=>{const el=e.target.closest('select[data-alact="exeTip"]');if(!el)return;e.stopImmediatePropagation();const a=curA(),e2=a?.al?.cst?.ed?.[+el.dataset.i];if(!e2)return;if(!await ask('Trocar a tipologia? Os pesos e as percentagens realizadas voltam aos valores por defeito.'))return render();e2.exe=exeNew(el.value);alValSync(a);await saveProc();S.scrollTop=window.scrollY;render()},true);
 document.addEventListener('change',e=>{const b=e.target.dataset?.bind||'';if(!/^almv\.|^alcst\.|^altab\./.test(b))return;const a=curA();if(!a)return;alValSync(a);saveProc().then(()=>{S.scrollTop=window.scrollY;render()})});
 /* ---------- troca por verba (regra sync.md) ---------- */
 function alTrocaModal(p){const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="box"><b style="font-size:17px">Enviar / receber verbas</b><p class="muted">Envie só as verbas escolhidas (com fotos) para continuar noutro aparelho. Ao receber, escolhe verba a verba; as outras verbas e os dados gerais do processo não mudam.</p><div class="btns"><button class="secondary mini" data-x="all">Todas</button><button class="secondary mini" data-x="none">Nenhuma</button></div><div class="allist">${p.anomalias.map(a=>`<label class="tk ${a.id===S.aid?'on':''}"><input type="checkbox" data-vb="${a.id}" ${a.id===S.aid?'checked':''}><span><b>${esc(alCode(p,a))}</b> ${esc(a.al?.designacao||'')} · 📷 ${a.fotos.length}</span></label>`).join('')}</div><div class="btns"><button class="green" data-x="send">📤 Enviar verbas escolhidas</button><label class="btn secondary">📥 Receber verbas<input type="file" accept=".json,application/json" data-x="recv" hidden></label><button class="secondary" data-x="close">Fechar</button></div></div>`;
@@ -2757,6 +2759,15 @@ function rhdDep(est,r){const k=rhdCod(est);if(!k)return null;const L=RHD_EST[k][
 /* @fim:rhd */
 /* CST — custo de reposição depreciado (docs/avalias/METODOS.md §3): [A] solo + [B] edificações (Ross-Heidecke) − obsolescências + taxas + margem do promotor + transformação */
 const CST_DEF={C:'850',IUS:'0.3',ILZ:'0.065',Div:'1',Ap:'',enc:'0.075',of:'0',oe:'0',txl:'0.07',mlr:'0.15',trf:'0'};
+/* Estado de execução: estrutura de custos por tipologia (capítulos principais e pesos indicativos, somam 100 %) — editáveis em cada caso */
+const EXE_TIP={
+ MOR:['Moradia unifamiliar',[['Estaleiro e trabalhos preparatórios',3],['Movimento de terras e fundações',8],['Estrutura',22],['Alvenarias e paredes',10],['Cobertura e impermeabilizações',8],['Redes de águas e esgotos',6],['Instalações elétricas e telecomunicações',6],['Rebocos e isolamentos',8],['Caixilharia exterior e serralharias',8],['Carpintarias interiores',5],['Revestimentos de pavimentos e paredes',8],['Pinturas',3],['Louças, equipamentos e climatização',5]]],
+ HCO:['Habitação coletiva / edifício em PH',[['Estaleiro e trabalhos preparatórios',3],['Movimento de terras e fundações',7],['Estrutura',24],['Alvenarias e paredes',9],['Cobertura e impermeabilizações',4],['Redes de águas, esgotos e gás',7],['Instalações elétricas e ITED',7],['Elevadores e climatização',5],['Rebocos e isolamentos',8],['Caixilharia exterior e serralharias',8],['Carpintarias interiores',5],['Revestimentos de pavimentos e paredes',8],['Pinturas',3],['Louças e equipamentos',2]]],
+ PAV:['Pavilhão / armazém',[['Estaleiro e trabalhos preparatórios',3],['Movimento de terras e fundações',12],['Estrutura (metálica ou pré-fabricada)',30],['Cobertura e revestimentos laterais',22],['Alvenarias',6],['Pavimento industrial',12],['Redes de águas e esgotos',4],['Instalações elétricas',6],['Portões e caixilharia',5]]],
+ ANX:['Anexo / construção de apoio',[['Movimento de terras e fundações',12],['Estrutura e alvenarias',40],['Cobertura',20],['Rebocos e pinturas',10],['Caixilharia e portas',10],['Instalações',8]]]};
+const exeTipOf=a=>({FRA:'HCO',EDI:'HCO',PAV:'PAV',ANX:'ANX',CAP:'ANX'})[a.al.tipo]||'MOR';
+const exeNew=tip=>({tip,caps:EXE_TIP[tip][1].map(([c,p])=>({c,p:String(p),r:'0'}))});
+const exeRun=x=>{const caps=(x?.caps||[]).map(c=>({...c,pn:cstNum(c.p)??0,rn:cstNum(c.r)??0}));caps.forEach(c=>c.ct=c.pn*c.rn/10000);return {caps,peso:caps.reduce((s1,c)=>s1+c.pn,0),tot:caps.reduce((s1,c)=>s1+c.ct,0)}};
 const cstR10=v=>String(Math.min(1,Math.max(0,Math.round(v*10)/10)));
 function cstInit(a){const x=a.al,c=x.car||{},ano=parseInt(c.ano),id=ano>1800?cstR10((new Date().getFullYear()-ano)/80):'',est=rhdCod(c.estado)||'5-Rg';
  const ed=[];if(alNum(c.abp))ed.push({d:'Área bruta privativa (Abp)',area:String(c.abp),k1:'1',cnv:'1000',r:id,est,adot:''});if(alNum(c.abd))ed.push({d:'Área bruta dependente (Abd)',area:String(c.abd),k1:'1',cnv:'500',r:id,est,adot:''});
@@ -2767,26 +2778,32 @@ const cstNum=v=>{let t=String(v??'').trim().replace(/\s|€/g,'');if(!t)return n
 function cstRun(a){const k=a.al.cst;if(!k?.on)return null;const n=v=>{const r=cstNum(v);return r==null?0:r},alNum=cstNum;
  const Ar=n(k.area),Ap=alNum(k.Ap);let kar=1;if(Ap&&Ar){const rr=Math.abs(Ar-Ap)/Ap;kar=Math.pow(Ap/Ar,rr<0.3?0.25:0.125)}
  const vun=n(k.C)*n(k.IUS)*n(k.ILZ)*(alNum(k.Div)??1)*kar,soloB=Ar*vun,encV=soloB*n(k.enc),solo=Math.round((soloB+encV)/100)*100;
- const ed=(k.ed||[]).map(e=>{const nv=n(e.area)*(alNum(e.k1)??1)*n(e.cnv),r=String(e.r??'').trim()!==''?n(e.r):(n(e.vida)?n(e.idade)/n(e.vida):0),adot=alNum(e.adot),dep=adot!=null?1-adot:(rhdDep(e.est,r)??0);return {...e,nv,r,dep,val:Math.round(nv*(1-dep)/100)*100}});
+ const ed=(k.ed||[]).map(e=>{const nv=n(e.area)*(alNum(e.k1)??1)*n(e.cnv),r=String(e.r??'').trim()!==''?n(e.r):(n(e.vida)?n(e.idade)/n(e.vida):0),adot=alNum(e.adot),dep=adot!=null?1-adot:(rhdDep(e.est,r)??0),ex=e.exe?exeRun(e.exe).tot:(cstNum(e.exec)??1);return {...e,nv,r,dep,ex,val:Math.round(nv*ex*(1-dep)/100)*100}});
  const NV=ed.reduce((s,e)=>s+e.nv,0),edif=ed.reduce((s,e)=>s+e.val,0),ofV=-edif*n(k.of),oeV=-(edif+ofV)*n(k.oe),efa=edif+ofV+oeV,rat=NV?efa/NV:0;
- const txlV=rat<0.5?0:n(k.txl)*efa,mlrV=n(k.mlr)*(solo+efa+txlV),trfV=n(k.trf)*NV,total=Math.round((solo+efa+txlV+mlrV+trfV)/100)*100;
- return {Ar,Ap,kar,vun,soloB,encV,solo,ed,NV,edif,ofV,oeV,efa,rat,txlV,mlrV,trfV,total}}
-function cstSheet(a){const k=a.al.cst,R=cstRun(a);if(!R)return null;const alNum=cstNum,n=v=>cstNum(v)??0,rows=[],P=(v)=>({v,s:5}),N0=v=>({v,s:7}),N2=v=>({v,s:3}),C4=v=>({v,s:6});
- rows.push([{v:'[A] Solo',s:2},{v:'Área (m²)',s:2},{v:'C (€/m²)',s:2},{v:'IUS',s:2},{v:'ILZ',s:2},{v:'Div',s:2},{v:'K_Ar',s:2},{v:'V_un (€/m²)',s:2},{v:'Valor (€)',s:2}]);
- rows.push(['Terreno',N2(R.Ar),N2(n(k.C)),C4(n(k.IUS)),P(n(k.ILZ)),C4(alNum(k.Div)??1),C4(R.kar),{f:'C2*D2*E2*F2*G2',v:R.vun,s:3},{f:'B2*H2',v:R.soloB,s:7}]);
- rows.push(['Encargos de aquisição','','','','','','',P(n(k.enc)),{f:'I2*H3',v:R.encV,s:7}]);
- rows.push([{v:'Valor do solo [A]',s:1},'','','','','','','',{f:'ROUND(I2+I3,-2)',v:R.solo,s:10}]);rows.push([]);
- rows.push([{v:'[B] Edificações',s:2},{v:'Área (m²)',s:2},{v:'K1',s:2},{v:'C novo (€/m²)',s:2},{v:'V. novo (€)',s:2},{v:'Idade %',s:2},{v:'ECV',s:2},{v:'Dep. física',s:2},{v:'Valor (€)',s:2}]);
- const e0=rows.length+1;R.ed.forEach((e,i)=>{const r=e0+i;rows.push([e.d||'Construção',N2(n(e.area)),C4(alNum(e.k1)??1),N2(n(e.cnv)),{f:`B${r}*C${r}*D${r}`,v:e.nv,s:7},P(e.r),rhdCod(e.est)||'—',P(e.dep),{f:`ROUND(E${r}*(1-H${r}),-2)`,v:e.val,s:7}])});
- const e1=e0+R.ed.length-1,rS=e1+1;rows.push([{v:'Edificações, com depreciação física (Ross-Heidecke)',s:1},'','','',{f:`SUM(E${e0}:E${e1})`,v:R.NV,s:10},'','','',{f:`SUM(I${e0}:I${e1})`,v:R.edif,s:10}]);
- const rF=rS+1,rE=rS+2,rT=rS+3,rM=rS+4,rR=rS+5,rTot=rS+6;
- rows.push(['Obsolescência funcional','','','','','','',P(n(k.of)),{f:`-I${rS}*H${rF}`,v:R.ofV,s:7}]);
- rows.push(['Obsolescência económica / externa','','','','','','',P(n(k.oe)),{f:`-(I${rS}+I${rF})*H${rE}`,v:R.oeV,s:7}]);
- rows.push(['Taxas, licenças e projetos (só se estado ≥ 50%)','','','','','','',P(n(k.txl)),{f:`IF(E${rS}=0,0,IF((I${rS}+I${rF}+I${rE})/E${rS}<0.5,0,H${rT}*(I${rS}+I${rF}+I${rE})))`,v:R.txlV,s:7}]);
- rows.push(['Margem do promotor','','','','','','',P(n(k.mlr)),{f:`H${rM}*(I4+I${rS}+I${rF}+I${rE}+I${rT})`,v:R.mlrV,s:7}]);
- rows.push(['Transformação / demolição (s/ valor novo)','','','','','','',P(n(k.trf)),{f:`H${rR}*E${rS}`,v:R.trfV,s:7}]);
- rows.push([{v:'Valor pelo custo (CST)',s:1},'','','','','','','',{f:`ROUND(I4+I${rS}+I${rF}+I${rE}+I${rT}+I${rM}+I${rR},-2)`,v:R.total,s:10}]);
- return {name:'Custo',cols:[30,8,8,9,10,8,7,9,11],rows}}
+ const txlV=rat<0.5?0:n(k.txl)*efa,mlrV=n(k.mlr)*(solo+efa+txlV),trfV=n(k.trf)*NV,trfE=-Math.abs(n(k.trfE)),total=Math.round((solo+efa+txlV+mlrV+trfV+trfE)/100)*100;
+ return {Ar,Ap,kar,vun,soloB,encV,solo,ed,NV,edif,ofV,oeV,efa,rat,txlV,mlrV,trfV,trfE,total}}
+function cstSheet(a){const k=a.al.cst,R=cstRun(a);if(!R)return null;const alNum=cstNum,n=v=>cstNum(v)??0,rows=[],P=(v)=>({v,s:5}),N2=v=>({v,s:3}),C4=v=>({v,s:6});
+ rows.push([{v:'[A] Solo',s:2},{v:'Área (m²)',s:2},{v:'C (€/m²)',s:2},{v:'IUS',s:2},{v:'ILZ',s:2},{v:'Div',s:2},{v:'K_Ar',s:2},{v:'V_un (€/m²)',s:2},{v:'',s:2},{v:'Valor (€)',s:2}]);
+ rows.push(['Terreno',N2(R.Ar),N2(n(k.C)),C4(n(k.IUS)),P(n(k.ILZ)),C4(alNum(k.Div)??1),C4(R.kar),{f:'C2*D2*E2*F2*G2',v:R.vun,s:3},'',{f:'B2*H2',v:R.soloB,s:7}]);
+ rows.push(['Encargos de aquisição','','','','','','',P(n(k.enc)),'',{f:'J2*H3',v:R.encV,s:7}]);
+ rows.push([{v:'Valor do solo [A]',s:1},'','','','','','','','',{f:'ROUND(J2+J3,-2)',v:R.solo,s:10}]);rows.push([]);
+ rows.push([{v:'[B] Edificações',s:2},{v:'Área (m²)',s:2},{v:'K1',s:2},{v:'C novo (€/m²)',s:2},{v:'V. novo (€)',s:2},{v:'Idade %',s:2},{v:'ECV',s:2},{v:'Dep. física',s:2},{v:'Exec. %',s:2},{v:'Valor (€)',s:2}]);
+ const e0=rows.length+1,nE=R.ed.length,e1=e0+nE-1,rS=e1+1,rF=rS+1,rE=rS+2,rT=rS+3,rM=rS+4,rR=rS+5,rD=rS+6,rTot=rS+7;
+ // blocos de execução (depois do total): posições conhecidas antes
+ let nx=rTot+2;const exPos=R.ed.map(e=>{if(!e.exe)return null;const X=exeRun(e.exe),h=nx;nx+=X.caps.length+3;return {h,c0:h+1,c1:h+X.caps.length,t:h+X.caps.length+1,X}});
+ R.ed.forEach((e,i)=>{const r=e0+i,xp=exPos[i];rows.push([e.d||'Construção',N2(n(e.area)),C4(alNum(e.k1)??1),N2(n(e.cnv)),{f:`B${r}*C${r}*D${r}`,v:e.nv,s:7},P(e.r),rhdCod(e.est)||'—',P(e.dep),xp?{f:`D${xp.t}`,v:e.ex,s:5}:P(e.ex),{f:`ROUND(E${r}*I${r}*(1-H${r}),-2)`,v:e.val,s:7}])});
+ rows.push([{v:'Edificações (depreciação física e execução)',s:1},'','','',{f:`SUM(E${e0}:E${e1})`,v:R.NV,s:10},'','','','',{f:`SUM(J${e0}:J${e1})`,v:R.edif,s:10}]);
+ rows.push(['Obsolescência funcional','','','','','','',P(n(k.of)),'',{f:`-J${rS}*H${rF}`,v:R.ofV,s:7}]);
+ rows.push(['Obsolescência económica / externa','','','','','','',P(n(k.oe)),'',{f:`-(J${rS}+J${rF})*H${rE}`,v:R.oeV,s:7}]);
+ rows.push(['Taxas, licenças e projetos (só se estado ≥ 50%)','','','','','','',P(n(k.txl)),'',{f:`IF(E${rS}=0,0,IF((J${rS}+J${rF}+J${rE})/E${rS}<0.5,0,H${rT}*(J${rS}+J${rF}+J${rE})))`,v:R.txlV,s:7}]);
+ rows.push(['Margem do promotor','','','','','','',P(n(k.mlr)),'',{f:`H${rM}*(J4+J${rS}+J${rF}+J${rE}+J${rT})`,v:R.mlrV,s:7}]);
+ rows.push(['Transformação / demolição (% s/ valor novo)','','','','','','',P(n(k.trf)),'',{f:`H${rR}*E${rS}`,v:R.trfV,s:7}]);
+ rows.push(['Custos de demolição, limpeza e transformação (€)','','','','','','','','',{v:R.trfE,s:7}]);
+ rows.push([{v:'Valor pelo custo (CST)',s:1},'','','','','','','','',{f:`ROUND(J4+J${rS}+J${rF}+J${rE}+J${rT}+J${rM}+J${rR}+J${rD},-2)`,v:R.total,s:10}]);
+ R.ed.forEach((e,i)=>{const xp=exPos[i];if(!xp)return;rows.push([]);rows.push([{v:`Estado de execução — ${e.d||'Construção'} (${EXE_TIP[e.exe.tip]?.[0]||''})`,s:2},{v:'Peso',s:2},{v:'Realizado',s:2},{v:'Contributo',s:2}]);
+  xp.X.caps.forEach((c,j)=>{const r=xp.c0+j;rows.push([c.c,{v:c.pn/100,s:9},{v:c.rn/100,s:9},{f:`B${r}*C${r}`,v:c.ct,s:5}])});
+  rows.push([{v:'Execução da obra',s:1},{f:`SUM(B${xp.c0}:B${xp.c1})`,v:xp.X.peso/100,s:11},'',{f:`SUM(D${xp.c0}:D${xp.c1})`,v:xp.X.tot,s:11}])});
+ return {name:'Custo',cols:[30,8,8,9,10,8,7,9,8,11],rows}}
 function cstHTML(a){const x=a.al,k=x.cst;if(!k?.on)return `<div class="btns"><button class="secondary mini" data-alact="cstOn">🧮 Calcular pelo custo (CST)</button></div>`;
  const R=cstRun(a),F=(v,d=0)=>esc(CULT.fmt(v,d)),P=v=>esc(CULT.fmt(v*100,1))+'%';
  const I=(bind,val,w=64)=>`<input data-bind="${bind}" inputmode="decimal" value="${esc(val??'')}" style="width:${w}px">`;
@@ -2797,14 +2814,18 @@ function cstHTML(a){const x=a.al,k=x.cst;if(!k?.on)return `<div class="btns"><bu
   <tr><td>Terreno</td><td>${I('alcst.area',k.area,72)}</td><td>${I('alcst.C',k.C)}</td><td>${I('alcst.IUS',k.IUS,52)}</td><td>${I('alcst.ILZ',k.ILZ,58)}</td><td>${I('alcst.Div',k.Div,48)}</td><td>${I('alcst.Ap',k.Ap,64)}</td><td class="c">${F(R.kar,4)}</td><td class="c">${F(R.vun,2)}</td><td class="c">${F(R.soloB)}</td></tr>
   <tr><td>Encargos de aquisição</td><td colspan="6"></td><td colspan="2">${I('alcst.enc',k.enc,58)}</td><td class="c">${F(R.encV)}</td></tr>
   <tr class="tot"><td>Valor do solo [A]</td><td colspan="8"></td><td class="c">${F(R.solo)}</td></tr></table></div>`;
- const ed=`<div class="cstx"><table><tr>${th('[B] Edificações')}${th('Área m²')}${th('K1')}${th('C novo €/m²')}${th('V. novo €')}${th('Idade %','Idade / vida útil (ex.: 20 anos em 60 = 30 %)')}${th('ECV','Estado de conservação: 8-Nv Novo · 7-Mb Muito bom · 6-Bo Bom · 5-Rg Regular · 4-Ac Aceitável · 3-Sf Sofrível · 2-Df Deficiente · 1-Ip Impróprio')}${th('Dep. física','Ross-Heidecke')}${th('Coef. adot.','Fração que fica — substitui Ross-Heidecke')}${th('Valor €')}${th('')}</tr>
-  ${(k.ed||[]).map((e,i)=>{const E=R.ed[i];return `<tr><td><input data-bind="alcst.ed.${i}.d" value="${esc(e.d||'')}" placeholder="Descrição" style="width:130px"></td><td>${I(`alcst.ed.${i}.area`,e.area)}</td><td>${I(`alcst.ed.${i}.k1`,e.k1,44)}</td><td>${I(`alcst.ed.${i}.cnv`,e.cnv)}</td><td class="c">${F(E.nv)}</td><td>${rSel(i,E)}</td><td>${estSel(i,e.est)}</td><td class="c">${P(E.dep)}</td><td>${I(`alcst.ed.${i}.adot`,e.adot,54)}</td><td class="c">${F(E.val)}</td><td><button class="del mini" data-alact="cstDel" data-i="${i}">✕</button></td></tr>`}).join('')}
-  <tr class="tot"><td>Edificações</td><td colspan="3"></td><td class="c">${F(R.NV)}</td><td colspan="4"></td><td class="c">${F(R.edif)}</td><td></td></tr></table></div>
+ const ed=`<div class="cstx"><table><tr>${th('[B] Edificações')}${th('Área m²')}${th('K1')}${th('C novo €/m²')}${th('V. novo €')}${th('Idade %','Idade / vida útil (ex.: 20 anos em 60 = 30 %)')}${th('ECV','Estado de conservação: 8-Nv Novo · 7-Mb Muito bom · 6-Bo Bom · 5-Rg Regular · 4-Ac Aceitável · 3-Sf Sofrível · 2-Df Deficiente · 1-Ip Impróprio')}${th('Dep. física','Ross-Heidecke')}${th('Coef. adot.','Fração que fica — substitui Ross-Heidecke')}${th('Exec. %','Obra realizada / aproveitável (1 = 100 %). 📋 = tabela por capítulos')}${th('Valor €')}${th('')}</tr>
+  ${(k.ed||[]).map((e,i)=>{const E=R.ed[i];return `<tr><td><input data-bind="alcst.ed.${i}.d" value="${esc(e.d||'')}" placeholder="Descrição" style="width:130px"></td><td>${I(`alcst.ed.${i}.area`,e.area)}</td><td>${I(`alcst.ed.${i}.k1`,e.k1,44)}</td><td>${I(`alcst.ed.${i}.cnv`,e.cnv)}</td><td class="c">${F(E.nv)}</td><td>${rSel(i,E)}</td><td>${estSel(i,e.est)}</td><td class="c">${P(E.dep)}</td><td>${I(`alcst.ed.${i}.adot`,e.adot,54)}</td><td>${e.exe?`<span class="c">${P(E.ex)}</span>`:I(`alcst.ed.${i}.exec`,e.exec??'1',48)} <button class="secondary mini" data-alact="exeTog" data-i="${i}" title="Estado de execução por capítulos">📋</button></td><td class="c">${F(E.val)}</td><td><button class="del mini" data-alact="cstDel" data-i="${i}">✕</button></td></tr>`}).join('')}
+  <tr class="tot"><td>Edificações</td><td colspan="3"></td><td class="c">${F(R.NV)}</td><td colspan="5"></td><td class="c">${F(R.edif)}</td><td></td></tr></table></div>
   <p class="muted" style="margin:0">ECV: 8-Nv Novo · 7-Mb Muito bom · 6-Bo Bom · 5-Rg Regular · 4-Ac Aceitável · 3-Sf Sofrível · 2-Df Deficiente · 1-Ip Impróprio</p><div class="btns"><button class="secondary mini" data-alact="cstAdd">+ Construção</button></div>`;
+ const exT=(k.ed||[]).map((e,i)=>{if(!e.exe)return '';const X=exeRun(e.exe),rs=v=>`<select data-bind="alcst.ed.${i}.exe.r.%" style="width:64px">${Array.from({length:11},(_,j)=>`<option value="${j*10}" ${Math.round((cstNum(v)??0)/10)===j?'selected':''}>${j*10}%</option>`).join('')}</select>`;
+  return `<div class="algrp">📋 Estado de execução — ${esc(e.d||'Construção')}</div><div class="inrow" style="margin:4px 0"><select data-alact="exeTip" data-i="${i}">${Object.entries(EXE_TIP).map(([c,[l]])=>`<option value="${c}" ${e.exe.tip===c?'selected':''}>${esc(l)}</option>`).join('')}</select></div>
+  <div class="cstx"><table><tr><th>Capítulo</th><th>Peso %</th><th>Realizado</th><th>Contributo</th></tr>${X.caps.map((c,j)=>`<tr><td>${esc(c.c)}</td><td><input data-bind="alcst.ed.${i}.exe.p.${j}" inputmode="decimal" value="${esc(c.p)}" style="width:52px"></td><td>${rs(c.r).replace('.r.%',`.r.${j}`)}</td><td class="c">${P(c.ct)}</td></tr>`).join('')}
+  <tr class="tot"><td>Execução da obra</td><td class="c" style="${Math.abs(X.peso-100)>0.01?'color:#b71c1c':''}">${F(X.peso,0)}%</td><td></td><td class="c">${P(X.tot)}</td></tr></table></div>${Math.abs(X.peso-100)>0.01?'<p class="muted" style="color:#b71c1c">A soma dos pesos tem de dar 100 %.</p>':''}<p class="muted" style="margin-top:0">Pesos indicativos da tipologia — corrija se a obra tiver outra estrutura de custos. A % de execução passa para a coluna «Exec. %» da construção.</p><div class="btns"><button class="secondary mini" data-alact="exeTog" data-i="${i}">Retirar a tabela</button></div>`}).join('');
  const aj=[['of','Obsolescência funcional',R.ofV],['oe','Obsolescência económica / externa',R.oeV],['txl','Taxas, licenças e projetos (só se estado ≥ 50 %)',R.txlV],['mlr','Margem do promotor',R.mlrV],['trf','Transformação / demolição (s/ valor novo)',R.trfV]];
- const ajT=`<div class="cstx"><table><tr>${th('Ajustes')}${th('%  (decimal)')}${th('Valor €')}</tr>${aj.map(([key,l,v])=>`<tr><td>${l}</td><td>${I('alcst.'+key,k[key],64)}</td><td class="c">${F(v)}</td></tr>`).join('')}
+ const ajT=`<div class="cstx"><table><tr>${th('Ajustes')}${th('%  (decimal)')}${th('Valor €')}</tr>${aj.map(([key,l,v])=>`<tr><td>${l}</td><td>${I('alcst.'+key,k[key],64)}</td><td class="c">${F(v)}</td></tr>`).join('')}<tr><td>Custos de demolição, limpeza e transformação (€, a deduzir)</td><td>${I('alcst.trfE',k.trfE,80)}</td><td class="c">${F(R.trfE)}</td></tr>
   <tr class="tot"><td>Valor pelo custo (CST)</td><td class="c">estado ${F(R.rat*100,0)}%</td><td class="c">${F(R.total)}</td></tr></table></div>`;
- return `<div class="algrp">🧮 Cálculo pelo custo (CST)</div><p class="muted" style="margin-top:0">Valores por defeito como no livro Best Value — confirme ou corrija. Percentagens em decimal (0,075 = 7,5 %). No telemóvel, deslize a tabela para o lado: a 1.ª coluna fica fixa.</p>${solo}${ed}${ajT}
+ return `<div class="algrp">🧮 Cálculo pelo custo (CST)</div><p class="muted" style="margin-top:0">Valores por defeito como no livro Best Value — confirme ou corrija. Percentagens em decimal (0,075 = 7,5 %). No telemóvel, deslize a tabela para o lado: a 1.ª coluna fica fixa.</p>${solo}${ed}${exT}${ajT}
  <div class="btns"><button class="secondary mini" data-alact="cstOff">Retirar o cálculo</button></div>`}
 /* Encargos / benfeitorias (BFT) em tabela, como no Best Value: parcial = QTD × Vref × K1 × K2 (arredondado à centena) */
 function bftRun(a){const L=(a.al.bftL||[]).map(r=>{const n=v=>cstNum(v),vun=(n(r.vref)??0)*(n(r.k1)??1)*(n(r.k2)??1),par=Math.round((n(r.qtd)??1)*vun/100)*100;return {...r,vun,par}});return {L,tot:L.reduce((s1,r)=>s1+r.par,0)}}

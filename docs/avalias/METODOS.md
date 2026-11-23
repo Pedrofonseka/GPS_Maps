@@ -109,3 +109,15 @@ Cada cálculo sai no Word como Excel embutido (regra das tabelas de cálculo).
 ## 10. Resumo do processo (feito na 1.12)
 
 Como a folha OUT_Resumo: por verba — valor apurado e % relativa ao total; total apurado; por grupo — Qtd, parciais e %. Sai no Word como Excel embutido editável e no ZIP como `<codigo>_Resumo.xlsx`. Quando houver métodos, o valor de cada verba é o do método adotado + BFT.
+
+## 11. Obras inacabadas, em curso ou em ruína parcial (CST, 1.18)
+
+Lógica do perito (custo evolutivo / residual): valor = terreno + % de obra realizada ou aproveitável × valor da construção − custos de demolição, limpeza e transformação. Ex.: 20 + 20 % × 150 − 3 = 47.
+
+- Coluna «Exec. %» por construção: V. novo × Exec. × (1 − dep. física).
+- Custos de demolição/limpeza/transformação em € (a deduzir), além da % sobre o valor novo.
+- Tabela de estado de execução por capítulos (pesos somam 100 %; realizado 0–100 % de 10 em 10). Estruturas de custo **indicativas** (capítulos principais; a confirmar/corrigir pelo perito — não são de fonte oficial):
+  - Moradia: estaleiro 3, terras e fundações 8, estrutura 22, alvenarias 10, cobertura 8, águas/esgotos 6, eletricidade/telecom 6, rebocos/isolamentos 8, caixilharia/serralharias 8, carpintarias 5, revestimentos 8, pinturas 3, louças/equipamentos/climatização 5.
+  - Habitação coletiva: 3, 7, 24, 9, 4, 7 (águas/esgotos/gás), 7 (eletricidade/ITED), 5 (elevadores/climatização), 8, 8, 5, 8, 3, 2.
+  - Pavilhão: estaleiro 3, terras e fundações 12, estrutura 30, cobertura e revest. laterais 22, alvenarias 6, pavimento industrial 12, águas/esgotos 4, eletricidade 6, portões/caixilharia 5.
+  - Anexo / apoio: terras e fundações 12, estrutura e alvenarias 40, cobertura 20, rebocos e pinturas 10, caixilharia e portas 10, instalações 8.
