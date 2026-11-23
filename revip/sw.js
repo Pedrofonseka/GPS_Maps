@@ -15,13 +15,13 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET' || url.origin !== location.origin) return;
   if (url.searchParams.has('chk')) return;                       // verificação de versão: sempre à rede
   if (url.pathname.endsWith('indices.json')) {                   // índices: rede primeiro, reserva se não houver rede
-    e.respondWith(fetch(req).then(res => { if (res && res.ok) caches.open(CACHE).then(c => c.put('indices.json', res.clone())); return res; })
+    e.respondWith(fetch(req, { cache: 'no-cache' }).then(res => { if (res && res.ok) caches.open(CACHE).then(c => c.put('indices.json', res.clone())); return res; })
       .catch(() => caches.open(CACHE).then(c => c.match('indices.json'))));
     return;
   }
   const key = req.mode === 'navigate' ? new URL('index.html', self.registration.scope).href : req;
   e.respondWith(
-    caches.open(CACHE).then(c => c.match(key).then(hit => hit || fetch(req).then(res => {
+    caches.open(CACHE).then(c => c.match(key).then(hit => hit || fetch(req, { cache: 'no-cache' }).then(res => {
       if (res && res.ok) c.put(key, res.clone());
       return res;
     })))

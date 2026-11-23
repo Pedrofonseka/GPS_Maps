@@ -15,14 +15,14 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   const u = new URL(req.url);
   if (u.hostname === 'cdnjs.cloudflare.com') {
-    e.respondWith(caches.open(CACHE).then(c => c.match(req).then(hit => hit || fetch(req).then(res => { if (res && res.ok) c.put(req, res.clone()); return res; }))));
+    e.respondWith(caches.open(CACHE).then(c => c.match(req).then(hit => hit || fetch(req, { cache: 'no-cache' }).then(res => { if (res && res.ok) c.put(req, res.clone()); return res; }))));
     return;
   }
   if (u.origin !== location.origin) return;                 // mapas, etc.: direto à rede
   if (u.searchParams.has('chk')) return;                    // verificação de versão: sempre à rede
   const key = req.mode === 'navigate' ? new URL('index.html', self.registration.scope).href : req;
   e.respondWith(
-    caches.open(CACHE).then(c => c.match(key).then(hit => hit || fetch(req).then(res => {
+    caches.open(CACHE).then(c => c.match(key).then(hit => hit || fetch(req, { cache: 'no-cache' }).then(res => {
       if (res && res.ok) c.put(key, res.clone());
       return res;
     })))

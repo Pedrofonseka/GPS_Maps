@@ -15,7 +15,7 @@ self.addEventListener('fetch', e => {
   if (new URL(req.url).searchParams.has('chk')) return;                          // verificação de versão: sempre à rede
   const key = req.mode === 'navigate' ? new URL('index.html', self.registration.scope).href : req;
   e.respondWith(
-    caches.open(CACHE).then(c => c.match(key).then(hit => hit || fetch(req).then(res => {
+    caches.open(CACHE).then(c => c.match(key).then(hit => hit || fetch(req, { cache: 'no-cache' }).then(res => {
       if (res && res.ok) c.put(key, res.clone());
       return res;
     })))
