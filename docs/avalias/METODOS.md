@@ -114,7 +114,8 @@ Como a folha OUT_Resumo: por verba — valor apurado e % relativa ao total; tota
 
 Lógica do perito (custo evolutivo / residual): valor = terreno + % de obra realizada ou aproveitável × valor da construção − custos de demolição, limpeza e transformação. Ex.: 20 + 20 % × 150 − 3 = 47.
 
-- Coluna «Exec. %» por construção: V. novo × Exec. × (1 − dep. física).
+- (1.18.1) Valor residual = valor da obra acabada (solo + edificações + taxas + margem do promotor — valor de mercado da coisa acabada, pelo custo) − obra por executar ou não aproveitável (custo a novo × (1 − Exec. %)) − custos de demolição, limpeza e transformação (€). Taxas e margem NÃO se anulam.
+- Coluna «Exec. %» por construção; colunas «Valor acabado» e «Por executar».
 - Custos de demolição/limpeza/transformação em € (a deduzir), além da % sobre o valor novo.
 - Tabela de estado de execução por capítulos (pesos somam 100 %; realizado 0–100 % de 10 em 10). Estruturas de custo **indicativas** (capítulos principais; a confirmar/corrigir pelo perito — não são de fonte oficial):
   - Moradia: estaleiro 3, terras e fundações 8, estrutura 22, alvenarias 10, cobertura 8, águas/esgotos 6, eletricidade/telecom 6, rebocos/isolamentos 8, caixilharia/serralharias 8, carpintarias 5, revestimentos 8, pinturas 3, louças/equipamentos/climatização 5.
