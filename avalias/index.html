@@ -726,7 +726,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.15.1';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.16';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1730,6 +1730,7 @@ async function buildRelat(p){ensureRel(p);alVisCapa(p);p.anomalias.forEach(a=>{a
     if(kr)body+=tbl([L1,L2],kr)+E();
     {const sh=alMetSheet(a);if(sh){body+=P(R('Métodos aplicados',{b:true}),{keep:1,sp:[120,60]});body+=!S.noOle?alOlePara(sh,oleParts):sh.rows.slice(1).map(r=>T(r.map(c=>c&&typeof c==='object'?(c.s===7||c.s===10?alEur(c.v):c.v):c).filter(c=>c!==''&&c!=null).join(' · '))).join('');
      {const cs=cstSheet(a);if(cs&&x.met['Custo (reposição depreciado)']){body+=P(R('Cálculo pelo custo de reposição depreciado',{b:true}),{keep:1,sp:[120,60]});body+=!S.noOle?alOlePara(cs,oleParts):T(`Valor pelo custo: ${alEur(cs.rows[cs.rows.length-1][8].v)}`)}}
+     {const rs=x.met['Rendimento (capitalização)']&&!alCultOk(a)&&rndSheet(a);if(rs){body+=P(R('Cálculo pelo rendimento',{b:true}),{keep:1,sp:[120,60]});body+=!S.noOle?alOlePara(rs,oleParts):T(`Valor pelo rendimento: ${alEur(rs.rows[rs.rows.length-1][9].v)}`)}}
      if(String(x.merc||'').trim())body+=P(R('Análise de mercado',{b:true}),{keep:1,sp:[120,60]})+T(x.merc,{jc:'both'});
      if(String(x.metTxt||'').trim())body+=P(R('Fundamentação',{b:true}),{keep:1,sp:[120,60]})+T(x.metTxt,{jc:'both'});body+=E()}}
     if(alRefOk(a)&&x.tofRef&&alNum(x.refV)>0){const at=alNum(x.car?.at),vr=alNum(x.refV);body+=P(R('Valor de referência',{b:true}),{keep:1,sp:[120,60]})+T(`Valor unitário de referência para ${alCultTipo(a).toLowerCase()}: ${CULT.fmt(vr)} €/m² – fonte: ${String(x.refF||'').trim().replace(/[.\s]+$/,'')}.`,{jc:'both'})+(at?T(`Valor do terreno = ${CULT.fmt(at,0)} m² × ${CULT.fmt(vr)} €/m² = ${alEur(Math.round(at*vr))}.`,{jc:'both',b:true}):'')+E()}
@@ -1846,7 +1847,7 @@ function alFichaRows(p,a){alA(a);alValSync(a);const x=a.al,fam=alFam(a),g=a.vis?
  add('Concelho',x.concelho);add('Freguesia',x.freguesia);add('Endereço',x.morada);if(g){L.push(['Latitude',+g.lat.toFixed(6)]);L.push(['Longitude',+g.lon.toFixed(6)])}
  add('Data da visita',a.vis?.data);add('Presenças',a.vis?.presencas);add('Grupo',x.tipo?`${alGrp(a)} – ${AL_GRUPOS[alGrp(a)]}`:'');add('Tipo de ativo',alTipoNome(a));add('Destino',alDestTxt(a));
  if(fam){if(x.modo==='suc')for(const [k,l] of AL_SUC[fam])add(l,x.suc[k]);else for(const f of AL_CAR[fam]){if(f[0]==='g')continue;const v=x.car[f[0]];add(f[1],f[2]==='c'?alOpt(v):v)}}
- add('Atratividade',x.atr);add('Utilidade',x.util);add('Métodos aplicados',alMetOn(x).map(alMetLbl).join(', '));for(const m of alMetOn(x)){const v=alMetVal(a,m);if(v!=null)L.push([`Valor — ${AL_MET_SIG[m]} (€)`,v])}add('Método adotado',x.mAdot?alMetLbl(x.mAdot):'');if(alNum(x.bft)!=null)L.push(['Encargos/benfeitorias (€)',alNum(x.bft)]);add('Encargos/benfeitorias — descrição',x.bftTxt);add('Análise de mercado',x.merc);add('Fundamentação do método',x.metTxt);
+ add('Atratividade',x.atr);add('Utilidade',x.util);add('Métodos aplicados',alMetOn(x).map(alMetLbl).join(', '));for(const m of alMetOn(x)){const v=alMetVal(a,m);if(v!=null)L.push([`Valor — ${AL_MET_SIG[m]} (€)`,v])}add('Método adotado',x.mAdot?alMetLbl(x.mAdot):'');{const B=bftRun(a);B.L.forEach(r=>L.push([`BFT — ${r.d||'—'} (€)`,r.par]));if(B.L.length)L.push(['Encargos/benfeitorias — total (€)',B.tot])}{const R=rndRun(a);if(R)L.push(['Rendimento — valor calculado (€)',R.total])}add('Análise de mercado',x.merc);add('Fundamentação do método',x.metTxt);
  if(x.calc&&alCultOk(a)){add('Cálculo pelo rendimento — método',CULT.CALC_MET[x.calc.m]||x.calc.m);add('Cálculo pelo rendimento — V_Un (€/m²)',x.vun);add('Cálculo pelo rendimento — fundamentação',x.fund)}
  if(x.tofRef&&alRefOk(a)){add('Valor de referência (€/m²)',x.refV);add('Valor de referência — fonte',x.refF)}
  const v=alNum(x.valor);if(v!=null)L.push(['Valor estimado (€)',v]);const rr=alNum(x.renda);if(rr!=null&&AP.base==='Valor de renda de mercado')L.push(['Renda mensal (€/mês)',rr]);if(AP.bad)add('BAD — redução até (%)',String(x.bad||'').trim()||AP.badPct||10);add('Notas ao valor',x.valObs);
@@ -1864,6 +1865,7 @@ async function relZip(p){const r=ensureRel(p);const x=await relPdf(p);busy(true,
   await loadFotos(p);
   for(const [k,a] of V.entries()){const c=safeName(alCode(p,a)),dir=`${base}/Verbas/${c}`;files.push({name:`${dir}/${c}_Ficha.xlsx`,data:buildXlsx(c.slice(0,31),[['Campo','Valor'],...R[k]],[34,70])});
     {const cs=a.al?.met?.['Custo (reposição depreciado)']&&cstSheet(a);if(cs)files.push({name:`${dir}/${c}_Custo.xlsx`,data:alXlsx(cs)})}
+    {const rs=a.al?.met?.['Rendimento (capitalização)']&&!alCultOk(a)&&rndSheet(a);if(rs)files.push({name:`${dir}/${c}_Rendimento.xlsx`,data:alXlsx(rs)})}
     if(a.al?.calc&&alCultOk(a)){try{const R2=CULT.calcRun(a.al.calc.m,a.al.calc.p,false);let n=0;if(R2&&R2.ok)for(const b of R2.W||[])if(b&&b.x){n++;files.push({name:`${dir}/${c}_Calculo${n>1?'_'+n:''}.xlsx`,data:alXlsx(b.x)})}}catch(e){}}
     const nR=relF(a).length;for(const [i,f] of a.fotos.entries()){const d=fd(f);if(!d)continue;files.push({name:inRel(f)?`${dir}/Fotos/${imgCode(p,a,i).replace(/\s+/g,'_')}.jpg`:`${dir}/Fotos/Reserva/Reserva_${c}_${i-nR+1}.jpg`,data:b64ToU8(await outData(d,'foto',f.id))})}}
   for(const [i,a] of (r.anexF||[]).entries()){const d=await anexData(a);if(!d)continue;files.push({name:`${base}/Anexos/${String(i+1).padStart(2,'0')}_${safeName(a.nome.replace(/\.[^.]+$/,''))}${(a.nome.match(/\.[A-Za-z0-9]{1,5}$/)||[''])[0].toLowerCase()}`,data:b64ToU8(d)})}
@@ -2116,17 +2118,18 @@ const AL_MET_NOME={'Custo (reposição depreciado)':'Custo','Residual':'Valor re
 const alMetLbl=m=>`${AL_MET_SIG[m]||''} · ${AL_MET_NOME[m]||m}`;
 const alMetOn=x=>AL_METODOS.filter(m=>x.met?.[m]);
 /* valor de um método: o escrito pelo perito ou, em TOF, o que sai das rotinas (culturas / valor de referência) */
-function alMetAuto(a,m){const x=a.al,at=alNum(x.car?.at);if(m==='Custo (reposição depreciado)'){const R=cstRun(a);return R&&R.total?R.total:null}if(!at)return null;
+function alMetAuto(a,m){const x=a.al,at=alNum(x.car?.at);if(m==='Custo (reposição depreciado)'){const R=cstRun(a);return R&&R.total?R.total:null}if(m==='Rendimento (capitalização)'&&!alCultOk(a)){const R=rndRun(a);return R&&R.total?R.total:null}if(!at)return null;
  if(m==='Rendimento (capitalização)'&&alCultOk(a)&&x.calc&&alNum(x.vun)!=null)return Math.round(at*alNum(x.vun));
  if(m==='Valores de referência'&&alRefOk(a)&&x.tofRef&&alNum(x.refV)!=null)return Math.round(at*alNum(x.refV));return null}
 function alMetVal(a,m){const v=alNum(a.al.mv?.[m]);return v!=null?v:alMetAuto(a,m)}
-function alMetHTML(a,p){const x=a.al,on=alMetOn(x),bft=alNum(x.bft),ad=x.mAdot&&x.met[x.mAdot]?x.mAdot:'',va=ad?alMetVal(a,ad):null;
+function alMetHTML(a,p){const x=a.al,on=alMetOn(x),bft=alBft(a),ad=x.mAdot&&x.met[x.mAdot]?x.mAdot:'',va=ad?alMetVal(a,ad):null;
  let h=`<p class="muted" style="margin-top:0">Escolha os métodos aplicados, indique o valor obtido por cada um e assinale o que se considera mais adequado (adotado). O valor estimado da verba = método adotado + encargos/benfeitorias.</p><div class="tks">${AL_METODOS.map(m=>alTk(!!x.met[m],esc(alMetLbl(m)),`data-alact="met" data-v="${esc(m)}"`)).join('')}</div>`;
  if(on.length){h+=`<div class="algrp">Valor por método</div>`;
-  for(const m of on){const au=alMetAuto(a,m),isA=ad===m;h+=`<div class="inrow" style="margin-top:6px;align-items:center"><b style="flex:0 0 46px">${AL_MET_SIG[m]}</b><input data-bind="almv.${AL_METODOS.indexOf(m)}" inputmode="decimal" value="${esc(x.mv?.[m]||'')}" placeholder="${au!=null?esc(CULT.fmt(au,0))+' (calculado)':'Valor (€)'}" style="flex:1;min-width:0"><button class="${isA?'green':'secondary'} mini" data-alact="adot" data-v="${esc(m)}" style="flex:0 0 auto">${isA?'✓ Adotado':'Adotar'}</button></div>${au!=null&&alNum(x.mv?.[m])==null?`<p class="muted" style="margin:2px 0 0 52px">${m==='Rendimento (capitalização)'?'Do cálculo pelo rendimento (culturas) — ver 8 · Valor.':m==='Valores de referência'?'Do valor de referência — ver 8 · Valor.':'Do cálculo pelo custo, abaixo.'}</p>`:''}`}
+  for(const m of on){const au=alMetAuto(a,m),isA=ad===m;h+=`<div class="inrow" style="margin-top:6px;align-items:center"><b style="flex:0 0 46px">${AL_MET_SIG[m]}</b><input data-bind="almv.${AL_METODOS.indexOf(m)}" inputmode="decimal" value="${esc(x.mv?.[m]||'')}" placeholder="${au!=null?esc(CULT.fmt(au,0))+' (calculado)':'Valor (€)'}" style="flex:1;min-width:0"><button class="${isA?'green':'secondary'} mini" data-alact="adot" data-v="${esc(m)}" style="flex:0 0 auto">${isA?'✓ Adotado':'Adotar'}</button></div>${au!=null&&alNum(x.mv?.[m])==null?`<p class="muted" style="margin:2px 0 0 52px">${m==='Rendimento (capitalização)'?(alCultOk(a)?'Do cálculo pelo rendimento (culturas) — ver 8 · Valor.':'Do cálculo pelo rendimento, abaixo.'):m==='Valores de referência'?'Do valor de referência — ver 8 · Valor.':'Do cálculo pelo custo, abaixo.'}</p>`:''}`}
   if(x.met['Custo (reposição depreciado)'])h+=cstHTML(a);
+  if(x.met['Rendimento (capitalização)']&&!alCultOk(a))h+=rndHTML(a);
   if(x.met['Comparativo de mercado'])h+=`<div class="algrp">Análise de mercado</div>${txt('al.merc','Testemunhos, fontes, homogeneização e conclusão',x.merc,4)}`;
-  h+=`<div class="algrp">Encargos / benfeitorias (BFT)</div><div class="row2">${inp('al.bft','Valor (€) — soma ao método adotado; negativo se for encargo',x.bft,'ex.: 2 500 ou -1 000')}${inp('al.bftTxt','Descrição',x.bftTxt,'ex.: poço, muros, ónus…')}</div>`;
+  h+=`<div class="algrp">Encargos / benfeitorias (BFT)</div>${bftHTML(a)}`;
   h+=txt('al.metTxt','Fundamentação da escolha do método',x.metTxt,3);
   h+=ad?`<p class="cmres" style="margin-top:8px">Adotado: <b>${esc(alMetLbl(ad))}</b> ${va!=null?esc(alEur(va)):'— (sem valor)'}${bft?` + BFT ${esc(alEur(bft))}`:''}${va!=null?` = <b>${esc(alEur(va+(bft||0)))}</b>`:''}${x.valAuto===''?'<br><span class="muted">O valor estimado (8 · Valor) foi escrito à mão e prevalece; volte a carregar em «Adotado» para o repor.</span>':''}</p>`:'<p class="muted">Assinale qual o método adotado.</p>'}
  return h}
@@ -2199,7 +2202,7 @@ document.addEventListener('change',async e=>{const el=e.target.closest('select[d
  if(k==='freguesia'&&el.value==='_outra'){const n=(prompt('Nome da freguesia (fica guardada para este concelho):','')||'').trim();if(n){settings.fregExtra=settings.fregExtra||{};const L=settings.fregExtra[x.concelho]=settings.fregExtra[x.concelho]||[];if(!L.includes(n))L.push(n);try{await saveSettings()}catch(_){}x.freguesia=n}}
  else{x[k]=el.value;if(k==='concelho'&&x.freguesia&&!fregOf(x.concelho).includes(x.freguesia))x.freguesia=''}
  await saveProc();S.scrollTop=window.scrollY;render()},true);
-function alA(a){const d={codigo:'',designacao:'',idTipo:'',idValor:'',concelho:'',freguesia:'',morada:'',tipo:'',destino:'',destinoOutro:'',modo:'det',car:{},suc:{},atr:'',util:'',met:{},metTxt:'',mv:{},mAdot:'',bft:'',bftTxt:'',merc:'',valor:'',renda:'',bad:'',valObs:''};a.al=a.al||{};for(const k in d)if(a.al[k]===undefined)a.al[k]=clone(d[k]);{const x0=a.al;if(AL_TIPO_OLD[x0.tipo])x0.tipo=AL_TIPO_OLD[x0.tipo];if(AL_DEST_OLD[x0.destino])x0.destino=AL_DEST_OLD[x0.destino];if(AL_ATR_OLD[x0.atr]!==undefined)x0.atr=AL_ATR_OLD[x0.atr];
+function alA(a){const d={codigo:'',designacao:'',idTipo:'',idValor:'',concelho:'',freguesia:'',morada:'',tipo:'',destino:'',destinoOutro:'',modo:'det',car:{},suc:{},atr:'',util:'',met:{},metTxt:'',mv:{},mAdot:'',bft:'',bftTxt:'',merc:'',valor:'',renda:'',bad:'',valObs:''};a.al=a.al||{};for(const k in d)if(a.al[k]===undefined)a.al[k]=clone(d[k]);{const x0=a.al;if(AL_TIPO_OLD[x0.tipo])x0.tipo=AL_TIPO_OLD[x0.tipo];if(!x0.bftL){x0.bftL=String(x0.bft??'').trim()?[{d:x0.bftTxt||'Encargos / benfeitorias',vref:String(x0.bft),k1:'1',k2:'1',qtd:'1'}]:[]}if(AL_DEST_OLD[x0.destino])x0.destino=AL_DEST_OLD[x0.destino];if(AL_ATR_OLD[x0.atr]!==undefined)x0.atr=AL_ATR_OLD[x0.atr];
   if(!x0.ids){x0.ids={};const t=String(x0.idTipo||'').trim(),v=String(x0.idValor||'').trim();if(t||v)x0.ids[AL_IDOLD[t]||t||'Outro']=v}
   const c0=x0.car;if(c0)for(const [k,M] of Object.entries(AL_LIST_OLD))if(typeof c0[k]==='string'&&M[c0[k]]!==undefined)c0[k]=M[c0[k]]}
  {const c=a.al.car;alCtxMig(c);if(c&&c.acessos&&!c.acesso){const t=alOpt(c.acessos);if(AL_ACESSO_OLD[t])c.acesso=AL_ACESSO_OLD[t]}}a.vis=a.vis||{data:'',presencas:'',gps:null};return a.al}
@@ -2252,7 +2255,7 @@ function vFicha(){
  h+=sec('v7','7 · Métodos aplicados',alMetHTML(a,p),{cnt:ok(alMetOn(x).length&&x.mAdot)});
  /* 8 valor */
  const renda=p.al.base==='Valor de renda de mercado';
- h+=sec('v8','8 · Valor',`${alCultOk(a)?alCultHTML(a):''}${x.valAuto==='met'?`<p class="muted" style="margin:6px 0 0">🔄 Valor estimado automático = método adotado (${esc(AL_MET_SIG[x.mAdot]||'')})${alNum(x.bft)?' + encargos/benfeitorias':''} — ver 7 · Métodos. Para fixar outro valor, escreva-o na caixa.</p>`:''}${x.valAuto&&x.valAuto!=='met'&&alNum(x.car?.at)?`<p class="muted" style="margin:6px 0 0">🔄 Valor estimado automático = área × ${x.valAuto==='calc'?'valor do cálculo':'valor de referência'} (atualiza-se se mudar a área ou o cálculo). Para fixar outro valor, escreva-o na caixa.</p>`:''}${alRefOk(a)?alRefHTML(a):''}${alTOF(a)&&!alCultOk(a)&&!alRefOk(a)?'<p class="muted">Terreno não apto para construção (TOF): assinale em «7 · Métodos» VRF (valores referenciais) e/ou RND (rendimento) para ter aqui o cálculo.</p>':''}<div class="row2">${inp('al.valor','Valor estimado (€)',x.valor,'ex.: 185 000')}${renda?inp('al.renda','Renda mensal (€/mês)',x.renda,'ex.: 650'):''}</div>${p.al.bad?inp('al.bad',`BAD — redução até (%) — vazio = ${p.al.badPct||10}%`,x.bad,String(p.al.badPct||10)):'<p class="muted">BAD não aplicável neste processo (Processo › Contexto da avaliação).</p>'}${txt('al.valObs','Notas ao valor (opcional)',x.valObs,2)}${alNum(x.valor)!=null?`<p><b>${esc(alEur(x.valor))}</b>${renda&&alNum(x.renda)!=null?` · ${esc(alEur(x.renda))}/mês`:''}</p>`:''}`,{cnt:ok(alNum(x.valor)!=null)});
+ h+=sec('v8','8 · Valor',`${alCultOk(a)?alCultHTML(a):''}${x.valAuto==='met'?`<p class="muted" style="margin:6px 0 0">🔄 Valor estimado automático = método adotado (${esc(AL_MET_SIG[x.mAdot]||'')})${alBft(a)?' + encargos/benfeitorias':''} — ver 7 · Métodos. Para fixar outro valor, escreva-o na caixa.</p>`:''}${x.valAuto&&x.valAuto!=='met'&&alNum(x.car?.at)?`<p class="muted" style="margin:6px 0 0">🔄 Valor estimado automático = área × ${x.valAuto==='calc'?'valor do cálculo':'valor de referência'} (atualiza-se se mudar a área ou o cálculo). Para fixar outro valor, escreva-o na caixa.</p>`:''}${alRefOk(a)?alRefHTML(a):''}${alTOF(a)&&!alCultOk(a)&&!alRefOk(a)?'<p class="muted">Terreno não apto para construção (TOF): assinale em «7 · Métodos» VRF (valores referenciais) e/ou RND (rendimento) para ter aqui o cálculo.</p>':''}<div class="row2">${inp('al.valor','Valor estimado (€)',x.valor,'ex.: 185 000')}${renda?inp('al.renda','Renda mensal (€/mês)',x.renda,'ex.: 650'):''}</div>${p.al.bad?inp('al.bad',`BAD — redução até (%) — vazio = ${p.al.badPct||10}%`,x.bad,String(p.al.badPct||10)):'<p class="muted">BAD não aplicável neste processo (Processo › Contexto da avaliação).</p>'}${txt('al.valObs','Notas ao valor (opcional)',x.valObs,2)}${alNum(x.valor)!=null?`<p><b>${esc(alEur(x.valor))}</b>${renda&&alNum(x.renda)!=null?` · ${esc(alEur(x.renda))}/mês`:''}</p>`:''}`,{cnt:ok(alNum(x.valor)!=null)});
  h+=`<div class="btns"><button class="green" data-alact="step" data-d="1" ${idx<n-1?'':'disabled'}>Verba seguinte ▶</button><span class="grow"></span><button class="secondary mini" data-act="dupA">⧉ Duplicar</button><button class="del" data-alact="del" data-id="${a.id}">🗑 Eliminar a verba ${esc(code)}</button></div>`;
  return h}
 
@@ -2318,6 +2321,10 @@ document.addEventListener('click',async e=>{const el=e.target.closest('[data-ala
   case 'car1':{alA(a);const k=el.dataset.k,v=el.dataset.v;a.al.car[k]=a.al.car[k]===v?'':v;return keep()}
   case 'carM':{alA(a);const k=el.dataset.k,v=el.dataset.v;const arr=Array.isArray(a.al.car[k])?a.al.car[k]:[];a.al.car[k]=arr.includes(v)?arr.filter(x=>x!==v):[...arr,v];return keep()}
   case 'met':{alA(a);const v=el.dataset.v;a.al.met[v]=!a.al.met[v];if(!a.al.met[v]&&a.al.mAdot===v)a.al.mAdot='';return keep()}
+  case 'tabAdd':{const l=el.dataset.l;if(l==='bft')(a.al.bftL=a.al.bftL||[]).push({d:'',vref:'',k1:'1',k2:'1',qtd:'1'});else a.al.rnd.L.push({d:'',ra:'',n:'10',i:'0.05',fr:'1',dt:'0.01'});if(a.al.mAdot&&a.al.valAuto!=='')a.al.valAuto='met';alValSync(a);return keep()}
+  case 'tabDel':{const l=el.dataset.l;(l==='bft'?a.al.bftL:a.al.rnd.L).splice(+el.dataset.i,1);alValSync(a);return keep()}
+  case 'rndOn':{alA(a);if(!a.al.rnd)rndInit(a);else a.al.rnd.on=1;return keep()}
+  case 'rndOff':{if(a.al.rnd)a.al.rnd.on=0;return keep()}
   case 'cstOn':{alA(a);if(!a.al.cst)cstInit(a);else a.al.cst.on=1;return keep()}
   case 'cstOff':{if(a.al.cst)a.al.cst.on=0;return keep()}
   case 'cstAdd':{a.al.cst.ed.push({d:'Construção',area:'',k1:'1',cnv:'1000',idade:'',vida:'80',est:'5-Rg',adot:''});return keep()}
@@ -2340,13 +2347,14 @@ document.addEventListener('click',async e=>{const el=e.target.closest('[data-ala
 
 /* ---------- campos ligados ---------- */
 document.addEventListener('input',e=>{const el=e.target,b=el.dataset?.bind;if(!b)return;const [scope,k]=b.split('.');if(scope==='cr'){e.stopImmediatePropagation();const p0=cur(),r0=ensureRel(p0),it=(r0.crono||[])[+k],k2=b.split('.')[2];if(it){it[k2]=el.value;saveProcSoon()}return}
+  if(scope==='altab'){e.stopImmediatePropagation();const a0=curA();if(!a0)return;const P=b.split('.'),L=P[1]==='bft'?a0.al.bftL:a0.al.rnd?.L,it=L&&L[+P[2]];if(it)it[P[3]]=el.value;if(a0.al.mAdot&&a0.al.valAuto!=='')a0.al.valAuto='met';saveProcSoon();return}
   if(scope==='alcst'){e.stopImmediatePropagation();const a0=curA(),c=a0?.al?.cst;if(!c)return;const P=b.split('.');if(P[1]==='ed'){const it=c.ed[+P[2]];if(it)it[P[3]]=el.value}else c[P[1]]=el.value;if(a0.al.mAdot&&a0.al.valAuto!=='')a0.al.valAuto='met';saveProcSoon();return}
   if(scope==='almv'){e.stopImmediatePropagation();const a0=curA();alA(a0);a0.al.mv=a0.al.mv||{};a0.al.mv[AL_METODOS[+k]]=el.value;if(a0.al.mAdot&&a0.al.valAuto!=='')a0.al.valAuto='met';saveProcSoon();return}
   if(!['al','alc','als','pal','alid','alart','aldoc'].includes(scope))return;e.stopImmediatePropagation();const p=cur(),a=curA();
  if(scope==='pal')alP(p)[k]=el.value;else if(scope==='alart'||scope==='aldoc'){alA(a);const L=scope==='alart'?a.al.artigos:a.al.docsArea,k2=b.split('.')[2];if(L&&L[+k])L[+k][k2]=el.value}else if(scope==='alid'){alA(a);const key=(AL_IDTIPO[alFam(a)]||AL_IDTIPO.imo)[+k];a.al.ids=a.al.ids||{};if(key)a.al.ids[key]=el.value}else{alA(a);if(scope==='al'){a.al[k]=el.value;if(k==='valor')a.al.valAuto=''}else if(scope==='alc')a.al.car[k]=el.value;else a.al.suc[k]=el.value}
  if(typeof autosize==='function')autosize(el);saveProcSoon()},true);
 
-document.addEventListener('change',e=>{const b=e.target.dataset?.bind||'';if(!/^almv\.|^al\.bft$|^alcst\./.test(b))return;const a=curA();if(!a)return;alValSync(a);saveProc().then(()=>{S.scrollTop=window.scrollY;render()})});
+document.addEventListener('change',e=>{const b=e.target.dataset?.bind||'';if(!/^almv\.|^alcst\.|^altab\./.test(b))return;const a=curA();if(!a)return;alValSync(a);saveProc().then(()=>{S.scrollTop=window.scrollY;render()})});
 /* ---------- troca por verba (regra sync.md) ---------- */
 function alTrocaModal(p){const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="box"><b style="font-size:17px">Enviar / receber verbas</b><p class="muted">Envie só as verbas escolhidas (com fotos) para continuar noutro aparelho. Ao receber, escolhe verba a verba; as outras verbas e os dados gerais do processo não mudam.</p><div class="btns"><button class="secondary mini" data-x="all">Todas</button><button class="secondary mini" data-x="none">Nenhuma</button></div><div class="allist">${p.anomalias.map(a=>`<label class="tk ${a.id===S.aid?'on':''}"><input type="checkbox" data-vb="${a.id}" ${a.id===S.aid?'checked':''}><span><b>${esc(alCode(p,a))}</b> ${esc(a.al?.designacao||'')} · 📷 ${a.fotos.length}</span></label>`).join('')}</div><div class="btns"><button class="green" data-x="send">📤 Enviar verbas escolhidas</button><label class="btn secondary">📥 Receber verbas<input type="file" accept=".json,application/json" data-x="recv" hidden></label><button class="secondary" data-x="close">Fechar</button></div></div>`;
  m.addEventListener('click',async e=>{const b=e.target.closest('[data-x]');if(e.target===m||b?.dataset.x==='close')return m.remove();if(!b)return;
@@ -2788,12 +2796,40 @@ function cstHTML(a){const x=a.al,k=x.cst;if(!k?.on)return `<div class="btns"><bu
   <tr class="tot"><td>Valor pelo custo (CST)</td><td class="c">estado ${F(R.rat*100,0)}%</td><td class="c">${F(R.total)}</td></tr></table></div>`;
  return `<div class="algrp">🧮 Cálculo pelo custo (CST)</div><p class="muted" style="margin-top:0">Valores por defeito como no livro Best Value — confirme ou corrija. Percentagens em decimal (0,075 = 7,5 %). No telemóvel, deslize a tabela para o lado: a 1.ª coluna fica fixa.</p>${solo}${ed}${ajT}
  <div class="btns"><button class="secondary mini" data-alact="cstOff">Retirar o cálculo</button></div>`}
+/* Encargos / benfeitorias (BFT) em tabela, como no Best Value: parcial = QTD × Vref × K1 × K2 (arredondado à centena) */
+function bftRun(a){const L=(a.al.bftL||[]).map(r=>{const n=v=>cstNum(v),vun=(n(r.vref)??0)*(n(r.k1)??1)*(n(r.k2)??1),par=Math.round((n(r.qtd)??1)*vun/100)*100;return {...r,vun,par}});return {L,tot:L.reduce((s1,r)=>s1+r.par,0)}}
+const alBft=a=>(a.al.bftL||[]).length?bftRun(a).tot:null;
+function bftHTML(a){const R=bftRun(a),F=(v,d=0)=>esc(CULT.fmt(v,d)),I=(b,v,w=64)=>`<input data-bind="${b}" inputmode="decimal" value="${esc(v??'')}" style="width:${w}px">`;
+ return `<div class="cstx"><table><tr><th>Encargos / benfeitorias</th><th title="Valor de referência por unidade">Vref €</th><th>K1</th><th>K2</th><th>QTD</th><th>Vun €</th><th>Parciais €</th><th></th></tr>
+ ${R.L.map((r,i)=>`<tr><td><input data-bind="altab.bft.${i}.d" value="${esc(r.d||'')}" placeholder="ex.: poço, muro, ónus" style="width:140px"></td><td>${I(`altab.bft.${i}.vref`,r.vref,70)}</td><td>${I(`altab.bft.${i}.k1`,r.k1,44)}</td><td>${I(`altab.bft.${i}.k2`,r.k2,44)}</td><td>${I(`altab.bft.${i}.qtd`,r.qtd,52)}</td><td class="c">${F(r.vun,2)}</td><td class="c">${F(r.par)}</td><td><button class="del mini" data-alact="tabDel" data-l="bft" data-i="${i}">✕</button></td></tr>`).join('')}
+ <tr class="tot"><td>Total [BFT]</td><td colspan="5"></td><td class="c">${F(R.tot)}</td><td></td></tr></table></div>
+ <div class="btns"><button class="secondary mini" data-alact="tabAdd" data-l="bft">+ Encargo / benfeitoria</button></div><p class="muted" style="margin-top:0">Valor negativo (Vref &lt; 0) para encargos que reduzem o valor.</p>`}
+/* RND — rendimento (capitalização), como no Best Value: [A] valor atual de N rendas + [B] valor de saída (renda perpétua × fator) atualizado a N+1 com taxa + Δ */
+const pvF=(i,n,c)=>i?c*(1-Math.pow(1+i,-n))/i:c*n;
+function rndRun(a){const k=a.al.rnd;if(!k?.on)return null;const n=v=>cstNum(v)??0;
+ const L=(k.L||[]).map(r=>{const ra=n(r.ra),N=n(r.n),i=n(r.i),fr=cstNum(r.fr)??1,dt=n(r.dt),A=pvF(i,N,ra),V=fr*pvF(i,200,ra),B=V/Math.pow(1+dt+i,N+1);return {...r,A,V,B,T:A+B}});
+ const A=L.reduce((s1,r)=>s1+r.A,0),B=L.reduce((s1,r)=>s1+r.B,0);return {L,A,B,total:Math.round((A+B)/100)*100}}
+function rndInit(a){const x=a.al,rm=alNum(x.renda);x.rnd={on:1,L:[{d:'Arrendamento',ra:rm?String(rm*12):'',n:'10',i:'0.05',fr:'1',dt:'0.01'}]}}
+function rndHTML(a){const k=a.al.rnd;if(!k?.on)return `<div class="btns"><button class="secondary mini" data-alact="rndOn">🧮 Calcular pelo rendimento (RND)</button></div>`;
+ const R=rndRun(a),F=(v,d=0)=>esc(CULT.fmt(v,d)),I=(b,v,w=60)=>`<input data-bind="${b}" inputmode="decimal" value="${esc(v??'')}" style="width:${w}px">`;
+ return `<div class="algrp">🧮 Cálculo pelo rendimento (RND)</div><p class="muted" style="margin-top:0">Por linha: [A] valor atual de N rendas anuais à taxa; [B] valor de saída = renda perpétua × fator residual, atualizado ao ano N+1 com a taxa + Δ de saída. Taxas em decimal (0,05 = 5 %) — confirme os valores por defeito.</p>
+ <div class="cstx"><table><tr><th>Utilidade</th><th>Rend. anual €</th><th>N.º per.</th><th>Taxa</th><th>[A] V. rendas €</th><th title="0 = sem valor de saída; 1 = renda perpétua">Fator resid.</th><th>Δ taxa saída</th><th>V. saída €</th><th>[B] V. saída atual. €</th><th>Total €</th><th></th></tr>
+ ${R.L.map((r,i)=>`<tr><td><input data-bind="altab.rnd.${i}.d" value="${esc(r.d||'')}" style="width:130px"></td><td>${I(`altab.rnd.${i}.ra`,r.ra,76)}</td><td>${I(`altab.rnd.${i}.n`,r.n,44)}</td><td>${I(`altab.rnd.${i}.i`,r.i,54)}</td><td class="c">${F(r.A)}</td><td>${I(`altab.rnd.${i}.fr`,r.fr,48)}</td><td>${I(`altab.rnd.${i}.dt`,r.dt,48)}</td><td class="c">${F(r.V)}</td><td class="c">${F(r.B)}</td><td class="c">${F(r.T)}</td><td><button class="del mini" data-alact="tabDel" data-l="rnd" data-i="${i}">✕</button></td></tr>`).join('')}
+ <tr class="tot"><td>Total [A + B]</td><td colspan="3"></td><td class="c">${F(R.A)}</td><td colspan="3"></td><td class="c">${F(R.B)}</td><td class="c">${F(R.total)}</td><td></td></tr></table></div>
+ <div class="btns"><button class="secondary mini" data-alact="tabAdd" data-l="rnd">+ Linha</button><button class="secondary mini" data-alact="rndOff">Retirar o cálculo</button></div>`}
+function rndSheet(a){const R=rndRun(a);if(!R||!R.L.length)return null;const n=v=>cstNum(v)??0,rows=[[{v:'Utilidade',s:2},{v:'Rend. anual (€)',s:2},{v:'N.º per.',s:2},{v:'Taxa',s:2},{v:'[A] V. rendas (€)',s:2},{v:'Fator resid.',s:2},{v:'Δ taxa saída',s:2},{v:'V. saída (€)',s:2},{v:'[B] V. saída atual. (€)',s:2},{v:'Total (€)',s:2}]];
+ R.L.forEach((r,i)=>{const k=i+2;rows.push([r.d||'Rendimento',{v:n(r.ra),s:7},{v:n(r.n),s:7},{v:n(r.i),s:5},{f:`-PV(D${k},C${k},B${k})`,v:r.A,s:7},{v:cstNum(r.fr)??1,s:6},{v:n(r.dt),s:5},{f:`F${k}*-PV(D${k},200,B${k})`,v:r.V,s:7},{f:`H${k}/(1+G${k}+D${k})^(C${k}+1)`,v:r.B,s:7},{f:`E${k}+I${k}`,v:r.T,s:7}])});
+ const e=R.L.length+1;rows.push([{v:'Valor pelo rendimento (RND)',s:1},'','','',{f:`SUM(E2:E${e})`,v:R.A,s:10},'','','',{f:`SUM(I2:I${e})`,v:R.B,s:10},{f:`ROUND(SUM(J2:J${e}),-2)`,v:R.total,s:10}]);
+ return {name:'Rendimento',cols:[22,11,7,7,12,8,8,12,13,11],rows}}
 /* tabela dos métodos da verba (Excel editável): valor por método, adotado, BFT e valor estimado */
-function alMetSheet(a){const x=a.al,on=alMetOn(x);if(!on.length)return null;const ad=x.mAdot,rows=[[{v:'Método',s:2},{v:'Designação',s:2},{v:'Valor (€)',s:2},{v:'Adotado',s:2}]];
- on.forEach(m=>{const v=alMetVal(a,m);rows.push([AL_MET_SIG[m],AL_MET_NOME[m],v!=null?{v,s:7}:'',ad===m?'✓':''])});
- const n=on.length,rB=n+2,bft=alNum(x.bft),hasB=!!bft||!!String(x.bftTxt||'').trim();if(hasB)rows.push(['BFT',String(x.bftTxt||'').trim()||'Encargos / benfeitorias',{v:bft||0,s:7},'']);
- const va=ad?alMetVal(a,ad):null;rows.push([{v:'Valor estimado',s:1},'',{f:`SUMIF(D2:D${rB-1},"✓",C2:C${rB-1})${hasB?`+C${rB}`:''}`,v:(va||0)+(bft||0),s:10},'']);
- return {name:'Métodos',cols:[8,30,15,9],rows}}
+function alMetSheet(a){const x=a.al,on=alMetOn(x);if(!on.length)return null;const ad=x.mAdot,rows=[[{v:'Método',s:2},{v:'Designação',s:2},{v:'',s:2},{v:'',s:2},{v:'',s:2},{v:'Adotado',s:2},{v:'Valor (€)',s:2}]];
+ on.forEach(m=>{const v=alMetVal(a,m);rows.push([AL_MET_SIG[m],AL_MET_NOME[m],'','','',ad===m?'✓':'',v!=null?{v,s:7}:''])});
+ const mE=on.length+1,B=bftRun(a);let bRef='';
+ if(B.L.length){rows.push([]);rows.push([{v:'Encargos / benfeitorias',s:2},{v:'Vref (€)',s:2},{v:'K1',s:2},{v:'K2',s:2},{v:'QTD',s:2},{v:'Vun (€)',s:2},{v:'Parciais (€)',s:2}]);const b0=rows.length+1;
+  B.L.forEach((r,k)=>{const rr=b0+k,n=v=>cstNum(v);rows.push([r.d||'—',{v:n(r.vref)??0,s:3},{v:n(r.k1)??1,s:6},{v:n(r.k2)??1,s:6},{v:n(r.qtd)??1,s:3},{f:`B${rr}*C${rr}*D${rr}`,v:r.vun,s:3},{f:`ROUND(E${rr}*F${rr},-2)`,v:r.par,s:7}])});
+  const b1=b0+B.L.length-1;rows.push([{v:'Total encargos / benfeitorias [BFT]',s:1},'','','','','',{f:`SUM(G${b0}:G${b1})`,v:B.tot,s:10}]);bRef=`+G${rows.length}`}
+ const va=ad?alMetVal(a,ad):null;rows.push([{v:'Valor estimado (adotado + BFT)',s:1},'','','','','',{f:`SUMIF(F2:F${mE},"✓",G2:G${mE})${bRef}`,v:(va||0)+(B.tot||0),s:10}]);
+ return {name:'Métodos',cols:[30,9,7,7,7,8,12],rows}}
 /* resumo dos valores apurados (Excel editável): uma linha por verba, total e % relativa; resumo por grupo */
 function alResumoSheet(p){const AP=alP(p),V=alAtivas(p),renda=AP.base==='Valor de renda de mercado',bad=!!AP.bad;
  const H=['Verba','Designação','Tipo de ativo','Grupo','Valor estimado (€)','%',...(renda?['Renda mensal (€)']:[]),...(bad?['BAD (até)']:[])];
@@ -2814,7 +2850,7 @@ const AL_MET_REND='Rendimento (capitalização)';
 function alValSync(a){const x=a?.al;if(!x)return;const at=alNum(x.car?.at);
  if(x.mAdot&&!x.met?.[x.mAdot])x.mAdot='';
  if(!x.mAdot&&x.valAuto==='calc'&&x.met?.[AL_MET_REND])x.mAdot=AL_MET_REND;if(!x.mAdot&&x.valAuto==='ref'&&x.met?.['Valores de referência'])x.mAdot='Valores de referência';
- if(x.mAdot&&x.valAuto!==''&&x.valAuto!==undefined){const v=alMetVal(a,x.mAdot);if(v!=null){const nv=String(Math.round(v+(alNum(x.bft)||0)));x.valAuto='met';if(x.valor!==nv)x.valor=nv}return}
+ if(x.mAdot&&x.valAuto!==''&&x.valAuto!==undefined){const v=alMetVal(a,x.mAdot);if(v!=null){const nv=String(Math.round(v+(alBft(a)||0)));x.valAuto='met';if(x.valor!==nv)x.valor=nv}return}
  if(x.valAuto===undefined){const vu=alNum(x.vun),vr=alNum(x.refV),v=alNum(x.valor);x.valAuto=x.calc&&vu!=null&&at&&v===Math.round(at*vu)?'calc':x.tofRef&&vr!=null&&at&&v===Math.round(at*vr)?'ref':''}
  if(!at||!alTOF(a))return;const u=x.valAuto==='calc'&&x.calc&&alCultOk(a)?alNum(x.vun):x.valAuto==='ref'&&alRefOk(a)?alNum(x.refV):null;if(u!=null){const nv=String(Math.round(at*u));if(x.valor!==nv)x.valor=nv}}
 const AL_MET_REF='Valores de referência';

@@ -103,7 +103,7 @@ Linhas com Vref (da tabela), K1, K2, QTD → `parcela = QTD × Vref × K1 × K2 
 2. ✅ (1.15) CST com depreciação física Ross-Heidecke (`comum/rhd.js`) + obsolescência funcional e económica; testado com o exemplo VB_001 (51 700 €).
 3. MER com testemunhos e calibração do ILZ (tópico de análise de mercado).
 4. VRF com K_Aju ponderado (aproveitando a caracterização sucinta já existente).
-5. RND/DCF para edifícios; RES.
+5. RND para edifícios ✅ (1.16, com BFT em tabela); DCF; RES.
 Cada cálculo sai no Word como Excel embutido (regra das tabelas de cálculo).
 
 ## 10. Resumo do processo (feito na 1.12)
