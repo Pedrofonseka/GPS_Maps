@@ -726,7 +726,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.18.1';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.19';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1730,10 +1730,11 @@ async function buildRelat(p){ensureRel(p);alVisCapa(p);p.anomalias.forEach(a=>{a
     if(kr)body+=tbl([L1,L2],kr)+E();
     if(x.crit||alMetOn(x).length){body+=H3('Critério')+T(alCritTxt(a)||'—',{jc:'both'});if(String(x.critTxt||'').trim())body+=T(x.critTxt,{jc:'both'})}
     {const sh=alMetSheet(a);if(sh){body+=H3('Método');if(String(x.metTxt||'').trim())body+=T(x.metTxt,{jc:'both'});body+=P(R('Métodos aplicados',{b:true}),{keep:1,sp:[120,60]});body+=!S.noOle?alOlePara(sh,oleParts):sh.rows.slice(1).map(r=>T(r.map(c=>c&&typeof c==='object'?(c.s===7||c.s===10?alEur(c.v):c.v):c).filter(c=>c!==''&&c!=null).join(' · '))).join('');
-     {const cs=cstSheet(a);if(cs&&x.met['Custo (reposição depreciado)']){{const Rc=cstRun(a),resid=Rc&&Rc.parcial;body+=P(R(resid?'Cálculo do valor residual, com base no custo a novo (obra inacabada / aproveitamento parcial)':'Cálculo pelo custo de reposição depreciado',{b:true}),{keep:1,sp:[120,60]})}body+=!S.noOle?alOlePara(cs,oleParts):T(`Valor pelo custo: ${alEur(cs.rows[cs.rows.length-1][8].v)}`)}}
+     {const cs=cstSheet(a);if(cs&&x.met['Custo (reposição depreciado)']){body+=P(R('Cálculo pelo custo de reposição depreciado (obra concluída)',{b:true}),{keep:1,sp:[120,60]});body+=!S.noOle?alOlePara(cs,oleParts):T(`Valor pelo custo: ${alEur(cs.rows[cs.rows.length-1][8].v)}`)}}
      {const rs=x.met['Rendimento (capitalização)']&&!alCultOk(a)&&rndSheet(a);if(rs){body+=P(R('Cálculo pelo rendimento',{b:true}),{keep:1,sp:[120,60]});body+=!S.noOle?alOlePara(rs,oleParts):T(`Valor pelo rendimento: ${alEur(rs.rows[rs.rows.length-1][9].v)}`)}}
      if(String(x.merc||'').trim())body+=P(R('Análise de mercado',{b:true}),{keep:1,sp:[120,60]})+T(x.merc,{jc:'both'});
      body+=E()}}
+    {const vs=vaSheet(a);if(vs){const Rv=vaRun(a);body+=H3('Valor atual')+T(`${VA_TIPO[x.va.tipo]||''}. Valor atual = terreno + % Exe × (obra concluída − terreno)${Rv.ct?' − custos de transformação / adaptação':''}: ${alEur(Rv.vt)} + ${CULT.fmt(Rv.exe*100,0)} % × ${alEur(Rv.con)}${Rv.ct?` − ${alEur(Rv.ct)}`:''} = ${alEur(Rv.va)}.`,{jc:'both'});body+=!S.noOle?alOlePara(vs,oleParts):'';body+=E()}}
     if(alRefOk(a)&&x.tofRef&&alNum(x.refV)>0){const at=alNum(x.car?.at),vr=alNum(x.refV);body+=P(R('Valor de referência',{b:true}),{keep:1,sp:[120,60]})+T(`Valor unitário de referência para ${alCultTipo(a).toLowerCase()}: ${CULT.fmt(vr)} €/m² – fonte: ${String(x.refF||'').trim().replace(/[.\s]+$/,'')}.`,{jc:'both'})+(at?T(`Valor do terreno = ${CULT.fmt(at,0)} m² × ${CULT.fmt(vr)} €/m² = ${alEur(Math.round(at*vr))}.`,{jc:'both',b:true}):'')+E()}
     if(alCultOk(a)&&x.calc&&Array.isArray(x.calcW)&&x.calcW.length){const at=alNum(x.car?.at),vu=alNum(x.vun);
      body+=P(R('Cálculo pelo rendimento',{b:true}),{keep:1,sp:[120,60]});
@@ -1866,6 +1867,7 @@ async function relZip(p){const r=ensureRel(p);const x=await relPdf(p);busy(true,
   await loadFotos(p);
   for(const [k,a] of V.entries()){const c=safeName(alCode(p,a)),dir=`${base}/Verbas/${c}`;files.push({name:`${dir}/${c}_Ficha.xlsx`,data:buildXlsx(c.slice(0,31),[['Campo','Valor'],...R[k]],[34,70])});
     {const cs=a.al?.met?.['Custo (reposição depreciado)']&&cstSheet(a);if(cs)files.push({name:`${dir}/${c}_Custo.xlsx`,data:alXlsx(cs)})}
+    {const vs=vaSheet(a);if(vs)files.push({name:`${dir}/${c}_ValorAtual.xlsx`,data:alXlsx(vs)})}
     {const rs=a.al?.met?.['Rendimento (capitalização)']&&!alCultOk(a)&&rndSheet(a);if(rs)files.push({name:`${dir}/${c}_Rendimento.xlsx`,data:alXlsx(rs)})}
     if(a.al?.calc&&alCultOk(a)){try{const R2=CULT.calcRun(a.al.calc.m,a.al.calc.p,false);let n=0;if(R2&&R2.ok)for(const b of R2.W||[])if(b&&b.x){n++;files.push({name:`${dir}/${c}_Calculo${n>1?'_'+n:''}.xlsx`,data:alXlsx(b.x)})}}catch(e){}}
     const nR=relF(a).length;for(const [i,f] of a.fotos.entries()){const d=fd(f);if(!d)continue;files.push({name:inRel(f)?`${dir}/Fotos/${imgCode(p,a,i).replace(/\s+/g,'_')}.jpg`:`${dir}/Fotos/Reserva/Reserva_${c}_${i-nR+1}.jpg`,data:b64ToU8(await outData(d,'foto',f.id))})}}
@@ -2135,10 +2137,11 @@ function alMetHTML(a,p){const x=a.al,on=alMetOn(x),bft=alBft(a),ad=x.mAdot&&x.me
   for(const m of on){const au=alMetAuto(a,m),isA=ad===m;h+=`<div class="inrow" style="margin-top:6px;align-items:center"><b style="flex:0 0 46px">${AL_MET_SIG[m]}</b><input data-bind="almv.${AL_METODOS.indexOf(m)}" inputmode="decimal" value="${esc(x.mv?.[m]||'')}" placeholder="${au!=null?esc(CULT.fmt(au,0))+' (calculado)':'Valor (€)'}" style="flex:1;min-width:0"><button class="${isA?'green':'secondary'} mini" data-alact="adot" data-v="${esc(m)}" style="flex:0 0 auto">${isA?'✓ Adotado':'Adotar'}</button></div>${au!=null&&alNum(x.mv?.[m])==null?`<p class="muted" style="margin:2px 0 0 52px">${m==='Rendimento (capitalização)'?(alCultOk(a)?'Do cálculo pelo rendimento (culturas) — ver 8 · Valor.':'Do cálculo pelo rendimento, abaixo.'):m==='Valores de referência'?'Do valor de referência — ver 8 · Valor.':'Do cálculo pelo custo, abaixo.'}</p>`:''}`}
   if(x.met['Custo (reposição depreciado)'])h+=cstHTML(a);
   if(x.met['Rendimento (capitalização)']&&!alCultOk(a))h+=rndHTML(a);
+  h+=vaHTML(a);
   if(x.met['Comparativo de mercado'])h+=`<div class="algrp">Análise de mercado</div>${txt('al.merc','Testemunhos, fontes, homogeneização e conclusão',x.merc,4)}`;
   h+=`<div class="algrp">Encargos / benfeitorias (BFT)</div>${bftHTML(a)}`;
   h+=txt('al.metTxt','Escolha do método — em função da finalidade, base de valor e critério',x.metTxt,3);{const sg=alMetSug(a,p);if(sg&&String(x.metTxt||'').trim()!==sg)h+=`<div class="cmres" style="margin-top:4px"><span class="muted">Sugestão: ${esc(sg)}</span> <button class="secondary mini" data-alact="metSug">✓ Usar</button></div>`}
-  h+=ad?`<p class="cmres" style="margin-top:8px">Adotado: <b>${esc(alMetLbl(ad))}</b> ${va!=null?esc(alEur(va)):'— (sem valor)'}${bft?` + BFT ${esc(alEur(bft))}`:''}${va!=null?` = <b>${esc(alEur(va+(bft||0)))}</b>`:''}${x.valAuto===''?'<br><span class="muted">O valor estimado (8 · Valor) foi escrito à mão e prevalece; volte a carregar em «Adotado» para o repor.</span>':''}</p>`:'<p class="muted">Assinale qual o método adotado.</p>'}
+  const vaR=vaRun(a);h+=ad?`<p class="cmres" style="margin-top:8px">Adotado: <b>${esc(alMetLbl(ad))}</b> ${va!=null?esc(alEur(va)):'— (sem valor)'}${vaR?` → valor atual ${esc(alEur(vaR.va))}`:''}${bft?` + BFT ${esc(alEur(bft))}`:''}${va!=null?` = <b>${esc(alEur((vaR?vaR.va:va)+(bft||0)))}</b>`:''}${x.valAuto===''?'<br><span class="muted">O valor estimado (8 · Valor) foi escrito à mão e prevalece; volte a carregar em «Adotado» para o repor.</span>':''}</p>`:'<p class="muted">Assinale qual o método adotado.</p>'}
  return h}
 /* texto do modelo «Ava_Context» (Valor estimado — considerações e BAD) */
 const AL_N=[
@@ -2209,7 +2212,8 @@ document.addEventListener('change',async e=>{const el=e.target.closest('select[d
  if(k==='freguesia'&&el.value==='_outra'){const n=(prompt('Nome da freguesia (fica guardada para este concelho):','')||'').trim();if(n){settings.fregExtra=settings.fregExtra||{};const L=settings.fregExtra[x.concelho]=settings.fregExtra[x.concelho]||[];if(!L.includes(n))L.push(n);try{await saveSettings()}catch(_){}x.freguesia=n}}
  else{x[k]=el.value;if(k==='concelho'&&x.freguesia&&!fregOf(x.concelho).includes(x.freguesia))x.freguesia=''}
  await saveProc();S.scrollTop=window.scrollY;render()},true);
-function alA(a){const d={codigo:'',designacao:'',idTipo:'',idValor:'',concelho:'',freguesia:'',morada:'',tipo:'',destino:'',destinoOutro:'',modo:'det',car:{},suc:{},atr:'',util:'',crit:'',critUA:'',critTxt:'',met:{},metTxt:'',mv:{},mAdot:'',bft:'',bftTxt:'',merc:'',valor:'',renda:'',bad:'',valObs:''};a.al=a.al||{};for(const k in d)if(a.al[k]===undefined)a.al[k]=clone(d[k]);{const x0=a.al;if(AL_TIPO_OLD[x0.tipo])x0.tipo=AL_TIPO_OLD[x0.tipo];if(!x0.bftL){x0.bftL=String(x0.bft??'').trim()?[{d:x0.bftTxt||'Encargos / benfeitorias',vref:String(x0.bft),k1:'1',k2:'1',qtd:'1'}]:[]}if(AL_DEST_OLD[x0.destino])x0.destino=AL_DEST_OLD[x0.destino];if(AL_ATR_OLD[x0.atr]!==undefined)x0.atr=AL_ATR_OLD[x0.atr];
+function alA(a){const d={codigo:'',designacao:'',idTipo:'',idValor:'',concelho:'',freguesia:'',morada:'',tipo:'',destino:'',destinoOutro:'',modo:'det',car:{},suc:{},atr:'',util:'',crit:'',critUA:'',critTxt:'',met:{},metTxt:'',mv:{},mAdot:'',bft:'',bftTxt:'',merc:'',valor:'',renda:'',bad:'',valObs:''};a.al=a.al||{};for(const k in d)if(a.al[k]===undefined)a.al[k]=clone(d[k]);{const x0=a.al;if(AL_TIPO_OLD[x0.tipo])x0.tipo=AL_TIPO_OLD[x0.tipo];if(x0.cst&&!x0.va){const c=x0.cst,ex=(c.ed||[]).find(e=>e.exe||(e.exec!=null&&String(e.exec).trim()!==''&&+String(e.exec).replace(',','.')<1)),te=Math.abs(+String(c.trfE||0).replace(',','.')||0),tp=Math.abs(+String(c.trf||0).replace(',','.')||0),nvT=(c.ed||[]).reduce((s1,e)=>s1+(+String(e.area||0).replace(',','.')||0)*(+String(e.k1||1).replace(',','.')||1)*(+String(e.cnv||0).replace(',','.')||0),0),tpv=Math.round(tp*nvT);if(ex||te||tpv){x0.va={on:1,tipo:'RUI',v100:'',vt:'',exe:ex&&!ex.exe?String(ex.exec):'1',exeT:ex?.exe||null,cust:[...(tpv?[{d:'Transformação / demolição',v:String(tpv)}]:[]),...(te?[{d:'Demolições, limpezas e transformação',v:String(te)}]:[])]}}(c.ed||[]).forEach(e=>{delete e.exe;delete e.exec});delete c.trfE;c.trf='0'}
+ if(!x0.bftL){x0.bftL=String(x0.bft??'').trim()?[{d:x0.bftTxt||'Encargos / benfeitorias',vref:String(x0.bft),k1:'1',k2:'1',qtd:'1'}]:[]}if(AL_DEST_OLD[x0.destino])x0.destino=AL_DEST_OLD[x0.destino];if(AL_ATR_OLD[x0.atr]!==undefined)x0.atr=AL_ATR_OLD[x0.atr];
   if(!x0.ids){x0.ids={};const t=String(x0.idTipo||'').trim(),v=String(x0.idValor||'').trim();if(t||v)x0.ids[AL_IDOLD[t]||t||'Outro']=v}
   const c0=x0.car;if(c0)for(const [k,M] of Object.entries(AL_LIST_OLD))if(typeof c0[k]==='string'&&M[c0[k]]!==undefined)c0[k]=M[c0[k]]}
  {const c=a.al.car;alCtxMig(c);if(c&&c.acessos&&!c.acesso){const t=alOpt(c.acessos);if(AL_ACESSO_OLD[t])c.acesso=AL_ACESSO_OLD[t]}}a.vis=a.vis||{data:'',presencas:'',gps:null};return a.al}
@@ -2332,7 +2336,13 @@ document.addEventListener('click',async e=>{const el=e.target.closest('[data-ala
   case 'tabDel':{const l=el.dataset.l;(l==='bft'?a.al.bftL:a.al.rnd.L).splice(+el.dataset.i,1);alValSync(a);return keep()}
   case 'rndOn':{alA(a);if(!a.al.rnd)rndInit(a);else a.al.rnd.on=1;return keep()}
   case 'rndOff':{if(a.al.rnd)a.al.rnd.on=0;return keep()}
-  case 'exeTog':{const e2=a.al.cst.ed[+el.dataset.i];if(e2.exe)delete e2.exe;else e2.exe=exeNew(exeTipOf(a));alValSync(a);return keep()}
+  case 'vaOn':{alA(a);if(!a.al.va)a.al.va={on:1,tipo:'CUR',v100:'',vt:'',exe:'1',exeT:null,cust:[]};else a.al.va.on=1;if(a.al.mAdot)a.al.valAuto='met';alValSync(a);return keep()}
+  case 'vaOff':{if(a.al.va)a.al.va.on=0;alValSync(a);return keep()}
+  case 'vaTipo':{a.al.va.tipo=el.dataset.v;if(el.dataset.v!=='CUR'&&!(a.al.va.cust||[]).length)a.al.va.cust=[{d:'Demolições, limpezas e trabalhos para aproveitar o existente',v:''}];return keep()}
+  case 'vaExeTog':{const k=a.al.va;k.exeT=k.exeT?null:exeNew(exeTipOf(a));alValSync(a);return keep()}
+  case 'vaCAdd':{(a.al.va.cust=a.al.va.cust||[]).push({d:'',v:''});return keep()}
+  case 'vaCDel':{a.al.va.cust.splice(+el.dataset.i,1);alValSync(a);return keep()}
+  case 'bftSign':{const r=a.al.bftL[+el.dataset.i];const v=String(r.vref||'').trim();r.vref=v.startsWith('-')?v.slice(1):(v?'-'+v:'-');alValSync(a);return keep()}
   case 'cstOn':{alA(a);if(!a.al.cst)cstInit(a);else a.al.cst.on=1;return keep()}
   case 'cstOff':{if(a.al.cst)a.al.cst.on=0;return keep()}
   case 'cstAdd':{a.al.cst.ed.push({d:'Construção',area:'',k1:'1',cnv:'1000',r:'',est:'5-Rg',adot:''});return keep()}
@@ -2356,15 +2366,16 @@ document.addEventListener('click',async e=>{const el=e.target.closest('[data-ala
 
 /* ---------- campos ligados ---------- */
 document.addEventListener('input',e=>{const el=e.target,b=el.dataset?.bind;if(!b)return;const [scope,k]=b.split('.');if(scope==='cr'){e.stopImmediatePropagation();const p0=cur(),r0=ensureRel(p0),it=(r0.crono||[])[+k],k2=b.split('.')[2];if(it){it[k2]=el.value;saveProcSoon()}return}
-  if(scope==='altab'){e.stopImmediatePropagation();const a0=curA();if(!a0)return;const P=b.split('.'),L=P[1]==='bft'?a0.al.bftL:a0.al.rnd?.L,it=L&&L[+P[2]];if(it)it[P[3]]=el.value;if(a0.al.mAdot&&a0.al.valAuto!=='')a0.al.valAuto='met';saveProcSoon();return}
+  if(scope==='alva'){e.stopImmediatePropagation();const a0=curA(),k=a0?.al?.va;if(!k)return;const P=b.split('.');if(P[1]==='cust'){const it=k.cust[+P[2]];if(it)it[P[3]]=el.value}else if(P[1]==='exeT'){const cp=k.exeT?.caps?.[+P[3]];if(cp)cp[P[2]]=el.value}else k[P[1]]=el.value;if(a0.al.mAdot&&a0.al.valAuto!=='')a0.al.valAuto='met';saveProcSoon();return}
+  if(scope==='altab'){e.stopImmediatePropagation();const a0=curA();if(!a0)return;const P=b.split('.'),L=P[1]==='bft'?a0.al.bftL:a0.al.rnd?.L,it=L&&L[+P[2]];if(it){if(P[1]==='bft'&&P[3]==='vref'&&String(it.vref||'').trim().startsWith('-'))it.vref='-'+el.value.replace(/^-/,'');else it[P[3]]=el.value}if(a0.al.mAdot&&a0.al.valAuto!=='')a0.al.valAuto='met';saveProcSoon();return}
   if(scope==='alcst'){e.stopImmediatePropagation();const a0=curA(),c=a0?.al?.cst;if(!c)return;const P=b.split('.');if(P[1]==='ed'){const it=c.ed[+P[2]];if(it){if(P[3]==='exe'){const cp=it.exe?.caps?.[+P[5]];if(cp)cp[P[4]]=el.value}else it[P[3]]=el.value}}else c[P[1]]=el.value;if(a0.al.mAdot&&a0.al.valAuto!=='')a0.al.valAuto='met';saveProcSoon();return}
   if(scope==='almv'){e.stopImmediatePropagation();const a0=curA();alA(a0);a0.al.mv=a0.al.mv||{};a0.al.mv[AL_METODOS[+k]]=el.value;if(a0.al.mAdot&&a0.al.valAuto!=='')a0.al.valAuto='met';saveProcSoon();return}
   if(!['al','alc','als','pal','alid','alart','aldoc'].includes(scope))return;e.stopImmediatePropagation();const p=cur(),a=curA();
  if(scope==='pal')alP(p)[k]=el.value;else if(scope==='alart'||scope==='aldoc'){alA(a);const L=scope==='alart'?a.al.artigos:a.al.docsArea,k2=b.split('.')[2];if(L&&L[+k])L[+k][k2]=el.value}else if(scope==='alid'){alA(a);const key=(AL_IDTIPO[alFam(a)]||AL_IDTIPO.imo)[+k];a.al.ids=a.al.ids||{};if(key)a.al.ids[key]=el.value}else{alA(a);if(scope==='al'){a.al[k]=el.value;if(k==='valor')a.al.valAuto=''}else if(scope==='alc')a.al.car[k]=el.value;else a.al.suc[k]=el.value}
  if(typeof autosize==='function')autosize(el);saveProcSoon()},true);
 
-document.addEventListener('change',async e=>{const el=e.target.closest('select[data-alact="exeTip"]');if(!el)return;e.stopImmediatePropagation();const a=curA(),e2=a?.al?.cst?.ed?.[+el.dataset.i];if(!e2)return;if(!await ask('Trocar a tipologia? Os pesos e as percentagens realizadas voltam aos valores por defeito.'))return render();e2.exe=exeNew(el.value);alValSync(a);await saveProc();S.scrollTop=window.scrollY;render()},true);
-document.addEventListener('change',e=>{const b=e.target.dataset?.bind||'';if(!/^almv\.|^alcst\.|^altab\./.test(b))return;const a=curA();if(!a)return;alValSync(a);saveProc().then(()=>{S.scrollTop=window.scrollY;render()})});
+document.addEventListener('change',async e=>{const el=e.target.closest('select[data-alact="exeTip"]');if(!el)return;e.stopImmediatePropagation();const a=curA(),e2=a?.al?.va;if(!e2?.exeT)return;if(!await ask('Trocar a tipologia? Os pesos e as percentagens executadas voltam aos valores por defeito.'))return render();e2.exeT=exeNew(el.value);alValSync(a);await saveProc();S.scrollTop=window.scrollY;render()},true);
+document.addEventListener('change',e=>{const b=e.target.dataset?.bind||'';if(!/^almv\.|^alcst\.|^altab\.|^alva\./.test(b))return;const a=curA();if(!a)return;alValSync(a);saveProc().then(()=>{S.scrollTop=window.scrollY;render()})});
 /* ---------- troca por verba (regra sync.md) ---------- */
 function alTrocaModal(p){const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="box"><b style="font-size:17px">Enviar / receber verbas</b><p class="muted">Envie só as verbas escolhidas (com fotos) para continuar noutro aparelho. Ao receber, escolhe verba a verba; as outras verbas e os dados gerais do processo não mudam.</p><div class="btns"><button class="secondary mini" data-x="all">Todas</button><button class="secondary mini" data-x="none">Nenhuma</button></div><div class="allist">${p.anomalias.map(a=>`<label class="tk ${a.id===S.aid?'on':''}"><input type="checkbox" data-vb="${a.id}" ${a.id===S.aid?'checked':''}><span><b>${esc(alCode(p,a))}</b> ${esc(a.al?.designacao||'')} · 📷 ${a.fotos.length}</span></label>`).join('')}</div><div class="btns"><button class="green" data-x="send">📤 Enviar verbas escolhidas</button><label class="btn secondary">📥 Receber verbas<input type="file" accept=".json,application/json" data-x="recv" hidden></label><button class="secondary" data-x="close">Fechar</button></div></div>`;
  m.addEventListener('click',async e=>{const b=e.target.closest('[data-x]');if(e.target===m||b?.dataset.x==='close')return m.remove();if(!b)return;
@@ -2778,34 +2789,26 @@ const cstNum=v=>{let t=String(v??'').trim().replace(/\s|€/g,'');if(!t)return n
 function cstRun(a){const k=a.al.cst;if(!k?.on)return null;const n=v=>{const r=cstNum(v);return r==null?0:r},alNum=cstNum;
  const Ar=n(k.area),Ap=alNum(k.Ap);let kar=1;if(Ap&&Ar){const rr=Math.abs(Ar-Ap)/Ap;kar=Math.pow(Ap/Ar,rr<0.3?0.25:0.125)}
  const vun=n(k.C)*n(k.IUS)*n(k.ILZ)*(alNum(k.Div)??1)*kar,soloB=Ar*vun,encV=soloB*n(k.enc),solo=Math.round((soloB+encV)/100)*100;
- const ed=(k.ed||[]).map(e=>{const nv=n(e.area)*(alNum(e.k1)??1)*n(e.cnv),r=String(e.r??'').trim()!==''?n(e.r):(n(e.vida)?n(e.idade)/n(e.vida):0),adot=alNum(e.adot),dep=adot!=null?1-adot:(rhdDep(e.est,r)??0),ex=e.exe?exeRun(e.exe).tot:(cstNum(e.exec)??1);return {...e,nv,r,dep,ex,val:Math.round(nv*(1-dep)/100)*100,falta:Math.round(nv*(1-ex)/100)*100}});
+ const ed=(k.ed||[]).map(e=>{const nv=n(e.area)*(alNum(e.k1)??1)*n(e.cnv),r=String(e.r??'').trim()!==''?n(e.r):(n(e.vida)?n(e.idade)/n(e.vida):0),adot=alNum(e.adot),dep=adot!=null?1-adot:(rhdDep(e.est,r)??0);return {...e,nv,r,dep,val:Math.round(nv*(1-dep)/100)*100}});
  const NV=ed.reduce((s,e)=>s+e.nv,0),edif=ed.reduce((s,e)=>s+e.val,0),ofV=-edif*n(k.of),oeV=-(edif+ofV)*n(k.oe),efa=edif+ofV+oeV,rat=NV?efa/NV:0;
- const txlV=rat<0.5?0:n(k.txl)*efa,mlrV=n(k.mlr)*(solo+efa+txlV),trfV=n(k.trf)*NV,trfE=-Math.abs(n(k.trfE)),acab=solo+efa+txlV+mlrV+trfV,falta=-ed.reduce((s,e)=>s+e.falta,0),total=Math.round((acab+falta+trfE)/100)*100;
- return {Ar,Ap,kar,vun,soloB,encV,solo,ed,NV,edif,ofV,oeV,efa,rat,txlV,mlrV,trfV,acab,falta,trfE,total,parcial:ed.some(e=>e.ex<1)||!!trfE}}
+ const txlV=rat<0.5?0:n(k.txl)*efa,mlrV=n(k.mlr)*(solo+efa+txlV),total=Math.round((solo+efa+txlV+mlrV)/100)*100;
+ return {Ar,Ap,kar,vun,soloB,encV,solo,ed,NV,edif,ofV,oeV,efa,rat,txlV,mlrV,total}}
 function cstSheet(a){const k=a.al.cst,R=cstRun(a);if(!R)return null;const alNum=cstNum,n=v=>cstNum(v)??0,rows=[],P=(v)=>({v,s:5}),N2=v=>({v,s:3}),C4=v=>({v,s:6});
- rows.push([{v:'[A] Solo',s:2},{v:'Área (m²)',s:2},{v:'C (€/m²)',s:2},{v:'IUS',s:2},{v:'ILZ',s:2},{v:'Div',s:2},{v:'K_Ar',s:2},{v:'V_un (€/m²)',s:2},{v:'',s:2},{v:'Valor (€)',s:2}]);
- rows.push(['Terreno',N2(R.Ar),N2(n(k.C)),C4(n(k.IUS)),P(n(k.ILZ)),C4(alNum(k.Div)??1),C4(R.kar),{f:'C2*D2*E2*F2*G2',v:R.vun,s:3},'',{f:'B2*H2',v:R.soloB,s:7}]);
- rows.push(['Encargos de aquisição','','','','','','',P(n(k.enc)),'',{f:'J2*H3',v:R.encV,s:7}]);
- rows.push([{v:'Valor do solo [A]',s:1},'','','','','','','','',{f:'ROUND(J2+J3,-2)',v:R.solo,s:10}]);rows.push([]);
- rows.push([{v:'[B] Edificações',s:2},{v:'Área (m²)',s:2},{v:'K1',s:2},{v:'C novo (€/m²)',s:2},{v:'V. novo (€)',s:2},{v:'Idade %',s:2},{v:'ECV',s:2},{v:'Dep. física',s:2},{v:'Exec. %',s:2},{v:'Valor acabado (€)',s:2},{v:'Por executar (€)',s:2}]);
- const e0=rows.length+1,nE=R.ed.length,e1=e0+nE-1,rS=e1+1,rF=rS+1,rE=rS+2,rT=rS+3,rM=rS+4,rR=rS+5,rA=rS+6,rX=rS+7,rD=rS+8,rTot=rS+9;
- // blocos de execução (depois do total): posições conhecidas antes
- let nx=rTot+2;const exPos=R.ed.map(e=>{if(!e.exe)return null;const X=exeRun(e.exe),h=nx;nx+=X.caps.length+3;return {h,c0:h+1,c1:h+X.caps.length,t:h+X.caps.length+1,X}});
- R.ed.forEach((e,i)=>{const r=e0+i,xp=exPos[i];rows.push([e.d||'Construção',N2(n(e.area)),C4(alNum(e.k1)??1),N2(n(e.cnv)),{f:`B${r}*C${r}*D${r}`,v:e.nv,s:7},P(e.r),rhdCod(e.est)||'—',P(e.dep),xp?{f:`D${xp.t}`,v:e.ex,s:5}:P(e.ex),{f:`ROUND(E${r}*(1-H${r}),-2)`,v:e.val,s:7},{f:`ROUND(E${r}*(1-I${r}),-2)`,v:e.falta,s:7}])});
- rows.push([{v:'Edificações acabadas (com depreciação física)',s:1},'','','',{f:`SUM(E${e0}:E${e1})`,v:R.NV,s:10},'','','','',{f:`SUM(J${e0}:J${e1})`,v:R.edif,s:10},{f:`SUM(K${e0}:K${e1})`,v:-R.falta,s:10}]);
- rows.push(['Obsolescência funcional','','','','','','',P(n(k.of)),'',{f:`-J${rS}*H${rF}`,v:R.ofV,s:7}]);
- rows.push(['Obsolescência económica / externa','','','','','','',P(n(k.oe)),'',{f:`-(J${rS}+J${rF})*H${rE}`,v:R.oeV,s:7}]);
- rows.push(['Taxas, licenças e projetos (só se estado ≥ 50%)','','','','','','',P(n(k.txl)),'',{f:`IF(E${rS}=0,0,IF((J${rS}+J${rF}+J${rE})/E${rS}<0.5,0,H${rT}*(J${rS}+J${rF}+J${rE})))`,v:R.txlV,s:7}]);
- rows.push(['Margem do promotor','','','','','','',P(n(k.mlr)),'',{f:`H${rM}*(J4+J${rS}+J${rF}+J${rE}+J${rT})`,v:R.mlrV,s:7}]);
- rows.push(['Transformação / demolição (% s/ valor novo)','','','','','','',P(n(k.trf)),'',{f:`H${rR}*E${rS}`,v:R.trfV,s:7}]);
- rows.push([{v:'Valor da obra acabada',s:1},'','','','','','','','',{f:`J4+J${rS}+J${rF}+J${rE}+J${rT}+J${rM}+J${rR}`,v:R.acab,s:10}]);
- rows.push(['Obra por executar / não aproveitável (custo a novo)','','','','','','','','',{f:`-K${rS}`,v:R.falta,s:7}]);
- rows.push(['Custos de demolição, limpeza e transformação (€)','','','','','','','','',{v:R.trfE,s:7}]);
- rows.push([{v:R.parcial?'Valor residual (CST)':'Valor pelo custo (CST)',s:1},'','','','','','','','',{f:`ROUND(J${rA}+J${rX}+J${rD},-2)`,v:R.total,s:10}]);
- R.ed.forEach((e,i)=>{const xp=exPos[i];if(!xp)return;rows.push([]);rows.push([{v:`Estado de execução — ${e.d||'Construção'} (${EXE_TIP[e.exe.tip]?.[0]||''})`,s:2},{v:'Peso',s:2},{v:'Realizado',s:2},{v:'Contributo',s:2}]);
-  xp.X.caps.forEach((c,j)=>{const r=xp.c0+j;rows.push([c.c,{v:c.pn/100,s:9},{v:c.rn/100,s:9},{f:`B${r}*C${r}`,v:c.ct,s:5}])});
-  rows.push([{v:'Execução da obra',s:1},{f:`SUM(B${xp.c0}:B${xp.c1})`,v:xp.X.peso/100,s:11},'',{f:`SUM(D${xp.c0}:D${xp.c1})`,v:xp.X.tot,s:11}])});
- return {name:'Custo',cols:[30,8,8,9,10,8,7,9,8,11,11],rows}}
+ rows.push([{v:'[A] Solo',s:2},{v:'Área (m²)',s:2},{v:'C (€/m²)',s:2},{v:'IUS',s:2},{v:'ILZ',s:2},{v:'Div',s:2},{v:'K_Ar',s:2},{v:'V_un (€/m²)',s:2},{v:'Valor (€)',s:2}]);
+ rows.push(['Terreno',N2(R.Ar),N2(n(k.C)),C4(n(k.IUS)),P(n(k.ILZ)),C4(alNum(k.Div)??1),C4(R.kar),{f:'C2*D2*E2*F2*G2',v:R.vun,s:3},{f:'B2*H2',v:R.soloB,s:7}]);
+ rows.push(['Encargos de aquisição','','','','','',{f:'I2',v:R.soloB,s:7},P(n(k.enc)),{f:'G3*H3',v:R.encV,s:7}]);
+ rows.push([{v:'Valor do solo [A]',s:1},'','','','','','','',{f:'ROUND(I2+I3,-2)',v:R.solo,s:10}]);rows.push([]);
+ rows.push([{v:'[B] Edificações',s:2},{v:'Área (m²)',s:2},{v:'K1',s:2},{v:'C novo (€/m²)',s:2},{v:'V. novo (€)',s:2},{v:'Idade %',s:2},{v:'ECV',s:2},{v:'Dep. física',s:2},{v:'Valor (€)',s:2}]);
+ const e0=rows.length+1;R.ed.forEach((e,i)=>{const r=e0+i;rows.push([e.d||'Construção',N2(n(e.area)),C4(alNum(e.k1)??1),N2(n(e.cnv)),{f:`B${r}*C${r}*D${r}`,v:e.nv,s:7},P(e.r),rhdCod(e.est)||'—',P(e.dep),{f:`ROUND(E${r}*(1-H${r}),-2)`,v:e.val,s:7}])});
+ const e1=e0+R.ed.length-1,rS=e1+1;rows.push([{v:'Edificações, com depreciação física (Ross-Heidecke)',s:1},'','','',{f:`SUM(E${e0}:E${e1})`,v:R.NV,s:10},'','','',{f:`SUM(I${e0}:I${e1})`,v:R.edif,s:10}]);rows.push([]);
+ const rH=rS+2,rF=rS+3,rE=rS+4,rT=rS+5,rM=rS+6;
+ rows.push([{v:'Ajustes',s:2},'','','','','',{v:'Base (€)',s:2},{v:'%',s:2},{v:'Valor (€)',s:2}]);
+ rows.push(['Obsolescência funcional (a deduzir)','','','','','',{f:`I${rS}`,v:R.edif,s:7},P(n(k.of)),{f:`-G${rF}*H${rF}`,v:R.ofV,s:7}]);
+ rows.push(['Obsolescência económica / externa (a deduzir)','','','','','',{f:`I${rS}+I${rF}`,v:R.edif+R.ofV,s:7},P(n(k.oe)),{f:`-G${rE}*H${rE}`,v:R.oeV,s:7}]);
+ rows.push(['Taxas, licenças e projetos (só se estado ≥ 50%)','','','','','',{f:`I${rS}+I${rF}+I${rE}`,v:R.efa,s:7},P(n(k.txl)),{f:`IF(E${rS}=0,0,IF(G${rT}/E${rS}<0.5,0,G${rT}*H${rT}))`,v:R.txlV,s:7}]);
+ rows.push(['Margem do promotor','','','','','',{f:`I4+G${rT}+I${rT}`,v:R.solo+R.efa+R.txlV,s:7},P(n(k.mlr)),{f:`G${rM}*H${rM}`,v:R.mlrV,s:7}]);
+ rows.push([{v:'Valor pelo custo — obra concluída (CST)',s:1},'','','','','','','',{f:`ROUND(I4+I${rS}+I${rF}+I${rE}+I${rT}+I${rM},-2)`,v:R.total,s:10}]);
+ return {name:'Custo',cols:[30,8,8,9,10,8,10,9,11],rows}}
 function cstHTML(a){const x=a.al,k=x.cst;if(!k?.on)return `<div class="btns"><button class="secondary mini" data-alact="cstOn">🧮 Calcular pelo custo (CST)</button></div>`;
  const R=cstRun(a),F=(v,d=0)=>esc(CULT.fmt(v,d)),P=v=>esc(CULT.fmt(v*100,1))+'%';
  const I=(bind,val,w=64)=>`<input data-bind="${bind}" inputmode="decimal" value="${esc(val??'')}" style="width:${w}px">`;
@@ -2816,27 +2819,62 @@ function cstHTML(a){const x=a.al,k=x.cst;if(!k?.on)return `<div class="btns"><bu
   <tr><td>Terreno</td><td>${I('alcst.area',k.area,72)}</td><td>${I('alcst.C',k.C)}</td><td>${I('alcst.IUS',k.IUS,52)}</td><td>${I('alcst.ILZ',k.ILZ,58)}</td><td>${I('alcst.Div',k.Div,48)}</td><td>${I('alcst.Ap',k.Ap,64)}</td><td class="c">${F(R.kar,4)}</td><td class="c">${F(R.vun,2)}</td><td class="c">${F(R.soloB)}</td></tr>
   <tr><td>Encargos de aquisição</td><td colspan="6"></td><td colspan="2">${I('alcst.enc',k.enc,58)}</td><td class="c">${F(R.encV)}</td></tr>
   <tr class="tot"><td>Valor do solo [A]</td><td colspan="8"></td><td class="c">${F(R.solo)}</td></tr></table></div>`;
- const ed=`<div class="cstx"><table><tr>${th('[B] Edificações')}${th('Área m²')}${th('K1')}${th('C novo €/m²')}${th('V. novo €')}${th('Idade %','Idade / vida útil (ex.: 20 anos em 60 = 30 %)')}${th('ECV','Estado de conservação: 8-Nv Novo · 7-Mb Muito bom · 6-Bo Bom · 5-Rg Regular · 4-Ac Aceitável · 3-Sf Sofrível · 2-Df Deficiente · 1-Ip Impróprio')}${th('Dep. física','Ross-Heidecke')}${th('Coef. adot.','Fração que fica — substitui Ross-Heidecke')}${th('Exec. %','Obra realizada / aproveitável (1 = 100 %). 📋 = tabela por capítulos')}${th('Valor acabado €')}${th('Por executar €','Custo a novo do que falta fazer ou não se aproveita')}${th('')}</tr>
-  ${(k.ed||[]).map((e,i)=>{const E=R.ed[i];return `<tr><td><input data-bind="alcst.ed.${i}.d" value="${esc(e.d||'')}" placeholder="Descrição" style="width:130px"></td><td>${I(`alcst.ed.${i}.area`,e.area)}</td><td>${I(`alcst.ed.${i}.k1`,e.k1,44)}</td><td>${I(`alcst.ed.${i}.cnv`,e.cnv)}</td><td class="c">${F(E.nv)}</td><td>${rSel(i,E)}</td><td>${estSel(i,e.est)}</td><td class="c">${P(E.dep)}</td><td>${I(`alcst.ed.${i}.adot`,e.adot,54)}</td><td>${e.exe?`<span class="c">${P(E.ex)}</span>`:I(`alcst.ed.${i}.exec`,e.exec??'1',48)} <button class="secondary mini" data-alact="exeTog" data-i="${i}" title="Estado de execução por capítulos">📋</button></td><td class="c">${F(E.val)}</td><td class="c">${E.falta?F(-E.falta):'—'}</td><td><button class="del mini" data-alact="cstDel" data-i="${i}">✕</button></td></tr>`}).join('')}
-  <tr class="tot"><td>Edificações</td><td colspan="3"></td><td class="c">${F(R.NV)}</td><td colspan="5"></td><td class="c">${F(R.edif)}</td><td class="c">${R.falta?F(R.falta):'—'}</td><td></td></tr></table></div>
+ const ed=`<div class="cstx"><table><tr>${th('[B] Edificações')}${th('Área m²')}${th('K1')}${th('C novo €/m²')}${th('V. novo €')}${th('Idade %','Idade / vida útil (ex.: 20 anos em 60 = 30 %)')}${th('ECV','Estado de conservação: 8-Nv Novo · 7-Mb Muito bom · 6-Bo Bom · 5-Rg Regular · 4-Ac Aceitável · 3-Sf Sofrível · 2-Df Deficiente · 1-Ip Impróprio')}${th('Dep. física','Ross-Heidecke')}${th('Coef. adot.','Fração que fica — substitui Ross-Heidecke')}${th('Valor €')}${th('')}</tr>
+  ${(k.ed||[]).map((e,i)=>{const E=R.ed[i];return `<tr><td><input data-bind="alcst.ed.${i}.d" value="${esc(e.d||'')}" placeholder="Descrição" style="width:130px"></td><td>${I(`alcst.ed.${i}.area`,e.area)}</td><td>${I(`alcst.ed.${i}.k1`,e.k1,44)}</td><td>${I(`alcst.ed.${i}.cnv`,e.cnv)}</td><td class="c">${F(E.nv)}</td><td>${rSel(i,E)}</td><td>${estSel(i,e.est)}</td><td class="c">${P(E.dep)}</td><td>${I(`alcst.ed.${i}.adot`,e.adot,54)}</td><td class="c">${F(E.val)}</td><td><button class="del mini" data-alact="cstDel" data-i="${i}">✕</button></td></tr>`}).join('')}
+  <tr class="tot"><td>Edificações</td><td colspan="3"></td><td class="c">${F(R.NV)}</td><td colspan="4"></td><td class="c">${F(R.edif)}</td><td></td></tr></table></div>
   <p class="muted" style="margin:0">ECV: 8-Nv Novo · 7-Mb Muito bom · 6-Bo Bom · 5-Rg Regular · 4-Ac Aceitável · 3-Sf Sofrível · 2-Df Deficiente · 1-Ip Impróprio</p><div class="btns"><button class="secondary mini" data-alact="cstAdd">+ Construção</button></div>`;
- const exT=(k.ed||[]).map((e,i)=>{if(!e.exe)return '';const X=exeRun(e.exe),rs=v=>`<select data-bind="alcst.ed.${i}.exe.r.%" style="width:64px">${Array.from({length:11},(_,j)=>`<option value="${j*10}" ${Math.round((cstNum(v)??0)/10)===j?'selected':''}>${j*10}%</option>`).join('')}</select>`;
-  return `<div class="algrp">📋 Estado de execução — ${esc(e.d||'Construção')}</div><div class="inrow" style="margin:4px 0"><select data-alact="exeTip" data-i="${i}">${Object.entries(EXE_TIP).map(([c,[l]])=>`<option value="${c}" ${e.exe.tip===c?'selected':''}>${esc(l)}</option>`).join('')}</select></div>
-  <div class="cstx"><table><tr><th>Capítulo</th><th>Peso %</th><th>Realizado</th><th>Contributo</th></tr>${X.caps.map((c,j)=>`<tr><td>${esc(c.c)}</td><td><input data-bind="alcst.ed.${i}.exe.p.${j}" inputmode="decimal" value="${esc(c.p)}" style="width:52px"></td><td>${rs(c.r).replace('.r.%',`.r.${j}`)}</td><td class="c">${P(c.ct)}</td></tr>`).join('')}
-  <tr class="tot"><td>Execução da obra</td><td class="c" style="${Math.abs(X.peso-100)>0.01?'color:#b71c1c':''}">${F(X.peso,0)}%</td><td></td><td class="c">${P(X.tot)}</td></tr></table></div>${Math.abs(X.peso-100)>0.01?'<p class="muted" style="color:#b71c1c">A soma dos pesos tem de dar 100 %.</p>':''}<p class="muted" style="margin-top:0">Pesos indicativos da tipologia — corrija se a obra tiver outra estrutura de custos. A % de execução passa para a coluna «Exec. %» da construção.</p><div class="btns"><button class="secondary mini" data-alact="exeTog" data-i="${i}">Retirar a tabela</button></div>`}).join('');
- const aj=[['of','Obsolescência funcional',R.ofV],['oe','Obsolescência económica / externa',R.oeV],['txl','Taxas, licenças e projetos (só se estado ≥ 50 %)',R.txlV],['mlr','Margem do promotor',R.mlrV],['trf','Transformação / demolição (s/ valor novo)',R.trfV]];
- const ajT=`<div class="cstx"><table><tr>${th('Ajustes')}${th('%  (decimal)')}${th('Valor €')}</tr>${aj.map(([key,l,v])=>`<tr><td>${l}</td><td>${I('alcst.'+key,k[key],64)}</td><td class="c">${F(v)}</td></tr>`).join('')}<tr class="tot"><td>Valor da obra acabada</td><td></td><td class="c">${F(R.acab)}</td></tr><tr><td>Obra por executar / não aproveitável (custo a novo)</td><td class="c">Exec. %</td><td class="c">${F(R.falta)}</td></tr><tr><td>Custos de demolição, limpeza e transformação (€, a deduzir)</td><td>${I('alcst.trfE',k.trfE,80)}</td><td class="c">${F(R.trfE)}</td></tr>
-  <tr class="tot"><td>${R.parcial?'Valor residual (CST)':'Valor pelo custo (CST)'}</td><td class="c">estado ${F(R.rat*100,0)}%</td><td class="c">${F(R.total)}</td></tr></table></div>`;
- return `<div class="algrp">🧮 Cálculo pelo custo (CST)</div><p class="muted" style="margin-top:0">Valores por defeito como no livro Best Value — confirme ou corrija. Percentagens em decimal (0,075 = 7,5 %). No telemóvel, deslize a tabela para o lado: a 1.ª coluna fica fixa.</p>${solo}${ed}${exT}${ajT}
+ const aj=[['of','Obsolescência funcional (a deduzir)',R.edif,R.ofV],['oe','Obsolescência económica / externa (a deduzir)',R.edif+R.ofV,R.oeV],['txl','Taxas, licenças e projetos (só se estado ≥ 50 %)',R.efa,R.txlV],['mlr','Margem do promotor',R.solo+R.efa+R.txlV,R.mlrV]];
+ const ajT=`<div class="cstx"><table><tr>${th('Ajustes')}${th('Base €','Valor sobre o qual se aplica a percentagem')}${th('% (decimal)')}${th('Valor €')}</tr>${aj.map(([key,l,b,v])=>`<tr><td>${l}</td><td class="c">${F(b)}</td><td>${I('alcst.'+key,k[key],64)}</td><td class="c">${F(v)}</td></tr>`).join('')}
+  <tr class="tot"><td>Valor pelo custo — obra concluída (CST)</td><td class="c" colspan="2">estado ${F(R.rat*100,0)}%</td><td class="c">${F(R.total)}</td></tr></table></div><p class="muted" style="margin-top:0">Bases: obsolescência funcional sobre as edificações; económica sobre as edificações já com a funcional; taxas sobre as edificações ajustadas; margem sobre solo + edificações + taxas. Obra em curso, inacabada ou com custos de transformação: use o bloco «Valor atual» abaixo.</p>`;
+ return `<div class="algrp">🧮 Cálculo pelo custo (CST)</div><p class="muted" style="margin-top:0">Valores por defeito como no livro Best Value — confirme ou corrija. Percentagens em decimal (0,075 = 7,5 %). No telemóvel, deslize a tabela para o lado: a 1.ª coluna fica fixa.</p>${solo}${ed}${ajT}
  <div class="btns"><button class="secondary mini" data-alact="cstOff">Retirar o cálculo</button></div>`}
+/* Valor atual (obra em curso, inacabada, em ruína ou a transformar) — bloco autónomo sobre o valor da obra concluída obtido por qualquer método:
+   valor atual = terreno + % Exe × (obra concluída − terreno) − custos de transformação/adaptação (demolições, limpezas…) */
+const VA_TIPO={CUR:'Obra em curso (taxas e encargos proporcionais à execução)',RUI:'Ruína, obra parada ou inacabada (aproveitamento + custos de transformação)',TRF:'Obra concluída com custos de transformação / adaptação'};
+function vaRun(a){const x=a.al,k=x.va;if(!k?.on)return null;const ad=x.mAdot&&x.met?.[x.mAdot]?x.mAdot:'';
+ const v100a=ad?alMetVal(a,ad):null,v100=cstNum(k.v100)??v100a??0;
+ const vta=ad==='Custo (reposição depreciado)'?cstRun(a)?.solo??null:null,vt=cstNum(k.vt)??vta??0;
+ const con=v100-vt,X=k.exeT?exeRun(k.exeT):null,exe=X?X.tot:(cstNum(k.exe)??1),exV=con*exe;
+ const cust=(k.cust||[]).map(c=>({...c,vn:Math.abs(cstNum(c.v)??0)})),ct=cust.reduce((s1,c)=>s1+c.vn,0);
+ return {ad,v100a,v100,vta,vt,con,X,exe,exV,cust,ct,va:Math.round((vt+exV-ct)/100)*100}}
+function vaHTML(a){const x=a.al,k=x.va;if(!k?.on)return `<div class="btns"><button class="secondary mini" data-alact="vaOn">🏗 Valor atual — obra em curso, inacabada, em ruína ou a transformar</button></div>`;
+ const R=vaRun(a),F=(v,d=0)=>esc(CULT.fmt(v,d)),P=v=>esc(CULT.fmt(v*100,0))+'%',I=(b,v,w=90,ph='')=>`<input data-bind="${b}" inputmode="decimal" value="${esc(v??'')}" placeholder="${esc(ph)}" style="width:${w}px">`;
+ const eSel=`<select data-bind="alva.exe" style="width:72px">${Array.from({length:21},(_,j)=>`<option value="${j/20}" ${Math.round(R.exe*20)===j?'selected':''}>${j*5}%</option>`).join('')}</select>`;
+ let h=`<div class="algrp">🏗 Valor atual</div><div class="tks col">${Object.entries(VA_TIPO).map(([c,l])=>alTk(k.tipo===c,esc(l),`data-alact="vaTipo" data-v="${c}"`)).join('')}</div>
+ <div class="cstx"><table><tr><th>Valor atual</th><th>Origem</th><th>Valor €</th></tr>
+ <tr><td>Valor da obra concluída (100 %)</td><td>${R.ad?`${AL_MET_SIG[R.ad]} adotado`:'manual'}</td><td>${I('alva.v100',k.v100,100,R.v100a!=null?CULT.fmt(R.v100a,0):'valor')}</td></tr>
+ <tr><td>Terreno (parte desse valor)</td><td>${R.vta!=null?'solo do CST':'manual'}</td><td>${I('alva.vt',k.vt,100,R.vta!=null?CULT.fmt(R.vta,0):'valor')}</td></tr>
+ <tr><td>Construção concluída</td><td></td><td class="c">${F(R.con)}</td></tr>
+ <tr><td>% Exe — obra considerada executada (o que se aproveita)</td><td>${k.exeT?'tabela 📋':'manual'}</td><td>${k.exeT?`<span class="c">${P(R.exe)}</span>`:eSel} <button class="secondary mini" data-alact="vaExeTog" title="Estado de execução por capítulos">📋</button></td></tr>
+ <tr><td>Construção executada / aproveitável</td><td>${P(R.exe)} × ${F(R.con)}</td><td class="c">${F(R.exV)}</td></tr>
+ ${R.cust.map((c,i)=>`<tr><td><input data-bind="alva.cust.${i}.d" value="${esc(c.d||'')}" placeholder="ex.: demolições, limpezas" style="width:150px"></td><td>a deduzir <button class="del mini" data-alact="vaCDel" data-i="${i}">✕</button></td><td>${I(`alva.cust.${i}.v`,c.v,100)}</td></tr>`).join('')}
+ <tr class="tot"><td>Valor atual</td><td>terreno + executada${R.ct?' − custos':''}</td><td class="c">${F(R.va)}</td></tr></table></div>
+ <div class="btns"><button class="secondary mini" data-alact="vaCAdd">+ Custo de transformação / adaptação (a deduzir)</button></div>`;
+ if(k.exeT){const X=R.X,rs=(j,v)=>`<select data-bind="alva.exeT.r.${j}" style="width:64px">${Array.from({length:11},(_,q)=>`<option value="${q*10}" ${Math.round((cstNum(v)??0)/10)===q?'selected':''}>${q*10}%</option>`).join('')}</select>`;
+  h+=`<div class="algrp">📋 Estado de execução (% Exe)</div><div class="inrow" style="margin:4px 0"><select data-alact="exeTip">${Object.entries(EXE_TIP).map(([c,[l]])=>`<option value="${c}" ${k.exeT.tip===c?'selected':''}>${esc(l)}</option>`).join('')}</select></div>
+  <div class="cstx"><table><tr><th>Capítulo</th><th>Peso %</th><th>Executado</th><th>Contributo</th></tr>${X.caps.map((c,j)=>`<tr><td>${esc(c.c)}</td><td><input data-bind="alva.exeT.p.${j}" inputmode="decimal" value="${esc(c.p)}" style="width:52px"></td><td>${rs(j,c.r)}</td><td class="c">${esc(CULT.fmt(c.ct*100,1))}%</td></tr>`).join('')}
+  <tr class="tot"><td>% Exe</td><td class="c" style="${Math.abs(X.peso-100)>0.01?'color:#b71c1c':''}">${F(X.peso,0)}%</td><td></td><td class="c">${esc(CULT.fmt(X.tot*100,1))}%</td></tr></table></div>${Math.abs(X.peso-100)>0.01?'<p class="muted" style="color:#b71c1c">A soma dos pesos tem de dar 100 %.</p>':''}<p class="muted" style="margin-top:0">Pesos indicativos da tipologia — corrija se a obra tiver outra estrutura de custos.</p><div class="btns"><button class="secondary mini" data-alact="vaExeTog">Retirar a tabela (% Exe manual)</button></div>`}
+ return h+`<div class="btns"><button class="secondary mini" data-alact="vaOff">Retirar o bloco «Valor atual»</button></div>`}
+function vaSheet(a){const R=vaRun(a);if(!R)return null;const rows=[[{v:'Valor atual',s:2},{v:'Origem',s:2},{v:'Valor (€)',s:2}]];
+ rows.push(['Valor da obra concluída (100 %)',R.ad&&cstNum(a.al.va.v100)==null?`${AL_MET_SIG[R.ad]} adotado`:'indicado',{v:R.v100,s:7}]);
+ rows.push(['Terreno (parte desse valor)',R.vta!=null&&cstNum(a.al.va.vt)==null?'solo do CST':'indicado',{v:R.vt,s:7}]);
+ rows.push(['Construção concluída','',{f:'C2-C3',v:R.con,s:7}]);
+ const xt=R.X?(7+R.cust.length+1+2):0;rows.push(['% Exe — obra considerada executada','',R.X?{f:`D${xt+R.X.caps.length}`,v:R.exe,s:9}:{v:R.exe,s:9}]);
+ rows.push(['Construção executada / aproveitável','',{f:'C4*C5',v:R.exV,s:7}]);
+ R.cust.forEach(c=>rows.push([c.d||'Custo de transformação / adaptação','a deduzir',{v:-c.vn,s:7}]));
+ const rl=rows.length;rows.push([{v:'Valor atual',s:1},'',{f:`ROUND(C3+C6${R.cust.length?`+SUM(C7:C${rl})`:''},-2)`,v:R.va,s:10}]);
+ if(R.X){rows.push([]);rows.push([{v:`Estado de execução (${EXE_TIP[a.al.va.exeT.tip]?.[0]||''})`,s:2},{v:'Peso',s:2},{v:'Executado',s:2},{v:'Contributo',s:2}]);const c0=rows.length+1;
+  R.X.caps.forEach((c,j)=>{const r=c0+j;rows.push([c.c,{v:c.pn/100,s:9},{v:c.rn/100,s:9},{f:`B${r}*C${r}`,v:c.ct,s:5}])});const c1=c0+R.X.caps.length-1;
+  rows.push([{v:'% Exe',s:1},{f:`SUM(B${c0}:B${c1})`,v:R.X.peso/100,s:11},'',{f:`SUM(D${c0}:D${c1})`,v:R.X.tot,s:11}])}
+ return {name:'Valor atual',cols:[38,16,13,11],rows}}
 /* Encargos / benfeitorias (BFT) em tabela, como no Best Value: parcial = QTD × Vref × K1 × K2 (arredondado à centena) */
 function bftRun(a){const L=(a.al.bftL||[]).map(r=>{const n=v=>cstNum(v),vun=(n(r.vref)??0)*(n(r.k1)??1)*(n(r.k2)??1),par=Math.round((n(r.qtd)??1)*vun/100)*100;return {...r,vun,par}});return {L,tot:L.reduce((s1,r)=>s1+r.par,0)}}
 const alBft=a=>(a.al.bftL||[]).length?bftRun(a).tot:null;
 function bftHTML(a){const R=bftRun(a),F=(v,d=0)=>esc(CULT.fmt(v,d)),I=(b,v,w=64)=>`<input data-bind="${b}" inputmode="decimal" value="${esc(v??'')}" style="width:${w}px">`;
  return `<div class="cstx"><table><tr><th>Encargos / benfeitorias</th><th title="Valor de referência por unidade">Vref €</th><th>K1</th><th>K2</th><th>QTD</th><th>Vun €</th><th>Parciais €</th><th></th></tr>
- ${R.L.map((r,i)=>`<tr><td><input data-bind="altab.bft.${i}.d" value="${esc(r.d||'')}" placeholder="ex.: poço, muro, ónus" style="width:140px"></td><td>${I(`altab.bft.${i}.vref`,r.vref,70)}</td><td>${I(`altab.bft.${i}.k1`,r.k1,44)}</td><td>${I(`altab.bft.${i}.k2`,r.k2,44)}</td><td>${I(`altab.bft.${i}.qtd`,r.qtd,52)}</td><td class="c">${F(r.vun,2)}</td><td class="c">${F(r.par)}</td><td><button class="del mini" data-alact="tabDel" data-l="bft" data-i="${i}">✕</button></td></tr>`).join('')}
+ ${R.L.map((r,i)=>`<tr><td><input data-bind="altab.bft.${i}.d" value="${esc(r.d||'')}" placeholder="ex.: poço, muro, ónus" style="width:140px"></td><td><button class="secondary mini" data-alact="bftSign" data-i="${i}" title="Benfeitoria (+) ou encargo a deduzir (−)">${String(r.vref||'').trim().startsWith('-')?'−':'+'}</button>${I(`altab.bft.${i}.vref`,String(r.vref||'').replace(/^-/,''),64)}</td><td>${I(`altab.bft.${i}.k1`,r.k1,44)}</td><td>${I(`altab.bft.${i}.k2`,r.k2,44)}</td><td>${I(`altab.bft.${i}.qtd`,r.qtd,52)}</td><td class="c">${F(r.vun,2)}</td><td class="c">${F(r.par)}</td><td><button class="del mini" data-alact="tabDel" data-l="bft" data-i="${i}">✕</button></td></tr>`).join('')}
  <tr class="tot"><td>Total [BFT]</td><td colspan="5"></td><td class="c">${F(R.tot)}</td><td></td></tr></table></div>
- <div class="btns"><button class="secondary mini" data-alact="tabAdd" data-l="bft">+ Encargo / benfeitoria</button></div><p class="muted" style="margin-top:0">Valor negativo (Vref &lt; 0) para encargos que reduzem o valor.</p>`}
+ <div class="btns"><button class="secondary mini" data-alact="tabAdd" data-l="bft">+ Encargo / benfeitoria</button></div><p class="muted" style="margin-top:0">Toque em + / − para passar a linha a encargo a deduzir (o teclado do iPhone não tem o sinal menos).</p>`}
 /* RND — rendimento (capitalização), como no Best Value: [A] valor atual de N rendas + [B] valor de saída (renda perpétua × fator) atualizado a N+1 com taxa + Δ */
 const pvF=(i,n,c)=>i?c*(1-Math.pow(1+i,-n))/i:c*n;
 function rndRun(a){const k=a.al.rnd;if(!k?.on)return null;const n=v=>cstNum(v)??0;
@@ -2883,7 +2921,7 @@ const AL_MET_REND='Rendimento (capitalização)';
 function alValSync(a){const x=a?.al;if(!x)return;const at=alNum(x.car?.at);
  if(x.mAdot&&!x.met?.[x.mAdot])x.mAdot='';
  if(!x.mAdot&&x.valAuto==='calc'&&x.met?.[AL_MET_REND])x.mAdot=AL_MET_REND;if(!x.mAdot&&x.valAuto==='ref'&&x.met?.['Valores de referência'])x.mAdot='Valores de referência';
- if(x.mAdot&&x.valAuto!==''&&x.valAuto!==undefined){const v=alMetVal(a,x.mAdot);if(v!=null){const nv=String(Math.round(v+(alBft(a)||0)));x.valAuto='met';if(x.valor!==nv)x.valor=nv}return}
+ if(x.mAdot&&x.valAuto!==''&&x.valAuto!==undefined){const v=x.va?.on?vaRun(a).va:alMetVal(a,x.mAdot);if(v!=null){const nv=String(Math.round(v+(alBft(a)||0)));x.valAuto='met';if(x.valor!==nv)x.valor=nv}return}
  if(x.valAuto===undefined){const vu=alNum(x.vun),vr=alNum(x.refV),v=alNum(x.valor);x.valAuto=x.calc&&vu!=null&&at&&v===Math.round(at*vu)?'calc':x.tofRef&&vr!=null&&at&&v===Math.round(at*vr)?'ref':''}
  if(!at||!alTOF(a))return;const u=x.valAuto==='calc'&&x.calc&&alCultOk(a)?alNum(x.vun):x.valAuto==='ref'&&alRefOk(a)?alNum(x.refV):null;if(u!=null){const nv=String(Math.round(at*u));if(x.valor!==nv)x.valor=nv}}
 const AL_MET_REF='Valores de referência';

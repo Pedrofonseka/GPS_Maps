@@ -110,14 +110,18 @@ Cada cálculo sai no Word como Excel embutido (regra das tabelas de cálculo).
 
 Como a folha OUT_Resumo: por verba — valor apurado e % relativa ao total; total apurado; por grupo — Qtd, parciais e %. Sai no Word como Excel embutido editável e no ZIP como `<codigo>_Resumo.xlsx`. Quando houver métodos, o valor de cada verba é o do método adotado + BFT.
 
-## 11. Obras inacabadas, em curso ou em ruína parcial (CST, 1.18)
+## 11. Valor atual — obra em curso, inacabada, em ruína ou a transformar (1.19)
 
-Lógica do perito (custo evolutivo / residual): valor = terreno + % de obra realizada ou aproveitável × valor da construção − custos de demolição, limpeza e transformação. Ex.: 20 + 20 % × 150 − 3 = 47.
+Bloco **autónomo**, aplicado sobre o valor da **obra concluída (100 %)** obtido por qualquer método (CST, MER, RND…) ou indicado à mão:
 
-- (1.18.1) Valor residual = valor da obra acabada (solo + edificações + taxas + margem do promotor — valor de mercado da coisa acabada, pelo custo) − obra por executar ou não aproveitável (custo a novo × (1 − Exec. %)) − custos de demolição, limpeza e transformação (€). Taxas e margem NÃO se anulam.
-- Coluna «Exec. %» por construção; colunas «Valor acabado» e «Por executar».
-- Custos de demolição/limpeza/transformação em € (a deduzir), além da % sobre o valor novo.
-- Tabela de estado de execução por capítulos (pesos somam 100 %; realizado 0–100 % de 10 em 10). Estruturas de custo **indicativas** (capítulos principais; a confirmar/corrigir pelo perito — não são de fonte oficial):
+- **Valor atual = terreno + % Exe × (obra concluída − terreno) − custos de transformação / adaptação.**
+- % Exe = obra considerada executada (o que se aproveita). Manual, ou da tabela de estado de execução por capítulos (estruturas de custo por tipologia; pesos indicativos, somam 100 %).
+- Obra em curso a 20 %: 20 + 0,2 × 150 = 50 (taxas, licenças e encargos incorporados proporcionalmente à execução).
+- Ruína / obra parada com 20 % aproveitável e 3 de demolições e limpezas: 20 + 0,2 × 150 − 3 = 47 (valor residual — RES — sobre o método prévio).
+- Custos de transformação ou adaptação deduzem-se ao valor da obra concluída, seja qual for o método.
+- O CST calcula só a obra concluída; os ajustes mostram a base sobre a qual se aplica cada percentagem.
+
+Estruturas de custo indicativas (capítulos principais; a confirmar/corrigir pelo perito — não são de fonte oficial):
   - Moradia: estaleiro 3, terras e fundações 8, estrutura 22, alvenarias 10, cobertura 8, águas/esgotos 6, eletricidade/telecom 6, rebocos/isolamentos 8, caixilharia/serralharias 8, carpintarias 5, revestimentos 8, pinturas 3, louças/equipamentos/climatização 5.
   - Habitação coletiva: 3, 7, 24, 9, 4, 7 (águas/esgotos/gás), 7 (eletricidade/ITED), 5 (elevadores/climatização), 8, 8, 5, 8, 3, 2.
   - Pavilhão: estaleiro 3, terras e fundações 12, estrutura 30, cobertura e revest. laterais 22, alvenarias 6, pavimento industrial 12, águas/esgotos 4, eletricidade 6, portões/caixilharia 5.
