@@ -106,7 +106,10 @@ Linhas com Vref (da tabela), K1, K2, QTD → `parcela = QTD × Vref × K1 × K2 
 5. RND para edifícios ✅ (1.16, com BFT em tabela); DCF; RES.
 Cada cálculo sai no Word como Excel embutido (regra das tabelas de cálculo).
 
-## 10. Resumo do processo (feito na 1.12)
+## 10. Resumo do processo (1.12) e livro do processo (1.20)
+
+Na pasta ZIP vai `<codigo>_Livro_Avaliacao.xlsx`: folha Resumo + uma folha por verba com os cálculos ligados por fórmulas (custo → métodos → valor atual → valor da verba → Resumo). As tabelas embutidas no Word são cópias independentes: para corrigir no PC com tudo ligado, usa-se o livro.
+
 
 Como a folha OUT_Resumo: por verba — valor apurado e % relativa ao total; total apurado; por grupo — Qtd, parciais e %. Sai no Word como Excel embutido editável e no ZIP como `<codigo>_Resumo.xlsx`. Quando houver métodos, o valor de cada verba é o do método adotado + BFT.
 
