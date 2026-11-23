@@ -133,6 +133,15 @@ table.pg{width:100%;border-collapse:collapse;table-layout:fixed}table.pg td{bord
 .pvbar{display:flex;gap:8px;align-items:center;padding:8px 10px;padding-top:max(8px,env(safe-area-inset-top));background:#E3AE1F;color:#1f2328}#prevOv .pvbar b{flex:1;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#prevOv .pvbar button{background:#fff;color:#E3AE1F;border:0;min-height:40px}#prevOv .pvscroll{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:10px 0 calc(30px + env(safe-area-inset-bottom))}#prevOv .pvzoom{transform-origin:top left}#prevOv .docx-wrapper{background:transparent!important;padding:0!important}#prevOv .docx-wrapper>section.docx{margin:0 auto 12px!important;box-shadow:0 2px 10px #0006!important}
 /* AvaLias — réguas e menus a amarelo médio, texto escuro para contraste */
 :root{--pri:#c2540f;--pri2:#c2540f;--priTx:#9a3d06;--bg:#f1eeeb;--line:#ddd7d1}#hdr{background:#34383d!important;color:#fff!important;border-bottom:3px solid #f28c28}#hdr .ver,#hdr .crumbs{color:#e9e6e3}#hdr .mini{background:#4a4f55;color:#fff;border-color:#4a4f55}#hdr .mini.on{background:#f28c28;color:#202b36;border-color:#f28c28}.secondary,button.sm,.btn:not(.green){border-color:#e3b08a}.algrp{margin:16px 0 4px;font-weight:700;color:#9a3d06;border-bottom:1px solid #ddd7d1;padding-bottom:3px}.vbpos{display:block;font-size:11.5px;font-weight:600;color:var(--mute)}.row2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}@media(max-width:520px){.row2{grid-template-columns:1fr}}.alcard{position:relative;padding-right:58px}.aldel{position:absolute;right:8px;bottom:10px;width:40px;min-height:36px;padding:0;border-radius:9px;background:#fff;color:#c62828;border:1.5px solid #e3a19c;font-size:17px}.allist{max-height:300px;overflow:auto;margin:8px 0}.tks.sm .tk{font-size:13.5px}#hdr{color:#1f2328}#hdr button{background:rgba(255,255,255,.5);color:#1f2328;border-color:rgba(0,0,0,.2)}#hdr button.on{background:#1f2328;color:#fff}h2{color:var(--priTx)}button,.btn{color:#1f2328;border-color:#c99a12}.secondary,button.sm,.btn:not(.green){background:#fff;color:var(--priTx);border-color:#d8c48a}.green,.pri{color:#fff;border-color:var(--ok)}.seg button{color:var(--priTx)}.seg button.on{background:var(--pri);color:#1f2328}.pill{color:var(--priTx)}.blk{color:#1f2328}table.st th{color:#1f2328}.steps3 b{color:#1f2328}.cd.sel{color:#1f2328}.subdesc b{color:var(--priTx)}details.sec>summary:before{color:var(--priTx)}.tk.on{background:#fbf3d6}
+.cstx{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:6px 0 8px;border:1px solid #ddd;border-radius:8px;max-width:100%}
+.cstx table{border-collapse:separate;border-spacing:0;font-size:13px;white-space:nowrap}
+.cstx th,.cstx td{padding:4px 5px;border-bottom:1px solid #eee;text-align:left;vertical-align:middle}
+.cstx th{background:#f3efe9;font-weight:700;font-size:12px}
+.cstx td.c{text-align:right;color:#333;background:#fafafa}
+.cstx tr.tot td{font-weight:700;background:#f6f6f6}
+.cstx th:first-child,.cstx td:first-child{position:sticky;left:0;z-index:1;background:#fff;box-shadow:1px 0 0 #ddd;max-width:150px;white-space:normal}
+.cstx th:first-child{background:#f3efe9}.cstx tr.tot td:first-child{background:#f6f6f6}
+.cstx input,.cstx select{padding:4px 5px;font-size:13px;min-height:0;margin:0}
 </style>
 </head>
 <body>
@@ -717,7 +726,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.15';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.15.1';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -2762,19 +2771,22 @@ function cstSheet(a){const k=a.al.cst,R=cstRun(a);if(!R)return null;const alNum=
  rows.push([{v:'Valor pelo custo (CST)',s:1},'','','','','','','',{f:`ROUND(I4+I${rS}+I${rF}+I${rE}+I${rT}+I${rM}+I${rR},-2)`,v:R.total,s:10}]);
  return {name:'Custo',cols:[30,8,8,9,10,8,7,9,11],rows}}
 function cstHTML(a){const x=a.al,k=x.cst;if(!k?.on)return `<div class="btns"><button class="secondary mini" data-alact="cstOn">🧮 Calcular pelo custo (CST)</button></div>`;
- const R=cstRun(a),f=(key,l,h)=>`<label class="cmf"><span>${l}</span><input data-bind="alcst.${key}" inputmode="decimal" value="${esc(k[key]??'')}">${h?`<small class="muted">${h}</small>`:''}</label>`;
- const estOpts=e=>`<option value="">—</option>${Object.entries(RHD_EST).map(([c,[l]])=>`<option value="${c}" ${rhdCod(e)===c?'selected':''}>${c} · ${esc(l)}</option>`).join('')}`;
- return `<div class="algrp">🧮 Cálculo pelo custo (CST)</div><p class="muted" style="margin-top:0">Valores por defeito como no livro Best Value — confirme ou corrija. Percentagens em decimal (0,075 = 7,5 %).</p>
- <b>[A] Solo</b><div class="cmgrid">${f('area','Área de terreno (m²)')}${f('C','C — custo de construção (€/m²)')}${f('IUS','IUS — índice de utilização')}${f('ILZ','ILZ — % do valor imputável ao solo','CE: ex. 0,065')}${f('Div','Div — coef. de ajuste')}${f('Ap','Área padrão (m²)','vazio = sem correção de área')}${f('enc','Encargos de aquisição')}</div>
- <p class="muted">V_un = ${esc(CULT.fmt(R.vun,2))} €/m²${R.kar!==1?` (K_Ar ${esc(CULT.fmt(R.kar,4))})`:''} · Solo = <b>${esc(alEur(R.solo))}</b></p>
- <b>[B] Edificações</b>${(k.ed||[]).map((e,i)=>{const E=R.ed[i];return `<div class="card" style="padding:8px;margin:6px 0"><div class="inrow"><input data-bind="alcst.ed.${i}.d" value="${esc(e.d||'')}" placeholder="Descrição" style="flex:1;min-width:0"><button class="del" data-alact="cstDel" data-i="${i}">✕</button></div><div class="cmgrid">
-  <label class="cmf"><span>Área (m²)</span><input data-bind="alcst.ed.${i}.area" inputmode="decimal" value="${esc(e.area||'')}"></label><label class="cmf"><span>K1</span><input data-bind="alcst.ed.${i}.k1" inputmode="decimal" value="${esc(e.k1||'')}"></label><label class="cmf"><span>Custo novo (€/m²)</span><input data-bind="alcst.ed.${i}.cnv" inputmode="decimal" value="${esc(e.cnv||'')}"></label>
-  <label class="cmf"><span>Idade (anos)</span><input data-bind="alcst.ed.${i}.idade" inputmode="decimal" value="${esc(e.idade||'')}"></label><label class="cmf"><span>Vida útil (anos)</span><input data-bind="alcst.ed.${i}.vida" inputmode="decimal" value="${esc(e.vida||'')}"></label>
-  <label class="cmf"><span>Estado de conservação</span><select data-bind="alcst.ed.${i}.est">${estOpts(e.est)}</select></label><label class="cmf"><span>Coef. adotado (opcional)</span><input data-bind="alcst.ed.${i}.adot" inputmode="decimal" value="${esc(e.adot||'')}"><small class="muted">fração que fica; substitui Ross-Heidecke</small></label></div>
-  <p class="muted" style="margin:4px 0 0">Novo ${esc(alEur(E.nv))} · idade rel. ${esc(CULT.fmt(E.r*100,0))} % · dep. física ${esc(CULT.fmt(E.dep*100,1))} % → <b>${esc(alEur(E.val))}</b></p></div>`}).join('')}
- <div class="btns"><button class="secondary mini" data-alact="cstAdd">+ Construção</button></div>
- <b>Ajustes</b><div class="cmgrid">${f('of','Obsolescência funcional')}${f('oe','Obsolescência económica / externa')}${f('txl','Taxas, licenças e projetos','só se estado global ≥ 50 %')}${f('mlr','Margem do promotor')}${f('trf','Transformação / demolição','negativo, sobre o valor novo')}</div>
- <div class="cmres">Solo ${esc(alEur(R.solo))} + edificações ${esc(alEur(R.efa))} (novo ${esc(alEur(R.NV))}, estado ${esc(CULT.fmt(R.rat*100,0))} %) + taxas ${esc(alEur(R.txlV))} + margem ${esc(alEur(R.mlrV))}${R.trfV?` + transformação ${esc(alEur(R.trfV))}`:''} = <b>${esc(alEur(R.total))}</b></div>
+ const R=cstRun(a),F=(v,d=0)=>esc(CULT.fmt(v,d)),P=v=>esc(CULT.fmt(v*100,1))+'%';
+ const I=(bind,val,w=64)=>`<input data-bind="${bind}" inputmode="decimal" value="${esc(val??'')}" style="width:${w}px">`;
+ const estSel=(i,e)=>`<select data-bind="alcst.ed.${i}.est" style="width:128px"><option value="">—</option>${Object.entries(RHD_EST).map(([c,[l]])=>`<option value="${c}" ${rhdCod(e)===c?'selected':''}>${c} · ${esc(l)}</option>`).join('')}</select>`;
+ const th=(t,tt='')=>`<th${tt?` title="${esc(tt)}"`:''}>${t}</th>`;
+ const solo=`<div class="cstx"><table><tr>${th('[A] Solo')}${th('Área m²')}${th('C €/m²','Custo de construção de referência')}${th('IUS','Índice de utilização do solo')}${th('ILZ','% do valor da construção imputável ao solo')}${th('Div','Coeficiente de ajuste')}${th('Área padrão','Vazio = sem correção de área')}${th('K_Ar')}${th('V_un €/m²')}${th('Valor €')}</tr>
+  <tr><td>Terreno</td><td>${I('alcst.area',k.area,72)}</td><td>${I('alcst.C',k.C)}</td><td>${I('alcst.IUS',k.IUS,52)}</td><td>${I('alcst.ILZ',k.ILZ,58)}</td><td>${I('alcst.Div',k.Div,48)}</td><td>${I('alcst.Ap',k.Ap,64)}</td><td class="c">${F(R.kar,4)}</td><td class="c">${F(R.vun,2)}</td><td class="c">${F(R.soloB)}</td></tr>
+  <tr><td>Encargos de aquisição</td><td colspan="6"></td><td colspan="2">${I('alcst.enc',k.enc,58)}</td><td class="c">${F(R.encV)}</td></tr>
+  <tr class="tot"><td>Valor do solo [A]</td><td colspan="8"></td><td class="c">${F(R.solo)}</td></tr></table></div>`;
+ const ed=`<div class="cstx"><table><tr>${th('[B] Edificações')}${th('Área m²')}${th('K1')}${th('C novo €/m²')}${th('V. novo €')}${th('Idade')}${th('Vida útil')}${th('Id. rel.')}${th('Estado de conservação')}${th('Dep. física','Ross-Heidecke')}${th('Coef. adot.','Fração que fica — substitui Ross-Heidecke')}${th('Valor €')}${th('')}</tr>
+  ${(k.ed||[]).map((e,i)=>{const E=R.ed[i];return `<tr><td><input data-bind="alcst.ed.${i}.d" value="${esc(e.d||'')}" placeholder="Descrição" style="width:130px"></td><td>${I(`alcst.ed.${i}.area`,e.area)}</td><td>${I(`alcst.ed.${i}.k1`,e.k1,44)}</td><td>${I(`alcst.ed.${i}.cnv`,e.cnv)}</td><td class="c">${F(E.nv)}</td><td>${I(`alcst.ed.${i}.idade`,e.idade,48)}</td><td>${I(`alcst.ed.${i}.vida`,e.vida,48)}</td><td class="c">${P(E.r)}</td><td>${estSel(i,e.est)}</td><td class="c">${P(E.dep)}</td><td>${I(`alcst.ed.${i}.adot`,e.adot,54)}</td><td class="c">${F(E.val)}</td><td><button class="del mini" data-alact="cstDel" data-i="${i}">✕</button></td></tr>`}).join('')}
+  <tr class="tot"><td>Edificações</td><td colspan="3"></td><td class="c">${F(R.NV)}</td><td colspan="6"></td><td class="c">${F(R.edif)}</td><td></td></tr></table></div>
+  <div class="btns"><button class="secondary mini" data-alact="cstAdd">+ Construção</button></div>`;
+ const aj=[['of','Obsolescência funcional',R.ofV],['oe','Obsolescência económica / externa',R.oeV],['txl','Taxas, licenças e projetos (só se estado ≥ 50 %)',R.txlV],['mlr','Margem do promotor',R.mlrV],['trf','Transformação / demolição (s/ valor novo)',R.trfV]];
+ const ajT=`<div class="cstx"><table><tr>${th('Ajustes')}${th('%  (decimal)')}${th('Valor €')}</tr>${aj.map(([key,l,v])=>`<tr><td>${l}</td><td>${I('alcst.'+key,k[key],64)}</td><td class="c">${F(v)}</td></tr>`).join('')}
+  <tr class="tot"><td>Valor pelo custo (CST)</td><td class="c">estado ${F(R.rat*100,0)}%</td><td class="c">${F(R.total)}</td></tr></table></div>`;
+ return `<div class="algrp">🧮 Cálculo pelo custo (CST)</div><p class="muted" style="margin-top:0">Valores por defeito como no livro Best Value — confirme ou corrija. Percentagens em decimal (0,075 = 7,5 %). No telemóvel, deslize a tabela para o lado: a 1.ª coluna fica fixa.</p>${solo}${ed}${ajT}
  <div class="btns"><button class="secondary mini" data-alact="cstOff">Retirar o cálculo</button></div>`}
 /* tabela dos métodos da verba (Excel editável): valor por método, adotado, BFT e valor estimado */
 function alMetSheet(a){const x=a.al,on=alMetOn(x);if(!on.length)return null;const ad=x.mAdot,rows=[[{v:'Método',s:2},{v:'Designação',s:2},{v:'Valor (€)',s:2},{v:'Adotado',s:2}]];
