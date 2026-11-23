@@ -21,4 +21,5 @@ Rotina comum às apps com vários itens no mesmo processo (verbas, parcelas, ano
 
 ## Onde está aplicada
 - AvaLias 1.21 (verbas).
-- A seguir: ExPropria (parcelas), Relatório de Peritagem, Regi, FullTopics; AVA_Input já tinha ordem de visita própria — passará a este motor.
+- Relatório de Peritagem 1.29 (situações): OV e «Data-hora» em 1 · Identificação da ficha; lista «Ordem da lista | Ordem de visita» (▲▼ só na ordem da lista); no relatório, a ordem de visita é mais uma opção do seletor «Ordem» já existente (por defeito: ordem da lista).
+- A seguir: ExPropria (parcelas), Regi, FullTopics; AVA_Input já tinha ordem de visita própria — passará a este motor.

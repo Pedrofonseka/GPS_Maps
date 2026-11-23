@@ -764,7 +764,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: Relatório de Peritagem =====
-const VERSION='1.28.7';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.29';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):parteLista(p));
@@ -952,10 +952,11 @@ async function enforceMax(){const m=maxF();let n=0;for(const p of procs){let ch=
 const inRel=f=>f.sel!==false;const relF=a=>a.fotos.filter(inRel);const resF=a=>a.fotos.filter(f=>!inRel(f));const MAXALL=40;
 function normFotos(a){a.fotos=[...relF(a),...resF(a)]}
 // ---------- ordenação da saída (Word, PDF, pré-visualização) ----------
-const ORDENS=[['lista','Por blocos — parte que coloca as questões (ordem da lista)'],['hier','NUF › Piso › Local › Elemento'],['zona','NUF – Núcleo Funcional'],['local','Local (compartimento)'],['elemento','Elemento'],['tipo','Tipo de anomalia'],['grav','Gravidade'],['urg','Urgência'],['gut','Prioridade (maior primeiro)'],];
+const ORDENS=[['lista','Por blocos — parte que coloca as questões (ordem da lista)'],['visita','Ordem de visita (OV) — as por visitar ficam no fim'],['hier','NUF › Piso › Local › Elemento'],['zona','NUF – Núcleo Funcional'],['local','Local (compartimento)'],['elemento','Elemento'],['tipo','Tipo de anomalia'],['grav','Gravidade'],['urg','Urgência'],['gut','Prioridade (maior primeiro)'],];
 // bloco de cada parte: as questões são tratadas por blocos (como no tribunal), com o título no início de cada bloco
 function blocoNome(p,n){const sg=parteSig(p,n),nm=String(parteNome(p,n)||'').replace(/\s*\(.*\)$/,'');if(p.rel?.ambito==='particular'&&sg!=='P')return 'Questões do solicitante';return sg==='A'?'Questões do Autor':sg==='R'?'Questões do Réu':sg==='T'?'Questões do Tribunal':sg==='S'?'Questões do Solicitante':sg==='P'?'Situações constatadas no local pelo Perito':`Questões — ${nm||'Parte '+n}`}
 function ordAnoms(p,L){let o=p.ordem||'lista';if(o==='parte')o='lista';
+  if(o==='visita')return L.map((a,i)=>({a,i})).sort((x,y)=>((+x.a.ov||1e9)-(+y.a.ov||1e9))||(x.i-y.i)).map(x=>({...x.a,_grp:''}));
   if(o==='lista')return L.map((a,i)=>({a,i,n:parteOf(p,a)})).sort((x,y)=>{const ix=(p.partes||[]).findIndex(q=>q.n==x.n),iy=(p.partes||[]).findIndex(q=>q.n==y.n);return (ix-iy)||((x.a._n||0)-(y.a._n||0))||(x.i-y.i)}).map(x=>({...x.a,_grp:blocoNome(p,x.n)}));
   const ci=(cat,v)=>{if(!v)return 1e6;const i=(settings[cat]||[]).indexOf(v);return i<0?1e5:i};const fo=id=>settings.fields.find(f=>f.id===id);
   const optI=(id,v)=>{const f=fo(id);if(!v||!f)return 1e6;const i=(f.opts||[]).findIndex(x=>x[0]===v);return i<0?1e5:i};
@@ -1217,12 +1218,30 @@ function vAnal(){const p=cur(),an=p.anomalias,done=an.filter(isDone).length;cons
       return `<div class="card thc" data-aid="${a.id}"><div class="thh"><b>${anCode(p,a)}</b> <span class="muted">${hh}</span><button class="secondary mini" data-act="openAnom" data-id="${a.id}" style="float:right">ficha ›</button>${a.descricao?`<div class="muted clamp">${esc(a.descricao)}</div>`:''}</div>${inner}</div>`}).join('')}
   return head+body+`<details class="sec" data-key="aCfg" ${S.open.aCfg?'open':''}><summary>⚙ Configuração da análise (campos a atender e títulos)</summary><div class="body">${secCampos(p)}${secLogica(p)}</div></details>`
     +blk('Conclusões','Apreciação geral e passos seguintes')+relRelHTML(p,'anal')+nextBtn('orc','5 · Custos')}
+/* @comum:visita v1.0 — Ordem de visita (OV_xxx): ordem real no terreno, separada do código do processo. O primeiro registo no local (foto tirada na app, GPS, «visitado hoje») sugere o número seguinte; o utilizador aceita ou corrige; os outros reajustam-se sem repetidos. Regra: docs/regras/visita.md */
+const ovCod=n=>(+n>0)?'OV_'+String(+n).padStart(3,'0'):'';
+const ovNext=L=>Math.max(0,...L.map(x=>+x.ov||0))+1;
+function ovCompact(L){L.filter(x=>+x.ov>0).sort((a,b)=>a.ov-b.ov||L.indexOf(a)-L.indexOf(b)).forEach((x,i)=>x.ov=i+1)}
+function ovTouch(L,it){if(!it||+it.ov>0)return false;it.ov=ovNext(L);it.ovSug=1;it.ovT=Date.now();return true}
+function ovSet(L,it,n){n=Math.round(+n||0);if(n<1){it.ov=0;it.ovSug=0;ovCompact(L);return}const V=L.filter(x=>x!==it&&+x.ov>0).sort((a,b)=>a.ov-b.ov);V.splice(Math.min(n-1,V.length),0,it);V.forEach((x,i)=>x.ov=i+1);it.ovSug=0;if(!it.ovT)it.ovT=Date.now()}
+const ovAccept=it=>{it.ovSug=0};
+const ovSort=L=>L.slice().sort((a,b)=>((+a.ov||1e9)-(+b.ov||1e9))||(L.indexOf(a)-L.indexOf(b)));
+function ovFromTimes(L,tsOf){const c=L.filter(x=>!(+x.ov>0)).map(x=>[x,tsOf(x)]).filter(([,t])=>t).sort((a,b)=>a[1]-b[1]);c.forEach(([x,t])=>{x.ov=ovNext(L);x.ovSug=1;x.ovT=t});return c.length}
+/* @fim:visita */
+const ovChip=a=>+a.ov>0?`<span style="display:inline-block;font-size:11px;font-weight:700;color:${a.ovSug?'#8a6d00':'#1b5e20'};background:${a.ovSug?'#fff8e1':'#e8f5e9'};border:1px ${a.ovSug?'dashed #c9a227':'solid #81c784'};border-radius:6px;padding:0 5px;margin-right:4px" title="${a.ovSug?'Ordem de visita sugerida — confirme na ficha':'Ordem de visita'}">${ovCod(a.ov)}${a.ovSug?'?':''}</span>`:'';
+const ovL=p=>p.anomalias.filter(x=>x.id!==CTXID);
+function ovTouchCur(){try{const p=cur(),a=curA();if(p&&a&&a.id!==CTXID&&ovTouch(ovL(p),a))toast(`${anCode(p,a)}: ordem de visita sugerida ${ovCod(a.ov)} — confirme ou corrija na ficha.`)}catch(e){}}
+function ovRelHTML(p,a){if(a.id===CTXID)return '';const L=ovL(p),d=a.dh||{};return `<div class="card" style="padding:8px;margin:0 0 8px"><label style="margin-top:0">Ordem de visita</label><div class="inrow" style="align-items:center">${+a.ov>0?`<b style="flex:0 0 auto">${ovCod(a.ov)}</b>${a.ovSug?'<span class="muted" style="flex:0 0 auto">(sugerida)</span>':''}`:'<span class="muted" style="flex:0 0 auto">por visitar</span>'}<input data-ovset="1" inputmode="numeric" value="${+a.ov>0?a.ov:''}" placeholder="n.º" style="width:64px;flex:0 0 64px">${a.ovSug&&!d.sug?'<button class="green mini" data-act="ovOk">✓ Aceitar</button>':''}${+a.ov>0?'<button class="secondary mini" data-act="ovClr">Limpar</button>':''}</div>
+ <div class="inrow" style="margin-top:6px;align-items:center"><input data-dh="data" value="${esc(d.data||'')}" placeholder="dd/mm/aaaa" style="flex:1;min-width:0"><input data-dh="hora" value="${esc(d.hora||'')}" placeholder="hh:mm" inputmode="numeric" style="width:72px;flex:0 0 72px"><button class="secondary" data-act="dhNow" title="Regista a data e a hora de agora e sugere a ordem de visita">🕘 Data-hora</button></div>
+ ${d.sug?`<div class="muted" style="margin-top:6px">Registado ${esc(d.data||'')} ${esc(d.hora||'')}${+a.ov>0?` · ${ovCod(a.ov)}`:''} — confirme. <button class="green mini" data-act="dhOk">✓ Aceitar</button> <button class="secondary mini" data-act="dhNo">✕ Anular — não era esta situação</button></div>`:''}
+ <p class="muted" style="margin:4px 0 0">Ordem real no terreno (o código ${anCode(p,a)} não muda). A 1.ª foto tirada na app ou «Data-hora» sugerem o n.º seguinte; escrevendo outro n.º, as restantes reajustam-se.</p></div>`}
+document.addEventListener('change',async e=>{const el=e.target;if(!el.dataset?.ovset&&!el.dataset?.dh)return;e.stopImmediatePropagation();const p=cur(),a=curA();if(!p||!a)return;if(el.dataset.ovset)ovSet(ovL(p),a,el.value);else{a.dh=a.dh||{};a.dh[el.dataset.dh]=el.value}await saveProc();S.scrollTop=window.scrollY;render()},true);
 function anomCard(a,i,n,mode){
   const p=cur();const st=isDone(a)?pill('✓ analisada','ok'):pill('por analisar','warn');
   const vals=[];if(useK(p,'conf')&&a.vals?.conf)vals.push(esc(a.vals.conf));if(useK(p,'cons')&&a.vals?.cons?.length)vals.push(esc(a.vals.cons.filter(x=>x!=='OUT').join(', ')));if(useK(p,'tipo')&&a.vals?.tipo?.length)vals.push(esc(a.vals.tipo.join(', ')));
-  return `<div class="card ${a.id===S.aid?'active':''}"><div class="cardrow"><div class="grow" data-act="openAnom" data-id="${a.id}"><b>${anCode(p,a)}</b> <span class="muted">${esc((parteNome(p,parteOf(p,a))||'').replace(/\s*\(.*\)$/,''))}${a.ref?' · Item '+esc(a.ref):''}</span> · ${esc(zonaTxt(a))} · <i>${esc(a.elemento||'')}</i>
+  return `<div class="card ${a.id===S.aid?'active':''}"><div class="cardrow"><div class="grow" data-act="openAnom" data-id="${a.id}">${ovChip(a)}<b>${anCode(p,a)}</b> <span class="muted">${esc((parteNome(p,parteOf(p,a))||'').replace(/\s*\(.*\)$/,''))}${a.ref?' · Item '+esc(a.ref):''}</span> · ${esc(zonaTxt(a))} · <i>${esc(a.elemento||'')}</i>
   <div class="muted clamp">${esc(a.descricao||'')}</div><div style="margin-top:4px">${mode==='analise'?st:''}${a.origem==='local'?pill('constatada pelo perito','bad'):''}${vals.length?pill(vals.join(' · ')):''}${pill('📷 '+relF(a).length+(resF(a).length?` (+${resF(a).length})`:''))}</div></div>
-  ${S.view==='anom'?`<div class="mv"><button class="secondary mini" data-act="mvA" data-id="${a.id}" data-d="-1" ${i?'':'disabled'}>▲</button><button class="secondary mini" data-act="mvA" data-id="${a.id}" data-d="1" ${i<n-1?'':'disabled'}>▼</button><button class="del" data-act="delA" data-id="${a.id}">🗑</button></div>`:''}</div></div>`;
+  ${S.view==='anom'&&!settings.listOv?`<div class="mv"><button class="secondary mini" data-act="mvA" data-id="${a.id}" data-d="-1" ${i?'':'disabled'}>▲</button><button class="secondary mini" data-act="mvA" data-id="${a.id}" data-d="1" ${i<n-1?'':'disabled'}>▼</button><button class="del" data-act="delA" data-id="${a.id}">🗑</button></div>`:''}</div></div>`;
 }
 // ----- Anomalias (pronúncia) -----
 function addBtns(p,short){const m=p.modo||'misto';const imp=`<button class="secondary" data-act="goImport">⬆ Importar lista (Excel/Word)</button>`;
@@ -1248,7 +1267,8 @@ function vAnoms(){
   ${usedP.length>1?`<select data-act="filtParte"><option value="">Todas as partes</option>${usedP.map(n=>`<option value="${n}" ${F.parte==n?'selected':''}>${n} – ${esc(parteNome(p,n))}</option>`).join('')}</select>`:''}
   ${an.length>1?`<div class="inrow"><select data-act="sortBy"><option value="">⇅ Ordenar a lista…</option><option value="num">Pelo número sequencial (código)</option><option value="ref">Pelo item (n.º na lista fornecida)</option><option value="hier">Por NUF › Piso › Local › Elemento</option></select></div><div class="muted" style="font-size:.85em">Ou a ordem que quiser: mova cada situação com ▲▼.</div>`:''}
   ${zonas.length>1?`<select data-act="filtZona"><option value="">Todas as zonas</option>${zonas.map(z=>`<option ${F.zona===z?'selected':''}>${esc(z)}</option>`).join('')}</select>`:''}`:''}
-  <div class="list">${vis.map(a=>anomCard(a,an.indexOf(a),an.length,'analise')).join('')||(an.length?'<p class="muted">Nenhuma anomalia com este filtro.</p>':'<p class="muted">Sem anomalias. Importe a lista fornecida ou acrescente-as uma a uma.</p>')}</div>
+  ${an.length>1?`<div class="seg" style="margin-top:6px"><button class="${settings.listOv?'':'on'}" data-act="ovList" data-v="0">Ordem da lista</button><button class="${settings.listOv?'on':''}" data-act="ovList" data-v="1">Ordem de visita (OV)</button></div>${an.some(a=>a.ovSug)?`<div class="btns"><button class="secondary mini" data-act="ovOkAll">✓ Aceitar as ordens de visita sugeridas</button></div>`:''}`:''}
+  <div class="list">${(settings.listOv?ovSort(vis):vis).map(a=>anomCard(a,an.indexOf(a),an.length,'analise')).join('')||(an.length?'<p class="muted">Nenhuma anomalia com este filtro.</p>':'<p class="muted">Sem anomalias. Importe a lista fornecida ou acrescente-as uma a uma.</p>')}</div>
   ${an.length>3?addBtns(p,true):''}
   ${isPart(ensureRel(p))?'':secPartes(p)}
   ${an.length?nextBtn('insp','3 · Inspeção'):''}`;
@@ -1273,7 +1293,7 @@ function vFicha(){
   S.subNav=`<div class="fnav"><button class="secondary" data-act="backList">◀ Lista</button><b class="grow center">${anCode(p,a)} · ${idx+1}/${n}</b><button class="secondary" data-act="stepA" data-d="-1" ${idx?'':'disabled'}>◀</button><button class="secondary" data-act="stepA" data-d="1" ${idx<n-1?'':'disabled'}>▶</button></div>${(()=>{const h=[a.zona,a.piso,a.local,a.elemento].map(x=>String(x||'').trim());return h.some(Boolean)?`<div class="subhier">${h.map((x,i)=>x?esc(x):`<span class="muted">${['NUF','Piso','Local','Elemento'][i]} —</span>`).join(' <span class="muted">/</span> ')}</div>`:''})()}${a.descricao?`<div class="subdesc ${S.descFull?'full':''}" data-act="descFull"><b>${esc(lblD(p))}:</b> ${esc(a.descricao)}<span class="dmore">${S.descFull?'▲':'▼'}</span></div>`:''}`;
   let h='';
   const ctx=S.view==='anal'?'an':'sit';
-  h+=sec('f1','1 · Identificação'+(fromList?'':` <span class="muted" style="font-weight:400">· ${esc(a.elemento||'')}</span>`),idBody,{cnt:falta(idMiss),def:ctx==='sit'||!!idMiss});
+  h+=sec('f1','1 · Identificação'+(fromList?'':` <span class="muted" style="font-weight:400">· ${esc(a.elemento||'')}</span>`),ovRelHTML(p,a)+idBody,{cnt:falta(idMiss),def:ctx==='sit'||!!idMiss});
   if(ctx==='sit')h+=`<div class="btns"><button class="secondary" data-act="toAnal">Analisar esta situação (4 · Análise) ▶</button></div>`;
   if(ctx==='an'){
     const prev=p.anomalias[idx-1];const prevHas=prev&&Object.entries(prev.vals||{}).some(([k,v])=>useK(p,k)&&(Array.isArray(v)?v.length:v));
@@ -2745,6 +2765,13 @@ document.addEventListener('click',async e=>{{const _x=e.target.closest&&e.target
     case 'rvOk':{const w=el.dataset.w;settings.spellOk=[...new Set([...(settings.spellOk||[]),w])];await saveSettings();if(S.review)S.review.issues=S.review.issues.filter(x=>!(x.word&&x.word.toLowerCase()===w.toLowerCase()));toast(`«${w}» passa a ser aceite em todos os processos.`);S.scrollTop=window.scrollY;break}
     case 'relWord':{if(dirty)await saveProc();if(!await exportGate(p))return;toast('A gerar o relatório…');try{const o=await buildRelat(p);await saveBlob(new Blob([o.bytes],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}),o.name)}catch(err){toast('Erro ao gerar o relatório: '+err.message,1)}return}
     case 'filt':S.filt.st=el.dataset.v;S.scrollTop=window.scrollY;break;
+    case 'ovOk':ovAccept(a);await saveProc();S.scrollTop=window.scrollY;break;
+    case 'ovClr':ovSet(ovL(p),a,0);await saveProc();S.scrollTop=window.scrollY;break;
+    case 'ovOkAll':p.anomalias.forEach(ovAccept);await saveProc();S.scrollTop=window.scrollY;break;
+    case 'ovList':settings.listOv=el.dataset.v==='1';await saveSettings();S.scrollTop=window.scrollY;break;
+    case 'dhNow':{const d=new Date(),z=n=>String(n).padStart(2,'0');a.dh={data:`${z(d.getDate())}/${z(d.getMonth()+1)}/${d.getFullYear()}`,hora:`${z(d.getHours())}:${z(d.getMinutes())}`,sug:1};ovTouch(ovL(p),a);await saveProc();S.scrollTop=window.scrollY;break}
+    case 'dhOk':if(a.dh)a.dh.sug=0;ovAccept(a);await saveProc();S.scrollTop=window.scrollY;break;
+    case 'dhNo':a.dh={};if(a.ovSug)ovSet(ovL(p),a,0);toast('Registo anulado nesta situação — abra a situação certa e carregue em «Data-hora».');await saveProc();S.scrollTop=window.scrollY;break;
     case 'dupA':{const c=JSON.parse(JSON.stringify(a));c.id=uid();c.ref='';c.fotos=[];c.num=p.lockNum?nextNum(p,parteOf(p,a)):undefined;c.parte=parteOf(p,a);c.createdAt=Date.now();p.anomalias.splice(p.anomalias.indexOf(a)+1,0,c);S.aid=c.id;S.openId=true;S.open.f1=true;S.scrollTop=0;await saveProc();toast(`Duplicada como ${anCode(p,c)} (sem fotografias).`);break}
     case 'copyPrev':{const i=p.anomalias.indexOf(a),pv=p.anomalias[i-1];if(!pv)return;const has=Object.entries(a.vals||{}).some(([k,v])=>useK(p,k)&&(Array.isArray(v)?v.length:v));
       if(has&&!await ask(`Substituir a pronúncia de ${anCode(p,a)} pela de ${anCode(p,pv)}? (o texto «${lblC(p)}» e as fotos não são copiados)`,['Cancelar','Substituir']))return;
@@ -2944,7 +2971,7 @@ document.addEventListener('change',async e=>{{const _x=e.target.closest&&e.targe
   if(act==='addCam'||act==='addLib'){
     const files=[...el.files];el.value='';const room=MAXALL-a.fotos.length;let nRes=0;
     if(files.length>room)toast(`Só cabem mais ${room} foto(s) nesta anomalia (máx. ${MAXALL} com a reserva); as restantes foram ignoradas.`,1);
-    for(const f of files.slice(0,room)){try{const r=await compressImage(f,settings.photoKB);const fid=uid();await fotoPut(fid,r.data);let ph='';try{ph=await phash(r.data)}catch(e){}{const sel=relF(a).length<maxF();if(!sel)nRes++;a.fotos.push({id:fid,w:r.w,h:r.h,legenda:'',ph,sel});normFotos(a)}S.prevStale=true;await loadFotos(p);await ensureHashes(p);warnDup(p,a,a.fotos.findIndex(x=>x.id===fid));if(act==='addCam'){S.camShots.push(f);gpsAutoFromCamera(p)}}catch(err){toast(err.message,1)}}
+    for(const f of files.slice(0,room)){try{const r=await compressImage(f,settings.photoKB);const fid=uid();await fotoPut(fid,r.data);let ph='';try{ph=await phash(r.data)}catch(e){}{const sel=relF(a).length<maxF();if(!sel)nRes++;a.fotos.push({id:fid,w:r.w,h:r.h,legenda:'',ph,sel,ts:act==='addCam'?Date.now():(+f.lastModified||Date.now())});normFotos(a);if(act==='addCam')ovTouchCur()}S.prevStale=true;await loadFotos(p);await ensureHashes(p);warnDup(p,a,a.fotos.findIndex(x=>x.id===fid));if(act==='addCam'){S.camShots.push(f);gpsAutoFromCamera(p)}}catch(err){toast(err.message,1)}}
     if(nRes)toast(`${nRes} foto(s) ficaram em reserva (o relatório já tem ${maxF()}). Escolha as melhores com «✓ No relatório» / «＋ Usar».`);
     await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='impFile'){const f=el.files[0];el.value='';if(!f)return;const u=new Uint8Array(await f.arrayBuffer());
