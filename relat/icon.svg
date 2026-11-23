@@ -1,14 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
- <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#24476a"/><stop offset="1" stop-color="#132a42"/></linearGradient></defs>
+ <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#24476a"/><stop offset="1" stop-color="#132a42"/></linearGradient>
+ <linearGradient id="dome" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#dfe5ec"/></linearGradient>
+ <linearGradient id="brim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4f6f9"/><stop offset="1" stop-color="#c9d2dc"/></linearGradient></defs>
  <rect width="1024" height="1024" fill="url(#bg)"/>
- <g stroke="#ffffff" stroke-opacity=".06" stroke-width="4"><path d="M0 256H1024M0 512H1024M0 768H1024M256 0V1024M512 0V1024M768 0V1024"/></g>
- <!-- «P» -->
- <text x="170" y="740" font-family="DejaVu Sans" font-weight="bold" font-size="560" fill="#ffffff">P</text>
- <!-- «t» desenhado como perfil estrutural (pilar + travessa + sapata) -->
- <g fill="#E3AE1F" transform="translate(40 0)">
-  <rect x="640" y="300" width="72" height="440" rx="8"/>
-  <rect x="580" y="410" width="210" height="64" rx="10"/>
-  <rect x="640" y="676" width="170" height="64" rx="10"/>
- </g>
- <text x="512" y="900" text-anchor="middle" font-family="DejaVu Sans" font-weight="bold" font-size="120" fill="#ffffff" letter-spacing="2">peri<tspan fill="#E3AE1F">T</tspan>ext</text>
+ <g transform="translate(0 -40)"><ellipse cx="470" cy="700" rx="330" ry="30" fill="#0b1a2a" opacity=".45"/>
+ <path d="M170 600C170 400 300 262 470 262S770 400 770 600Z" fill="url(#dome)"/>
+ <path d="M345 292C298 356 276 470 274 600M595 292C642 356 664 470 666 600" fill="none" stroke="#c9d2dc" stroke-width="13"/>
+ <path d="M424 270C432 264 508 264 516 270V600H424Z" fill="#eef2f6"/><path d="M424 270V600M516 270V600" stroke="#c9d2dc" stroke-width="7"/>
+ <path d="M100 606C100 588 118 576 146 576H794C822 576 840 588 840 606C840 638 800 660 744 660H196C140 660 100 638 100 606Z" fill="url(#brim)"/>
+ <path d="M146 600H794" stroke="#E3AE1F" stroke-width="14" stroke-linecap="round"/>
+ <text x="470" y="520" text-anchor="middle" font-family="DejaVu Sans" font-weight="bold" font-size="160" fill="#1b3651" letter-spacing="-4">P<tspan fill="#c8941a">tx</tspan></text>
+ <!-- lupa -->
+ <path d="M790 720L900 830" stroke="#E3AE1F" stroke-width="64" stroke-linecap="round"/>
+ <circle cx="730" cy="660" r="110" fill="#1b3651" fill-opacity=".35" stroke="#E3AE1F" stroke-width="36"/>
+ </g><text x="512" y="935" text-anchor="middle" font-family="DejaVu Sans" font-weight="bold" font-size="140" fill="#fff">peri<tspan fill="#E3AE1F">T</tspan>ext</text>
 </svg>
