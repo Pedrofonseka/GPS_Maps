@@ -141,3 +141,6 @@ Cada app mostra na régua (cabeçalho) a versão **e a data da release**, ex.: `
 - Modelo: o das Definições, senão `claude-sonnet-5-5` → `claude-sonnet-5` → `claude-sonnet-4-6` (passa ao seguinte se o modelo não existir).
 - Aplicado em: Relatório de Peritagem 1.13.0.
 - **Custo visível** (v1.1): cada análise guarda os tokens que o serviço indica (`usage`) e mostra o custo estimado (tabela de preços por modelo na app, USD); a ficha soma o total da situação (reanálises incluídas) e o cartão do Relatório soma o gasto do processo. O valor faturado é o da consola do fornecedor.
+
+
+> Nota (23/11/2026): a app «Relatório de Peritagem» (pasta `relat`) passou a chamar-se **PeriText** — relatórios de peritagem de engenharia e construção. A pasta e os endereços mantêm-se.

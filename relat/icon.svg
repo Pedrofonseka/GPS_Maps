@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+ <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#21405f"/><stop offset="1" stop-color="#16304a"/></linearGradient></defs>
+ <rect width="512" height="512" rx="0" fill="url(#bg)"/>
+ <!-- folha do relatório -->
+ <path d="M132 70h182l70 70v302a14 14 0 0 1-14 14H132a14 14 0 0 1-14-14V84a14 14 0 0 1 14-14z" fill="#fff"/>
+ <path d="M314 70v56a14 14 0 0 0 14 14h56z" fill="#cfd8e3"/>
+ <!-- estrutura: pórtico (pilares, vigas) -->
+ <g fill="none" stroke="#21405f" stroke-width="16" stroke-linejoin="round" stroke-linecap="round">
+  <path d="M168 300V196l82-52 82 52v104"/>
+  <path d="M168 248h164M250 144v156"/>
+ </g>
+ <!-- linhas de texto -->
+ <g stroke="#9aa9b9" stroke-width="12" stroke-linecap="round"><path d="M164 342h150M164 374h120M164 406h90"/></g>
+ <!-- lupa (análise pericial) -->
+ <circle cx="352" cy="352" r="62" fill="#E3AE1F" stroke="#fff" stroke-width="12"/>
+ <circle cx="346" cy="346" r="28" fill="none" stroke="#21405f" stroke-width="12"/>
+ <path d="M366 366l26 26" stroke="#21405f" stroke-width="14" stroke-linecap="round"/>
+</svg>

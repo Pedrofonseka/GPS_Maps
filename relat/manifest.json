@@ -1,7 +1,7 @@
 {
-  "name": "Relatório de Peritagem",
-  "short_name": "Rel. Peritagem",
-  "description": "Gerador de relatórios de peritagem de anomalias em edifícios",
+  "name": "PeriText — Relatórios de peritagem",
+  "short_name": "PeriText",
+  "description": "Relatórios de peritagem de engenharia e construção",
   "lang": "pt-PT",
   "start_url": "./",
   "scope": "./",
