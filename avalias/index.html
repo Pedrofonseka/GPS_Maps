@@ -726,7 +726,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.20';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.21';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1326,7 +1326,7 @@ function gpsBlock(p){const g=p.visita?.gps;
   ${g?`<div class="muted">${esc(toDMS(g.lat,g.lon))}${g.acc?` · precisão ≈ ${Math.round(g.acc)} m`:''}${g.src?' · '+esc(g.src):''}${g.at?' · '+new Date(g.at).toLocaleString('pt-PT'):''}</div>`:''}
   <div id="gpsPreview"></div>${mapOk(p)?`<div class="mapsaved"><img src="${fotoCache.get(p.visita.map.id)}"><span>✓ Mapa guardado para o Word (${p.visita.map.mode==='street'?'mapa':'satélite'})</span></div>`:''}<div id="gpsStatus" class="muted">${S.gpsMsg||''}</div>
   <div class="muted">Aceita decimal, graus/min/seg ou um link do Google Maps / Apple Maps — converte sozinho.</div></div>`}
-async function gpsSet(p,txt,src,acc){const pp=parseGpsTxt(txt);
+async function gpsSet(p,txt,src,acc){const pp=parseGpsTxt(txt);if(pp)ovTouchCur();
   if(!pp){setGpsStatus('O texto não tem coordenadas reconhecíveis. No Google Maps, mantém o dedo no local: as coordenadas aparecem no topo (ex.: 41.15794, -8.62910) — toca nelas para copiar.');return false}
   p.visita.gps={lat:pp.lat,lon:pp.lng,acc:acc??null,src:src||'Manual',at:Date.now()};await saveProc();
   const el=$('#gps');if(el)el.value=gpsTxt(p.visita.gps);const a=$('#gpsMaps');if(a)a.href=gpsMapsUrl(p.visita.gps);
@@ -1722,7 +1722,7 @@ async function buildRelat(p){ensureRel(p);alVisCapa(p);p.anomalias.forEach(a=>{a
     kr+=krow('Descrição sumária',a.descricao);
     kr+=krow('Localização',[x.morada,alLocTxt(x),g?`GPS ${g.lat.toFixed(6)}°, ${g.lon.toFixed(6)}°`:''].filter(Boolean).join('\n'));
     kr+=krow('Visita',[a.vis?.data,String(a.vis?.presencas||'').trim()?'Presenças: '+a.vis.presencas:''].filter(Boolean).join('\n'));
-    kr+=krow('Grupo',x.tipo?`${alGrp(a)} – ${AL_GRUPOS[alGrp(a)]}`:'');kr+=krow('Tipo de ativo',alTipoNome(a));kr+=krow('Destino',alDestTxt(a));
+    kr+=krow('Grupo',x.tipo?`${alGrp(a)} – ${AL_GRUPOS[alGrp(a)]}`:'');kr+=krow('Ordem de visita',ovCod(a.ov));kr+=krow('Tipo de ativo',alTipoNome(a));kr+=krow('Destino',alDestTxt(a));
     if(fam){if(x.modo==='suc')for(const [k,l] of AL_SUC[fam])kr+=krow(l,x.suc[k]);
      else for(const f of AL_CAR[fam]){if(f[0]==='g')continue;const v=x.car[f[0]];kr+=krow(f[1],Array.isArray(v)?v.map(alOpt).join(', '):(f[2]==='c'?alOpt(v):v))}}
     kr+=krow('Utilidade',[x.atr?'Atratividade: '+x.atr:'',x.util].filter(s=>String(s||'').trim()).join('\n'));
@@ -1849,7 +1849,7 @@ function alFichaRows(p,a){alA(a);alValSync(a);const x=a.al,fam=alFam(a),g=a.vis?
  add('Concelho',x.concelho);add('Freguesia',x.freguesia);add('Endereço',x.morada);if(g){L.push(['Latitude',+g.lat.toFixed(6)]);L.push(['Longitude',+g.lon.toFixed(6)])}
  add('Data da visita',a.vis?.data);add('Presenças',a.vis?.presencas);add('Grupo',x.tipo?`${alGrp(a)} – ${AL_GRUPOS[alGrp(a)]}`:'');add('Tipo de ativo',alTipoNome(a));add('Destino',alDestTxt(a));
  if(fam){if(x.modo==='suc')for(const [k,l] of AL_SUC[fam])add(l,x.suc[k]);else for(const f of AL_CAR[fam]){if(f[0]==='g')continue;const v=x.car[f[0]];add(f[1],f[2]==='c'?alOpt(v):v)}}
- add('Atratividade',x.atr);add('Utilidade',x.util);add('Critério',alCritTxt(a));add('Critério — notas',x.critTxt);add('Métodos aplicados',alMetOn(x).map(alMetLbl).join(', '));for(const m of alMetOn(x)){const v=alMetVal(a,m);if(v!=null)L.push([`Valor — ${AL_MET_SIG[m]} (€)`,v])}add('Método adotado',x.mAdot?alMetLbl(x.mAdot):'');{const B=bftRun(a);B.L.forEach(r=>L.push([`BFT — ${r.d||'—'} (€)`,r.par]));if(B.L.length)L.push(['Encargos/benfeitorias — total (€)',B.tot])}{const R=rndRun(a);if(R)L.push(['Rendimento — valor calculado (€)',R.total])}add('Análise de mercado',x.merc);add('Escolha do método',x.metTxt);
+ add('Atratividade',x.atr);add('Utilidade',x.util);add('Ordem de visita',ovCod(a.ov));add('Critério',alCritTxt(a));add('Critério — notas',x.critTxt);add('Métodos aplicados',alMetOn(x).map(alMetLbl).join(', '));for(const m of alMetOn(x)){const v=alMetVal(a,m);if(v!=null)L.push([`Valor — ${AL_MET_SIG[m]} (€)`,v])}add('Método adotado',x.mAdot?alMetLbl(x.mAdot):'');{const B=bftRun(a);B.L.forEach(r=>L.push([`BFT — ${r.d||'—'} (€)`,r.par]));if(B.L.length)L.push(['Encargos/benfeitorias — total (€)',B.tot])}{const R=rndRun(a);if(R)L.push(['Rendimento — valor calculado (€)',R.total])}add('Análise de mercado',x.merc);add('Escolha do método',x.metTxt);
  if(x.calc&&alCultOk(a)){add('Cálculo pelo rendimento — método',CULT.CALC_MET[x.calc.m]||x.calc.m);add('Cálculo pelo rendimento — V_Un (€/m²)',x.vun);add('Cálculo pelo rendimento — fundamentação',x.fund)}
  if(x.tofRef&&alRefOk(a)){add('Valor de referência (€/m²)',x.refV);add('Valor de referência — fonte',x.refF)}
  const v=alNum(x.valor);if(v!=null)L.push(['Valor estimado (€)',v]);const rr=alNum(x.renda);if(rr!=null&&AP.base==='Valor de renda de mercado')L.push(['Renda mensal (€/mês)',rr]);if(AP.bad)add('BAD — redução até (%)',String(x.bad||'').trim()||AP.badPct||10);add('Notas ao valor',x.valObs);
@@ -2245,7 +2245,7 @@ function vFicha(){
  h+=sec('v2','2 · Localização',`${prevLoc?`<div class="btns" style="margin-top:0"><button class="secondary mini" data-alact="copyLoc">⧉ Igual à ${esc(alCode(p,prev))}</button></div>`:''}${alLocSel(x)}${inp('al.morada','Endereço',x.morada,'Rua, n.º, lugar / localidade — ou cemitério, parque…')}${gpsBlock(p)}`,{cnt:ok(a.vis.gps||(x.morada&&x.concelho))});
  /* 3 visita */
  const prevVis=prev&&(prev.vis?.data||prev.vis?.presencas);
- h+=sec('v3','3 · Visita',`${prevVis?`<div class="btns" style="margin-top:0"><button class="secondary mini" data-alact="copyVis">⧉ Igual à ${esc(alCode(p,prev))}</button></div>`:''}<label>Data da visita</label><div class="inrow"><input data-bind="vis.data" value="${esc(a.vis.data||'')}" placeholder="dd/mm/aaaa"><button class="secondary" data-act="visCal">📅</button><button class="secondary" data-act="visHoje">Hoje</button></div>${txt('vis.presencas','Presenças (nome – qualidade)',a.vis.presencas,3)}`,{cnt:ok(a.vis.data)});
+ h+=sec('v3','3 · Visita',`${prevVis?`<div class="btns" style="margin-top:0"><button class="secondary mini" data-alact="copyVis">⧉ Igual à ${esc(alCode(p,prev))}</button></div>`:''}${ovHTML(p,a)}<label>Data da visita</label><div class="inrow"><input data-bind="vis.data" value="${esc(a.vis.data||'')}" placeholder="dd/mm/aaaa"><button class="secondary" data-act="visCal">📅</button><button class="secondary" data-act="visHoje">Hoje</button></div>${txt('vis.presencas','Presenças (nome – qualidade)',a.vis.presencas,3)}`,{cnt:ok(a.vis.data)});
  /* 4 tipo e destino */
  h+=sec('v4','4 · Tipo de ativo e destino',`<label>Tipo de ativo</label><div class="tks">${AL_TIPOS.map(([k,t])=>alTk(x.tipo===k,esc(t),`data-alact="tipo" data-v="${k}"`)).join('')}</div>
   ${x.tipo?`<p class="muted" style="margin:4px 0">Grupo: ${grpChip(alGrp(a))}${esc(AL_GRUPOS[alGrp(a)])}</p>`:''}${fam?`<label>Destino</label><div class="tks">${AL_DEST[fam].map(d=>alTk(x.destino===d,esc(d),`data-alact="set" data-k="destino" data-v="${esc(d)}"`)).join('')}</div>${x.destino==='Outro'||fam==='out'?inp('al.destinoOutro','Destino — descrever',x.destinoOutro):''}`:'<p class="muted">Escolha o tipo de ativo para ver os destinos possíveis.</p>'}`,{cnt:ok(x.tipo&&x.destino)});
@@ -2286,7 +2286,25 @@ function alFalta(a){alA(a);const x=a.al,F=[];
  return F}
 const alCompleta=a=>!alFalta(a).length;
 const fillChip=a=>{const F=alFalta(a);return F.length?`<span class="pill warn" title="Falta: ${esc(F.join(', '))}">Incompleta · falta ${F.length}</span>`:`<span class="pill ok">✓ Completa</span>`};
-const alAtivas=p=>p.anomalias;
+/* @comum:visita v1.0 — Ordem de visita (OV_xxx): ordem real no terreno, separada do código do processo. O primeiro registo no local (foto tirada na app, GPS, «visitado hoje») sugere o número seguinte; o utilizador aceita ou corrige; os outros reajustam-se sem repetidos. Regra: docs/regras/visita.md */
+const ovCod=n=>(+n>0)?'OV_'+String(+n).padStart(3,'0'):'';
+const ovNext=L=>Math.max(0,...L.map(x=>+x.ov||0))+1;
+function ovCompact(L){L.filter(x=>+x.ov>0).sort((a,b)=>a.ov-b.ov||L.indexOf(a)-L.indexOf(b)).forEach((x,i)=>x.ov=i+1)}
+function ovTouch(L,it){if(!it||+it.ov>0)return false;it.ov=ovNext(L);it.ovSug=1;it.ovT=Date.now();return true}
+function ovSet(L,it,n){n=Math.round(+n||0);if(n<1){it.ov=0;it.ovSug=0;ovCompact(L);return}const V=L.filter(x=>x!==it&&+x.ov>0).sort((a,b)=>a.ov-b.ov);V.splice(Math.min(n-1,V.length),0,it);V.forEach((x,i)=>x.ov=i+1);it.ovSug=0;if(!it.ovT)it.ovT=Date.now()}
+const ovAccept=it=>{it.ovSug=0};
+const ovSort=L=>L.slice().sort((a,b)=>((+a.ov||1e9)-(+b.ov||1e9))||(L.indexOf(a)-L.indexOf(b)));
+function ovFromTimes(L,tsOf){const c=L.filter(x=>!(+x.ov>0)).map(x=>[x,tsOf(x)]).filter(([,t])=>t).sort((a,b)=>a[1]-b[1]);c.forEach(([x,t])=>{x.ov=ovNext(L);x.ovSug=1;x.ovT=t});return c.length}
+/* @fim:visita */
+const alAtivas=p=>ensureRel(p).ordVis?ovSort(p.anomalias):p.anomalias;
+const ovTsOf=a=>{const t=(a.fotos||[]).map(f=>+f.ts||0).filter(Boolean);return t.length?Math.min(...t):0};
+const ovChip=a=>+a.ov>0?`<span style="display:inline-block;font-size:10px;font-weight:700;color:${a.ovSug?'#8a6d00':'#1b5e20'};background:${a.ovSug?'#fff8e1':'#e8f5e9'};border:1px ${a.ovSug?'dashed #c9a227':'solid #81c784'};border-radius:6px;padding:0 5px;margin-right:4px" title="${a.ovSug?'Ordem de visita sugerida — confirme na ficha (3 · Visita)':'Ordem de visita'}">${ovCod(a.ov)}${a.ovSug?'?':''}</span>`:'';
+function ovTouchCur(){try{const p=cur(),a=curA();if(p&&a&&ovTouch(p.anomalias,a))toast(`${alCode(p,a)}: ordem de visita sugerida ${ovCod(a.ov)} — confirme ou corrija em 3 · Visita.`)}catch(e){}}
+function ovHTML(p,a){const L=p.anomalias;return `<label>Ordem de visita</label><div class="inrow" style="align-items:center">${+a.ov>0?`<b style="flex:0 0 auto">${ovCod(a.ov)}</b>${a.ovSug?'<span class="muted" style="flex:0 0 auto">(sugerida)</span>':''}`:'<span class="muted" style="flex:0 0 auto">por visitar</span>'}<input data-ovset="1" inputmode="numeric" value="${+a.ov>0?a.ov:''}" placeholder="n.º" style="width:64px;flex:0 0 64px">${a.ovSug?'<button class="green mini" data-alact="ovOk">✓ Aceitar</button>':''}${+a.ov>0?'<button class="secondary mini" data-alact="ovClr">Limpar</button>':`<button class="secondary mini" data-alact="ovNow">Visitada agora → ${ovCod(ovNext(L))}</button>`}</div><p class="muted" style="margin-top:2px">Ordem real no terreno (independente do código ${esc(alCode(p,a))}). A primeira foto tirada na app, o GPS ou «Hoje» sugerem o número seguinte; escrevendo outro n.º, as restantes reajustam-se.</p>`}
+document.addEventListener('click',async e=>{const o=e.target.closest('[data-alact="ordVis"]');if(!o)return;e.preventDefault();e.stopImmediatePropagation();const p=cur();ensureRel(p).ordVis=o.dataset.v==='1';await saveProc();S.scrollTop=window.scrollY;render()},true);
+document.addEventListener('click',async e=>{const el=e.target.closest('[data-alact="ovList"],[data-alact="ovFotos"],[data-alact="ovOkAll"]');if(!el)return;e.preventDefault();e.stopImmediatePropagation();const p=cur();if(!p)return;const k=el.dataset.alact;
+ if(k==='ovList'){settings.listOv=el.dataset.v==='1';await saveSettings()}else if(k==='ovFotos'){const n=ovFromTimes(p.anomalias,ovTsOf);toast(`${n} ordem(ns) de visita sugerida(s) pela hora das fotografias — confirme ou corrija.`);await saveProc()}else{p.anomalias.forEach(ovAccept);await saveProc()}S.scrollTop=window.scrollY;render()},true);
+document.addEventListener('change',async e=>{const el=e.target;if(!el.dataset?.ovset)return;e.stopImmediatePropagation();const p=cur(),a=curA();if(!p||!a)return;ovSet(p.anomalias,a,el.value);await saveProc();S.scrollTop=window.scrollY;render()},true);
 /* Cronologia do processo — ocorrências com data; podem (ou não) sair no relatório */
 const cronoList=r=>(r.crono||[]).filter(x=>String(x.desc||'').trim()).slice().sort((a,b)=>String(a.data||'9999').localeCompare(String(b.data||'9999')));
 const dPT=d=>/^\d{4}-\d{2}-\d{2}$/.test(d||'')?d.split('-').reverse().join('/'):String(d||'');
@@ -2297,11 +2315,12 @@ function cronoHTML(p){const r=ensureRel(p),L=r.crono||[];return sec('pcron','Cro
 document.addEventListener('click',async e=>{const a=e.target.closest('[data-cradd],[data-crdel]');if(!a)return;e.preventDefault();e.stopImmediatePropagation();const p=cur();if(!p)return;const r=ensureRel(p);r.crono=r.crono||[];
  if(a.dataset.cradd)r.crono.push({data:new Date().toISOString().slice(0,10),desc:''});else r.crono.splice(+a.dataset.crdel,1);await saveProc();S.scrollTop=window.scrollY;render()},true);
 document.addEventListener('change',async e=>{const el=e.target;if(!el.dataset?.crword)return;e.stopImmediatePropagation();const p=cur();if(!p)return;const r=ensureRel(p);r.cronoWord=el.checked;await saveProc()},true);
-function vAnoms(){const p=cur();alP(p);const L=p.anomalias;L.forEach(alA);const tot=L.reduce((s,a)=>s+(alNum(a.al.valor)||0),0),done=L.filter(alCompleta).length;
+let L0;function vAnoms(){const p=cur();alP(p);L0=p.anomalias;L0.forEach(alA);const L=settings.listOv?ovSort(L0):L0,semOv=L0.filter(a=>!(+a.ov>0)&&ovTsOf(a)).length,sugN=L0.filter(a=>a.ovSug).length;const tot=L.reduce((s,a)=>s+(alNum(a.al.valor)||0),0),done=L.filter(alCompleta).length;
  return `<h2>Verbas (${L.length})</h2><div class="card"><div class="steps3"><span><b>1</b> Identificar e localizar</span><span><b>2</b> Tipo, estado e fotos</span><span><b>3</b> Utilidade, métodos e valor</span></div>
  <div class="btns"><button class="green" data-alact="nova">+ Nova verba</button><button class="secondary" data-alact="trocar">⇄ Enviar / receber verbas</button></div>
+ ${L.length>1?`<div class="tks sm" style="margin-top:6px"><span class="muted" style="align-self:center">Ordem:</span>${alTk(!settings.listOv,'Processo','data-alact="ovList" data-v="0"')}${alTk(!!settings.listOv,'Visita (OV)','data-alact="ovList" data-v="1"')}</div>${semOv?`<div class="btns"><button class="secondary mini" data-alact="ovFotos">🕘 Sugerir ordem de visita pelas fotografias (${semOv})</button></div>`:''}${sugN?`<div class="btns"><button class="secondary mini" data-alact="ovOkAll">✓ Aceitar as ${sugN} ordens sugeridas</button></div>`:''}`:''}
  ${L.length?`<div class="bar"><i style="width:${Math.round(100*done/L.length)}%"></i></div><b>${done}/${L.length}</b> verba(s) completa(s)${tot?` · total estimado <b>${esc(alEur(tot))}</b>`:''}`:''}</div>
- <div class="list">${L.map((a,i)=>{const x=a.al;return `<div class="card alcard" data-act="openAnom" data-id="${a.id}"><button class="aldel" data-alact="del" data-id="${a.id}" title="Eliminar a verba ${esc(alCode(p,a))}" aria-label="Eliminar a verba">🗑</button>${a.al.tipo?grpChip(alGrp(a)):''}<b>${esc(alCode(p,a))}</b> ${esc(x.designacao||'')}<div class="muted">${esc([alTipoNome(a),alDestTxt(a)].filter(Boolean).join(' · ')||'Tipo por definir')}${Object.keys(x.ids||{}).length?' · '+esc(alIdTxt(x).replace(/\n/g,' · ')):''}</div><div style="margin-top:4px">${pill('📷 '+relF(a).length)}${a.vis?.gps?pill('GPS','ok'):''}${a.vis?.data?pill(a.vis.data):''}${alNum(x.valor)!=null?pill(alEur(x.valor),'ok'):''}${fillChip(a)}</div></div>`}).join('')||'<p class="muted">Ainda não há verbas.</p>'}</div>`}
+ <div class="list">${L.map((a,i)=>{const x=a.al;return `<div class="card alcard" data-act="openAnom" data-id="${a.id}"><button class="aldel" data-alact="del" data-id="${a.id}" title="Eliminar a verba ${esc(alCode(p,a))}" aria-label="Eliminar a verba">🗑</button>${ovChip(a)}${a.al.tipo?grpChip(alGrp(a)):''}<b>${esc(alCode(p,a))}</b> ${esc(x.designacao||'')}<div class="muted">${esc([alTipoNome(a),alDestTxt(a)].filter(Boolean).join(' · ')||'Tipo por definir')}${Object.keys(x.ids||{}).length?' · '+esc(alIdTxt(x).replace(/\n/g,' · ')):''}</div><div style="margin-top:4px">${pill('📷 '+relF(a).length)}${a.vis?.gps?pill('GPS','ok'):''}${a.vis?.data?pill(a.vis.data):''}${alNum(x.valor)!=null?pill(alEur(x.valor),'ok'):''}${fillChip(a)}</div></div>`}).join('')||'<p class="muted">Ainda não há verbas.</p>'}</div>`}
 
 /* ---------- processo ---------- */
 function vProc(){const p=cur(),P=alP(p);
@@ -2337,6 +2356,9 @@ document.addEventListener('click',async e=>{const el=e.target.closest('[data-ala
   case 'tabDel':{const l=el.dataset.l;(l==='bft'?a.al.bftL:a.al.rnd.L).splice(+el.dataset.i,1);alValSync(a);return keep()}
   case 'rndOn':{alA(a);if(!a.al.rnd)rndInit(a);else a.al.rnd.on=1;return keep()}
   case 'rndOff':{if(a.al.rnd)a.al.rnd.on=0;return keep()}
+  case 'ovOk':{ovAccept(a);return keep()}
+  case 'ovClr':{ovSet(p.anomalias,a,0);return keep()}
+  case 'ovNow':{ovTouch(p.anomalias,a);ovAccept(a);return keep()}
   case 'vaOn':{alA(a);if(!a.al.va)a.al.va={on:1,tipo:'CUR',v100:'',vt:'',exe:'1',exeT:null,cust:[]};else a.al.va.on=1;if(a.al.mAdot)a.al.valAuto='met';alValSync(a);return keep()}
   case 'vaOff':{if(a.al.va)a.al.va.on=0;alValSync(a);return keep()}
   case 'vaTipo':{a.al.va.tipo=el.dataset.v;if(el.dataset.v!=='CUR'&&!(a.al.va.cust||[]).length)a.al.va.cust=[{d:'Demolições, limpezas e trabalhos para aproveitar o existente',v:''}];return keep()}
@@ -2438,10 +2460,11 @@ function alRvItems(p){const r=ensureRel(p),L=[];const add=(sec,lbl,key,o,k)=>L.p
  return L}
 document.addEventListener('click',async e=>{if(!e.target.closest('[data-alrv]'))return;e.preventDefault();e.stopImmediatePropagation();const p=cur();if(!p)return;const r=ensureRel(p);r.rvKeep=r.rvKeep||{};
  const done=rvRun(alRvItems(p),r.rvKeep);await saveProc();rvModal(done,r.rvKeep,async()=>{await saveProc();S.scrollTop=window.scrollY;render()})},true);
+function ordSecHTML(p){const r=ensureRel(p),n=p.anomalias.filter(a=>+a.ov>0).length;return sec('rord','Ordem das verbas no relatório',`<div class="tks col">${alTk(!r.ordVis,'Pela ordem do processo (como foram listadas) — por defeito','data-alact="ordVis" data-v="0"')}${alTk(!!r.ordVis,`Pela ordem de visita (OV) — ${n} de ${p.anomalias.length} com ordem; as por visitar ficam no fim`,'data-alact="ordVis" data-v="1"')}</div><p class="muted">Os códigos das verbas (VB_xxx) não mudam; muda só a sequência no Word, no quadro-resumo e no livro Excel. A coluna OV aparece sempre no resumo.</p>`,{cnt:pill(r.ordVis?'Visita':'Processo'),def:false})}
 function vRel(){const p=cur();const box=document.createElement('div');box.innerHTML=vRel_relat();
  box.querySelectorAll('.card.chk,details[data-key="r1"],details[data-key="r5"],details[data-key="r2"],details[data-key="r3"],details[data-key="r4"],details[data-key="rr2"]').forEach(e=>e.remove());
  const V=p.anomalias,tot=V.reduce((s,a)=>s+(alNum(a.al?.valor)||0),0),nf=V.reduce((s,a)=>s+relF(a).length,0);
- const b=box.querySelector('.blk');if(b)b.insertAdjacentHTML('afterend',capaSecHTML(p));if(b)b.outerHTML=blk('Resultado',`${V.length} verba(s) · ${V.filter(alCompleta).length} completa(s) · ${nf} foto(s)${tot?' · total '+alEur(tot):''}`);
+ const b=box.querySelector('.blk');if(b)b.insertAdjacentHTML('afterend',capaSecHTML(p)+ordSecHTML(p));if(b)b.outerHTML=blk('Resultado',`${V.length} verba(s) · ${V.filter(alCompleta).length} completa(s) · ${nf} foto(s)${tot?' · total '+alEur(tot):''}`);
  {const c=box.querySelector('.blk');if(c)c.insertAdjacentHTML('afterend',`<div class="card"><b>🔍 Revisão do texto</b><p class="muted">Corrige automaticamente as gralhas mecânicas (espaços, pontuação, maiúscula no início da frase, ponto final) em todos os textos do processo e das verbas; depois pode aceitar cada correção ou manter o original.</p><div class="btns"><button class="green" data-alrv="1">🔍 Rever o texto</button></div></div>`)}
  box.insertAdjacentHTML('beforeend',sec('rf','Fotografias e tamanho dos documentos',`<div class="btns"><button class="secondary" data-dupscan="1">🔍 Procurar fotografias repetidas</button>${camUnsaved(p).length?`<button class="secondary" data-act="saveCam">💾 Guardar ${camUnsaved(p).length} foto(s) tirada(s) na app na Fototeca</button>`:''}</div>`+maxUI().replace('cada anomalia','cada verba')+tamHTML(p)));
  return box.innerHTML}
@@ -2943,17 +2966,17 @@ function alLivro(p){alP(p);const V=alAtivas(p);p.anomalias.forEach(a=>alValSync(
  return alXlsxBook([{...R,name:'Resumo'},...vs])}
 /* resumo dos valores apurados (Excel editável): uma linha por verba, total e % relativa; resumo por grupo */
 function alResumoSheet(p){const AP=alP(p),V=alAtivas(p),renda=AP.base==='Valor de renda de mercado',bad=!!AP.bad;
- const H=['Verba','Designação','Tipo de ativo','Grupo','Valor estimado (€)','%',...(renda?['Renda mensal (€)']:[]),...(bad?['BAD (até)']:[])];
+ const H=['Verba','Designação','Tipo de ativo','Grupo','Valor estimado (€)','%',...(renda?['Renda mensal (€)']:[]),...(bad?['BAD (até)']:[]),'OV'];
  const n=V.length,r0=2,rT=r0+n,tot=V.reduce((a,x)=>a+(alNum(x.al.valor)||0),0);
  const rows=[H.map(h=>({v:h,s:2}))];
- V.forEach((a,i)=>{const x=a.al,v=alNum(x.valor),r=r0+i;rows.push([alCode(p,a),x.designacao||String(a.descricao||'').split('\n')[0].slice(0,80),alTipoNome(a)||'—',x.tipo?alGrp(a):'NID',v!=null?{v,s:7}:'',{f:`IF(E${rT}=0,0,E${r}/E$${rT})`,v:tot?(v||0)/tot:0,s:5},...(renda?[alNum(x.renda)!=null?{v:alNum(x.renda),s:7}:'']:[]),...(bad?[`${String(x.bad||'').trim()||AP.badPct||10}%`]:[])])});
+ V.forEach((a,i)=>{const x=a.al,v=alNum(x.valor),r=r0+i;rows.push([alCode(p,a),x.designacao||String(a.descricao||'').split('\n')[0].slice(0,80),alTipoNome(a)||'—',x.tipo?alGrp(a):'NID',v!=null?{v,s:7}:'',{f:`IF(E${rT}=0,0,E${r}/E$${rT})`,v:tot?(v||0)/tot:0,s:5},...(renda?[alNum(x.renda)!=null?{v:alNum(x.renda),s:7}:'']:[]),...(bad?[`${String(x.bad||'').trim()||AP.badPct||10}%`]:[]),ovCod(a.ov)])});
  const totR=V.reduce((a,x)=>a+(alNum(x.al.renda)||0),0);
  rows.push([{v:`Total apurado (${n} verba${n===1?'':'s'})`,s:1},'','','',{f:`SUM(E${r0}:E${rT-1})`,v:tot,s:10},{f:`SUM(F${r0}:F${rT-1})`,v:tot?1:0,s:11},...(renda?[{f:`SUM(G${r0}:G${rT-1})`,v:totR,s:10}]:[]),...(bad?['']:[])]);
  const G=Object.keys(AL_GRUPOS).filter(g=>V.some(a=>(a.al.tipo?alGrp(a):'NID')===g));
  if(G.length>1){rows.push([]);const rg=rows.length+1;rows.push([{v:'Grupo',s:2},{v:'Descrição',s:2},{v:'',s:2},{v:'Qtd',s:2},{v:'Parciais (€)',s:2},{v:'%',s:2}]);
   G.forEach((g,k)=>{const r=rg+1+k,L=V.filter(a=>(a.al.tipo?alGrp(a):'NID')===g),st=L.reduce((a,x)=>a+(alNum(x.al.valor)||0),0);
    rows.push([g,AL_GRUPOS[g],'',{f:`COUNTIF(D$${r0}:D$${rT-1},A${r})`,v:L.length,s:7},{f:`SUMIF(D$${r0}:D$${rT-1},A${r},E$${r0}:E$${rT-1})`,v:st,s:7},{f:`IF(E$${rT}=0,0,E${r}/E$${rT})`,v:tot?st/tot:0,s:5}])})}
- return {name:'Resumo',cols:[9,24,33,7,15,9,...(renda?[14]:[]),...(bad?[9]:[])],rows}}
+ return {name:'Resumo',cols:[9,24,33,7,15,9,...(renda?[14]:[]),...(bad?[9]:[]),8],rows}}
 function alOlePara(sh,parts){const n=parts.length/2+1,wPt=Math.min(481,Math.round(sh.cols.reduce((a,b)=>a+b,0)*5.6+10)),hPt=Math.round(sh.rows.length*14.2+6);
  const xr=`rIdXL${n}`,ir=`rIdXP${n}`,sid=`_x0000_i${2000+n}`;parts.push({rid:xr,name:`word/embeddings/avalias_calc_${n}.xlsx`,data:alXlsx(sh),type:'package'},{rid:ir,name:`word/media/avalias_calc_${n}.png`,data:b64ToU8(alXlsPng(sh,wPt,hPt)),type:'image'});
  return `<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:spacing w:before="60" w:after="120"/><w:jc w:val="left"/></w:pPr><w:r><w:object w:dxaOrig="${wPt*20}" w:dyaOrig="${hPt*20}">${n===1?AL_T75:''}<v:shape id="${sid}" type="#_x0000_t75" style="width:${wPt}pt;height:${hPt}pt" o:ole=""><v:imagedata r:id="${ir}" o:title=""/></v:shape><o:OLEObject Type="Embed" ProgID="Excel.Sheet.12" ShapeID="${sid}" DrawAspect="Content" ObjectID="_${1900000000+n}" r:id="${xr}"/></w:object></w:r></w:p>`}
@@ -3077,7 +3100,7 @@ document.addEventListener('click',async e=>{
     case 'prevMode':S.prevSimple=!S.prevSimple;break;
     case 'toggleId':S.openId=!S.openId;S.scrollTop=window.scrollY;break;
     case 'visCal':openCalendar(p.visita.data,async v=>{p.visita.data=v;await saveProc();S.scrollTop=window.scrollY;render()});return;
-    case 'visHoje':{const d=new Date();p.visita.data=`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;await saveProc();S.scrollTop=window.scrollY;break}
+    case 'visHoje':{ovTouchCur();const d=new Date();p.visita.data=`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;await saveProc();S.scrollTop=window.scrollY;break}
     case 'gpsAuto':gpsObterAuto(p);return;
     case 'gpsMapsInfo':setGpsStatus('<b>No Google Maps:</b> toca no ponto azul (onde estás) ou mantém o dedo no local; as coordenadas aparecem no topo — toca nelas para as copiar. Depois volta aqui e toca em <b>Colar</b>.');return;
     case 'gpsPaste':{const el2=$('#gps');try{if(!navigator.clipboard?.readText)throw 0;const t=await navigator.clipboard.readText();if(await gpsSet(p,t))return}catch(err){}el2.focus();try{el2.select()}catch(err){}setGpsStatus('Neste modo o iPhone não deixa a app ler a área de transferência diretamente. <b>Mantém o dedo no campo das coordenadas e escolhe «Colar»</b> — a app converte sozinha.');return}
@@ -3200,7 +3223,7 @@ document.addEventListener('change',async e=>{
   if(act==='addCam'||act==='addLib'){
     const files=[...el.files];el.value='';const room=MAXALL-a.fotos.length;let nRes=0;
     if(files.length>room)toast(`Só cabem mais ${room} foto(s) nesta anomalia (máx. ${MAXALL} com a reserva); as restantes foram ignoradas.`,1);
-    for(const f of files.slice(0,room)){try{const r=await compressImage(f,settings.photoKB);const fid=uid();await fotoPut(fid,r.data);let ph='';try{ph=await phash(r.data)}catch(e){}{const sel=relF(a).length<maxF();if(!sel)nRes++;a.fotos.push({id:fid,w:r.w,h:r.h,legenda:'',ph,sel,...(act==='addCam'?{fromCamera:true,libSaved:false}:{})});normFotos(a)}S.prevStale=true;await loadFotos(p);await ensureHashes(p);warnDup(p,a,a.fotos.findIndex(x=>x.id===fid));if(act==='addCam'){S.camOrig=S.camOrig||{};S.camOrig[fid]=f;gpsAutoFromCamera(p)}}catch(err){toast(err.message,1)}}
+    for(const f of files.slice(0,room)){try{const r=await compressImage(f,settings.photoKB);const fid=uid();await fotoPut(fid,r.data);let ph='';try{ph=await phash(r.data)}catch(e){}{const sel=relF(a).length<maxF();if(!sel)nRes++;a.fotos.push({id:fid,w:r.w,h:r.h,legenda:'',ph,sel,ts:act==='addCam'?Date.now():(+f.lastModified||Date.now()),...(act==='addCam'?{fromCamera:true,libSaved:false}:{})});if(act==='addCam')ovTouchCur();normFotos(a)}S.prevStale=true;await loadFotos(p);await ensureHashes(p);warnDup(p,a,a.fotos.findIndex(x=>x.id===fid));if(act==='addCam'){S.camOrig=S.camOrig||{};S.camOrig[fid]=f;gpsAutoFromCamera(p)}}catch(err){toast(err.message,1)}}
     if(nRes)toast(`${nRes} foto(s) ficaram em reserva (o relatório já tem ${maxF()}). Escolha as melhores com «✓ No relatório» / «＋ Usar».`);
     await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='impFile'){const f=el.files[0];el.value='';if(!f)return;const u=new Uint8Array(await f.arrayBuffer());

@@ -35,6 +35,7 @@ Ao melhorar uma rotina numa app, atualizar o ficheiro respetivo e a tabela «Ond
 | **Base de peritos e gabinetes** (`comum/peritos.js`; troca por ficheiro) — ExPropria, AvaLias | [peritos.md](peritos.md) | 1.0 |
 | **Concelhos → freguesias** (`comum/concelhos.js`: tabela do país, mapa de 2013, + «Outra…» guardada em `settings.fregExtra`) — ExPropria e AvaLias (Localização: Concelho · Freguesia · Endereço) | `comum/concelhos.js` | 1.0 |
 | **Depreciação física Ross-Heidecke** (`comum/rhd.js`: estado de conservação 8…1 × idade relativa, interpolada; obsolescência funcional e económica aplicadas à parte) — AvaLias (CST); a usar no ExPropria nas construções | [../avalias/METODOS.md](../avalias/METODOS.md) | 1.0 |
+| **Ordem de visita** (`OV_xxx`, `comum/visita.js`: sugestão pelo 1.º registo no local, aceitar/corrigir, lista e relatório por processo ou por visita) — AvaLias | [visita.md](visita.md) | 1.0 |
 | **Motores comuns** (`comum/*.js`, copiados para dentro das apps entre `@comum:<nome>` e `@fim:<nome>`; nunca editar nas apps) | `tools/sync_comum.py` | 1.0 |
 
 ### Imagens no Word — controlo de conteúdo
