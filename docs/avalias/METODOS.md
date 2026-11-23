@@ -99,7 +99,7 @@ Linhas com Vref (da tabela), K1, K2, QTD → `parcela = QTD × Vref × K1 × K2 
 
 ## 9. Proposta de implementação gradual (a decidir)
 
-1. Quadro de métodos por verba: vários métodos, valor de cada um (à mão), escolha do método adotado + fundamentação; BFT à parte; síntese no Word.
+1. ✅ (1.14) Quadro de métodos por verba: vários métodos, valor de cada um (à mão), escolha do método adotado + fundamentação; BFT à parte; síntese no Word.
 2. CST com depreciação física Ross-Heidecke (tabela comum, para `comum/`) + obsolescência funcional e económica.
 3. MER com testemunhos e calibração do ILZ (tópico de análise de mercado).
 4. VRF com K_Aju ponderado (aproveitando a caracterização sucinta já existente).
