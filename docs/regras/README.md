@@ -143,4 +143,4 @@ Cada app mostra na régua (cabeçalho) a versão **e a data da release**, ex.: `
 - **Custo visível** (v1.1): cada análise guarda os tokens que o serviço indica (`usage`) e mostra o custo estimado (tabela de preços por modelo na app, USD); a ficha soma o total da situação (reanálises incluídas) e o cartão do Relatório soma o gasto do processo. O valor faturado é o da consola do fornecedor.
 
 
-> Nota (23/11/2026): a app «Relatório de Peritagem» (pasta `relat`) passou a chamar-se **PeriText** — relatórios de peritagem de engenharia e construção. A pasta e os endereços mantêm-se.
+> Nota (23/11/2026): a app «Relatório de Peritagem» (pasta `relat`) passou a chamar-se **periText** — relatórios de peritagem de engenharia e construção. A pasta e os endereços mantêm-se.

@@ -1,6 +1,6 @@
 {
-  "name": "PeriText — Relatórios de peritagem",
-  "short_name": "PeriText",
+  "name": "periText — Relatórios de peritagem",
+  "short_name": "periText",
   "description": "Relatórios de peritagem de engenharia e construção",
   "lang": "pt-PT",
   "start_url": "./",

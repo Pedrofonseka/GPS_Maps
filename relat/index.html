@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="PeriText">
+<meta name="apple-mobile-web-app-title" content="periText">
 <meta name="theme-color" content="#E3AE1F">
-<title>PeriText — Relatórios de peritagem de engenharia e construção</title>
+<title>periText — Relatórios de peritagem de engenharia e construção</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" href="icon-192.png">
@@ -757,15 +757,15 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
   objs[pagesId-1]=[enc(`<< /Type /Pages /Kids [${pages.map(p=>p.pid+' 0 R').join(' ')}] /Count ${pages.length} >>`)];
   const title=String(fileName||'Relatório de Peritagem').replace(/\.pdf$/i,'');
   objs[catalogId-1]=[enc(`<< /Type /Catalog /Pages ${pagesId} 0 R >>`)];
-  const info=add([enc(`<< /Title ${pstr(title)} /Producer (PeriText) >>`)]);
+  const info=add([enc(`<< /Title ${pstr(title)} /Producer (periText) >>`)]);
   const out=[enc('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n')];let off=out[0].length;const xref=[];
   objs.forEach((parts,i)=>{xref.push(off);const h=enc(`${i+1} 0 obj\n`);out.push(h);off+=h.length;for(const u of parts){out.push(u);off+=u.length}const e=enc('\nendobj\n');out.push(e);off+=e.length});
   let x=`xref\n0 ${objs.length+1}\n0000000000 65535 f \n`+xref.map(o=>String(o).padStart(10,'0')+' 00000 n \n').join('');x+=`trailer\n<< /Size ${objs.length+1} /Root ${catalogId} 0 R /Info ${info} 0 R >>\nstartxref\n${off}\n%%EOF\n`;out.push(enc(x));
   const tot=out.reduce((s,u)=>s+u.length,0);const res=new Uint8Array(tot);let o=0;for(const u of out){res.set(u,o);o+=u.length}return res;
 }
 
-// ===== App: PeriText (antes «Relatório de Peritagem») =====
-const VERSION='1.30';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
+// ===== App: periText (antes «Relatório de Peritagem») =====
+const VERSION='1.30.1';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):parteLista(p));
@@ -1095,10 +1095,10 @@ const PSTEPS=[['proc','1','Processo'],['anom','2','Situações'],['insp','3','In
 function stepState(p){const r=ensureRel(p),W=relCheck(p),o={proc:0,anom:0,insp:0,anal:0,orc:0,rel:0};for(const w of W){if(/1 · Processo/.test(w))o.proc++;else if(/3 · Inspeção/.test(w))o.insp++;else if(/2 · Situações/.test(w))o.anom++;else if(/4 · Análise/.test(w))o.anal++;else o.rel++}
   const an=p.anomalias;if(an.some(a=>!String(a.descricao||'').trim()))o.anom++;o.anal+=an.filter(a=>!isDone(a)).length;if(!mtxt(r,'passos')&&r.incPassos!==false)o.anal++;return o}
 function render(){
-  document.title=`PeriText · ${VERSION}`;
+  document.title=`periText · ${VERSION}`;
   const p=cur();if(!p&&PVIEWS.includes(S.view))S.view='home';
   const crumbs=p&&S.view!=='home'&&S.view!=='defs'?`${esc(p.codigo||'(sem código)')}${S.sub==='ficha'&&curA()?' › '+anCode(p,curA()):''}`:'';
-  $('#hdr').innerHTML=`<h1 data-act="go" data-v="home">PeriText</h1><span class="ver">v${VERSION} · ${VERSION_DATA.split('-').reverse().join('/')}</span><div class="crumbs">${crumbs}</div>${p&&S.view!=='home'&&S.view!=='defs'?`<button class="mini undobtn" data-act="undo" title="Desfazer (Ctrl/⌘+Z)" aria-label="Desfazer" ${hk(p).u.length?'':'disabled'}>↶</button><button class="mini undobtn" data-act="redo" title="Refazer (Ctrl/⌘+Y)" aria-label="Refazer" ${hk(p).r.length?'':'disabled'}>↷</button>`:''}<button class="mini menubtn ${bkWarn()?'dot':''}" data-act="menu" aria-label="Menu">☰ Menu</button>`;
+  $('#hdr').innerHTML=`<h1 data-act="go" data-v="home">periText</h1><span class="ver">v${VERSION} · ${VERSION_DATA.split('-').reverse().join('/')}</span><div class="crumbs">${crumbs}</div>${p&&S.view!=='home'&&S.view!=='defs'?`<button class="mini undobtn" data-act="undo" title="Desfazer (Ctrl/⌘+Z)" aria-label="Desfazer" ${hk(p).u.length?'':'disabled'}>↶</button><button class="mini undobtn" data-act="redo" title="Refazer (Ctrl/⌘+Y)" aria-label="Refazer" ${hk(p).r.length?'':'disabled'}>↷</button>`:''}<button class="mini menubtn ${bkWarn()?'dot':''}" data-act="menu" aria-label="Menu">☰ Menu</button>`;
   const ST=p&&PVIEWS.includes(S.view)?stepState(p):{};const OPT=v=>v==='orc'&&!orcHas(p);$('#steps').innerHTML=p&&PVIEWS.includes(S.view)?PSTEPS.map(([v,n,t])=>`<button class="${S.view===v?'on':''}" data-act="go" data-v="${v}" title="${ST[v]?ST[v]+' por completar':'completo'}"><b>${n} <i class="stp ${OPT(v)?'':ST[v]?'w':'k'}">${OPT(v)?'○':ST[v]?'●':'✓'}</i></b> ${t}</button>`).join(''):'';{const on=document.querySelector('#steps button.on');if(on&&on.scrollIntoView)on.scrollIntoView({inline:'nearest',block:'nearest'})}
   $('#steps').style.display=$('#steps').innerHTML?'':'none';
   let html;
@@ -1509,7 +1509,7 @@ function vDefs(){
   ${blk('D · Fotografias')}
   ${sec('dp','Resolução',`<label>Resolução das fotos</label><div class="seg">${[[50,'50 KB'],[150,'150 KB'],[300,'300 KB'],[500,'500 KB']].map(([v,t])=>`<button class="${settings.photoKB==v?'on':''}" data-act="setNum" data-k="photoKB" data-v="${v}">${t}</button>`).join('')}</div><p class="muted">50 mínima · 150 baixa (recomendada) · 300 razoável · 500 média. O número máximo de fotos por assunto escolhe-se em «Fotografias e valores no Word» (acima) ou em 6 · Relatório.</p>`)}
   ${blk('E · Cópias de segurança')}${bkBarHTML()}
-  <p class="muted center">PeriText — relatórios de peritagem de engenharia e construção · v${VERSION} · ${VERSION_DATA.split('-').reverse().join('/')}</p>`;
+  <p class="muted center">periText — relatórios de peritagem de engenharia e construção · v${VERSION} · ${VERSION_DATA.split('-').reverse().join('/')}</p>`;
 }
 
 
@@ -2787,7 +2787,7 @@ document.addEventListener('click',async e=>{{const _x=e.target.closest&&e.target
     case 'undo':return doUndo(-1);case 'redo':return doUndo(1);case 'menu':openMenu();return;
     case 'menuClose':return;
     case 'quit':await quitApp();return;
-    case 'help':{const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="box helpbox"><div class="btns" style="margin-top:0;justify-content:space-between"><b style="font-size:17px">Como funciona o PeriText</b><button class="secondary mini" data-x>✕</button></div>${HELP_HTML}</div>`;m.addEventListener('click',e=>{if(e.target===m||e.target.closest('[data-x]'))m.remove()});document.body.appendChild(m);return}
+    case 'help':{const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="box helpbox"><div class="btns" style="margin-top:0;justify-content:space-between"><b style="font-size:17px">Como funciona o periText</b><button class="secondary mini" data-x>✕</button></div>${HELP_HTML}</div>`;m.addEventListener('click',e=>{if(e.target===m||e.target.closest('[data-x]'))m.remove()});document.body.appendChild(m);return}
     case 'filtQClear':S.filt.q='';S.scrollTop=window.scrollY;break;
     case 'addParte':{const n=Math.max(0,...p.partes.map(x=>+x.n))+1;p.partes.push({n,nome:'Parte '+n});await saveProc();S.scrollTop=window.scrollY;break}
     case 'delParte':{const x=p.partes[+el.dataset.i];const k=p.anomalias.filter(a=>parteOf(p,a)==x.n).length;if(k)return toast(`A parte ${x.n} tem ${k} anomalia(s) — mude-as primeiro de parte.`,1);if(p.partes.length<2)return;p.partes.splice(+el.dataset.i,1);await saveProc();S.scrollTop=window.scrollY;break}
