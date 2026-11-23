@@ -1730,7 +1730,7 @@ async function buildRelat(p){ensureRel(p);alVisCapa(p);p.anomalias.forEach(a=>{a
     if(kr)body+=tbl([L1,L2],kr)+E();
     if(x.crit||alMetOn(x).length){body+=H3('Critério')+T(alCritTxt(a)||'—',{jc:'both'});if(String(x.critTxt||'').trim())body+=T(x.critTxt,{jc:'both'})}
     {const sh=alMetSheet(a);if(sh){body+=H3('Método');if(String(x.metTxt||'').trim())body+=T(x.metTxt,{jc:'both'});body+=P(R('Métodos aplicados',{b:true}),{keep:1,sp:[120,60]});body+=!S.noOle?alOlePara(sh,oleParts):sh.rows.slice(1).map(r=>T(r.map(c=>c&&typeof c==='object'?(c.s===7||c.s===10?alEur(c.v):c.v):c).filter(c=>c!==''&&c!=null).join(' · '))).join('');
-     {const cs=cstSheet(a);if(cs&&x.met['Custo (reposição depreciado)']){body+=P(R('Cálculo pelo custo de reposição depreciado',{b:true}),{keep:1,sp:[120,60]});body+=!S.noOle?alOlePara(cs,oleParts):T(`Valor pelo custo: ${alEur(cs.rows[cs.rows.length-1][8].v)}`)}}
+     {const cs=cstSheet(a);if(cs&&x.met['Custo (reposição depreciado)']){{const Rc=cstRun(a),resid=Rc&&(Rc.ed.some(e=>e.ex<1)||Rc.trfE);body+=P(R(resid?'Cálculo do valor residual, com base no custo a novo (obra inacabada / aproveitamento parcial)':'Cálculo pelo custo de reposição depreciado',{b:true}),{keep:1,sp:[120,60]})}body+=!S.noOle?alOlePara(cs,oleParts):T(`Valor pelo custo: ${alEur(cs.rows[cs.rows.length-1][8].v)}`)}}
      {const rs=x.met['Rendimento (capitalização)']&&!alCultOk(a)&&rndSheet(a);if(rs){body+=P(R('Cálculo pelo rendimento',{b:true}),{keep:1,sp:[120,60]});body+=!S.noOle?alOlePara(rs,oleParts):T(`Valor pelo rendimento: ${alEur(rs.rows[rs.rows.length-1][9].v)}`)}}
      if(String(x.merc||'').trim())body+=P(R('Análise de mercado',{b:true}),{keep:1,sp:[120,60]})+T(x.merc,{jc:'both'});
      body+=E()}}
