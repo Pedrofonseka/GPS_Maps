@@ -113,7 +113,10 @@ Na pasta ZIP vai `<codigo>_Livro_Avaliacao.xlsx`: folha Resumo + uma folha por v
 
 Como a folha OUT_Resumo: por verba — valor apurado e % relativa ao total; total apurado; por grupo — Qtd, parciais e %. Sai no Word como Excel embutido editável e no ZIP como `<codigo>_Resumo.xlsx`. Quando houver métodos, o valor de cada verba é o do método adotado + BFT.
 
-## 11. Valor atual — obra em curso, inacabada, em ruína ou a transformar (1.19)
+## 11. Valor atual — método residual RES (1.19; RES desde 1.23)
+
+(1.23) Ao escolher RES pergunta-se a base do valor final a novo: **método de custo** (CST a novo — sem depreciação física nem obsolescências; a idade pode ser indicada mas não entra) ou **método de mercado** (MER), ou valor à mão. Depois: **valor atual = (valor final a novo − terreno) × % reutilizável + terreno − custos de demolição, limpeza, transformação**. O terreno vem do solo do CST (se existir) ou indica-se.
+
 
 Bloco **autónomo**, aplicado sobre o valor da **obra concluída (100 %)** obtido por qualquer método (CST, MER, RND…) ou indicado à mão:
 

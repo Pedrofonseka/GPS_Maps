@@ -728,7 +728,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.22';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.23';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -757,7 +757,7 @@ const DEF_LOCAL=['Cozinha', 'Sala de estar', 'Sala de jantar', 'Sala comum', 'Es
 const DEF_ELEM=['Caixa de escada', 'Beirado', 'Platibanda', 'Soco', 'Parede exterior', 'Parede interior', 'Teto', 'Pavimento', 'Orlas e rodapés', 'Mobiliário', 'Mob. cozinha', 'Eletrodoméstico', 'Equip. sanitário', 'Porta interior', 'Porta exterior', 'Janela', 'Vidros', 'Cantaria', 'Rd água', 'Rd esgoto', 'Rd elétrica', 'Rd telecom', 'Rd gás', 'Rd incêndio', 'Rd intrusão', 'Rd AVAC', 'AQS', 'Cobertura', 'Telhas', 'Caleiras e tubos de queda', 'Rufos', 'Chaminé', 'Rd pluviais', 'Rd ventilação', 'Revestimento', 'Pintura', 'Teto falso', 'Escadas', 'Guardas e corrimãos', 'Estores e caixas', 'Portão', 'Muro'];
 const CATS=[['catZona','NUF – Núcleo Funcional','zona'],['catPiso','Piso','piso'],['catLocal','Local (compartimento)','local'],['catElem','Elemento','elemento'],['catalog','Tipo de anomalia',null]];
 const COMP_SINGULAR_DEF='Pedro Jorge Fernandes Fonseca, engenheiro, perito-avaliador da Lista Oficial do Ministério da Justiça e do Ministério das Finanças, com formação em avaliação imobiliária e expropriações pelo Centro de Estudos Judiciários do Ministério da Justiça, inscrito na Associação Nacional de Avaliadores Imobiliários sob o número 336 e na CMVM sob o registo PAI 2011 0005, ao serviço da empresa Proficis serviços de engenharia Lda, pessoa coletiva com o número 503 759 813, jura por sua honra desempenhar as funções que lhe foram atribuídas, com lealdade e proficiência.';
-const DEF_SETTINGS={fields:DEF_FIELDS,catalog:DEF_CATALOG,catZona:DEF_ZONA,catPiso:DEF_PISO,catLocal:DEF_LOCAL,catElem:DEF_ELEM,printStyle:'both',photoKB:150,maxFotos:6,outKB:0,peritoNome:'Pedro Fonseca, Eng.',compSingular:COMP_SINGULAR_DEF,photoCols:2,onePerPage:true,fitPage:true,dateCom:true,layout:'grelha',txtPhotos:true};
+const DEF_SETTINGS={fields:DEF_FIELDS,catalog:DEF_CATALOG,catZona:DEF_ZONA,catPiso:DEF_PISO,catLocal:DEF_LOCAL,catElem:DEF_ELEM,printStyle:'both',photoKB:150,maxFotos:18,outKB:0,peritoNome:'Pedro Fonseca, Eng.',compSingular:COMP_SINGULAR_DEF,photoCols:2,onePerPage:true,fitPage:true,dateCom:true,layout:'grelha',txtPhotos:true};
 
 let db,settings,procs=[];
 const S={view:'home',open:{},sub:null,filt:{st:'all',zona:''},openId:false,gpsMsg:'',pid:null,aid:null,imp:null,camShots:[],openCfg:false};
@@ -815,8 +815,8 @@ async function relAnexFull(r){if(!r||!r.anexF)return r;return {...r,anexF:await 
 const numOf=(p,a)=>{if(p.lockNum&&a.num)return a.num;const pt=parteOf(p,a);let k=0;for(const x of p.anomalias){if(parteOf(p,x)==pt)k++;if(x===a||(a.id&&x.id===a.id))return k}return k};
 // fotos escolhidas para o relatório (sel!==false) vêm primeiro; as restantes ficam em reserva (guardadas, não exportadas)
 // máximo de fotos no relatório por assunto: 2·4·6·8·9·10·sem limite (por defeito 6) — biblioteca: tamanho.md
-const MAXOPT=()=>[2,4,6,8,9,10,0];
-const maxF=()=>{const v=settings.maxFotos;if(v===0||v==='0')return Infinity;return MAXOPT().includes(+v)?+v:6};
+const MAXOPT=()=>[2,4,6,8,9,10,12,18,0];
+const maxF=()=>{const v=settings.maxFotos;if(v===0||v==='0')return Infinity;return MAXOPT().includes(+v)?+v:18};
 const maxTxt=()=>Number.isFinite(maxF())?String(maxF()):'sem limite';
 const maxUI=()=>`<label>Fotos no relatório, por assunto (máximo)</label><div class="seg">${MAXOPT().map(v=>`<button class="${(v?maxF()===v:maxF()===Infinity)?'on':''}" data-act="setMax" data-v="${v}">${v||'Sem limite'}</button>`).join('')}</div><p class="muted">Por defeito 6. As fotos a mais não se perdem: ficam na reserva de cada anomalia.</p>`;
 // resolução das imagens nos documentos (não altera as fotos guardadas) + tamanho previsto
@@ -882,6 +882,7 @@ function migrateSettings(s){
   if(!s.migR130){s.catPiso=DEF_PISO.slice();const oldZ=['Edifício','Anexo','Garagem','Jardim','Piscina','Pavimentação','Redes técnicas','Cobertura','Logradouro','Muros e vedações','Acessos'];s.catZona=[...DEF_ZONA,...(s.catZona||[]).filter(z=>!oldZ.includes(z)&&!DEF_ZONA.includes(z))];s.catElem=[...new Set([...(s.catElem||[]),'Caixa de escada','Beirado','Chaminé','Platibanda','Soco'])];const c=s.fields.find(f=>f.id==='conf');if(c&&Array.isArray(c.opts)){c.opts=c.opts.filter(o=>o[0]!=='EEX');const ks=c.opts.map(o=>o[0]);const at=ks.indexOf('STB');const add=[['NIN','Não iniciado'],['ECU','Em curso']].filter(o=>!ks.includes(o[0]));c.opts.splice(at>=0?at:c.opts.length,0,...add)}s.migR130=true;s.mig0163=true;s.mig0165=true}
   if(!s.mig0165){const c=s.fields.find(f=>f.id==='conf');if(c&&Array.isArray(c.opts)&&!c.opts.some(o=>o[0]==='NCF')){const at=c.opts.findIndex(o=>o[0]==='CFM');c.opts.splice(at>=0?at+1:c.opts.length,0,['NCF','Não confirmado'])}s.mig0165=true}
   if(!s.mig0163){const c=s.fields.find(f=>f.id==='conf');if(c&&Array.isArray(c.opts)){const ks=c.opts.map(o=>o[0]);const add=[['EEX','Em execução'],['STB','Em stand-by']].filter(o=>!ks.includes(o[0]));if(add.length){const at=ks.indexOf('RES');c.opts.splice(at>=0?at+1:c.opts.length,0,...add)}}s.mig0163=true}
+  if(!s.migAv18){if(s.maxFotos==null||+s.maxFotos===6)s.maxFotos=18;s.migAv18=true}
   if(!s.mig060){const c=s.fields.find(f=>f.id==='conf');if(c&&c.opts&&c.opts.map(o=>o[0]).join()==='CON,NID'){c.opts=clone(DEF_FIELDS[0].opts);if(c.label==='Confirmação')c.label='Status'}if(s.maxFotos===4)s.maxFotos=9;s.mig060=true}
   return s;
 }
@@ -1736,7 +1737,7 @@ async function buildRelat(p){ensureRel(p);alVisCapa(p);p.anomalias.forEach(a=>{a
      {const rs=x.met['Rendimento (capitalização)']&&!alCultOk(a)&&rndSheet(a);if(rs){body+=P(R('Cálculo pelo rendimento',{b:true}),{keep:1,sp:[120,60]});body+=!S.noOle?alOlePara(rs,oleParts):T(`Valor pelo rendimento: ${alEur(rs.rows[rs.rows.length-1][9].v)}`)}}
      if(String(x.merc||'').trim())body+=P(R('Análise de mercado',{b:true}),{keep:1,sp:[120,60]})+T(x.merc,{jc:'both'});
      body+=E()}}
-    {const vs=vaSheet(a);if(vs){const Rv=vaRun(a);body+=H3('Valor atual')+T(`${VA_TIPO[x.va.tipo]||''}. Valor atual = terreno + % Exe × (obra concluída − terreno)${Rv.ct?' − custos de transformação / adaptação':''}: ${alEur(Rv.vt)} + ${CULT.fmt(Rv.exe*100,0)} % × ${alEur(Rv.con)}${Rv.ct?` − ${alEur(Rv.ct)}`:''} = ${alEur(Rv.va)}.`,{jc:'both'});body+=!S.noOle?alOlePara(vs,oleParts):'';body+=E()}}
+    {const vs=x.met?.['Residual']&&vaSheet(a);if(vs){const Rv=vaRun(a);body+=H3('Valor atual — método residual (RES)')+T(`${VA_TIPO[x.va.tipo]||''}. Base: valor final a novo — ${vaBaseLbl(a)}. Valor atual = (valor final a novo − terreno) × % reutilizável + terreno${Rv.ct?' − custos de demolição, limpeza e transformação':''}: (${alEur(Rv.v100)} − ${alEur(Rv.vt)}) × ${CULT.fmt(Rv.exe*100,0)} % + ${alEur(Rv.vt)}${Rv.ct?` − ${alEur(Rv.ct)}`:''} = ${alEur(Rv.va)}.`,{jc:'both'});body+=!S.noOle?alOlePara(vs,oleParts):'';body+=E()}}
     if(alRefOk(a)&&x.tofRef&&alNum(x.refV)>0){const at=alNum(x.car?.at),vr=alNum(x.refV);body+=P(R('Valor de referência',{b:true}),{keep:1,sp:[120,60]})+T(`Valor unitário de referência para ${alCultTipo(a).toLowerCase()}: ${CULT.fmt(vr)} €/m² – fonte: ${String(x.refF||'').trim().replace(/[.\s]+$/,'')}.`,{jc:'both'})+(at?T(`Valor do terreno = ${CULT.fmt(at,0)} m² × ${CULT.fmt(vr)} €/m² = ${alEur(Math.round(at*vr))}.`,{jc:'both',b:true}):'')+E()}
     if(alCultOk(a)&&x.calc&&Array.isArray(x.calcW)&&x.calcW.length){const at=alNum(x.car?.at),vu=alNum(x.vun);
      body+=P(R('Cálculo pelo rendimento',{b:true}),{keep:1,sp:[120,60]});
@@ -1746,8 +1747,9 @@ async function buildRelat(p){ensureRel(p);alVisCapa(p);p.anomalias.forEach(a=>{a
        for(const x2 of b.t.r){const c=Array.isArray(x2)?x2:x2.c,bb=!Array.isArray(x2)&&x2.b;rr+=tr(c.map((t,k)=>tc(t,Wc[k],{b:bb,jc:b.t.jc[k]||'left',sz:8})).join(''))}
        body+=tbl(Wc,rr)+P('',{sp:[0,60]})}else body+=T(b.p,{jc:'both',b:!!b.h})}
      if(at&&vu!=null)body+=T(`Valor do terreno = ${CULT.fmt(at,0)} m² × ${CULT.fmt(vu)} €/m² = ${alEur(Math.round(at*vu))}${x.fund?` (${x.fund})`:''}.`,{jc:'both',b:true})+E()}
-    const F=relF(a).filter(f=>fd(f));if(F.length){body+=P(R('Levantamento fotográfico',{b:true}),{keep:1,sp:[120,60]});const CW2=Math.floor(TWb/2);let pr='';
-     for(let k=0;k<F.length;k+=2){let cells='',caps='';for(let c=0;c<2;c++){const f=F[k+c],i=k+c;cells+=`<w:tc><w:tcPr><w:tcW w:w="${CW2}" w:type="dxa"/></w:tcPr><w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:keepNext/><w:spacing w:before="40" w:after="0"/><w:jc w:val="center"/></w:pPr>${f?imgRun(await cropTo(fd(f),4/3,1000),8.0,6.0,'Foto'):''}</w:p></w:tc>`;caps+=`<w:tc><w:tcPr><w:tcW w:w="${CW2}" w:type="dxa"/></w:tcPr><w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:spacing w:before="20" w:after="80"/><w:jc w:val="center"/></w:pPr>${f?R(`${imgCode(p,a,i)}${f.legenda?' – '+f.legenda:''}`,{i:true,sz:8}):''}</w:p></w:tc>`}
+    const F=relF(a).filter(f=>fd(f));if(F.length){body+=BRK+P(R('Levantamento fotográfico',{b:true}),{keep:1,sp:[0,60]});const CW2=Math.floor(TWb/2);let pr='';
+     /* 2 colunas × 3 linhas por página (6 fotografias); nova página a cada 6 */
+     for(let k=0;k<F.length;k+=2){if(k&&k%6===0){body+=tbl([CW2,TWb-CW2],pr,false)+BRK;pr=''}let cells='',caps='';for(let c=0;c<2;c++){const f=F[k+c],i=k+c;cells+=`<w:tc><w:tcPr><w:tcW w:w="${CW2}" w:type="dxa"/></w:tcPr><w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:keepNext/><w:spacing w:before="40" w:after="0"/><w:jc w:val="center"/></w:pPr>${f?imgRun(await cropTo(fd(f),4/3,1000),8.0,6.0,'Foto'):''}</w:p></w:tc>`;caps+=`<w:tc><w:tcPr><w:tcW w:w="${CW2}" w:type="dxa"/></w:tcPr><w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:spacing w:before="20" w:after="80"/><w:jc w:val="center"/></w:pPr>${f?R(`${imgCode(p,a,i)}${f.legenda?' – '+f.legenda:''}`,{i:true,sz:8}):''}</w:p></w:tc>`}
       pr+=`<w:tr><w:trPr><w:cantSplit/></w:trPr>${cells}</w:tr><w:tr><w:trPr><w:cantSplit/></w:trPr>${caps}</w:tr>`}
      body+=tbl([CW2,TWb-CW2],pr,false)+E()}}}
   // 7 — resposta ao solicitado
@@ -2124,7 +2126,7 @@ const AL_MET_NOME={'Custo (reposição depreciado)':'Custo','Residual':'Valor re
 const alMetLbl=m=>`${AL_MET_SIG[m]||''} · ${AL_MET_NOME[m]||m}`;
 const alMetOn=x=>AL_METODOS.filter(m=>x.met?.[m]);
 /* valor de um método: o escrito pelo perito ou, em TOF, o que sai das rotinas (culturas / valor de referência) */
-function alMetAuto(a,m){const x=a.al,at=alNum(x.car?.at);if(m==='Custo (reposição depreciado)'){const R=cstRun(a);return R&&R.total?R.total:null}if(m==='Rendimento (capitalização)'&&!alCultOk(a)){const R=rndRun(a);return R&&R.total?R.total:null}if(!at)return null;
+function alMetAuto(a,m){const x=a.al,at=alNum(x.car?.at);if(m==='Custo (reposição depreciado)'){const R=cstRun(a);return R&&R.total?R.total:null}if(m==='Residual'){const R=vaRun(a);return R?R.va:null}if(m==='Rendimento (capitalização)'&&!alCultOk(a)){const R=rndRun(a);return R&&R.total?R.total:null}if(!at)return null;
  if(m==='Rendimento (capitalização)'&&alCultOk(a)&&x.calc&&alNum(x.vun)!=null)return Math.round(at*alNum(x.vun));
  if(m==='Valores de referência'&&alRefOk(a)&&x.tofRef&&alNum(x.refV)!=null)return Math.round(at*alNum(x.refV));return null}
 function alMetVal(a,m){const v=alNum(a.al.mv?.[m]);return v!=null?v:alMetAuto(a,m)}
@@ -2138,9 +2140,9 @@ function alMetHTML(a,p){const x=a.al,on=alMetOn(x),bft=alBft(a),ad=x.mAdot&&x.me
  let h=alCritHTML(a)+`<p class="muted" style="margin-top:0">Escolha os métodos aplicados, indique o valor obtido por cada um e assinale o que se considera mais adequado (adotado). O valor estimado da verba = método adotado + encargos/benfeitorias.</p><div class="tks">${AL_METODOS.map(m=>alTk(!!x.met[m],esc(alMetLbl(m)),`data-alact="met" data-v="${esc(m)}"`)).join('')}</div>`;
  if(on.length){h+=`<div class="algrp">Valor por método</div>`;
   for(const m of on){const au=alMetAuto(a,m),isA=ad===m;h+=`<div class="inrow" style="margin-top:6px;align-items:center"><b style="flex:0 0 46px">${AL_MET_SIG[m]}</b><input data-bind="almv.${AL_METODOS.indexOf(m)}" inputmode="decimal" value="${esc(x.mv?.[m]||'')}" placeholder="${au!=null?esc(CULT.fmt(au,0))+' (calculado)':'Valor (€)'}" style="flex:1;min-width:0"><button class="${isA?'green':'secondary'} mini" data-alact="adot" data-v="${esc(m)}" style="flex:0 0 auto">${isA?'✓ Adotado':'Adotar'}</button></div>${au!=null&&alNum(x.mv?.[m])==null?`<p class="muted" style="margin:2px 0 0 52px">${m==='Rendimento (capitalização)'?(alCultOk(a)?'Do cálculo pelo rendimento (culturas) — ver 8 · Valor.':'Do cálculo pelo rendimento, abaixo.'):m==='Valores de referência'?'Do valor de referência — ver 8 · Valor.':'Do cálculo pelo custo, abaixo.'}</p>`:''}`}
-  if(x.met['Custo (reposição depreciado)'])h+=cstHTML(a);
+  if(x.met['Custo (reposição depreciado)']||(x.met['Residual']&&vaBase(a)==='cst'))h+=cstHTML(a);
   if(x.met['Rendimento (capitalização)']&&!alCultOk(a))h+=rndHTML(a);
-  h+=vaHTML(a);
+  if(x.met['Residual'])h+=vaHTML(a);
   if(x.met['Comparativo de mercado'])h+=`<div class="algrp">Análise de mercado</div>${txt('al.merc','Testemunhos, fontes, homogeneização e conclusão',x.merc,4)}`;
   h+=`<div class="algrp">Encargos / benfeitorias (BFT)</div>${bftHTML(a)}`;
   h+=txt('al.metTxt','Escolha do método — em função da finalidade, base de valor e critério',x.metTxt,3);{const sg=alMetSug(a,p);if(sg&&String(x.metTxt||'').trim()!==sg)h+=`<div class="cmres" style="margin-top:4px"><span class="muted">Sugestão: ${esc(sg)}</span> <button class="secondary mini" data-alact="metSug">✓ Usar</button></div>`}
@@ -2215,7 +2217,8 @@ document.addEventListener('change',async e=>{const el=e.target.closest('select[d
  if(k==='freguesia'&&el.value==='_outra'){const n=(prompt('Nome da freguesia (fica guardada para este concelho):','')||'').trim();if(n){settings.fregExtra=settings.fregExtra||{};const L=settings.fregExtra[x.concelho]=settings.fregExtra[x.concelho]||[];if(!L.includes(n))L.push(n);try{await saveSettings()}catch(_){}x.freguesia=n}}
  else{x[k]=el.value;if(k==='concelho'&&x.freguesia&&!fregOf(x.concelho).includes(x.freguesia))x.freguesia=''}
  await saveProc();S.scrollTop=window.scrollY;render()},true);
-function alA(a){const d={codigo:'',designacao:'',idTipo:'',idValor:'',concelho:'',freguesia:'',morada:'',tipo:'',destino:'',destinoOutro:'',modo:'det',car:{},suc:{},atr:'',util:'',crit:'',critUA:'',critTxt:'',met:{},metTxt:'',mv:{},mAdot:'',bft:'',bftTxt:'',merc:'',valor:'',renda:'',bad:'',valObs:''};a.al=a.al||{};for(const k in d)if(a.al[k]===undefined)a.al[k]=clone(d[k]);{const x0=a.al;if(AL_TIPO_OLD[x0.tipo])x0.tipo=AL_TIPO_OLD[x0.tipo];if(x0.cst&&!x0.va){const c=x0.cst,ex=(c.ed||[]).find(e=>e.exe||(e.exec!=null&&String(e.exec).trim()!==''&&+String(e.exec).replace(',','.')<1)),te=Math.abs(+String(c.trfE||0).replace(',','.')||0),tp=Math.abs(+String(c.trf||0).replace(',','.')||0),nvT=(c.ed||[]).reduce((s1,e)=>s1+(+String(e.area||0).replace(',','.')||0)*(+String(e.k1||1).replace(',','.')||1)*(+String(e.cnv||0).replace(',','.')||0),0),tpv=Math.round(tp*nvT);if(ex||te||tpv){x0.va={on:1,tipo:'RUI',v100:'',vt:'',exe:ex&&!ex.exe?String(ex.exec):'1',exeT:ex?.exe||null,cust:[...(tpv?[{d:'Transformação / demolição',v:String(tpv)}]:[]),...(te?[{d:'Demolições, limpezas e transformação',v:String(te)}]:[])]}}(c.ed||[]).forEach(e=>{delete e.exe;delete e.exec});delete c.trfE;c.trf='0'}
+function alA(a){const d={codigo:'',designacao:'',idTipo:'',idValor:'',concelho:'',freguesia:'',morada:'',tipo:'',destino:'',destinoOutro:'',modo:'det',car:{},suc:{},atr:'',util:'',crit:'',critUA:'',critTxt:'',met:{},metTxt:'',mv:{},mAdot:'',bft:'',bftTxt:'',merc:'',valor:'',renda:'',bad:'',valObs:''};a.al=a.al||{};for(const k in d)if(a.al[k]===undefined)a.al[k]=clone(d[k]);{const x0=a.al;if(AL_TIPO_OLD[x0.tipo])x0.tipo=AL_TIPO_OLD[x0.tipo];if(x0.va?.on&&!x0.met?.['Residual']){x0.met=x0.met||{};const ad0=x0.mAdot;x0.met['Residual']=true;if(!x0.va.base)x0.va.base=ad0&&ad0!=='Residual'?'m:'+ad0:'man';if(x0.valAuto==='met'||x0.valAuto===undefined)x0.mAdot='Residual'}
+ if(x0.cst&&!x0.va){const c=x0.cst,ex=(c.ed||[]).find(e=>e.exe||(e.exec!=null&&String(e.exec).trim()!==''&&+String(e.exec).replace(',','.')<1)),te=Math.abs(+String(c.trfE||0).replace(',','.')||0),tp=Math.abs(+String(c.trf||0).replace(',','.')||0),nvT=(c.ed||[]).reduce((s1,e)=>s1+(+String(e.area||0).replace(',','.')||0)*(+String(e.k1||1).replace(',','.')||1)*(+String(e.cnv||0).replace(',','.')||0),0),tpv=Math.round(tp*nvT);if(ex||te||tpv){x0.va={on:1,tipo:'RUI',v100:'',vt:'',exe:ex&&!ex.exe?String(ex.exec):'1',exeT:ex?.exe||null,cust:[...(tpv?[{d:'Transformação / demolição',v:String(tpv)}]:[]),...(te?[{d:'Demolições, limpezas e transformação',v:String(te)}]:[])]}}(c.ed||[]).forEach(e=>{delete e.exe;delete e.exec});delete c.trfE;c.trf='0'}
  if(!x0.bftL){x0.bftL=String(x0.bft??'').trim()?[{d:x0.bftTxt||'Encargos / benfeitorias',vref:String(x0.bft),k1:'1',k2:'1',qtd:'1'}]:[]}if(AL_DEST_OLD[x0.destino])x0.destino=AL_DEST_OLD[x0.destino];if(AL_ATR_OLD[x0.atr]!==undefined)x0.atr=AL_ATR_OLD[x0.atr];
   if(!x0.ids){x0.ids={};const t=String(x0.idTipo||'').trim(),v=String(x0.idValor||'').trim();if(t||v)x0.ids[AL_IDOLD[t]||t||'Outro']=v}
   const c0=x0.car;if(c0)for(const [k,M] of Object.entries(AL_LIST_OLD))if(typeof c0[k]==='string'&&M[c0[k]]!==undefined)c0[k]=M[c0[k]]}
@@ -2366,7 +2369,7 @@ document.addEventListener('click',async e=>{const el=e.target.closest('[data-ala
   case 'tipo':{alA(a);const v=el.dataset.v;if(a.al.tipo===v)return;if(a.al.tipo&&alFam(a)!==(AL_TIPOS.find(t=>t[0]===v)||[])[2]&&(Object.keys(a.al.car).length)&&!await ask('Mudar o tipo de ativo? A caracterização detalhada já registada fica guardada, mas só aparece a do novo tipo.',['Cancelar','Mudar'],1))return;a.al.tipo=v;if(!AL_DEST[alFam(a)].includes(a.al.destino))a.al.destino='';S.open.v5=true;return keep()}
   case 'car1':{alA(a);const k=el.dataset.k,v=el.dataset.v;a.al.car[k]=a.al.car[k]===v?'':v;return keep()}
   case 'carM':{alA(a);const k=el.dataset.k,v=el.dataset.v;const arr=Array.isArray(a.al.car[k])?a.al.car[k]:[];a.al.car[k]=arr.includes(v)?arr.filter(x=>x!==v):[...arr,v];return keep()}
-  case 'met':{alA(a);const v=el.dataset.v;a.al.met[v]=!a.al.met[v];if(!a.al.met[v]&&a.al.mAdot===v)a.al.mAdot='';return keep()}
+  case 'met':{alA(a);const v=el.dataset.v;a.al.met[v]=!a.al.met[v];if(!a.al.met[v]&&a.al.mAdot===v)a.al.mAdot='';if(v==='Residual'&&a.al.met[v]){if(!a.al.va)a.al.va={on:1,tipo:'RUI',v100:'',vt:'',exe:'1',exeT:null,cust:[]};a.al.va.on=1}return keep()}
   case 'tabAdd':{const l=el.dataset.l;if(l==='bft')(a.al.bftL=a.al.bftL||[]).push({d:'',vref:'',k1:'1',k2:'1',qtd:'1'});else a.al.rnd.L.push({d:'',ra:'',n:'10',i:'0.05',fr:'1',dt:'0.01'});if(a.al.mAdot&&a.al.valAuto!=='')a.al.valAuto='met';alValSync(a);return keep()}
   case 'tabDel':{const l=el.dataset.l;(l==='bft'?a.al.bftL:a.al.rnd.L).splice(+el.dataset.i,1);alValSync(a);return keep()}
   case 'rndOn':{alA(a);if(!a.al.rnd)rndInit(a);else a.al.rnd.on=1;return keep()}
@@ -2377,7 +2380,8 @@ document.addEventListener('click',async e=>{const el=e.target.closest('[data-ala
   case 'dhNo':{a.vis.data='';a.vis.hora='';a.vis.dhSug=0;if(a.ovSug)ovSet(p.anomalias,a,0);toast('Registo anulado nesta verba — abra a verba certa e carregue em «Data-hora».');return keep()}
   case 'ovClr':{ovSet(p.anomalias,a,0);return keep()}
   case 'ovNow':{ovTouch(p.anomalias,a);ovAccept(a);return keep()}
-  case 'vaOn':{alA(a);if(!a.al.va)a.al.va={on:1,tipo:'CUR',v100:'',vt:'',exe:'1',exeT:null,cust:[]};else a.al.va.on=1;if(a.al.mAdot)a.al.valAuto='met';alValSync(a);return keep()}
+  case 'vaBaseSet':{const k=a.al.va;k.base=el.dataset.v;if(k.base==='cst'){a.al.met['Custo (reposição depreciado)']=true;if(!a.al.cst)cstInit(a)}if(k.base==='m:Comparativo de mercado')a.al.met['Comparativo de mercado']=true;k.v100='';alValSync(a);return keep()}
+  case 'vaOn':{alA(a);if(!a.al.va)a.al.va={on:1,tipo:'RUI',v100:'',vt:'',exe:'1',exeT:null,cust:[]};else a.al.va.on=1;if(vaBase(a)==='cst'&&!a.al.cst)cstInit(a);alValSync(a);return keep()}
   case 'vaOff':{if(a.al.va)a.al.va.on=0;alValSync(a);return keep()}
   case 'vaTipo':{a.al.va.tipo=el.dataset.v;if(el.dataset.v!=='CUR'&&!(a.al.va.cust||[]).length)a.al.va.cust=[{d:'Demolições, limpezas e trabalhos para aproveitar o existente',v:''}];return keep()}
   case 'vaExeTog':{const k=a.al.va;k.exeT=k.exeT?null:exeNew(exeTipOf(a));alValSync(a);return keep()}
@@ -2415,6 +2419,7 @@ document.addEventListener('input',e=>{const el=e.target,b=el.dataset?.bind;if(!b
  if(scope==='pal')alP(p)[k]=el.value;else if(scope==='alart'||scope==='aldoc'){alA(a);const L=scope==='alart'?a.al.artigos:a.al.docsArea,k2=b.split('.')[2];if(L&&L[+k])L[+k][k2]=el.value}else if(scope==='alid'){alA(a);const key=(AL_IDTIPO[alFam(a)]||AL_IDTIPO.imo)[+k];a.al.ids=a.al.ids||{};if(key)a.al.ids[key]=el.value}else{alA(a);if(scope==='al'){a.al[k]=el.value;if(k==='valor')a.al.valAuto=''}else if(scope==='alc')a.al.car[k]=el.value;else a.al.suc[k]=el.value}
  if(typeof autosize==='function')autosize(el);saveProcSoon()},true);
 
+document.addEventListener('change',async e=>{const el=e.target.closest('select[data-alact="vaBase"]');if(!el)return;e.stopImmediatePropagation();const a=curA();if(!a?.al?.va)return;a.al.va.base=el.value;if(el.value==='cst'&&!a.al.cst)cstInit(a);alValSync(a);await saveProc();S.scrollTop=window.scrollY;render()},true);
 document.addEventListener('change',async e=>{const el=e.target.closest('select[data-alact="exeTip"]');if(!el)return;e.stopImmediatePropagation();const a=curA(),e2=a?.al?.va;if(!e2?.exeT)return;if(!await ask('Trocar a tipologia? Os pesos e as percentagens executadas voltam aos valores por defeito.'))return render();e2.exeT=exeNew(el.value);alValSync(a);await saveProc();S.scrollTop=window.scrollY;render()},true);
 /* cálculos: ao mudar de caixa não se redesenha o ecrã (no iPhone fecharia o teclado e o ecrã saltava); redesenha-se quando o foco sai das caixas */
 let calcPend=false;const calcRedraw=()=>{if(!calcPend)return;const ae=document.activeElement;if(ae&&/^(INPUT|TEXTAREA)$/.test(ae.tagName))return;calcPend=false;S.scrollTop=window.scrollY;render()};
@@ -2847,11 +2852,11 @@ function cstInit(a){const x=a.al,c=x.car||{},ano=parseInt(c.ano),id=ano>1800?cst
  x.cst={on:1,area:String(c.at||''),...CST_DEF,ed}}
 /* números do cálculo: vírgula ou ponto decimal (0,065 = 0.065); «1.000» só é milhar se tiver grupos de 3 */
 const cstNum=v=>{let t=String(v??'').trim().replace(/\s|€/g,'');if(!t)return null;if(t.includes(','))t=t.replace(/\./g,'').replace(',','.');else if(/^-?[1-9]\d{0,2}(\.\d{3})+$/.test(t))t=t.replace(/\./g,'');const r=Number(t);return isFinite(r)?r:null};
-function cstRun(a){const k=a.al.cst;if(!k?.on)return null;const n=v=>{const r=cstNum(v);return r==null?0:r},alNum=cstNum;
+function cstRun(a,novo){const k=a.al.cst;if(!k?.on)return null;const n=v=>{const r=cstNum(v);return r==null?0:r},alNum=cstNum;
  const Ar=n(k.area),Ap=alNum(k.Ap);let kar=1;if(Ap&&Ar){const rr=Math.abs(Ar-Ap)/Ap;kar=Math.pow(Ap/Ar,rr<0.3?0.25:0.125)}
  const vun=n(k.C)*n(k.IUS)*n(k.ILZ)*(alNum(k.Div)??1)*kar,soloB=Ar*vun,encV=soloB*n(k.enc),solo=Math.round((soloB+encV)/100)*100;
- const ed=(k.ed||[]).map(e=>{const nv=n(e.area)*(alNum(e.k1)??1)*n(e.cnv),r=String(e.r??'').trim()!==''?n(e.r):(n(e.vida)?n(e.idade)/n(e.vida):0),adot=alNum(e.adot),dep=adot!=null?1-adot:(rhdDep(e.est,r)??0);return {...e,nv,r,dep,val:Math.round(nv*(1-dep)/100)*100}});
- const NV=ed.reduce((s,e)=>s+e.nv,0),edif=ed.reduce((s,e)=>s+e.val,0),ofV=-edif*n(k.of),oeV=-(edif+ofV)*n(k.oe),efa=edif+ofV+oeV,rat=NV?efa/NV:0;
+ const ed=(k.ed||[]).map(e=>{const nv=n(e.area)*(alNum(e.k1)??1)*n(e.cnv),r=String(e.r??'').trim()!==''?n(e.r):(n(e.vida)?n(e.idade)/n(e.vida):0),adot=alNum(e.adot),dep=novo?0:(adot!=null?1-adot:(rhdDep(e.est,r)??0));return {...e,nv,r,dep,val:Math.round(nv*(1-dep)/100)*100}});
+ const NV=ed.reduce((s,e)=>s+e.nv,0),edif=ed.reduce((s,e)=>s+e.val,0),ofV=novo?0:-edif*n(k.of),oeV=novo?0:-(edif+ofV)*n(k.oe),efa=edif+ofV+oeV,rat=NV?efa/NV:0;
  const txlV=rat<0.5?0:n(k.txl)*efa,mlrV=n(k.mlr)*(solo+efa+txlV),total=Math.round((solo+efa+txlV+mlrV)/100)*100;
  return {Ar,Ap,kar,vun,soloB,encV,solo,ed,NV,edif,ofV,oeV,efa,rat,txlV,mlrV,total}}
 function cstSheet(a){const k=a.al.cst,R=cstRun(a);if(!R)return null;const alNum=cstNum,n=v=>cstNum(v)??0,rows=[],P=(v)=>({v,s:5}),N2=v=>({v,s:3}),C4=v=>({v,s:6});
@@ -2886,44 +2891,49 @@ function cstHTML(a){const x=a.al,k=x.cst;if(!k?.on)return `<div class="btns"><bu
   <p class="muted" style="margin:0">ECV: 8-Nv Novo · 7-Mb Muito bom · 6-Bo Bom · 5-Rg Regular · 4-Ac Aceitável · 3-Sf Sofrível · 2-Df Deficiente · 1-Ip Impróprio</p><div class="btns"><button class="secondary mini" data-alact="cstAdd">+ Construção</button></div>`;
  const aj=[['of','Obsolescência funcional (a deduzir)',R.edif,R.ofV],['oe','Obsolescência económica / externa (a deduzir)',R.edif+R.ofV,R.oeV],['txl','Taxas, licenças e projetos (só se estado ≥ 50 %)',R.efa,R.txlV],['mlr','Margem do promotor',R.solo+R.efa+R.txlV,R.mlrV]];
  const ajT=`<div class="cstx"><table><tr>${th('Ajustes')}${th('Base €','Valor sobre o qual se aplica a percentagem')}${th('% (decimal)')}${th('Valor €')}</tr>${aj.map(([key,l,b,v])=>`<tr><td>${l}</td><td class="c">${F(b)}</td><td>${I('alcst.'+key,k[key],64)}</td><td class="c">${F(v)}</td></tr>`).join('')}
-  <tr class="tot"><td>Valor pelo custo — obra concluída (CST)</td><td class="c" colspan="2">estado ${F(R.rat*100,0)}%</td><td class="c">${F(R.total)}</td></tr></table></div><p class="muted" style="margin-top:0">Bases: obsolescência funcional sobre as edificações; económica sobre as edificações já com a funcional; taxas sobre as edificações ajustadas; margem sobre solo + edificações + taxas. Obra em curso, inacabada ou com custos de transformação: use o bloco «Valor atual» abaixo.</p>`;
+  ${x.met?.['Residual']&&vaBase(a)==='cst'?`<tr><td>Valor a novo, sem depreciação (base do RES)</td><td class="c" colspan="2">idade e estado não contam</td><td class="c">${F(cstRun(a,true).total)}</td></tr>`:''}<tr class="tot"><td>Valor pelo custo — obra concluída (CST)</td><td class="c" colspan="2">estado ${F(R.rat*100,0)}%</td><td class="c">${F(R.total)}</td></tr></table></div><p class="muted" style="margin-top:0">Bases: obsolescência funcional sobre as edificações; económica sobre as edificações já com a funcional; taxas sobre as edificações ajustadas; margem sobre solo + edificações + taxas. Obra em curso, inacabada, em ruína ou com custos de transformação: escolha o método residual (RES).</p>`;
  return `<div class="algrp">🧮 Cálculo pelo custo (CST)</div><p class="muted" style="margin-top:0">Valores por defeito como no livro Best Value — confirme ou corrija. Percentagens em decimal (0,075 = 7,5 %). No telemóvel, deslize a tabela para o lado: a 1.ª coluna fica fixa.</p>${solo}${ed}${ajT}
  <div class="btns"><button class="secondary mini" data-alact="cstOff">Retirar o cálculo</button></div>`}
 /* Valor atual (obra em curso, inacabada, em ruína ou a transformar) — bloco autónomo sobre o valor da obra concluída obtido por qualquer método:
    valor atual = terreno + % Exe × (obra concluída − terreno) − custos de transformação/adaptação (demolições, limpezas…) */
 const VA_TIPO={CUR:'Obra em curso (taxas e encargos proporcionais à execução)',RUI:'Ruína, obra parada ou inacabada (aproveitamento + custos de transformação)',TRF:'Obra concluída com custos de transformação / adaptação'};
-function vaRun(a){const x=a.al,k=x.va;if(!k?.on)return null;const ad=x.mAdot&&x.met?.[x.mAdot]?x.mAdot:'';
- const v100a=ad?alMetVal(a,ad):null,v100=cstNum(k.v100)??v100a??0;
- const vta=ad==='Custo (reposição depreciado)'?cstRun(a)?.solo??null:null,vt=cstNum(k.vt)??vta??0;
+/* base do RES: 'cst' = custo a novo (sem depreciação) · 'm:<método>' = valor de outro método · 'man' = indicado à mão */
+const vaBase=a=>(a.al.va||{}).base||'';
+const vaBaseLbl=a=>{const b=vaBase(a);return b==='cst'?'método de custo (CST a novo, sem depreciação)':b==='m:Comparativo de mercado'?'método de mercado (MER)':b.startsWith('m:')?`${AL_MET_SIG[b.slice(2)]||''} (${AL_MET_NOME[b.slice(2)]||''})`:b==='man'?'indicado':'(por escolher)'};
+function vaRun(a){const x=a.al,k=x.va;if(!k?.on)return null;const b=vaBase(a),ad=b.startsWith('m:')?b.slice(2):'';const Cn=b==='cst'?cstRun(a,true):null;
+ const v100a=b==='cst'?(Cn?Cn.total:null):ad&&ad!=='Residual'?alMetVal(a,ad):null,v100=cstNum(k.v100)??v100a??0;
+ const vta=b==='cst'?(Cn?Cn.solo:null):(x.cst?.on?cstRun(a,true)?.solo??null:null),vt=cstNum(k.vt)??vta??0;
  const con=v100-vt,X=k.exeT?exeRun(k.exeT):null,exe=X?X.tot:(cstNum(k.exe)??1),exV=con*exe;
  const cust=(k.cust||[]).map(c=>({...c,vn:Math.abs(cstNum(c.v)??0)})),ct=cust.reduce((s1,c)=>s1+c.vn,0);
  return {ad,v100a,v100,vta,vt,con,X,exe,exV,cust,ct,va:Math.round((vt+exV-ct)/100)*100}}
-function vaHTML(a){const x=a.al,k=x.va;if(!k?.on)return `<div class="btns"><button class="secondary mini" data-alact="vaOn">🏗 Valor atual — obra em curso, inacabada, em ruína ou a transformar</button></div>`;
+function vaHTML(a){const x=a.al,k=x.va;if(!k?.on)return `<div class="btns"><button class="secondary mini" data-alact="vaOn">🏗 Calcular o valor residual (RES)</button></div>`;
  const R=vaRun(a),F=(v,d=0)=>esc(CULT.fmt(v,d)),P=v=>esc(CULT.fmt(v*100,0))+'%',I=(b,v,w=90,ph='')=>`<input data-bind="${b}" inputmode="decimal" value="${esc(v??'')}" placeholder="${esc(ph)}" style="width:${w}px">`;
  const eSel=`<select data-bind="alva.exe" style="width:72px">${Array.from({length:21},(_,j)=>`<option value="${j/20}" ${Math.round(R.exe*20)===j?'selected':''}>${j*5}%</option>`).join('')}</select>`;
- let h=`<div class="algrp">🏗 Valor atual</div><div class="tks col">${Object.entries(VA_TIPO).map(([c,l])=>alTk(k.tipo===c,esc(l),`data-alact="vaTipo" data-v="${c}"`)).join('')}</div>
+ const bQ=`<div class="tks">${[['cst','Método de custo (a novo)'],['m:Comparativo de mercado','Método de mercado'],['man','Indicar à mão']].map(([v,l])=>alTk(vaBase(a)===v,esc(l),`data-alact="vaBaseSet" data-v="${esc(v)}"`)).join('')}</div>`;
+ if(!vaBase(a))return `<div class="algrp">🏗 RES — valor residual (valor atual)</div><p><b>O valor final a novo é baseado em que método?</b></p>${bQ}<p class="muted">Depois: valor atual = (valor final a novo − terreno) × % reutilizável + terreno − custos de demolição, limpeza, transformação…</p>`;
+ let h=`<div class="algrp">🏗 RES — valor residual (valor atual)</div><p class="muted" style="margin-top:0">Valor atual = (valor final a novo − terreno) × % reutilizável + terreno − custos de demolição, limpeza, transformação…</p><label>O valor final a novo é baseado no:</label>${bQ}<div class="tks col">${Object.entries(VA_TIPO).map(([c,l])=>alTk(k.tipo===c,esc(l),`data-alact="vaTipo" data-v="${c}"`)).join('')}</div>
  <div class="cstx"><table><tr><th>Valor atual</th><th>Origem</th><th>Valor €</th></tr>
- <tr><td>Valor da obra concluída (100 %)</td><td>${R.ad?`${AL_MET_SIG[R.ad]} adotado`:'manual'}</td><td>${I('alva.v100',k.v100,100,R.v100a!=null?CULT.fmt(R.v100a,0):'valor')}</td></tr>
- <tr><td>Terreno (parte desse valor)</td><td>${R.vta!=null?'solo do CST':'manual'}</td><td>${I('alva.vt',k.vt,100,R.vta!=null?CULT.fmt(R.vta,0):'valor')}</td></tr>
+ <tr><td>Valor final a novo (obra concluída 100 %)</td><td>${esc(vaBaseLbl(a))}</td><td>${I('alva.v100',k.v100,100,R.v100a!=null?CULT.fmt(R.v100a,0):'valor')}</td></tr>
+ <tr><td>Terreno (parte desse valor)</td><td>${R.vta!=null?'solo do CST':'indicado'}</td><td>${I('alva.vt',k.vt,100,R.vta!=null?CULT.fmt(R.vta,0):'valor')}</td></tr>
  <tr><td>Construção concluída</td><td></td><td class="c">${F(R.con)}</td></tr>
- <tr><td>% Exe — obra considerada executada (o que se aproveita)</td><td>${k.exeT?'tabela 📋':'manual'}</td><td>${k.exeT?`<span class="c">${P(R.exe)}</span>`:eSel} <button class="secondary mini" data-alact="vaExeTog" title="Estado de execução por capítulos">📋</button></td></tr>
+ <tr><td>% reutilizável — % Exe (o que se aproveita para obra nova)</td><td>${k.exeT?'tabela 📋':'manual'}</td><td>${k.exeT?`<span class="c">${P(R.exe)}</span>`:eSel} <button class="secondary mini" data-alact="vaExeTog" title="Estado de execução por capítulos">📋</button></td></tr>
  <tr><td>Construção executada / aproveitável</td><td>${P(R.exe)} × ${F(R.con)}</td><td class="c">${F(R.exV)}</td></tr>
  ${R.cust.map((c,i)=>`<tr><td><input data-bind="alva.cust.${i}.d" value="${esc(c.d||'')}" placeholder="ex.: demolições, limpezas" style="width:150px"></td><td>a deduzir <button class="del mini" data-alact="vaCDel" data-i="${i}">✕</button></td><td>${I(`alva.cust.${i}.v`,c.v,100)}</td></tr>`).join('')}
- <tr class="tot"><td>Valor atual</td><td>terreno + executada${R.ct?' − custos':''}</td><td class="c">${F(R.va)}</td></tr></table></div>
+ <tr class="tot"><td>Valor atual (RES)</td><td>terreno + aproveitável${R.ct?' − custos':''}</td><td class="c">${F(R.va)}</td></tr></table></div>
  <div class="btns"><button class="secondary mini" data-alact="vaCAdd">+ Custo de transformação / adaptação (a deduzir)</button></div>`;
  if(k.exeT){const X=R.X,rs=(j,v)=>`<select data-bind="alva.exeT.r.${j}" style="width:64px">${Array.from({length:11},(_,q)=>`<option value="${q*10}" ${Math.round((cstNum(v)??0)/10)===q?'selected':''}>${q*10}%</option>`).join('')}</select>`;
   h+=`<div class="algrp">📋 Estado de execução (% Exe)</div><div class="inrow" style="margin:4px 0"><select data-alact="exeTip">${Object.entries(EXE_TIP).map(([c,[l]])=>`<option value="${c}" ${k.exeT.tip===c?'selected':''}>${esc(l)}</option>`).join('')}</select></div>
   <div class="cstx"><table><tr><th>Capítulo</th><th>Peso %</th><th>Executado</th><th>Contributo</th></tr>${X.caps.map((c,j)=>`<tr><td>${esc(c.c)}</td><td><input data-bind="alva.exeT.p.${j}" inputmode="decimal" value="${esc(c.p)}" style="width:52px"></td><td>${rs(j,c.r)}</td><td class="c">${esc(CULT.fmt(c.ct*100,1))}%</td></tr>`).join('')}
   <tr class="tot"><td>% Exe</td><td class="c" style="${Math.abs(X.peso-100)>0.01?'color:#b71c1c':''}">${F(X.peso,0)}%</td><td></td><td class="c">${esc(CULT.fmt(X.tot*100,1))}%</td></tr></table></div>${Math.abs(X.peso-100)>0.01?'<p class="muted" style="color:#b71c1c">A soma dos pesos tem de dar 100 %.</p>':''}<p class="muted" style="margin-top:0">Pesos indicativos da tipologia — corrija se a obra tiver outra estrutura de custos.</p><div class="btns"><button class="secondary mini" data-alact="vaExeTog">Retirar a tabela (% Exe manual)</button></div>`}
- return h+`<div class="btns"><button class="secondary mini" data-alact="vaOff">Retirar o bloco «Valor atual»</button></div>`}
+ return h}
 function vaSheet(a){const R=vaRun(a);if(!R)return null;const rows=[[{v:'Valor atual',s:2},{v:'Origem',s:2},{v:'Valor (€)',s:2}]];
- rows.push(['Valor da obra concluída (100 %)',R.ad&&cstNum(a.al.va.v100)==null?`${AL_MET_SIG[R.ad]} adotado`:'indicado',{v:R.v100,s:7}]);
+ rows.push(['Valor final a novo (obra concluída 100 %)',cstNum(a.al.va.v100)==null?vaBaseLbl(a):'indicado',{v:R.v100,s:7}]);
  rows.push(['Terreno (parte desse valor)',R.vta!=null&&cstNum(a.al.va.vt)==null?'solo do CST':'indicado',{v:R.vt,s:7}]);
  rows.push(['Construção concluída','',{f:'C2-C3',v:R.con,s:7}]);
- const xt=R.X?(7+R.cust.length+1+2):0;rows.push(['% Exe — obra considerada executada','',R.X?{f:`D${xt+R.X.caps.length}`,v:R.exe,s:9}:{v:R.exe,s:9}]);
+ const xt=R.X?(7+R.cust.length+1+2):0;rows.push(['% reutilizável (% Exe)','',R.X?{f:`D${xt+R.X.caps.length}`,v:R.exe,s:9}:{v:R.exe,s:9}]);
  rows.push(['Construção executada / aproveitável','',{f:'C4*C5',v:R.exV,s:7}]);
  R.cust.forEach(c=>rows.push([c.d||'Custo de transformação / adaptação','a deduzir',{v:-c.vn,s:7}]));
- const rl=rows.length;rows.push([{v:'Valor atual',s:1},'',{f:`ROUND(C3+C6${R.cust.length?`+SUM(C7:C${rl})`:''},-2)`,v:R.va,s:10}]);
+ const rl=rows.length;rows.push([{v:'Valor atual (RES)',s:1},'',{f:`ROUND(C3+C6${R.cust.length?`+SUM(C7:C${rl})`:''},-2)`,v:R.va,s:10}]);
  if(R.X){rows.push([]);rows.push([{v:`Estado de execução (${EXE_TIP[a.al.va.exeT.tip]?.[0]||''})`,s:2},{v:'Peso',s:2},{v:'Executado',s:2},{v:'Contributo',s:2}]);const c0=rows.length+1;
   R.X.caps.forEach((c,j)=>{const r=c0+j;rows.push([c.c,{v:c.pn/100,s:9},{v:c.rn/100,s:9},{f:`B${r}*C${r}`,v:c.ct,s:5}])});const c1=c0+R.X.caps.length-1;
   rows.push([{v:'% Exe',s:1},{f:`SUM(B${c0}:B${c1})`,v:R.X.peso/100,s:11},'',{f:`SUM(D${c0}:D${c1})`,v:R.X.tot,s:11}])}
@@ -2975,11 +2985,11 @@ function alVerbaSheet(p,a,name){const x=a.al,rows=[],cols=[];const useC=w=>w.for
  const ms=alMetSheet(a);if(ms){const on=alMetOn(x);ms.rows.forEach((r,i)=>{const m=on[i-1];if(!m||i<1||i>on.length)return;if(m==='Custo (reposição depreciado)'&&cst&&cstNum(x.mv?.[m])==null)r[6]={f:`I${cst.tot}`,abs:1,v:r[6]?.v,s:7};if(m==='Rendimento (capitalização)'&&rnd&&cstNum(x.mv?.[m])==null)r[6]={f:`J${rnd.tot}`,abs:1,v:r[6]?.v,s:7}});
   rows.push([{v:'Métodos aplicados',s:1}]);const o=xlPlace(rows,ms);
   met={m0:o+2,m1:o+1+on.length,fin:o+ms.rows.length,bft:B=>B};const B=bftRun(a);met.bftTot=B.L.length?o+ms.rows.length-1:null;rows.push([]);useC(ms.cols)}
- const vs=vaSheet(a);if(vs&&met){const k=x.va;if(cstNum(k.v100)==null)vs.rows[1][2]={f:`SUMIF(F${met.m0}:F${met.m1},"✓",G${met.m0}:G${met.m1})`,abs:1,v:vs.rows[1][2].v,s:7};if(cstNum(k.vt)==null&&cst&&x.mAdot==='Custo (reposição depreciado)')vs.rows[2][2]={f:`I${cst.solo}`,abs:1,v:vs.rows[2][2].v,s:7};
+ const vs=x.met?.['Residual']&&vaSheet(a);if(vs&&met){const k=x.va;if(cstNum(k.v100)==null&&vaBase(a).startsWith('m:')&&false)vs.rows[1][2]={f:`SUMIF(F${met.m0}:F${met.m1},"✓",G${met.m0}:G${met.m1})`,abs:1,v:vs.rows[1][2].v,s:7};if(false)vs.rows[2][2]={f:`I${cst.solo}`,abs:1,v:vs.rows[2][2].v,s:7};
   rows.push([{v:'Valor atual',s:1}]);const o=xlPlace(rows,vs);
   const tRow=o+1+(vs.rows.findIndex(r=>r&&r[0]&&r[0].v==='Valor atual'&&r[0].s===1));va={tot:tRow};rows.push([]);useC(vs.cols)}
  // valor final da verba
- const manual=x.valAuto===''||!met;let ref;if(manual)ref={v:alNum(x.valor)??0,s:10};else if(va)ref={f:`C${va.tot}${met.bftTot?`+G${met.bftTot}`:''}`,v:alNum(x.valor)??0,s:10};else ref={f:`G${met.fin}`,v:alNum(x.valor)??0,s:10};
+ const manual=x.valAuto===''||!met;let ref;if(manual)ref={v:alNum(x.valor)??0,s:10};else if(va&&x.mAdot==='Residual')ref={f:`C${va.tot}${met.bftTot?`+G${met.bftTot}`:''}`,v:alNum(x.valor)??0,s:10};else ref={f:`G${met.fin}`,v:alNum(x.valor)??0,s:10};
  rows.push([{v:manual?'VALOR DA VERBA (indicado)':'VALOR DA VERBA',s:1},'','','','','',ref]);const fin={r:rows.length,c:'G'};
  return {name,cols:cols.map(w=>Math.min(Math.max(w,8),40)),rows,fin}}
 function alLivro(p){alP(p);const V=alAtivas(p);p.anomalias.forEach(a=>alValSync(a));const used=new Set(['Resumo']),vs=V.map(a=>alVerbaSheet(p,a,xlSheetName(alCode(p,a),used)));
@@ -3005,7 +3015,7 @@ const AL_MET_REND='Rendimento (capitalização)';
 function alValSync(a){const x=a?.al;if(!x)return;const at=alNum(x.car?.at);
  if(x.mAdot&&!x.met?.[x.mAdot])x.mAdot='';
  if(!x.mAdot&&x.valAuto==='calc'&&x.met?.[AL_MET_REND])x.mAdot=AL_MET_REND;if(!x.mAdot&&x.valAuto==='ref'&&x.met?.['Valores de referência'])x.mAdot='Valores de referência';
- if(x.mAdot&&x.valAuto!==''&&x.valAuto!==undefined){const v=x.va?.on?vaRun(a).va:alMetVal(a,x.mAdot);if(v!=null){const nv=String(Math.round(v+(alBft(a)||0)));x.valAuto='met';if(x.valor!==nv)x.valor=nv}return}
+ if(x.mAdot&&x.valAuto!==''&&x.valAuto!==undefined){const v=alMetVal(a,x.mAdot);if(v!=null){const nv=String(Math.round(v+(alBft(a)||0)));x.valAuto='met';if(x.valor!==nv)x.valor=nv}return}
  if(x.valAuto===undefined){const vu=alNum(x.vun),vr=alNum(x.refV),v=alNum(x.valor);x.valAuto=x.calc&&vu!=null&&at&&v===Math.round(at*vu)?'calc':x.tofRef&&vr!=null&&at&&v===Math.round(at*vr)?'ref':''}
  if(!at||!alTOF(a))return;const u=x.valAuto==='calc'&&x.calc&&alCultOk(a)?alNum(x.vun):x.valAuto==='ref'&&alRefOk(a)?alNum(x.refV):null;if(u!=null){const nv=String(Math.round(at*u));if(x.valor!==nv)x.valor=nv}}
 const AL_MET_REF='Valores de referência';
