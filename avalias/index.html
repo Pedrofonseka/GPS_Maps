@@ -753,7 +753,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.37';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.38';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -2034,7 +2034,8 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
     kr+=krow('Valor estimado',[alNum(x.valor)!=null?alEur(x.valor):'',renda&&alNum(x.renda)!=null?'Renda mensal: '+alEur(x.renda)+'/mês':'',x.valObs].filter(s=>String(s||'').trim()).join('\n'));
     if(kr)body+=tbl([L1,L2],kr)+E();
     {const G=(x.pdmF||[]).map((g,i)=>g&&fd(g)?{g,i}:null).filter(Boolean),com=String(x.car?.pdmCom||'').trim();if(fam==='ter'&&(G.length||com)){body+=BRK+P(R('Extratos do PDM',{b:true}),{keep:1,sp:[0,80]});
-     for(const {g,i} of G){const MW=16.9,MH=6;let w=MW,h=MW*(g.h||3)/(g.w||4);if(h>MH){h=MH;w=MH*(g.w||4)/(g.h||3)}body+=`<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:keepNext/><w:spacing w:before="60" w:after="0"/><w:jc w:val="center"/></w:pPr>${imgRun(fd(g),w,h,'PDM')}</w:p>`+P(R(String(g.leg||'').trim()||PDM_SLOTS[i],{i:true,sz:8}),{jc:'center',sp:[20,100]})}
+     const nl=Math.ceil(com.length/95)+(com?1:0),MH=Math.min(6.5,(22.5-0.8-G.length*0.6-nl*0.5)/Math.max(1,G.length));
+     for(const {g,i} of G){const MW=16.9;let w=MW,h=MW*(g.h||3)/(g.w||4);if(h>MH){h=MH;w=MH*(g.w||4)/(g.h||3)}body+=`<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:keepNext/><w:spacing w:before="60" w:after="0"/><w:jc w:val="center"/></w:pPr>${imgRun(fd(g),w,h,'PDM')}</w:p>`+P(R(String(g.leg||'').trim()||PDM_SLOTS[i],{i:true,sz:8}),{jc:'center',sp:[20,100]})}
      if(com){body+=P(R('Comentários sobre a consulta ao PDM',{b:true}),{keep:1,sp:[60,40]});for(const ln of com.split('\n'))body+=T(ln,{jc:'both'})}body+=BRK}}
     if(x.crit||alMetOn(x).length){body+=H3('Critério')+T(alCritTxt(a)||'—',{jc:'both'});if(String(x.critTxt||'').trim())body+=T(x.critTxt,{jc:'both'})}
     {const sh=alMetSheet(a);if(sh){body+=H3('Método');if(String(x.metTxt||'').trim())body+=T(x.metTxt,{jc:'both'});body+=P(R('Métodos aplicados',{b:true}),{keep:1,sp:[120,60]});body+=!S.noOle?alOlePara(sh,oleParts):sh.rows.slice(1).map(r=>T(r.map(c=>c&&typeof c==='object'?(c.s===7||c.s===10?alEur(c.v):c.v):c).filter(c=>c!==''&&c!=null).join(' · '))).join('');
@@ -2442,9 +2443,9 @@ function aptHTML(a){const x=a.al,c=x.car||{},A=aptAreas(a);if(A.at==null)return 
   h+=`<label>Cedências e encargos de urbanização</label><input data-bind="alc.tacEnc" value="${esc(c.tacEnc||'')}" placeholder="ex.: cedência para alargamento do arruamento; ramal de saneamento">`}
  if(A.tof>0){h+=`<div class="algrp">Parte TOF — características</div>`+alField(a,['tofDest','Finalidade da parte TOF','c','apt_tofdest'])+APT_TOFV.map(([k,l,o])=>alField(a,[k,l,'c',o])).join('')}
  return h}
-/* Extratos do PDM: 3 espaços (6 cm de altura × largura da página), legenda sob cada imagem e comentários — tudo numa página do Word */
-const PDM_SLOTS=['Extrato da carta de ordenamento','Extrato da carta de condicionantes','Outro extrato (planta de localização, PU / PP…)'];
-function pdmImgHTML(a){const x=a.al,F=x.pdmF||[];return `<div class="algrp">Extratos do PDM (saem numa página do Word)</div>${PDM_SLOTS.map((d,i)=>{const g=F[i];return `<div class="qbox">${g&&fd(g)?`<img src="${fd(g)}" style="width:100%;max-height:140px;object-fit:contain;background:#f3f3f3;border-radius:6px">`:`<div class="muted" style="height:56px;display:flex;align-items:center;justify-content:center;border:1px dashed #bbb;border-radius:6px">Espaço ${i+1} — 6 cm de altura</div>`}
+/* Extratos do PDM: até 4 espaços (a altura útil da página repartida pelas imagens; 3 é o habitual), legenda sob cada imagem e comentários — tudo numa página do Word */
+const PDM_SLOTS=['Extrato da carta de ordenamento','Extrato da carta de condicionantes','Outro extrato (planta de localização, PU / PP…)','Outro extrato'];
+function pdmImgHTML(a){const x=a.al,F=x.pdmF||[];return `<div class="algrp">Extratos do PDM (saem numa página do Word)</div>${PDM_SLOTS.map((d,i)=>{const g=F[i];return `<div class="qbox">${g&&fd(g)?`<img src="${fd(g)}" style="width:100%;max-height:140px;object-fit:contain;background:#f3f3f3;border-radius:6px">`:`<div class="muted" style="height:56px;display:flex;align-items:center;justify-content:center;border:1px dashed #bbb;border-radius:6px">Espaço ${i+1}${i===3?' (opcional)':''}</div>`}
   <div class="btns" style="margin-top:4px"><label class="btn secondary mini">📎 ${g?'Trocar':'Juntar'} imagem<input type="file" accept="image/*" data-alpdm="${i}" hidden></label>${g?`<button class="del mini" data-alpdmdel="${i}">✕ Retirar</button>`:''}</div>
   ${g?`<input data-bind="alpdm.${i}.leg" ${avA(g.leg,d)} placeholder="Legenda">`:''}</div>`}).join('')}<label>Comentários sobre a consulta ao PDM</label><textarea data-bind="alc.pdmCom" rows="3" placeholder="ex.: Segundo a planta de ordenamento, o prédio insere-se em espaço habitacional; sem condicionantes assinaladas.">${esc(x.car?.pdmCom||'')}</textarea>`}
 document.addEventListener('change',async e=>{const el=e.target.closest('input[data-alpdm]');if(!el)return;e.stopImmediatePropagation();const p=cur(),a=curA();if(!a||!el.files?.[0])return;alA(a);const i=+el.dataset.alpdm,file=el.files[0];el.value='';
