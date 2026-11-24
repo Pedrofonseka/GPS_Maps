@@ -729,7 +729,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.26';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.27';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1567,9 +1567,11 @@ const qCode=i=>`1.${String(i+1).padStart(3,'0')}`;
 /* Função a desempenhar — o que se pretende (por ordem alfabética; «Outro» no fim) */
 const OBJ_FUN=[['conj','Estimar o valor de um conjunto de «x» ativos'],['edif','Estimar o valor de um edifício'],['terr','Estimar o valor de um terreno'],['casa','Estimar o valor de uma casa'],['mor','Estimar o valor de uma moradia'],['out','Outro (descrever)']];
 const OBJ_ALVO={edif:'um edifício',terr:'um terreno',casa:'uma casa',mor:'uma moradia'};
+function objFunAuto(p){const V=alAtivas(p);if(V.length>1)return 'conj';if(V.length!==1)return '';const t=V[0].al?.tipo;return ({MOR:'mor',FRA:'casa',EDI:'edif',TCI:'terr',TCM:'terr',TUR:'terr',TER:'terr'})[t]||''}
+const objFunEf=p=>{const r=ensureRel(p);return r.objFun||objFunAuto(p)};
 const objNx=p=>{const r=ensureRel(p),n=parseInt(r.objNx);return n>0?n:alAtivas(p).length};
-function objAlvo(p){const r=ensureRel(p),k=r.objFun;if(k==='conj'){const n=objNx(p);return `um conjunto de ${n} ativo${n===1?'':'s'}`}if(k==='out')return String(r.objFunOutro||'').trim().replace(/^estimar o valor de\s+/i,'');return OBJ_ALVO[k]||''}
-function objTxt(p){const r=ensureRel(p),k=r.objFun;if(!k)return '';if(k==='out'){const t=String(r.objFunOutro||'').trim();return t?t.charAt(0).toLowerCase()+t.slice(1):''}return 'estimar o valor de '+objAlvo(p)}
+function objAlvo(p){const r=ensureRel(p),k=objFunEf(p);if(k==='conj'){const n=objNx(p);return `um conjunto de ${n} ativo${n===1?'':'s'}`}if(k==='out')return String(r.objFunOutro||'').trim().replace(/^estimar o valor de\s+/i,'');return OBJ_ALVO[k]||''}
+function objTxt(p){const r=ensureRel(p),k=objFunEf(p);if(!k)return '';if(k==='out'){const t=String(r.objFunOutro||'').trim();return t?t.charAt(0).toLowerCase()+t.slice(1):''}return 'estimar o valor de '+objAlvo(p)}
 const BAD_NOTA='BAD — benefício económico de adjudicação direta: quando algum dos intervenientes (por exemplo, um comproprietário ou o arrendatário) manifesta interesse especial em adquirir o ativo, pode justificar-se uma redução ao valor estimado, por se evitarem os custos, prazos e riscos de uma venda em mercado aberto. A percentagem indicada é um limite máximo sugerido, a ponderar caso a caso.';
 const mesAno=()=>{const d=new Date();return `${MESES_R[d.getMonth()]} de ${d.getFullYear()}`};
 const RPICK=(k,L,val,lbl)=>`<select data-rpick="${k}" style="margin-top:4px"><option value="">${esc(lbl)}</option>${L.map(o=>`<option ${o===val?'selected':''}>${esc(o)}</option>`).join('')}</select>`;
@@ -1595,14 +1597,14 @@ function relProcHTML(p){const r=ensureRel(p),col=isCol(r),part=isPart(r),hd=hdrD
     ${RL('versao','Versão do relatório',r.versao,'ex.: 1.01VF ou Draft00')}<p class="muted">Nome do ficheiro (e rodapé): <b>${esc(relFileName(p))}</b></p>`;
   const nq=r.quesitos.length;
   const QW=part?['queixa','queixas','Queixa']:['quesito','quesitos','Quesito'];
-  const t3o=`<label>Função a desempenhar — o que se pretende</label><div class="tks col">${OBJ_FUN.map(([k,l])=>tickBox('',r.objFun===k,l,`data-act="rObjFun" data-v="${k}"`)).join('')}</div>${r.objFun==='conj'?`<label>N.º de ativos («x») — automático: n.º de verbas</label><input data-bind="r.objNx" inputmode="numeric" ${avA(r.objNx,String(alAtivas(p).length))}>`:''}${r.objFun==='out'?RL('objFunOutro','Descrever o que se pretende',r.objFunOutro,'ex.: Estimar o valor de renda de uma loja'):''}${r.objFun?`<p class="muted">No relatório: «Pretende-se ${esc(objTxt(p)||'…')}.»</p>`:''}`;
-  const t3=`${t3o}${part?'<p class="muted">Particular: em princípio não há quesitos, mas uma lista de queixas sobre determinadas situações. O perito pode encontrar outras no decurso da inspeção (registe-as em Anomalias, origem P – Perito).</p>':''}${r.objFun?'<label>Questões complementares</label>':RL('objIntro','Frase de abertura',r.objIntro,'Pretende-se:')}
+  const t3o=`<label>Função a desempenhar — o que se pretende</label><div class="tks col">${OBJ_FUN.map(([k,l])=>tickBox('',objFunEf(p)===k,l,`data-act="rObjFun" data-v="${k}"`)).join('')}</div>${!r.objFun&&objFunAuto(p)?'<p class="muted" style="color:#1565c0">🔗 Proposta automática pelo tipo e n.º de verbas — toque noutra hipótese para mudar.</p>':''}${objFunEf(p)==='conj'?`<label>N.º de ativos («x») — automático: n.º de verbas</label><input data-bind="r.objNx" inputmode="numeric" ${avA(r.objNx,String(alAtivas(p).length))}>`:''}${r.objFun==='out'?RL('objFunOutro','Descrever o que se pretende',r.objFunOutro,'ex.: Estimar o valor de renda de uma loja'):''}${objFunEf(p)?`<p class="muted">No relatório: «Pretende-se ${esc(objTxt(p)||'…')}.»</p>`:''}`;
+  const t3=`${t3o}${part?'<p class="muted">Particular: em princípio não há quesitos, mas uma lista de queixas sobre determinadas situações. O perito pode encontrar outras no decurso da inspeção (registe-as em Anomalias, origem P – Perito).</p>':''}<label>Questões complementares</label>
     <div class="rows">${r.quesitos.map((q,i)=>`<div class="qbox"><div class="qhd"><b>${qCode(i)}</b><span class="grow"></span><button class="secondary mini" data-act="rMvQ" data-i="${i}" data-d="-1" ${i?'':'disabled'}>▲</button><button class="secondary mini" data-act="rMvQ" data-i="${i}" data-d="1" ${i<nq-1?'':'disabled'}>▼</button><button class="del" data-act="rDelQ" data-i="${i}">✕</button></div><input data-bind="q.${i}.de" value="${esc(q.de||'')}" placeholder="Colocada por (ex.: Autor, Réu, Tribunal) — opcional" style="margin-bottom:4px"><textarea data-bind="q.${i}.txt" rows="3">${esc(q.txt||'')}</textarea></div>`).join('')||`<p class="muted">Sem questões complementares — no relatório sai «Outras questões: nada a considerar».</p>`}</div>
     <div class="btns"><button class="secondary mini" data-act="rAddQ">+ ${QW[2]}</button><label class="btn secondary mini">📄 Do Word<input type="file" accept=".docx" data-act="rImpQ" data-k="docx" hidden></label><label class="btn secondary mini">📊 Do Excel<input type="file" accept=".xlsx" data-act="rImpQ" data-k="xlsx" hidden></label><button class="secondary mini" data-act="rPasteQ">📋 Colar texto</button></div>${qModHTML()}
     <p class="muted">Word: cada alínea (a), b)…, 1., 2.…) ou parágrafo passa a um quesito. Excel: 1.ª coluna da 1.ª folha (ignora a linha de títulos se disser «quesito»). Pode editar e reordenar depois.</p>`;
   const nd=DOCS_R.filter(d=>r.docs[d]).length;
   const t4=`<div class="tks col">${DOCS_R.map(d=>tickBox('',!!r.docs[d],d,`data-act="rDoc" data-k="${esc(d)}"`)).join('')}</div>${RT('docsOutros','Outros elementos',r.docsOutros,2,'-')}${RT('docsCom','Comentários',r.docsCom,2)}`;
-  const t5=`${RL('hora','Hora',r.hora,'ex.: 14:30')}<p class="muted">A data e as presenças registam-se em cada verba (3 · Visita).</p>${RT('interv','Outros intervenientes e suas funções',r.interv,2,'Não houve.')}${RT('decurso','Decurso da diligência',r.decurso,3,'Com o acompanhamento dos presentes, foi visitado o interior e exterior do edifício, para analisar as situações que vinham definidas.')}${RT('constrang','Constrangimentos, impedimentos ou dúvidas relevantes',r.constrang,2,'Nada a considerar.')}`;
+  const t5=`<p class="muted">A data, a hora (🕘 Data-hora) e as presenças registam-se em cada verba (3 · Visita).</p>${RT('interv','Outros intervenientes e suas funções',r.interv,2,'Não houve.')}${RT('decurso','Decurso da diligência',r.decurso,3,'Com o acompanhamento dos presentes, foi visitado o interior e exterior do edifício, para analisar as situações que vinham definidas.')}${RT('constrang','Constrangimentos, impedimentos ou dúvidas relevantes',r.constrang,2,'Nada a considerar.')}`;
   return `${blk('R · Relatório','Tipo de peritagem, capa, objeto, documentos e visita')}
   ${sec('rp1','R1 · Tipo de relatório e gabinete',t1,{cnt:pill((r.ambito==='particular'?'Particular':'Institucional')+' · '+(col?'Colegial':'Singular')+' · '+(GABS_R.find(g=>g[0]===r.gab)||['',''])[1].split(' ')[0])})}
   ${sec('rp2','R2 · Identificação (dados da capa)',t2,{cnt:falta([r.entidade,r.parte1].filter(x=>!String(x||'').trim()).length),def:false})}
@@ -1724,7 +1726,7 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
   const comp=part||r.incComp===false?'':(col?COMP_COLEGIAL:(String(settings.compSingular||'').trim()||COMP_SINGULAR));
   if(!part){body+=H1('Compromisso de honra')+E()+(comp?T(comp,{jc:'both'}):T('[Texto do compromisso de honra — preencha em Definições › Relatório]',{i:true,color:'C00000'}))+E()}
   body+=H1('Objeto da avaliação')+H2(part?'Queixas apresentadas':'Matéria a responder')+E();
-  if(r.objFun&&!part){body+=T(`Pretende-se ${objTxt(p)||'…'}.`,{jc:'both'})+E();
+  if(objFunEf(p)&&!part){body+=T(`Pretende-se ${objTxt(p)||'…'}.`,{jc:'both'})+E();
    const Qs=r.quesitos.filter(q=>String(q.txt||'').trim());
    if(!Qs.length)body+=P(R('Outras questões: ',{b:true})+R('nada a considerar.'));
    else{body+=P(R('Outras questões:',{b:true}),{keep:1});const grp=[...new Set(Qs.map(q=>String(q.de||'').trim()))];
@@ -1779,7 +1781,7 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
     if(fam){if(x.modo==='suc')for(const [k,l] of AL_SUC[fam])kr+=krow(l,x.suc[k]);
      else for(const f of AL_CAR[fam]){if(f[0]==='g')continue;const v=x.car[f[0]];kr+=krow(f[1],Array.isArray(v)?v.map(alOpt).join(', '):(f[2]==='c'?alOpt(v):v))}}
     kr+=krow('Utilidade',[x.atr?'Atratividade: '+x.atr:'',x.util].filter(s=>String(s||'').trim()).join('\n'));
-    kr+=krow('Valor estimado',[alNum(x.valor)!=null?alEur(x.valor):'',renda&&alNum(x.renda)!=null?'Renda mensal: '+alEur(x.renda)+'/mês':'',bad?`BAD: redução até ${String(x.bad||'').trim()||AP.badPct||10}%`:'',x.valObs].filter(s=>String(s||'').trim()).join('\n'));
+    kr+=krow('Valor estimado',[alNum(x.valor)!=null?alEur(x.valor):'',renda&&alNum(x.renda)!=null?'Renda mensal: '+alEur(x.renda)+'/mês':'',x.valObs].filter(s=>String(s||'').trim()).join('\n'));
     if(kr)body+=tbl([L1,L2],kr)+E();
     if(x.crit||alMetOn(x).length){body+=H3('Critério')+T(alCritTxt(a)||'—',{jc:'both'});if(String(x.critTxt||'').trim())body+=T(x.critTxt,{jc:'both'})}
     {const sh=alMetSheet(a);if(sh){body+=H3('Método');if(String(x.metTxt||'').trim())body+=T(x.metTxt,{jc:'both'});body+=P(R('Métodos aplicados',{b:true}),{keep:1,sp:[120,60]});body+=!S.noOle?alOlePara(sh,oleParts):sh.rows.slice(1).map(r=>T(r.map(c=>c&&typeof c==='object'?(c.s===7||c.s===10?alEur(c.v):c.v):c).filter(c=>c!==''&&c!=null).join(' · '))).join('');
@@ -1804,22 +1806,17 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
      body+=tbl([CW2,TWb-CW2],pr,false)+E()}}}
   // 7 — resposta ao solicitado
   body+=E()+H1(part?'Apreciação das queixas':'Resposta ao solicitado');
-  if(r.objFun&&!part){const AP=alP(p),V=alAtivas(p),bad=!!AP.bad,tot=V.reduce((s1,a)=>s1+(alNum(a.al.valor)||0),0),alvo=objAlvo(p)||'o solicitado';
-   const B7='<w:tblBorders>'+['top','left','bottom','right','insideH','insideV'].map(k=>`<w:${k} w:val="single" w:sz="4" w:space="0" w:color="808080"/>`).join('')+'</w:tblBorders>';
-   const tc7=(t,w,o={})=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${o.span?`<w:gridSpan w:val="${o.span}"/>`:''}${o.fill?`<w:shd w:val="clear" w:color="auto" w:fill="${o.fill}"/>`:''}<w:vAlign w:val="center"/></w:tcPr><w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:spacing w:before="30" w:after="30"/><w:jc w:val="${o.jc||'left'}"/></w:pPr>${R(t,{b:o.b,sz:9})}</w:p></w:tc>`;
-   const tr7=(c,h)=>`<w:tr><w:trPr><w:cantSplit/>${h?'<w:tblHeader/>':''}</w:trPr>${c}</w:tr>`,tbl7=(W,rows)=>`<w:tbl><w:tblPr><w:tblW w:w="${W.reduce((x,y)=>x+y,0)}" w:type="dxa"/>${B7}<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>${W.map(w=>`<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>${rows}</w:tbl>`;
+  if(objFunEf(p)&&!part){const AP=alP(p),V=alAtivas(p),bad=!!AP.bad,tot=V.reduce((s1,a)=>s1+(alNum(a.al.valor)||0),0),alvo=objAlvo(p)||'o solicitado';
    body+=P(R(`– Valor estimado para ${alvo}`,{b:true}),{keep:1})+T('De acordo com a análise:')+E();
    if(V.length===1){const a=V[0];body+=P(R('Valor: ',{b:true})+R(alNum(a.al.valor)!=null?alEur(a.al.valor):'—',{b:true}))}
-   else if(V.length){const W=[1300,5338,3000];let rr=tr7(tc7('Verba',W[0],{b:1,fill:'D9D9D9'})+tc7('Designação',W[1],{b:1,fill:'D9D9D9'})+tc7('Valor',W[2],{b:1,fill:'D9D9D9',jc:'center'}),1);
-    V.forEach(a=>{rr+=tr7(tc7(alCode(p,a),W[0])+tc7(a.al.designacao||'—',W[1])+tc7(alNum(a.al.valor)!=null?alEur(a.al.valor):'—',W[2],{jc:'center'}))});
-    rr+=tr7(tc7('Total',W[0]+W[1],{span:2,b:1,fill:'F2F2F2'})+tc7(alEur(tot),W[2],{b:1,fill:'F2F2F2',jc:'center'}));body+=tbl7(W,rr)}
+   else if(V.length){body+=P(R('Valor total: ',{b:true})+R(alEur(tot),{b:true}))+T('Discriminado por verba no quadro-resumo do capítulo «Valor estimado».',{jc:'both'})}
    if(bad){const pc=String(AP.badPct||10);body+=E()+P(R(`BAD elegível — desconto sugerido: até ${pc} %`)+FNREF(BAD_NOTA)+R(V.length===1&&alNum(V[0].al.valor)!=null?` (valor com o desconto máximo: ${alEur(Math.round(alNum(V[0].al.valor)*(1-(+pc.replace(',','.')||0)/100)/100)*100)}).`:'.'))}
    body+=E()}
-  r.quesitos.forEach((q,i)=>{if(r.objFun&&!part&&!String(q.txt||'').trim())return;body+=H2(r.objFun&&!part?`Questão complementar ${qCode(i)}${String(q.de||'').trim()?' — '+q.de:''}`:`${part?'Queixa':'Quesito'} ${qCode(i)}`)+E()+T(q.txt,{jc:'both'})+E();
+  r.quesitos.forEach((q,i)=>{if(objFunEf(p)&&!part&&!String(q.txt||'').trim())return;body+=H2(objFunEf(p)&&!part?`Questão complementar ${qCode(i)}${String(q.de||'').trim()?' — '+q.de:''}`:`${part?'Queixa':'Quesito'} ${qCode(i)}`)+E()+T(q.txt,{jc:'both'})+E();
     const cons=String(q.resp||'').trim();
-    if(cons||!col)body+=P(R(r.objFun&&!part?'Resposta':'Resposta:',{b:true,i:!(r.objFun&&!part)}))+T(cons||'—',{jc:'both'})+E();
+    if(cons||!col)body+=P(R(objFunEf(p)&&!part?'Resposta':'Resposta:',{b:true,i:!(objFunEf(p)&&!part)}))+T(cons||'—',{jc:'both'})+E();
     else{r.peritos.forEach((pe,j)=>{const t=String(q.rp?.[j]||'').trim();body+=P(R(`Resposta — ${pe.nome||'Perito '+(j+1)} (${represR(r,pe).replace(/^Perito /,'').replace(/^n/,'n')}):`,{b:true,i:true}))+T(t||'—',{jc:'both'})+E()})}});
-  if(!r.quesitos.length&&!(r.objFun&&!part))body+=T('—');
+  if(!r.quesitos.length&&!(objFunEf(p)&&!part))body+=T('—');
   // 8, 9
   if(r.incReservas!==false){body+=H1('Âmbito de utilização – reservas de análise');for(const l of String(r.reservas||RESERVAS_R).split('\n'))body+=/^\d+\.\s/.test(l)?P(R(l,{b:true}),{sp:[160,60]}):T(l,{jc:'both'})}
   if(r.incAmbiente!==false){body+=H1('Ambiente, sustentabilidade e conformidade de licenciamento')+T(String(r.ambiente||AMBIENTE_R),{jc:'both'})}
@@ -2214,6 +2211,7 @@ function alMetHTML(a,p){const x=a.al,on=alMetOn(x),bft=alBft(a),ad=x.mAdot&&x.me
   if(x.met['Custo (reposição depreciado)']||(x.met['Residual']&&vaBase(a)==='cst'))h+=cstHTML(a);
   if(x.met['Rendimento (capitalização)']&&!alCultOk(a))h+=rndHTML(a);
   if(x.met['Residual'])h+=vaHTML(a);
+  if(x.met['Valores de referência']&&alRefOk(a))h+=alRefHTML(a);
   if(x.met['Comparativo de mercado'])h+=`<div class="algrp">Análise de mercado</div>${txt('al.merc','Testemunhos, fontes, homogeneização e conclusão',x.merc,4)}`;
   h+=`<div class="algrp">Encargos / benfeitorias (BFT)</div>${bftHTML(a)}`;
   h+=txt('al.metTxt','Escolha do método — em função da finalidade, base de valor e critério',x.metTxt,3);{const sg=alMetSug(a,p);if(sg&&String(x.metTxt||'').trim()!==sg)h+=`<div class="cmres" style="margin-top:4px"><span class="muted">Sugestão: ${esc(sg)}</span> <button class="secondary mini" data-alact="metSug">✓ Usar</button></div>`}
@@ -2355,7 +2353,7 @@ function vFicha(){
  h+=SM('v7','7 · Avaliação — critério e método',alMetHTML(a,p),{cnt:ok(x.crit&&alMetOn(x).length&&x.mAdot)});
  /* 8 valor */
  const renda=p.al.base==='Valor de renda de mercado';
- h+=SM('v8','8 · Valor',`${alCultOk(a)?alCultHTML(a):''}${x.valAuto==='met'?`<p class="muted" style="margin:6px 0 0">🔄 Valor estimado automático = método adotado (${esc(AL_MET_SIG[x.mAdot]||'')})${alBft(a)?' + encargos/benfeitorias':''} — ver 7 · Métodos. Para fixar outro valor, escreva-o na caixa.</p>`:''}${x.valAuto&&x.valAuto!=='met'&&alNum(x.car?.at)?`<p class="muted" style="margin:6px 0 0">🔄 Valor estimado automático = área × ${x.valAuto==='calc'?'valor do cálculo':'valor de referência'} (atualiza-se se mudar a área ou o cálculo). Para fixar outro valor, escreva-o na caixa.</p>`:''}${alRefOk(a)?alRefHTML(a):''}${alTOF(a)&&!alCultOk(a)&&!alRefOk(a)?'<p class="muted">Terreno não apto para construção (TOF): assinale em «7 · Métodos» VRF (valores referenciais) e/ou RND (rendimento) para ter aqui o cálculo.</p>':''}<div class="row2">${inp('al.valor','Valor estimado (€)',x.valor,'ex.: 185 000')}${renda?inp('al.renda','Renda mensal (€/mês)',x.renda,'ex.: 650'):''}</div>${p.al.bad?`<label>BAD — redução até (%) — automático: o valor do processo</label><input data-bind="al.bad" inputmode="decimal" ${avA(x.bad,String(p.al.badPct||10))}>`:'<p class="muted">BAD não aplicável neste processo (Processo › Contexto da avaliação).</p>'}${txt('al.valObs','Notas ao valor (opcional)',x.valObs,2)}${alNum(x.valor)!=null?`<p><b>${esc(alEur(x.valor))}</b>${renda&&alNum(x.renda)!=null?` · ${esc(alEur(x.renda))}/mês`:''}</p>`:''}`,{cnt:ok(alNum(x.valor)!=null)});
+ h+=SM('v8','8 · Valor',`${alCultOk(a)?alCultHTML(a):''}${x.valAuto==='met'?`<p class="muted" style="margin:6px 0 0">🔄 Valor estimado automático = método adotado (${esc(AL_MET_SIG[x.mAdot]||'')})${alBft(a)?' + encargos/benfeitorias':''} — ver 7 · Métodos. Para fixar outro valor, escreva-o na caixa.</p>`:''}${x.valAuto&&x.valAuto!=='met'&&alNum(x.car?.at)?`<p class="muted" style="margin:6px 0 0">🔄 Valor estimado automático = área × ${x.valAuto==='calc'?'valor do cálculo':'valor de referência'} (atualiza-se se mudar a área ou o cálculo). Para fixar outro valor, escreva-o na caixa.</p>`:''}${alRefOk(a)?'<p class="muted">Valores de referência (VRF): ver 7 · Avaliação — métodos.</p>':''}${alTOF(a)&&!alCultOk(a)&&!alRefOk(a)?'<p class="muted">Terreno não apto para construção (TOF): assinale em «7 · Métodos» VRF (valores referenciais) e/ou RND (rendimento) para ter aqui o cálculo.</p>':''}<div class="row2">${inp('al.valor','Valor estimado (€)',x.valor,'ex.: 185 000')}${renda?inp('al.renda','Renda mensal (€/mês)',x.renda,'ex.: 650'):''}</div>${p.al.bad?`<label>BAD — redução até (%) — automático: o valor do processo</label><input data-bind="al.bad" inputmode="decimal" ${avA(x.bad,String(p.al.badPct||10))}>`:'<p class="muted">BAD não aplicável neste processo (Processo › Contexto da avaliação).</p>'}${txt('al.valObs','Notas ao valor (opcional)',x.valObs,2)}${alNum(x.valor)!=null?`<p><b>${esc(alEur(x.valor))}</b>${renda&&alNum(x.renda)!=null?` · ${esc(alEur(x.renda))}/mês`:''}</p>`:''}`,{cnt:ok(alNum(x.valor)!=null)});
  h+=`<div class="btns"><button class="green" data-alact="step" data-d="1" ${idx<n-1?'':'disabled'}>Verba seguinte ▶</button><span class="grow"></span><button class="secondary mini" data-act="dupA">⧉ Duplicar</button><button class="del" data-alact="del" data-id="${a.id}">🗑 Eliminar a verba ${esc(code)}</button></div>`;
  return h}
 
@@ -3177,7 +3175,7 @@ document.addEventListener('click',async e=>{
     case 'rDelQ':{if(!await ask('Retirar este quesito (e as respostas)?',['Cancelar','Retirar'],1))return;ensureRel(p).quesitos.splice(+el.dataset.i,1);await saveProc();S.scrollTop=window.scrollY;break}
     case 'rMvQ':{const Q=ensureRel(p).quesitos,i=+el.dataset.i,j=i+(+el.dataset.d);if(j<0||j>=Q.length)return;[Q[i],Q[j]]=[Q[j],Q[i]];await saveProc();S.scrollTop=window.scrollY;break}
     case 'rPasteQ':{const t=prompt('Cole aqui os quesitos (uma alínea por linha: a), b)… ou 1., 2.…):');if(!t)return;const q=splitQuesitos(t.split('\n'));q.forEach(x=>ensureRel(p).quesitos.push({id:uid(),txt:x,resp:'',rp:{}}));await saveProc();toast(q.length+' quesito(s) acrescentado(s).');S.scrollTop=window.scrollY;break}
-    case 'rObjFun':{const r=ensureRel(p);r.objFun=r.objFun===el.dataset.v?'':el.dataset.v;await saveProc();S.scrollTop=window.scrollY;break}
+    case 'rObjFun':{const r=ensureRel(p);r.objFun=r.objFun===el.dataset.v?'':el.dataset.v;if(!r.objFun&&objFunAuto(p)===el.dataset.v)r.objFun=el.dataset.v;await saveProc();S.scrollTop=window.scrollY;break}
     case 'rDoc':case 'rAnex':{const r=ensureRel(p),o=act==='rDoc'?r.docs:r.anexos,k=el.dataset.k;o[k]=!o[k];await saveProc();S.scrollTop=window.scrollY;break}
     case 'rTk':{const r=ensureRel(p),k=el.dataset.k;r[k]=r[k]===false;await saveProc();S.scrollTop=window.scrollY;break}
     case 'relPrev':{if(dirty)await saveProc();try{const d=await relBuildBlob(p);await previewDocx(d.blob,d.name,relCheck(p))}catch(err){busy(false);toast('Erro na pré-visualização: '+err.message,1)}return}
