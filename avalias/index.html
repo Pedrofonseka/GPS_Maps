@@ -170,6 +170,7 @@ input.auto,textarea.auto{color:#1565c0;font-style:italic;background:#eef5ff}
 #mkOv .mkBox{background:#fff;max-width:780px;margin:0 auto;min-height:100%;padding:10px 12px;box-sizing:border-box}
 #mkOv .mkHead{display:flex;align-items:center;gap:8px}
 .ph .mkBtn{position:absolute;left:6px;top:114px;margin:0;padding:3px 8px;min-height:0;font-size:12px;background:#fffe}
+.imgt{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
 </style>
 </head>
 <body>
@@ -754,7 +755,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.40';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.41';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -894,8 +895,32 @@ function openMarker(a,f,selId=''){f.marks=f.marks||[];if(selId&&!f.marks.some(m=
  const end=async()=>{if(!drag)return;drag=null;document.removeEventListener('touchmove',block,true);await save();again(selId)};
  svg.addEventListener('pointerup',end);svg.addEventListener('pointercancel',()=>{drag=null;document.removeEventListener('touchmove',block,true)})}
 
+/* @comum:imgtools v1.0 — ferramentas comuns para QUALQUER imagem anexada ao processo (extratos do PDM, páginas de anexos, imagens fornecidas…):
+   🔍 Ver · ⟳ Rodar · ✏️ Marcar · 🗑 Eliminar — as mesmas das fotografias. Regra: docs/regras/imagens_anexas.md.
+   Uso: ao desenhar, a app chama IMGT.bar(chave, objeto, {del:()=>…}); o objeto é {id,w,h,marks}; a imagem lê-se com fd(objeto) e guarda-se com fotoPut(id,data).
+   Precisa, na app: fd, fotoPut, saveProc, render, S; para marcar: openMarker e prepMark (rotina de marcas, docs/regras/marcas_fotos.md). */
+const IMGT=(function(){const R=new Map();
+ const bar=(k,o,opt={})=>{if(!o)return '';R.set(k,{o,...opt});const n=(o.marks||[]).length;return `<div class="imgt"><button type="button" class="secondary mini" data-imgt="zoom" data-k="${k}">🔍 Ver</button><button type="button" class="secondary mini" data-imgt="rot" data-k="${k}">⟳ Rodar</button>${typeof openMarker==='function'?`<button type="button" class="secondary mini" data-imgt="mark" data-k="${k}">✏️ Marcar${n?` (${n})`:''}</button>`:''}${opt.del?`<button type="button" class="del mini" data-imgt="del" data-k="${k}">🗑 Eliminar</button>`:''}</div>`};
+ async function rot(f){const src=fd(f);if(!src)return;const im=await new Promise((ok,no)=>{const x=new Image;x.onload=()=>ok(x);x.onerror=()=>no(new Error('Imagem ilegível'));x.src=src});
+  const c=document.createElement('canvas');c.width=im.naturalHeight;c.height=im.naturalWidth;const g=c.getContext('2d',{alpha:false});g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.translate(c.width,0);g.rotate(Math.PI/2);g.drawImage(im,0,0);
+  const d=c.toDataURL('image/jpeg',.86);await fotoPut(f.id,d);if(f.data)delete f.data;f.w=c.width;f.h=c.height;const cl=v=>Math.max(0.02,Math.min(.98,+v||0));
+  (f.marks||[]).forEach(m=>{[m.x,m.y]=[cl(1-m.y),cl(m.x)];if(m.x2!=null)[m.x2,m.y2]=[cl(1-m.y2),cl(m.x2)]})}
+ const out=f=>(typeof fdOut==='function'?fdOut(f):fd(f));
+ async function after(f){await saveProc();try{if(typeof prepMark==='function')await prepMark(f)}catch(_){}try{if(typeof S==='object')S.scrollTop=window.scrollY}catch(_){}render()}
+ function zoom(k){const e=R.get(k);if(!e)return;document.getElementById('imgtZ')?.remove();const m=document.createElement('div');m.className='modal';m.id='imgtZ';
+  m.innerHTML=`<div class="box" style="max-width:900px;max-height:94vh;overflow:auto;text-align:center"><img src="${out(e.o)}" style="max-width:100%;max-height:72vh;object-fit:contain;background:#f3f3f3">${bar(k,e.o,e)}<div class="btns"><button class="secondary" data-imgtz="x">Fechar</button></div></div>`;document.body.appendChild(m)}
+ document.addEventListener('click',async ev=>{const z=ev.target.closest('[data-imgtz]');if(z){ev.preventDefault();ev.stopImmediatePropagation();document.getElementById('imgtZ')?.remove();return}
+  const b=ev.target.closest('[data-imgt]');if(!b)return;ev.preventDefault();ev.stopImmediatePropagation();const k=b.dataset.k,e=R.get(k);if(!e)return;const act=b.dataset.imgt,zm=!!document.getElementById('imgtZ');
+  try{if(act==='zoom')return zoom(k);
+   if(act==='rot'){await rot(e.o);await after(e.o);if(zm)zoom(k);return}
+   if(act==='mark'){document.getElementById('imgtZ')?.remove();e.o.marks=e.o.marks||[];openMarker(null,e.o,'');return}
+   if(act==='del'){if(!confirm('Eliminar esta imagem?'))return;document.getElementById('imgtZ')?.remove();e.del();R.delete(k);await after(e.o);return}}
+  catch(err){if(typeof toast==='function')toast(err.message||String(err),1)}},true);
+ return {bar,rot}})();
+/* @fim:imgtools */
 async function loadFotos(p){if(!p)return;const m=p.visita?.map;if(m&&!fotoCache.has(m.id)){try{const r=await fotoGet(m.id);if(r)fotoCache.set(m.id,r.data)}catch(e){}}for(const a of p.anomalias)for(const f of [...a.fotos,...((a.al?.pdmF)||[]).filter(Boolean)])if(!fotoCache.has(f.id)&&!f.data){try{const r=await fotoGet(f.id);if(r)fotoCache.set(f.id,r.data)}catch(e){}}}
 {const _lf=loadFotos;loadFotos=async p=>{await _lf(p);await prepMarks(p)}}
+{const _lf2=loadFotos;loadFotos=async p=>{await _lf2(p);if(!p)return;const L=[...((p.rel?.anexF)||[]).flatMap(x=>x.pages||[]),...(p.anomalias||[]).flatMap(a=>(a.al?.pdmF||[]).filter(Boolean))];for(const g of L){if(!fotoCache.has(g.id)){try{const r=await fotoGet(g.id);if(r)fotoCache.set(g.id,r.data)}catch(e){}}try{await prepMark(g)}catch(e){}}}}
 async function migrateFotos(p){let ch=false;const m=p.visita?.map;if(m&&m.data){await fotoPut(m.id,m.data);delete m.data;ch=true}for(const a of p.anomalias||[])for(const f of a.fotos||[]){if(!f.id)f.id=uid();if(f.data){await fotoPut(f.id,f.data);delete f.data;ch=true}}
   for(const a of p.rel?.anexF||[]){if(a.data){await fotoPut(a.id,a.data);delete a.data;ch=true}for(const pg of a.pages||[])if(pg.data){await fotoPut(pg.id,pg.data);delete pg.data;ch=true}}
   if(ch)await dbPut(p);return p}
@@ -2045,7 +2070,7 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
     if(kr)body+=tbl([L1,L2],kr)+E();
     {const G=(x.pdmF||[]).map((g,i)=>g&&fd(g)?{g,i}:null).filter(Boolean),com=String(x.car?.pdmCom||'').trim();if(fam==='ter'&&(G.length||com)){body+=BRK+P(R('Extratos do PDM',{b:true}),{keep:1,sp:[0,80]});
      const nl=Math.ceil(com.length/95)+(com?1:0),MH=Math.min(6.5,(22.5-0.8-G.length*0.6-nl*0.5)/Math.max(1,G.length));
-     for(const {g,i} of G){const MW=16.9;let w=MW,h=MW*(g.h||3)/(g.w||4);if(h>MH){h=MH;w=MH*(g.w||4)/(g.h||3)}body+=`<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:keepNext/><w:spacing w:before="60" w:after="0"/><w:jc w:val="center"/></w:pPr>${imgRun(fd(g),w,h,'PDM')}</w:p>`+P(R(String(g.leg||'').trim()||PDM_SLOTS[i],{i:true,sz:8}),{jc:'center',sp:[20,100]})}
+     for(const {g,i} of G){const MW=16.9;let w=MW,h=MW*(g.h||3)/(g.w||4);if(h>MH){h=MH;w=MH*(g.w||4)/(g.h||3)}body+=`<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:keepNext/><w:spacing w:before="60" w:after="0"/><w:jc w:val="center"/></w:pPr>${imgRun(fdOut(g),w,h,'PDM')}</w:p>`+P(R(String(g.leg||'').trim()||PDM_SLOTS[i],{i:true,sz:8}),{jc:'center',sp:[20,100]})}
      if(com){body+=P(R('Comentários sobre a consulta ao PDM',{b:true}),{keep:1,sp:[60,40]});for(const ln of com.split('\n'))body+=T(ln,{jc:'both'})}body+=BRK}}
     if(x.crit||alMetOn(x).length){body+=H3('Critério')+T(alCritTxt(a)||'—',{jc:'both'});if(String(x.critTxt||'').trim())body+=T(x.critTxt,{jc:'both'})}
     {const sh=alMetSheet(a);if(sh){body+=H3('Método');if(String(x.metTxt||'').trim())body+=T(x.metTxt,{jc:'both'});body+=P(R('Métodos aplicados',{b:true}),{keep:1,sp:[120,60]});body+=!S.noOle?alOlePara(sh,oleParts):sh.rows.slice(1).map(r=>T(r.map(c=>c&&typeof c==='object'?(c.s===7||c.s===10?alEur(c.v):c.v):c).filter(c=>c!==''&&c!=null).join(' · '))).join('');
@@ -2107,7 +2132,7 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
   for(const [i,a] of (r.anexF||[]).entries()){if(a.inc===false||!anexKind(a))continue;
     if(!(a.pages||[]).length){try{a.pages=await anexPages(a);a.larg=a.larg||ANEX_LARG}catch(e){continue}}
     const L=Math.min(19,+a.larg||ANEX_LARG),MAXH=22.5;let first=true;
-    for(const pg of a.pages){const d=await anexData({id:pg.id});if(!d)continue;let w=L,h=w*pg.h/pg.w;if(h>MAXH){h=MAXH;w=h*pg.w/pg.h}
+    for(const pg of a.pages){let d=await anexData({id:pg.id});if(d&&(pg.marks||[]).length&&!pg.marksHidden){fotoCache.set(pg.id,d);try{await prepMark(pg)}catch(e){}d=fdOut(pg)}if(!d)continue;let w=L,h=w*pg.h/pg.w;if(h>MAXH){h=MAXH;w=h*pg.w/pg.h}
       body+=BRK+(first?H2(anexLbl(a,i)):'')+`<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:spacing w:before="0" w:after="0"/><w:ind w:left="-851" w:right="-284"/><w:jc w:val="center"/></w:pPr>${imgRun(d,w,h,'Anexo')}</w:p>`;first=false}}
   // ---- índice (campo TOC pré-preenchido; o Word atualiza os n.os de página) ----
   const tocE=toc.map(([lv,nm,t,bm])=>`<w:p><w:pPr><w:pStyle w:val="ndice${lv}"/><w:tabs><w:tab w:val="left" w:pos="${lv===1?440:lv===2?880:1320}"/><w:tab w:val="right" w:leader="dot" w:pos="9628"/></w:tabs></w:pPr><w:hyperlink w:anchor="${bm}" w:history="1"><w:r><w:t xml:space="preserve">${X(nm)}</w:t></w:r><w:r><w:tab/></w:r><w:r><w:t xml:space="preserve">${X(t)}</w:t></w:r><w:r><w:tab/></w:r><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> PAGEREF ${bm} \\h </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t></w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:hyperlink></w:p>`);
@@ -2177,7 +2202,7 @@ function anexFilesHTML(p){const r=ensureRel(p),L=r.anexF||[];return `<label>Fich
     <label>Nome no relatório <span class="muted">(sai no índice como sub-tópico de «Em anexo»)</span></label><input data-bind="ax.${i}.titulo" value="${esc(a.titulo||'')}" placeholder="ex.: Planta do 2.º andar com a localização das anomalias">
     <label>Conteúdo <span class="muted">(se não der nome)</span></label><select data-act="rAnexTipo" data-i="${i}"><option value="">— escolher —</option>${ANEXT_R.map(t=>`<option ${a.tipo2===t?'selected':''}>${t}</option>`).join('')}</select>
     <input data-bind="ax.${i}.desc" value="${esc(a.desc||'')}" placeholder="${a.tipo2==='Outros'?'Descreva o conteúdo':'Descrição do conteúdo (opcional), ex.: artigo 1234 urbano'}"><p class="muted" style="margin:2px 0 0">No relatório: ${esc(anexLbl(a,i))}</p>
-    ${anexKind(a)?`<div class="rw" style="align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap">${tickBox('',a.inc!==false&&!!(a.pages||[]).length||(a.inc!==false&&!a.pages),`Incluir no Word${(a.pages||[]).length?` (${a.pages.length} pág.)`:''}`,`data-act="rAnexInc" data-i="${i}"`)}<label style="margin:0">Largura (cm)</label><input type="number" step="0.5" min="3" max="19" data-act="rAnexLarg" data-i="${i}" value="${a.larg||ANEX_LARG}" style="width:80px"></div><div class="muted" style="font-size:11px">Por defeito ${ANEX_LARG} cm = largura da página − 2 cm (centrado na página). Se a página for alta demais, a app reduz para caber.</div>${(a.pages||[]).length&&fotoCache.get(a.pages[0].id)?`<img src="${fotoCache.get(a.pages[0].id)}" style="max-height:90px;margin-top:4px;border:1px solid #ddd">`:''}`:'<div class="muted" style="font-size:11px;margin-top:4px">Este tipo de ficheiro vai só na lista «Em anexo» e na pasta ZIP. Para entrar no Word, junte-o em PDF ou imagem.</div>'}</div>`).join('')}
+    ${anexKind(a)?`<div class="rw" style="align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap">${tickBox('',a.inc!==false&&!!(a.pages||[]).length||(a.inc!==false&&!a.pages),`Incluir no Word${(a.pages||[]).length?` (${a.pages.length} pág.)`:''}`,`data-act="rAnexInc" data-i="${i}"`)}<label style="margin:0">Largura (cm)</label><input type="number" step="0.5" min="3" max="19" data-act="rAnexLarg" data-i="${i}" value="${a.larg||ANEX_LARG}" style="width:80px"></div><div class="muted" style="font-size:11px">Por defeito ${ANEX_LARG} cm = largura da página − 2 cm (centrado na página). Se a página for alta demais, a app reduz para caber.</div>${(a.pages||[]).length?`<div class="photos" style="margin-top:6px">${a.pages.map((pg,j)=>fotoCache.get(pg.id)?`<div style="border:1px solid #ddd;border-radius:6px;padding:4px"><img src="${fdOut(pg)}" style="width:100%;max-height:130px;object-fit:contain"><div class="muted" style="font-size:11px">Página ${j+1}${(pg.marks||[]).length?' · ✏️':''}</div>${IMGT.bar(`anx.${a.id}.${j}`,pg,{del:()=>{a.pages.splice(j,1);if(!a.pages.length)a.inc=false}})}</div>`:'').join('')}</div>`:''}`:'<div class="muted" style="font-size:11px;margin-top:4px">Este tipo de ficheiro vai só na lista «Em anexo» e na pasta ZIP. Para entrar no Word, junte-o em PDF ou imagem.</div>'}</div>`).join('')}
   <div class="btns"><label class="btn secondary mini">📄 Anexar documento (planta, certidão… PDF ou outro)<input type="file" multiple accept=".pdf,application/pdf,image/*,.doc,.docx,.xls,.xlsx,.dwg,.dxf,.zip" data-act="rAddAnexF" hidden></label><label class="btn secondary mini">🖼️ Anexar imagens<input type="file" multiple accept="image/*" data-act="rAddAnexF" data-k="img" hidden></label></div>
   <p class="muted" style="font-size:11px">PDF e imagens entram no Word, cada anexo em página própria a seguir à lista «Em anexo», com o seu título. As imagens seguem a rotina das fotografias (compressão e qualidade de Definições, com um mínimo para leitura em página inteira).</p>`}
 /* ficha da verba em linhas «campo · valor» (para o Excel; a mesma informação do quadro da verba no Word) */
@@ -2455,8 +2480,8 @@ function aptHTML(a){const x=a.al,c=x.car||{},A=aptAreas(a);if(A.at==null)return 
  return h}
 /* Extratos do PDM: até 4 espaços (a altura útil da página repartida pelas imagens; 3 é o habitual), legenda sob cada imagem e comentários — tudo numa página do Word */
 const PDM_SLOTS=['Extrato da carta de ordenamento','Extrato da carta de condicionantes','Outro extrato (planta de localização, PU / PP…)','Outro extrato'];
-function pdmImgHTML(a){const x=a.al,F=x.pdmF||[];return `<div class="algrp">Extratos do PDM (saem numa página do Word)</div>${PDM_SLOTS.map((d,i)=>{const g=F[i];return `<div class="qbox">${g&&fd(g)?`<img src="${fd(g)}" style="width:100%;max-height:140px;object-fit:contain;background:#f3f3f3;border-radius:6px">`:`<div class="muted" style="height:56px;display:flex;align-items:center;justify-content:center;border:1px dashed #bbb;border-radius:6px">Espaço ${i+1}${i===3?' (opcional)':''}</div>`}
-  <div class="btns" style="margin-top:4px"><label class="btn secondary mini">📎 ${g?'Trocar':'Juntar'} imagem<input type="file" accept="image/*" data-alpdm="${i}" hidden></label>${g?`<button class="del mini" data-alpdmdel="${i}">✕ Retirar</button>`:''}</div>
+function pdmImgHTML(a){const x=a.al,F=x.pdmF||[];return `<div class="algrp">Extratos do PDM (saem numa página do Word)</div>${PDM_SLOTS.map((d,i)=>{const g=F[i];return `<div class="qbox">${g&&fd(g)?`<img src="${fdOut(g)}" style="width:100%;max-height:140px;object-fit:contain;background:#f3f3f3;border-radius:6px">${IMGT.bar(`pdm.${a.id}.${i}`,g,{del:()=>{a.al.pdmF[i]=null}})}`:`<div class="muted" style="height:56px;display:flex;align-items:center;justify-content:center;border:1px dashed #bbb;border-radius:6px">Espaço ${i+1}${i===3?' (opcional)':''}</div>`}
+  <div class="btns" style="margin-top:4px"><label class="btn secondary mini">📎 ${g?'Trocar':'Juntar'} imagem<input type="file" accept="image/*" data-alpdm="${i}" hidden></label></div>
   ${g?`<input data-bind="alpdm.${i}.leg" ${avA(g.leg,d)} placeholder="Legenda">`:''}</div>`}).join('')}<label>Comentários sobre a consulta ao PDM</label><textarea data-bind="alc.pdmCom" rows="3" placeholder="ex.: Segundo a planta de ordenamento, o prédio insere-se em espaço habitacional; sem condicionantes assinaladas.">${esc(x.car?.pdmCom||'')}</textarea>`}
 document.addEventListener('change',async e=>{const el=e.target.closest('input[data-alpdm]');if(!el)return;e.stopImmediatePropagation();const p=cur(),a=curA();if(!a||!el.files?.[0])return;alA(a);const i=+el.dataset.alpdm,file=el.files[0];el.value='';
  try{const r=await compressImage(file,Math.max(+settings.photoKB||0,400));const fid=uid();await fotoPut(fid,r.data);fotoCache.set(fid,r.data);a.al.pdmF=a.al.pdmF||[];const old=a.al.pdmF[i];a.al.pdmF[i]={id:fid,w:r.w,h:r.h,leg:old?.leg||''};await saveProc();S.scrollTop=window.scrollY;render()}catch(err){toast(err.message,1)}},true);
