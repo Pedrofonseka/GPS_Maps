@@ -730,7 +730,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.30';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.31';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1578,7 +1578,7 @@ function qBlocos(r){const Qs=r.quesitos.map((q,i)=>({q,i})).filter(o=>String(o.q
 /* Função a desempenhar — o que se pretende (por ordem alfabética; «Outro» no fim) */
 const OBJ_FUN=[['conj','Estimar o valor de um conjunto de «x» ativos'],['edif','Estimar o valor de um edifício'],['terr','Estimar o valor de um terreno'],['casa','Estimar o valor de uma casa'],['mor','Estimar o valor de uma moradia'],['out','Outro (descrever)']];
 const OBJ_ALVO={edif:'um edifício',terr:'um terreno',casa:'uma casa',mor:'uma moradia'};
-function objFunAuto(p){const V=alAtivas(p);if(V.length>1)return 'conj';if(V.length!==1)return '';const t=V[0].al?.tipo;return ({MOR:'mor',FRA:'casa',EDI:'edif',TCI:'terr',TCM:'terr',TUR:'terr',TER:'terr'})[t]||''}
+function objFunAuto(p){const V=alAtivas(p);if(V.length>1)return 'conj';if(V.length!==1)return '';const t=V[0].al?.tipo;return ({MOR:'mor',CAS:'casa',FRA:'casa',EDI:'edif',EDM:'edif',TCI:'terr',TCM:'terr',TUR:'terr',TER:'terr'})[t]||''}
 const objFunEf=p=>{const r=ensureRel(p);return r.objFun||objFunAuto(p)};
 const objNx=p=>{const r=ensureRel(p),n=parseInt(r.objNx);return n>0?n:alAtivas(p).length};
 function objAlvo(p){const r=ensureRel(p),k=objFunEf(p);if(k==='conj'){const n=objNx(p);return `um conjunto de ${n} ativo${n===1?'':'s'}`}if(k==='out')return String(r.objFunOutro||'').trim().replace(/^estimar o valor de\s+/i,'');return OBJ_ALVO[k]||''}
@@ -2158,10 +2158,10 @@ const AL_LISTS={"aglomerado": ["7 - Cap. Distrito", "6 - Cidade", "5 - Vila", "4
    5 Estado (características — Detalhado/Sucinto — e fotos) · 6 Utilidade · 7 Métodos · 8 Valor.
    ===================================================================== */
 const ABC=L=>{const top=L.filter(x=>/^NA[PN] - |^NFN - /.test(x)),end=L.filter(x=>/^Outr[oa]$/.test(x));return [...top,...L.filter(x=>!top.includes(x)&&!end.includes(x)).sort((a,b)=>a.localeCompare(b,'pt')),...end]}; // ordem alfabética, NAP/NAN/NFN no início e «Outro» no fim
-const AL_TIPOS=[['AES','Área de estacionamento','imo'],['CAP','Construção de apoio','imo'],['ANX','Construção tipo Anexo','imo'],['EDI','Edifício em PV','imo'],['EQP','Equipamento','mob'],['FRA','Fração em PH','imo'],['MOB','Mobiliário','mob'],['MBA','Moradia em banda','imo'],['MOR','Moradia isolada','imo'],['MUR','Muro','imo'],['PAV','Pavilhão','imo'],['PIS','Piscina','imo'],['SEP','Sepultura','sep'],['TCI','Terreno para construção individual','ter'],['TCM','Terreno para construção múltipla','ter'],['TUR','Terreno para urbanizar','ter'],['TER','Terreno rústico / outras finalidades','ter'],['VEI','Veículo','vei'],['OUT','Outro','out']];
+const AL_TIPOS=[['AES','Área de estacionamento','imo'],['CAS','Casa','imo'],['CAP','Construção de apoio','imo'],['ANX','Construção tipo Anexo','imo'],['EDI','Edifício em PV','imo'],['EDM','Edifício múltiplo','imo'],['EQP','Equipamento','mob'],['FRA','Fração em PH','imo'],['MOB','Mobiliário','mob'],['MBA','Moradia em banda','imo'],['MOR','Moradia isolada','imo'],['MUR','Muro','imo'],['PAV','Pavilhão','imo'],['PIS','Piscina','imo'],['SEP','Sepultura','sep'],['TCI','Terreno para construção individual','ter'],['TCM','Terreno para construção múltipla','ter'],['TUR','Terreno para urbanizar','ter'],['TER','Terreno rústico / outras finalidades','ter'],['VEI','Veículo','vei'],['OUT','Outro','out']];
 /* grupos de ativo (como no AVA_Input) — para estatística e para agrupar valores; o grupo sai do tipo */
 const AL_GRUPOS={EDC:'Edifícios e construções',TAC:'Terreno apto para construção',TOF:'Terreno para outras finalidades',MOB:'Mobiliário',MEQ:'Máquinas/Equipamentos',VEI:'Veículos',SEP:'Sepulturas e jazigos',OTS:'Outras situações',NID:'Não identificado'};
-const AL_TIPO_GRP={AES:'EDC',CAP:'EDC',ANX:'EDC',EDI:'EDC',FRA:'EDC',MBA:'EDC',MOR:'EDC',MUR:'EDC',PAV:'EDC',PIS:'EDC',TCI:'TAC',TCM:'TAC',TUR:'TAC',TER:'TOF',EQP:'MEQ',MOB:'MOB',VEI:'VEI',SEP:'SEP',OUT:'OTS'};
+const AL_TIPO_GRP={AES:'EDC',CAS:'EDC',EDM:'EDC',CAP:'EDC',ANX:'EDC',EDI:'EDC',FRA:'EDC',MBA:'EDC',MOR:'EDC',MUR:'EDC',PAV:'EDC',PIS:'EDC',TCI:'TAC',TCM:'TAC',TUR:'TAC',TER:'TOF',EQP:'MEQ',MOB:'MOB',VEI:'VEI',SEP:'SEP',OUT:'OTS'};
 const alGrp=a=>AL_TIPO_GRP[a?.al?.tipo]||'NID';
 const grpChip=g=>`<span style="display:inline-block;font-size:10px;font-weight:700;color:#37474f;background:#eceff1;border:1px solid #b0bec5;border-radius:6px;padding:0 5px;margin-right:4px" title="${esc(AL_GRUPOS[g]||'')}">${g}</span>`;
 const AL_TIPO_OLD={GAR:'AES',LUG:'AES',LOT:'TCI'};
@@ -2927,7 +2927,7 @@ const EXE_TIP={
  HCO:['Habitação coletiva / edifício em PH',[['Estaleiro e trabalhos preparatórios',3],['Movimento de terras e fundações',7],['Estrutura',24],['Alvenarias e paredes',9],['Cobertura e impermeabilizações',4],['Redes de águas, esgotos e gás',7],['Instalações elétricas e ITED',7],['Elevadores e climatização',5],['Rebocos e isolamentos',8],['Caixilharia exterior e serralharias',8],['Carpintarias interiores',5],['Revestimentos de pavimentos e paredes',8],['Pinturas',3],['Louças e equipamentos',2]]],
  PAV:['Pavilhão / armazém',[['Estaleiro e trabalhos preparatórios',3],['Movimento de terras e fundações',12],['Estrutura (metálica ou pré-fabricada)',30],['Cobertura e revestimentos laterais',22],['Alvenarias',6],['Pavimento industrial',12],['Redes de águas e esgotos',4],['Instalações elétricas',6],['Portões e caixilharia',5]]],
  ANX:['Anexo / construção de apoio',[['Movimento de terras e fundações',12],['Estrutura e alvenarias',40],['Cobertura',20],['Rebocos e pinturas',10],['Caixilharia e portas',10],['Instalações',8]]]};
-const exeTipOf=a=>({FRA:'HCO',EDI:'HCO',PAV:'PAV',ANX:'ANX',CAP:'ANX'})[a.al.tipo]||'MOR';
+const exeTipOf=a=>({FRA:'HCO',EDI:'HCO',EDM:'HCO',PAV:'PAV',ANX:'ANX',CAP:'ANX'})[a.al.tipo]||'MOR';
 const exeNew=tip=>({tip,caps:EXE_TIP[tip][1].map(([c,p])=>({c,p:String(p),r:'0'}))});
 const exeRun=x=>{const caps=(x?.caps||[]).map(c=>({...c,pn:cstNum(c.p)??0,rn:cstNum(c.r)??0}));caps.forEach(c=>c.ct=c.pn*c.rn/10000);return {caps,peso:caps.reduce((s1,c)=>s1+c.pn,0),tot:caps.reduce((s1,c)=>s1+c.ct,0)}};
 const cstR10=v=>String(Math.min(1,Math.max(0,Math.round(v*10)/10)));
