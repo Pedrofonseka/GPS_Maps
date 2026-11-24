@@ -145,6 +145,11 @@ table.pg{width:100%;border-collapse:collapse;table-layout:fixed}table.pg td{bord
 .cstx input,.cstx select{padding:4px 5px;font-size:16px;min-height:0;margin:0} /* 16px: abaixo disto o iPhone amplia o ecrã ao tocar na caixa */
 @media (pointer:coarse){input,select,textarea{font-size:16px!important}} /* iPhone: abaixo de 16px amplia o ecrã ao tocar na caixa e o ecrã salta */
 body.kbd .cstx th:first-child,body.kbd .cstx td:first-child{position:static}
+/* ecrã largo (PC): mais largura útil, escolhas em colunas, mais fotografias por linha */
+body.wide #app,body.wide .subdesc,body.wide .fnav{max-width:1240px}
+body.wide .tks.col{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:6px 10px}
+body.wide .photos{grid-template-columns:repeat(4,1fr)}
+body.wide textarea{min-height:4.5em}
 input.auto,textarea.auto{color:#1565c0;font-style:italic;background:#eef5ff}
 /* marcas nas fotografias (docs/regras/marcas_fotos.md) */
 .annotStage{display:flex;justify-content:center;width:100%;margin:6px 0;background:#111;border-radius:10px;overflow:hidden;touch-action:none;overscroll-behavior:none}
@@ -747,7 +752,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.33';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.34';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1080,7 +1085,7 @@ function avRev(bind,stored,auto,txt){if(String(stored??'').trim()===''||auto==nu
 document.addEventListener('focusin',e=>{const el=e.target;if(el.tagName==='INPUT'&&el.classList&&el.classList.contains('auto'))setTimeout(()=>{try{if(document.activeElement===el)el.select()}catch(_){}},0)});
 document.addEventListener('input',e=>{const el=e.target;if(el.classList&&el.classList.contains('auto')){el.classList.remove('auto');el.removeAttribute('title')}},true);
 document.addEventListener('click',e=>{const b=e.target.closest('[data-autoclr]');if(!b)return;e.preventDefault();e.stopImmediatePropagation();const el=document.querySelector(`[data-bind="${CSS.escape(b.dataset.autoclr)}"]`);if(!el)return;el.value='';el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));setTimeout(()=>{S.scrollTop=window.scrollY;render()},0)},true);
-function render_relat(){
+function render_relat(){try{applyWide()}catch(_){}
   document.title=`AvaLias · ${VERSION}`;
   const p=cur();if(!p&&['proc','anom','rel'].includes(S.view))S.view='home';
   const crumbs=p&&S.view!=='home'&&S.view!=='defs'?`${esc(p.codigo||'(sem código)')}${S.sub==='ficha'&&curA()?' › '+anCode(p,curA()):''}`:'';
@@ -1398,7 +1403,12 @@ async function dupModal(p){await loadFotos(p);if(await ensureHashes(p))await sav
  m.querySelector('#ddNo').onclick=()=>m.remove();m.querySelector('#ddGo').onclick=async()=>{const ids=new Set([...m.querySelectorAll('[data-dd]:checked')].map(c=>c.dataset.dd));m.remove();if(!ids.size)return;
   for(const a of p.anomalias){a.fotos=a.fotos.filter(f=>!ids.has(f.id));normFotos(a)}S.prevStale=true;await saveProc();S.scrollTop=window.scrollY;render();toast(`${ids.size} fotografia(s) repetida(s) eliminada(s) — pode desfazer (↶).`)}}
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-dupscan]');if(!b)return;e.preventDefault();e.stopImmediatePropagation();const p=cur();if(p)await dupModal(p)},true);
-function relDefsHTML(){return sec('d_relat','Relatório — perito (singular)',`<p class="muted">Usado no compromisso de honra das peritagens institucionais singulares e na assinatura do termo de encerramento. Fica só neste aparelho.</p><label>Nome do perito (assinatura)</label><input data-bind="s.peritoNome" list="dlPeritos" value="${esc(settings.peritoNome||'')}" placeholder="Nome">${perDL()}<label>Linha de qualificação (por baixo do nome, no termo de encerramento)</label><input data-bind="s.peritoQual" value="${esc(settings.peritoQual||'')}" placeholder="ex.: Perito avaliador registado na CMVM * lista oficial …"><label>Compromisso de honra — perícia singular</label><textarea data-bind="s.compSingular" rows="7" placeholder="Nome, profissão, perito-avaliador da Lista Oficial…, jura por sua honra desempenhar as funções que lhe foram atribuídas, com lealdade e proficiência.">${esc(settings.compSingular||'')}</textarea><p class="muted">Perícia colegial: «${esc(COMP_COLEGIAL)}» · Particular: sem compromisso.</p>`,{cnt:settings.compSingular?pill('✓','ok'):pill('por preencher','warn'),def:false})}
+/* largura do ecrã: automática (larga num ecrã grande com rato), estreita ou larga */
+function applyWide(){const m=settings.largura||'auto',w=m==='larga'||(m==='auto'&&window.matchMedia&&matchMedia('(min-width:1000px) and (pointer:fine)').matches);document.body.classList.toggle('wide',!!w)}
+window.addEventListener('resize',()=>{try{applyWide()}catch(_){}});
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-largura]');if(!b)return;e.preventDefault();e.stopImmediatePropagation();settings.largura=b.dataset.largura;await saveSettings();applyWide();S.scrollTop=window.scrollY;render()},true);
+const largHTML=()=>sec('d_larg','Ecrã — largura do formulário',`<p class="muted">No PC, o modo largo aproveita a largura do ecrã: formulário mais largo, escolhas em várias colunas e 4 fotografias por linha. No iPhone fica sempre estreito, salvo se escolher «Larga».</p><div class="seg">${[['auto','Automática'],['estreita','Estreita (telemóvel)'],['larga','Larga (PC)']].map(([k,t])=>`<button class="${(settings.largura||'auto')===k?'on':''}" data-largura="${k}">${t}</button>`).join('')}</div>`,{def:false});
+function relDefsHTML(){return largHTML()+sec('d_relat','Relatório — perito (singular)',`<p class="muted">Usado no compromisso de honra das peritagens institucionais singulares e na assinatura do termo de encerramento. Fica só neste aparelho.</p><label>Nome do perito (assinatura)</label><input data-bind="s.peritoNome" list="dlPeritos" value="${esc(settings.peritoNome||'')}" placeholder="Nome">${perDL()}<label>Linha de qualificação (por baixo do nome, no termo de encerramento)</label><input data-bind="s.peritoQual" value="${esc(settings.peritoQual||'')}" placeholder="ex.: Perito avaliador registado na CMVM * lista oficial …"><label>Compromisso de honra — perícia singular</label><textarea data-bind="s.compSingular" rows="7" placeholder="Nome, profissão, perito-avaliador da Lista Oficial…, jura por sua honra desempenhar as funções que lhe foram atribuídas, com lealdade e proficiência.">${esc(settings.compSingular||'')}</textarea><p class="muted">Perícia colegial: «${esc(COMP_COLEGIAL)}» · Particular: sem compromisso.</p>`,{cnt:settings.compSingular?pill('✓','ok'):pill('por preencher','warn'),def:false})}
 function vDefs(){
   const TY={choice:'Escolha única',multi:'Escolha múltipla',catalog:'Catálogo',text:'Texto curto',long:'Texto longo'};
   const catSec=([ck,lab],n)=>sec('dc_'+ck,`${n} · ${esc(lab)}`,`<div class="rows">${settings[ck].map((c,i)=>`<div class="rw"><input data-catedit="${ck}" data-i="${i}" value="${esc(c)}"><button class="del" data-act="delCat" data-k="${ck}" data-i="${i}" aria-label="Retirar">✕</button></div>`).join('')}</div>
