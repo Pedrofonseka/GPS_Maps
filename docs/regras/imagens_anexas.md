@@ -20,4 +20,4 @@ Cada imagem é um objeto `{id, w, h, marks}`; a imagem guarda-se com `fotoPut(id
 ## Onde está aplicada
 - AvaLias 1.41 — extratos do PDM; páginas dos anexos (PDF e imagens).
 - periText 1.30.7 — páginas dos anexos (PDF e imagens).
-- ExPropria — a seguir.
+- ExPropria 0.17.0 — extratos do PDM (até 4, numa página), imagens fornecidas e páginas dos anexos: ✏️ Marcar e ⟳ Rodar (com as marcas); as fotografias do ExPropria têm as suas ferramentas próprias (sem marcas, por agora).
