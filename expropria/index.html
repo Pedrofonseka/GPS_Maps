@@ -742,7 +742,7 @@ button:not(.tiny):not([data-tldel]):not([data-del]){min-height:44px!important}
 #prevOv .pvbar{display:flex;gap:8px;align-items:center;padding:8px 10px;padding-top:max(8px,env(safe-area-inset-top));background:#2f5d3a;color:#fff}
 #prevOv .pvbar b{flex:1;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #prevOv .pvbar button{background:#fff;color:#2f5d3a;border:0;min-height:40px}
-#prevOv .pvscroll{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:10px 0 calc(30px + env(safe-area-inset-bottom))}
+#prevOv .pvscroll{flex:1;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;touch-action:pan-y;-webkit-overflow-scrolling:touch;padding:10px 0 calc(30px + env(safe-area-inset-bottom))}
 #prevOv .pvzoom{transform-origin:top left}
 #prevOv .docx-wrapper{background:transparent!important;padding:0!important}
 #prevOv .docx-wrapper>section.docx{margin:0 auto 12px!important;box-shadow:0 2px 10px #0006!important}
@@ -785,7 +785,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
 <script>
 'use strict';
-const VERSION='0.16.1';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
+const VERSION='0.16.2';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
 function growFit(t){if(!t||!t.classList?.contains('grow')||!t.offsetParent)return;t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px'}
 function growAll(root){(root||document).querySelectorAll('textarea.grow').forEach(growFit)}
 document.addEventListener('input',e=>growFit(e.target),true);
@@ -1789,7 +1789,7 @@ async function previewDocx(blob,nome,warns=[]){busy(true,'A preparar a pré-visu
   await lib.renderAsync(await avaDocxParaEcra(blob),box,null,{className:'docx',inWrapper:true,ignoreWidth:false,ignoreHeight:false,ignoreFonts:false,breakPages:true,ignoreLastRenderedPageBreak:true,renderHeaders:true,renderFooters:true,renderFootnotes:true,useBase64URL:true,experimental:true});
   await Promise.all([...box.querySelectorAll('img')].map(im=>im.decode?im.decode().catch(()=>{}):null));if(document.fonts?.ready)await document.fonts.ready;
   const wr=box.querySelector('.docx-wrapper')||box;avaPdfPost(wr);avaPdfPaginate(wr);
-  const fit=()=>{const sec=wr.querySelector('section.docx');if(!sec)return;const w=sec.offsetWidth+16,sc=Math.min(1,ov.clientWidth/w);box.style.transform=`scale(${sc})`;box.style.width=`${100/sc}%`;box.style.height=`${wr.offsetHeight*sc}px`};fit();window.addEventListener('resize',fit,{once:true});
+  const hasZoom=typeof CSS!=='undefined'&&CSS.supports&&CSS.supports('zoom','0.5');let lastW=0;const fit=()=>{const sec=wr.querySelector('section.docx');if(!sec)return;const W0=ov.clientWidth;if(W0===lastW)return;lastW=W0;const w=sec.offsetWidth+16,sc=Math.min(1,W0/w);if(hasZoom){box.style.zoom=sc;box.style.transform='';box.style.width='';box.style.height=''}else{box.style.transform=`scale(${sc})`;box.style.width=`${100/sc}%`;box.style.height=`${wr.offsetHeight*sc}px`}};fit();setTimeout(()=>{lastW=0;fit()},400);window.addEventListener('resize',()=>{lastW=0;fit()});
   busy(false);if(warns&&warns.length)alert('Avisos:\n\n- '+warns.join('\n- '))}
  catch(e){busy(false);close();throw e}}
 async function avaFxPdfBlob(o = {}) {
