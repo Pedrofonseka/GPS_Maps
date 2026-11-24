@@ -1,6 +1,6 @@
 # Marcas nas fotografias (setas, círculos, letras, texto, balões)
 
-Origem: AVA_Input 2.91. Incorporada no Relatório de Peritagem 1.6.0 e no Regi Anomalias 0.18.0.
+Origem: AVA_Input 2.91. Incorporada no Relatório de Peritagem (periText) 1.6.0, no Regi Anomalias 0.18.0 e na AvaLias 1.33 (miniaturas da ficha, Word, PDF/pré-visualização e capa).
 
 ## Funcionamento
 - Botão «✏️ Marcar» em cada fotografia (com o n.º de marcas).
