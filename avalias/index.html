@@ -144,6 +144,7 @@ table.pg{width:100%;border-collapse:collapse;table-layout:fixed}table.pg td{bord
 .cstx th:first-child{background:#f3efe9}.cstx tr.tot td:first-child{background:#f6f6f6}
 .cstx input,.cstx select{padding:4px 5px;font-size:16px;min-height:0;margin:0} /* 16px: abaixo disto o iPhone amplia o ecrã ao tocar na caixa */
 @media (pointer:coarse){input,select,textarea{font-size:16px!important}} /* iPhone: abaixo de 16px amplia o ecrã ao tocar na caixa e o ecrã salta */
+input.auto,textarea.auto{color:#1565c0;font-style:italic;background:#eef5ff}
 </style>
 </head>
 <body>
@@ -728,7 +729,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.25';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.26';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -965,6 +966,39 @@ async function rotateFoto(f){const i=await loadImg(fd(f));const c=document.creat
 
 // ---------- Render ----------
 // Ecrãs: home (Processos) · proc (Processo) · anom (Anomalias) · rel (Relatório) · defs (Definições); sub: ficha | imp
+/* @comum:morph v1.0 — redesenho sem saltos: em vez de substituir o HTML inteiro (o que destrói a caixa onde se está a escrever, fecha o teclado e faz o ecrã saltar no iPhone), compara o HTML novo com o que está no ecrã e só altera o que mudou. A caixa com o foco nunca é substituída nem perde o que lá está escrito. Se a estrutura mudou à volta da caixa com o foco (ex.: linha nova acima), devolve false e não mexe — a app redesenha quando o foco sair. Regra: docs/regras/README.md (Teclado no iPhone). */
+const domMorph=(function(){
+ const isTxt=e=>!!e&&(e.tagName==='TEXTAREA'||e.tagName==='SELECT'||(e.tagName==='INPUT'&&!/^(checkbox|radio|file|button|submit|range|color)$/i.test(e.type)));
+ const pathOf=(root,el)=>{const p=[];while(el&&el!==root){p.unshift([...el.parentNode.childNodes].indexOf(el));el=el.parentNode}return el===root?p:null};
+ const at=(root,p)=>{let n=root;for(const i of p){n=n&&n.childNodes[i];if(!n)return null}return n};
+ const same=(a,b)=>!!a&&!!b&&a.nodeName===b.nodeName&&['data-bind','id','name','data-perb','data-pk','data-act','data-i'].every(k=>a.getAttribute(k)===b.getAttribute(k));
+ function attrs(o,n){for(const at of [...o.attributes])if(!n.hasAttribute(at.name)&&!(o.tagName==='TEXTAREA'&&at.name==='style'))o.removeAttribute(at.name);for(const at of [...n.attributes])if(o.getAttribute(at.name)!==at.value)o.setAttribute(at.name,at.value)}
+ function morph(o,n,act){
+  if(o.nodeType!==n.nodeType||o.nodeName!==n.nodeName){o.parentNode.replaceChild(n,o);return}
+  if(o.nodeType!==1){if(o.nodeValue!==n.nodeValue)o.nodeValue=n.nodeValue;return}
+  attrs(o,n);const t=o.tagName;
+  if(t==='INPUT'){if(o!==act){if(/^(checkbox|radio)$/i.test(o.type))o.checked=n.hasAttribute('checked');else if(o.type!=='file'&&o.value!==(n.getAttribute('value')||''))o.value=n.getAttribute('value')||''}return}
+  if(t==='TEXTAREA'){if(o!==act&&o.value!==n.value)o.value=n.value;return}
+  const oc=o.childNodes,nc=[...n.childNodes];
+  for(let i=0;i<nc.length;i++){if(i<oc.length)morph(oc[i],nc[i],act);else o.appendChild(nc[i])}
+  while(oc.length>nc.length)o.removeChild(o.lastChild);
+  if(t==='SELECT'&&o!==act){const s=[...n.options].findIndex(x=>x.hasAttribute('selected'));o.selectedIndex=s<0?0:s}
+  if(t==='DETAILS')o.open=n.hasAttribute('open')}
+ return function(root,html){const act=document.activeElement,foco=isTxt(act)&&root.contains(act);
+  const tp=document.createElement('template');tp.innerHTML=html;const nw=tp.content;
+  if(foco){const p=pathOf(root,act);if(!p||!same(act,at(nw,p)))return false}
+  const oc=root.childNodes,nc=[...nw.childNodes];
+  for(let i=0;i<nc.length;i++){if(i<oc.length)morph(oc[i],nc[i],foco?act:null);else root.appendChild(nc[i])}
+  while(oc.length>nc.length)root.removeChild(root.lastChild);return true}})();
+/* @fim:morph */
+window.KBD_MORPH=true;
+/* Valores automáticos (calculados ou propostos): ficam escritos na caixa (a azul, itálico) e já contam. Escrever por cima = corrigir; apagar = voltar ao automático; ↺ repõe o automático. */
+const AUTO_T='Valor automático — já conta. Escreva por cima para corrigir; apague (ou ↺) para voltar ao automático.';
+function avA(stored,auto){const s1=String(stored??'');if(s1.trim()!=='')return `value="${esc(s1)}"`;const u=String(auto??'');return u?`value="${esc(u)}" class="auto" title="${AUTO_T}"`:'value=""'}
+function avRev(bind,stored,auto,txt){if(String(stored??'').trim()===''||auto==null||auto==='')return '';const sv=cstNum(stored),au=typeof auto==='number'?auto:cstNum(auto);if(sv!=null&&au!=null&&Math.abs(sv-au)<0.5)return '';if(sv==null&&String(stored).trim()===String(auto).trim())return '';return `<button class="secondary mini" data-autoclr="${esc(bind)}" title="Corrigido à mão — voltar ao valor automático">↺ ${esc(txt??String(auto))}</button>`}
+document.addEventListener('focusin',e=>{const el=e.target;if(el.classList&&el.classList.contains('auto'))setTimeout(()=>{try{if(document.activeElement===el)el.select()}catch(_){}},0)});
+document.addEventListener('input',e=>{const el=e.target;if(el.classList&&el.classList.contains('auto')){el.classList.remove('auto');el.removeAttribute('title')}},true);
+document.addEventListener('click',e=>{const b=e.target.closest('[data-autoclr]');if(!b)return;e.preventDefault();e.stopImmediatePropagation();const el=document.querySelector(`[data-bind="${CSS.escape(b.dataset.autoclr)}"]`);if(!el)return;el.value='';el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));setTimeout(()=>{S.scrollTop=window.scrollY;render()},0)},true);
 function render_relat(){
   document.title=`AvaLias · ${VERSION}`;
   const p=cur();if(!p&&['proc','anom','rel'].includes(S.view))S.view='home';
@@ -976,9 +1010,11 @@ function render_relat(){
   if(S.sub==='ficha'&&curA())html=vFicha();else if(S.sub==='imp'&&p)html=vImport();
   else{S.sub=null;html=({home:vHome,proc:vProc,anom:vAnoms,rel:vRel,defs:vDefs}[S.view]||vHome)()}
   $('#sub').innerHTML=S.sub==='ficha'?(S.subNav||''):'';$('#sub').style.display=S.sub==='ficha'?'':'none';
-  $('#app').innerHTML=html;
+  const _ae=document.activeElement,_foco=_ae&&_ae!==document.body&&$('#app').contains(_ae)&&/^(INPUT|TEXTAREA|SELECT)$/.test(_ae.tagName);
+  document.querySelectorAll('#app .alsug').forEach(n=>n.remove());
+  window._lastHtml=html;if(!domMorph($('#app'),html))window.KBD_PEND=true;
   document.querySelectorAll('#app textarea').forEach(autosize);
-  if(S.scrollTop!==undefined){window.scrollTo(0,S.scrollTop);S.scrollTop=undefined}
+  if(S.scrollTop!==undefined){if(!_foco)window.scrollTo(0,S.scrollTop);S.scrollTop=undefined}
   if(S.view==='rel'&&!S.sub&&!S.prevSimple&&S.open['r3']!==false){const box=$('#docxPrev');if(S.prevNode&&S.prevPid===S.pid&&box){box.innerHTML='';box.appendChild(S.prevNode);fitDocxPreview()}else renderDocxPreview()}
 }
 const useK=(p,k)=>!p?.use||!!p.use[String(k).split('__')[0]];
@@ -1030,7 +1066,7 @@ function vProc_relat(){
     <label>Situações acrescentadas no local (pelo perito) ficam na parte</label><select data-act="parteLocal">${p.partes.map(x=>`<option value="${x.n}" ${x.n==(p.parteLocal??4)?'selected':''}>${parteSig(p,x.n)} – ${esc(x.nome)}</option>`).join('')}</select>`,{cnt:pill(p.partes.map(x=>parteSig(p,x.n)).join(' · ')),def:false})}
   ${sec('p5','Lógica da ficha',`<p class="muted">Escolha o par de títulos que sai em cada ficha do Word.</p>
     <div class="seg">${[['Situação','Análise'],['Questão','Resposta']].map(([d,c])=>`<button class="${lblD(p)===d&&lblC(p)===c?'on':''}" data-act="setPair" data-d="${d}" data-c="${c}">${d} / ${c}</button>`).join('')}</div>
-    <p class="muted">Personalizar (opcional):</p><div class="grid2"><div><label>1.º título</label><input data-bind="p.lblDesc" value="${esc(p.lblDesc||'')}" placeholder="${esc(lblD(p))}"></div><div><label>2.º título</label><input data-bind="p.lblCom" value="${esc(p.lblCom||'')}" placeholder="${esc(lblC(p))}"></div></div>`,{cnt:pill(lblD(p)+' / '+lblC(p)),def:false})}
+    <p class="muted">Personalizar (opcional):</p><div class="grid2"><div><label>1.º título</label><input data-bind="p.lblDesc" ${avA(p.lblDesc,lblD(p))}></div><div><label>2.º título</label><input data-bind="p.lblCom" ${avA(p.lblCom,lblC(p))}></div></div>`,{cnt:pill(lblD(p)+' / '+lblC(p)),def:false})}
   ${sec('p3','3 · Campos a atender na pronúncia',`<p class="muted">Marque os campos sobre os quais se vai pronunciar. Só esses aparecem em cada ficha. "Imprimir" decide se saem no Word.</p>
     <table class="tb"><tr><th>Campo</th><th class="c">Atender</th><th class="c">Imprimir</th></tr>${settings.fields.map(f=>`<tr><td>${esc(f.label)}</td><td class="c"><input type="checkbox" data-act="tickUse" data-f="${f.id}" ${p.use?.[f.id]?'checked':''}></td><td class="c"><input type="checkbox" data-act="tickPrint" data-f="${f.id}" ${p.print?.[f.id]?'checked':''} ${p.use?.[f.id]?'':'disabled'}></td></tr>`).join('')}</table>
     <div class="btns"><button class="secondary mini" data-act="useAll" data-v="1">Marcar todos</button><button class="secondary mini" data-act="useAll" data-v="0">Desmarcar todos</button></div>`,{cnt:pill(nUse+' campo'+(nUse===1?'':'s'))})}
@@ -1554,12 +1590,12 @@ function relProcHTML(p){const r=ensureRel(p),col=isCol(r),part=isPart(r),hd=hdrD
     <p class="muted">O local está em «1 · Dados do processo».</p>
     ${RL('entidade',part?'Solicitante (entidade / nome)':'Tribunal / entidade',r.entidade,part?'':'ex.: Tribunal Judicial de Coimbra')}${part?'':RPICK('entidade',AL_TRIBUNAIS,r.entidade,'📋 Escolher o tribunal da lista…')}
     ${RL('objeto','Objeto de análise',r.objeto,'ex.: Moradia – Rua X, n.º 10 (habitação e logradouro)')}
-    ${RL('funcao','Função',r.funcao,'Peritagem')}${RL('contexto','Contexto processual',r.contexto,'ex.: Ação de Despejo')}${RPICK('contexto',AL_CONTEXTO,r.contexto,'📋 Escolher da lista…')}
+    ${`<label>Título da capa («… – Relatório»)</label><input data-bind="r.funcao" ${avA(r.funcao,'Peritagem')}>`}${RL('contexto','Contexto processual',r.contexto,'ex.: Ação de Despejo')}${RPICK('contexto',AL_CONTEXTO,r.contexto,'📋 Escolher da lista…')}
     ${part?'':`${RL('parte1','Parte 1',r.parte1)}${RL('parte2','Parte 2',r.parte2)}`}
     ${RL('versao','Versão do relatório',r.versao,'ex.: 1.01VF ou Draft00')}<p class="muted">Nome do ficheiro (e rodapé): <b>${esc(relFileName(p))}</b></p>`;
   const nq=r.quesitos.length;
   const QW=part?['queixa','queixas','Queixa']:['quesito','quesitos','Quesito'];
-  const t3o=`<label>Função a desempenhar — o que se pretende</label><div class="tks col">${OBJ_FUN.map(([k,l])=>tickBox('',r.objFun===k,l,`data-act="rObjFun" data-v="${k}"`)).join('')}</div>${r.objFun==='conj'?RL('objNx','N.º de ativos («x»)',r.objNx,String(alAtivas(p).length)+' (n.º de verbas)'):''}${r.objFun==='out'?RL('objFunOutro','Descrever o que se pretende',r.objFunOutro,'ex.: Estimar o valor de renda de uma loja'):''}${r.objFun?`<p class="muted">No relatório: «Pretende-se ${esc(objTxt(p)||'…')}.»</p>`:''}`;
+  const t3o=`<label>Função a desempenhar — o que se pretende</label><div class="tks col">${OBJ_FUN.map(([k,l])=>tickBox('',r.objFun===k,l,`data-act="rObjFun" data-v="${k}"`)).join('')}</div>${r.objFun==='conj'?`<label>N.º de ativos («x») — automático: n.º de verbas</label><input data-bind="r.objNx" inputmode="numeric" ${avA(r.objNx,String(alAtivas(p).length))}>`:''}${r.objFun==='out'?RL('objFunOutro','Descrever o que se pretende',r.objFunOutro,'ex.: Estimar o valor de renda de uma loja'):''}${r.objFun?`<p class="muted">No relatório: «Pretende-se ${esc(objTxt(p)||'…')}.»</p>`:''}`;
   const t3=`${t3o}${part?'<p class="muted">Particular: em princípio não há quesitos, mas uma lista de queixas sobre determinadas situações. O perito pode encontrar outras no decurso da inspeção (registe-as em Anomalias, origem P – Perito).</p>':''}${r.objFun?'<label>Questões complementares</label>':RL('objIntro','Frase de abertura',r.objIntro,'Pretende-se:')}
     <div class="rows">${r.quesitos.map((q,i)=>`<div class="qbox"><div class="qhd"><b>${qCode(i)}</b><span class="grow"></span><button class="secondary mini" data-act="rMvQ" data-i="${i}" data-d="-1" ${i?'':'disabled'}>▲</button><button class="secondary mini" data-act="rMvQ" data-i="${i}" data-d="1" ${i<nq-1?'':'disabled'}>▼</button><button class="del" data-act="rDelQ" data-i="${i}">✕</button></div><input data-bind="q.${i}.de" value="${esc(q.de||'')}" placeholder="Colocada por (ex.: Autor, Réu, Tribunal) — opcional" style="margin-bottom:4px"><textarea data-bind="q.${i}.txt" rows="3">${esc(q.txt||'')}</textarea></div>`).join('')||`<p class="muted">Sem questões complementares — no relatório sai «Outras questões: nada a considerar».</p>`}</div>
     <div class="btns"><button class="secondary mini" data-act="rAddQ">+ ${QW[2]}</button><label class="btn secondary mini">📄 Do Word<input type="file" accept=".docx" data-act="rImpQ" data-k="docx" hidden></label><label class="btn secondary mini">📊 Do Excel<input type="file" accept=".xlsx" data-act="rImpQ" data-k="xlsx" hidden></label><button class="secondary mini" data-act="rPasteQ">📋 Colar texto</button></div>${qModHTML()}
@@ -1579,7 +1615,7 @@ function relRelHTML(p){const r=ensureRel(p),col=isCol(r);
     return `<div class="qbox"><div class="qhd"><b>${isPart(r)?'Queixa':'Quesito'} ${qCode(i)}</b></div><div class="muted qtxt">${esc(q.txt||'')}</div>${resp}</div>`}).join('')||'<p class="muted">Sem quesitos — acrescente-os em Processo › R3.</p>';
   const nr=r.quesitos.filter(q=>String(q.resp||'').trim()).length;
   const termo=`${col?`<label>Conclusão</label>${segR('rUnan',[['1','Por unanimidade'],['0','Com posições discordantes']],r.unan?'1':'0')}${r.unan?'':RT('discord','Posições discordantes (perito e fundamento)',r.discord,4)}`:''}
-    ${RL('dataEnc','Concluído em',r.dataEnc,mesAno())}<p class="muted">${col?'Assinam os peritos do colégio.':'Assina o perito (nome em Definições).'}</p>`;
+    ${`<label>Concluído em</label><input data-bind="r.dataEnc" ${avA(r.dataEnc,mesAno())}>`}<p class="muted">${col?'Assinam os peritos do colégio.':'Assina o perito (nome em Definições).'}</p>`;
   const anex=`<div class="tks col">${ANEX_R.map(d=>tickBox('',!!r.anexos[d],d,`data-act="rAnex" data-k="${esc(d)}"`)).join('')}</div>${RT('anexosOutros','Outros anexos (um por linha)',r.anexosOutros,2)}${anexFilesHTML(p)}`;
   return `${sec('rr1',isPart(r)?'Apreciação das queixas':'Resposta ao solicitado (quesitos)',qs,{cnt:pill(`${nr}/${r.quesitos.length}`,nr&&nr===r.quesitos.length?'ok':'warn')})}
   ${sec('rr2','Resumo de análise — nota',RT('nota','Nota (sai a seguir aos gráficos)',r.nota,3)+'<p class="muted">Os quadros e gráficos vêm do «Resumo estatístico» (abaixo). Sem estatística e sem nota, a secção não sai no relatório.</p>',{def:false})}
@@ -2167,10 +2203,14 @@ const alCritTxt=a=>{const x=a.al;return x.crit==='UC'?`Uso continuado — manté
 function alMetSug(a,p){const x=a.al,AP=alP(p),fin=AP.finalidade==='Outra'?AP.finalidadeOutra:AP.finalidade,ad=x.mAdot;if(!ad)return '';const outros=alMetOn(x).filter(m=>m!==ad).map(m=>AL_MET_SIG[m]);
  return `Tendo em conta a finalidade${fin?` («${fin}»)`:''}, a base de valor${AP.base?` «${AP.base}»`:''} e o critério de ${x.crit==='UA'?`uso alternativo (${String(x.critUA||'').trim()||'—'})`:'uso continuado'}, considera-se mais adequado o método ${AL_MET_NOME[ad].toLowerCase()} (${AL_MET_SIG[ad]})${outros.length?`; ${outros.join(', ')} serve${outros.length>1?'m':''} de verificação`:''}.`}
 function alCritHTML(a){const x=a.al;return `<div class="algrp">1 · Critério</div><div class="tks">${alTk(x.crit==='UC','Uso continuado — manter a utilização','data-alact="set" data-k="crit" data-v="UC"')}${alTk(x.crit==='UA','Uso alternativo','data-alact="set" data-k="crit" data-v="UA"')}</div>${x.crit==='UA'?inp('al.critUA','Uso alternativo considerado (qual)',x.critUA,'ex.: habitação unifamiliar após reconversão; loteamento; turismo rural…'):''}${txt('al.critTxt','Notas ao critério (opcional)',x.critTxt,2)}<div class="algrp">2 · Método</div>`}
+/* mau estado de conservação (ECV 1–3) ou obra inacabada / em ruína → sugerir o método residual (RES) */
+function alResSug(a){const x=a.al,c=x.car||{},R=[];const e=rhdCod(c.estado),n=parseInt(e);if(n>=1&&n<=3)R.push(`estado de conservação ${e}`);
+ const bad=(x.cst?.on?x.cst.ed||[]:[]).map(r=>r.est).filter(v=>{const k=parseInt(v);return k>=1&&k<=3});if(bad.length&&!R.length)R.push(`construção com estado ${bad[0]} no método de custo`);
+ if(/ruína|por concluir|em construção/i.test(c.exec||''))R.push(`estado de execução «${c.exec}»`);return R.join(' e ')}
 function alMetHTML(a,p){const x=a.al,on=alMetOn(x),bft=alBft(a),ad=x.mAdot&&x.met[x.mAdot]?x.mAdot:'',va=ad?alMetVal(a,ad):null;
- let h=alCritHTML(a)+`<p class="muted" style="margin-top:0">Escolha os métodos aplicados, indique o valor obtido por cada um e assinale o que se considera mais adequado (adotado). O valor estimado da verba = método adotado + encargos/benfeitorias.</p><div class="tks">${AL_METODOS.map(m=>alTk(!!x.met[m],esc(alMetLbl(m)),`data-alact="met" data-v="${esc(m)}"`)).join('')}</div>`;
+ const rs=alResSug(a);let h=alCritHTML(a)+(rs&&!(x.met['Residual']&&x.va?.on)?`<div class="cmres" style="margin:4px 0;border-left:4px solid #e65100">💡 <b>Sugestão:</b> ${esc(rs.charAt(0).toUpperCase()+rs.slice(1))} — sugere-se o <b>método residual (RES)</b>: valor final a novo (custo a novo ou mercado), menos o terreno, × % reutilizável, + terreno − custos de demolição, limpeza e transformação. <button class="secondary mini" data-alact="resSug">✓ Aplicar RES</button></div>`:'')+`<p class="muted" style="margin-top:0">Escolha os métodos aplicados, indique o valor obtido por cada um e assinale o que se considera mais adequado (adotado). O valor estimado da verba = método adotado + encargos/benfeitorias.</p><div class="tks">${AL_METODOS.map(m=>alTk(!!x.met[m],esc(alMetLbl(m)),`data-alact="met" data-v="${esc(m)}"`)).join('')}</div>`;
  if(on.length){h+=`<div class="algrp">Valor por método</div>`;
-  for(const m of on){const au=alMetAuto(a,m),isA=ad===m;h+=`<div class="inrow" style="margin-top:6px;align-items:center"><b style="flex:0 0 46px">${AL_MET_SIG[m]}</b><input data-bind="almv.${AL_METODOS.indexOf(m)}" inputmode="decimal" value="${esc(x.mv?.[m]||'')}" placeholder="${au!=null?esc(CULT.fmt(au,0))+' (calculado)':'Valor (€)'}" style="flex:1;min-width:0"><button class="${isA?'green':'secondary'} mini" data-alact="adot" data-v="${esc(m)}" style="flex:0 0 auto">${isA?'✓ Adotado':'Adotar'}</button></div>${au!=null&&alNum(x.mv?.[m])==null?`<p class="muted" style="margin:2px 0 0 52px">${m==='Rendimento (capitalização)'?(alCultOk(a)?'Do cálculo pelo rendimento (culturas) — ver 8 · Valor.':'Do cálculo pelo rendimento, abaixo.'):m==='Valores de referência'?'Do valor de referência — ver 8 · Valor.':'Do cálculo pelo custo, abaixo.'}</p>`:''}`}
+  for(const m of on){const au=alMetAuto(a,m),isA=ad===m;h+=`<div class="inrow" style="margin-top:6px;align-items:center"><b style="flex:0 0 46px">${AL_MET_SIG[m]}</b><input data-bind="almv.${AL_METODOS.indexOf(m)}" inputmode="decimal" ${avA(x.mv?.[m],au!=null?CULT.fmt(au,0):'')} placeholder="Valor (€)" style="flex:1;min-width:0">${avRev(`almv.${AL_METODOS.indexOf(m)}`,x.mv?.[m],au,au!=null?CULT.fmt(au,0):'')}<button class="${isA?'green':'secondary'} mini" data-alact="adot" data-v="${esc(m)}" style="flex:0 0 auto">${isA?'✓ Adotado':'Adotar'}</button></div>${au!=null&&alNum(x.mv?.[m])==null?`<p class="muted" style="margin:2px 0 0 52px">🔗 Automático — ${m==='Rendimento (capitalização)'?(alCultOk(a)?'Do cálculo pelo rendimento (culturas) — ver 8 · Valor.':'Do cálculo pelo rendimento, abaixo.'):m==='Valores de referência'?'Do valor de referência — ver 8 · Valor.':'Do cálculo pelo custo, abaixo.'}</p>`:''}`}
   if(x.met['Custo (reposição depreciado)']||(x.met['Residual']&&vaBase(a)==='cst'))h+=cstHTML(a);
   if(x.met['Rendimento (capitalização)']&&!alCultOk(a))h+=rndHTML(a);
   if(x.met['Residual'])h+=vaHTML(a);
@@ -2315,7 +2355,7 @@ function vFicha(){
  h+=SM('v7','7 · Avaliação — critério e método',alMetHTML(a,p),{cnt:ok(x.crit&&alMetOn(x).length&&x.mAdot)});
  /* 8 valor */
  const renda=p.al.base==='Valor de renda de mercado';
- h+=SM('v8','8 · Valor',`${alCultOk(a)?alCultHTML(a):''}${x.valAuto==='met'?`<p class="muted" style="margin:6px 0 0">🔄 Valor estimado automático = método adotado (${esc(AL_MET_SIG[x.mAdot]||'')})${alBft(a)?' + encargos/benfeitorias':''} — ver 7 · Métodos. Para fixar outro valor, escreva-o na caixa.</p>`:''}${x.valAuto&&x.valAuto!=='met'&&alNum(x.car?.at)?`<p class="muted" style="margin:6px 0 0">🔄 Valor estimado automático = área × ${x.valAuto==='calc'?'valor do cálculo':'valor de referência'} (atualiza-se se mudar a área ou o cálculo). Para fixar outro valor, escreva-o na caixa.</p>`:''}${alRefOk(a)?alRefHTML(a):''}${alTOF(a)&&!alCultOk(a)&&!alRefOk(a)?'<p class="muted">Terreno não apto para construção (TOF): assinale em «7 · Métodos» VRF (valores referenciais) e/ou RND (rendimento) para ter aqui o cálculo.</p>':''}<div class="row2">${inp('al.valor','Valor estimado (€)',x.valor,'ex.: 185 000')}${renda?inp('al.renda','Renda mensal (€/mês)',x.renda,'ex.: 650'):''}</div>${p.al.bad?inp('al.bad',`BAD — redução até (%) — vazio = ${p.al.badPct||10}%`,x.bad,String(p.al.badPct||10)):'<p class="muted">BAD não aplicável neste processo (Processo › Contexto da avaliação).</p>'}${txt('al.valObs','Notas ao valor (opcional)',x.valObs,2)}${alNum(x.valor)!=null?`<p><b>${esc(alEur(x.valor))}</b>${renda&&alNum(x.renda)!=null?` · ${esc(alEur(x.renda))}/mês`:''}</p>`:''}`,{cnt:ok(alNum(x.valor)!=null)});
+ h+=SM('v8','8 · Valor',`${alCultOk(a)?alCultHTML(a):''}${x.valAuto==='met'?`<p class="muted" style="margin:6px 0 0">🔄 Valor estimado automático = método adotado (${esc(AL_MET_SIG[x.mAdot]||'')})${alBft(a)?' + encargos/benfeitorias':''} — ver 7 · Métodos. Para fixar outro valor, escreva-o na caixa.</p>`:''}${x.valAuto&&x.valAuto!=='met'&&alNum(x.car?.at)?`<p class="muted" style="margin:6px 0 0">🔄 Valor estimado automático = área × ${x.valAuto==='calc'?'valor do cálculo':'valor de referência'} (atualiza-se se mudar a área ou o cálculo). Para fixar outro valor, escreva-o na caixa.</p>`:''}${alRefOk(a)?alRefHTML(a):''}${alTOF(a)&&!alCultOk(a)&&!alRefOk(a)?'<p class="muted">Terreno não apto para construção (TOF): assinale em «7 · Métodos» VRF (valores referenciais) e/ou RND (rendimento) para ter aqui o cálculo.</p>':''}<div class="row2">${inp('al.valor','Valor estimado (€)',x.valor,'ex.: 185 000')}${renda?inp('al.renda','Renda mensal (€/mês)',x.renda,'ex.: 650'):''}</div>${p.al.bad?`<label>BAD — redução até (%) — automático: o valor do processo</label><input data-bind="al.bad" inputmode="decimal" ${avA(x.bad,String(p.al.badPct||10))}>`:'<p class="muted">BAD não aplicável neste processo (Processo › Contexto da avaliação).</p>'}${txt('al.valObs','Notas ao valor (opcional)',x.valObs,2)}${alNum(x.valor)!=null?`<p><b>${esc(alEur(x.valor))}</b>${renda&&alNum(x.renda)!=null?` · ${esc(alEur(x.renda))}/mês`:''}</p>`:''}`,{cnt:ok(alNum(x.valor)!=null)});
  h+=`<div class="btns"><button class="green" data-alact="step" data-d="1" ${idx<n-1?'':'disabled'}>Verba seguinte ▶</button><span class="grow"></span><button class="secondary mini" data-act="dupA">⧉ Duplicar</button><button class="del" data-alact="del" data-id="${a.id}">🗑 Eliminar a verba ${esc(code)}</button></div>`;
  return h}
 
@@ -2412,7 +2452,8 @@ document.addEventListener('click',async e=>{const el=e.target.closest('[data-ala
   case 'ovClr':{ovSet(p.anomalias,a,0);return keep()}
   case 'ovNow':{ovTouch(p.anomalias,a);ovAccept(a);return keep()}
   case 'vaBaseSet':{const k=a.al.va;k.base=el.dataset.v;if(k.base==='cst'){a.al.met['Custo (reposição depreciado)']=true;if(!a.al.cst)cstInit(a)}if(k.base==='m:Comparativo de mercado')a.al.met['Comparativo de mercado']=true;k.v100='';alValSync(a);return keep()}
-  case 'vaOn':{alA(a);if(!a.al.va)a.al.va={on:1,tipo:'RUI',v100:'',vt:'',exe:'1',exeT:null,cust:[]};else a.al.va.on=1;if(vaBase(a)==='cst'&&!a.al.cst)cstInit(a);alValSync(a);return keep()}
+  case 'resSug':{alA(a);a.al.met['Residual']=true;if(!a.al.va)a.al.va={on:1,tipo:'RUI',v100:'',vt:'',exe:'1',exeT:null,cust:[]};else a.al.va.on=1;if(!a.al.mAdot)a.al.mAdot='Residual';alValSync(a);return keep()}
+    case 'vaOn':{alA(a);if(!a.al.va)a.al.va={on:1,tipo:'RUI',v100:'',vt:'',exe:'1',exeT:null,cust:[]};else a.al.va.on=1;if(vaBase(a)==='cst'&&!a.al.cst)cstInit(a);alValSync(a);return keep()}
   case 'vaOff':{if(a.al.va)a.al.va.on=0;alValSync(a);return keep()}
   case 'vaTipo':{a.al.va.tipo=el.dataset.v;if(el.dataset.v!=='CUR'&&!(a.al.va.cust||[]).length)a.al.va.cust=[{d:'Demolições, limpezas e trabalhos para aproveitar o existente',v:''}];return keep()}
   case 'vaExeTog':{const k=a.al.va;k.exeT=k.exeT?null:exeNew(exeTipOf(a));alValSync(a);return keep()}
@@ -2455,8 +2496,8 @@ document.addEventListener('change',async e=>{const el=e.target.closest('select[d
 document.addEventListener('change',async e=>{const el=e.target.closest('select[data-alact="vaBase"]');if(!el)return;e.stopImmediatePropagation();const a=curA();if(!a?.al?.va)return;a.al.va.base=el.value;if(el.value==='cst'&&!a.al.cst)cstInit(a);alValSync(a);await saveProc();S.scrollTop=window.scrollY;render()},true);
 document.addEventListener('change',async e=>{const el=e.target.closest('select[data-alact="exeTip"]');if(!el)return;e.stopImmediatePropagation();const a=curA(),e2=a?.al?.va;if(!e2?.exeT)return;if(!await ask('Trocar a tipologia? Os pesos e as percentagens executadas voltam aos valores por defeito.'))return render();e2.exeT=exeNew(el.value);alValSync(a);await saveProc();S.scrollTop=window.scrollY;render()},true);
 /* cálculos: ao mudar de caixa não se redesenha o ecrã (no iPhone fecharia o teclado e o ecrã saltava); redesenha-se quando o foco sai das caixas */
-let calcPend=false;const calcRedraw=()=>{if(!calcPend)return;const ae=document.activeElement;if(ae&&/^(INPUT|TEXTAREA)$/.test(ae.tagName))return;calcPend=false;S.scrollTop=window.scrollY;render()};
-document.addEventListener('change',e=>{const b=e.target.dataset?.bind||'';if(!/^almv\.|^alcst\.|^altab\.|^alva\./.test(b))return;const a=curA();if(!a)return;alValSync(a);saveProc().then(()=>{if(e.target.tagName==='SELECT'){S.scrollTop=window.scrollY;render()}else{calcPend=true;setTimeout(calcRedraw,350)}})});
+let calcPend=false;const calcRedraw=()=>{if(!calcPend)return;calcPend=false;render()};
+document.addEventListener('change',e=>{const b=e.target.dataset?.bind||'';if(!/^almv\.|^alcst\.|^altab\.|^alva\./.test(b))return;const a=curA();if(!a)return;alValSync(a);saveProc().then(()=>{if(e.target.tagName==='SELECT'){S.scrollTop=window.scrollY;render()}else{calcPend=true;setTimeout(calcRedraw,0)}})});
 document.addEventListener('focusout',()=>setTimeout(calcRedraw,350));
 /* ---------- troca por verba (regra sync.md) ---------- */
 function alTrocaModal(p){const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="box"><b style="font-size:17px">Enviar / receber verbas</b><p class="muted">Envie só as verbas escolhidas (com fotos) para continuar noutro aparelho. Ao receber, escolhe verba a verba; as outras verbas e os dados gerais do processo não mudam.</p><div class="btns"><button class="secondary mini" data-x="all">Todas</button><button class="secondary mini" data-x="none">Nenhuma</button></div><div class="allist">${p.anomalias.map(a=>`<label class="tk ${a.id===S.aid?'on':''}"><input type="checkbox" data-vb="${a.id}" ${a.id===S.aid?'checked':''}><span><b>${esc(alCode(p,a))}</b> ${esc(a.al?.designacao||'')} · 📷 ${a.fotos.length}</span></label>`).join('')}</div><div class="btns"><button class="green" data-x="send">📤 Enviar verbas escolhidas</button><label class="btn secondary">📥 Receber verbas<input type="file" accept=".json,application/json" data-x="recv" hidden></label><button class="secondary" data-x="close">Fechar</button></div></div>`;
@@ -2954,18 +2995,18 @@ function vaRun(a){const x=a.al,k=x.va;if(!k?.on)return null;const b=vaBase(a),ad
  const cust=(k.cust||[]).map(c=>({...c,vn:Math.abs(cstNum(c.v)??0)})),ct=cust.reduce((s1,c)=>s1+c.vn,0);
  return {ad,v100a,v100,vta,vt,con,X,exe,exV,cust,ct,va:Math.round((vt+exV-ct)/100)*100}}
 function vaHTML(a){const x=a.al,k=x.va;if(!k?.on)return `<div class="btns"><button class="secondary mini" data-alact="vaOn">🏗 Calcular o valor residual (RES)</button></div>`;
- const R=vaRun(a),F=(v,d=0)=>esc(CULT.fmt(v,d)),P=v=>esc(CULT.fmt(v*100,0))+'%',I=(b,v,w=90,ph='')=>`<input data-bind="${b}" inputmode="decimal" value="${esc(v??'')}" placeholder="${esc(ph)}" style="width:${w}px">`;
+ const R=vaRun(a),F=(v,d=0)=>esc(CULT.fmt(v,d)),P=v=>esc(CULT.fmt(v*100,0))+'%',I=(b,v,w=90,au='')=>`<input data-bind="${b}" inputmode="decimal" ${avA(v,au)} placeholder="valor" style="width:${w}px">`;
  const eSel=`<select data-bind="alva.exe" style="width:72px">${Array.from({length:21},(_,j)=>`<option value="${j/20}" ${Math.round(R.exe*20)===j?'selected':''}>${j*5}%</option>`).join('')}</select>`;
  const bQ=`<div class="tks">${[['cst','Método de custo (a novo)'],['m:Comparativo de mercado','Método de mercado'],['man','Indicar à mão']].map(([v,l])=>alTk(vaBase(a)===v,esc(l),`data-alact="vaBaseSet" data-v="${esc(v)}"`)).join('')}</div>`;
  if(!vaBase(a))return `<div class="algrp">🏗 RES — valor residual (valor atual)</div><p><b>O valor final a novo é baseado em que método?</b></p>${bQ}<p class="muted">Depois: valor atual = (valor final a novo − terreno) × % reutilizável + terreno − custos de demolição, limpeza, transformação…</p>`;
  let h=`<div class="algrp">🏗 RES — valor residual (valor atual)</div><p class="muted" style="margin-top:0">Valor atual = (valor final a novo − terreno) × % reutilizável + terreno − custos de demolição, limpeza, transformação…</p><label>O valor final a novo é baseado no:</label>${bQ}<div class="tks col">${Object.entries(VA_TIPO).map(([c,l])=>alTk(k.tipo===c,esc(l),`data-alact="vaTipo" data-v="${c}"`)).join('')}</div>
  <div class="cstx"><table><tr><th>Valor atual</th><th>Origem</th><th>Valor €</th></tr>
- <tr><td>Valor final a novo (obra concluída 100 %)</td><td>${esc(vaBaseLbl(a))}</td><td>${I('alva.v100',k.v100,100,R.v100a!=null?CULT.fmt(R.v100a,0):'valor')}</td></tr>
- <tr><td>Terreno (parte desse valor)</td><td>${R.vta!=null?'solo do CST':'indicado'}</td><td>${I('alva.vt',k.vt,100,R.vta!=null?CULT.fmt(R.vta,0):'valor')}</td></tr>
+ <tr><td>Valor final a novo (obra concluída 100 %)</td><td>${esc(vaBaseLbl(a))}${R.v100a!=null&&cstNum(k.v100)==null?' 🔗':''}${avRev('alva.v100',k.v100,R.v100a,R.v100a!=null?CULT.fmt(R.v100a,0):'')}</td><td>${I('alva.v100',k.v100,100,R.v100a!=null?CULT.fmt(R.v100a,0):'')}</td></tr>
+ <tr><td>Terreno (parte desse valor)</td><td>${R.vta!=null?'solo do CST'+(cstNum(k.vt)==null?' 🔗':''):'indicado'}${avRev('alva.vt',k.vt,R.vta,R.vta!=null?CULT.fmt(R.vta,0):'')}</td><td>${I('alva.vt',k.vt,100,R.vta!=null?CULT.fmt(R.vta,0):'')}</td></tr>
  <tr><td>Construção concluída</td><td></td><td class="c">${F(R.con)}</td></tr>
  <tr><td>% reutilizável — % Exe (o que se aproveita para obra nova)</td><td>${k.exeT?'tabela 📋':'manual'}</td><td>${k.exeT?`<span class="c">${P(R.exe)}</span>`:eSel} <button class="secondary mini" data-alact="vaExeTog" title="Estado de execução por capítulos">📋</button></td></tr>
  <tr><td>Construção executada / aproveitável</td><td>${P(R.exe)} × ${F(R.con)}</td><td class="c">${F(R.exV)}</td></tr>
- ${R.cust.map((c,i)=>`<tr><td><input data-bind="alva.cust.${i}.d" value="${esc(c.d||'')}" placeholder="ex.: demolições, limpezas" style="width:150px"></td><td>a deduzir <button class="del mini" data-alact="vaCDel" data-i="${i}">✕</button></td><td>${I(`alva.cust.${i}.v`,c.v,100)}</td></tr>`).join('')}
+ ${R.cust.map((c,i)=>`<tr><td><input data-bind="alva.cust.${i}.d" value="${esc(c.d||'')}" placeholder="ex.: demolições, limpezas" style="width:150px"></td><td>a deduzir <button class="del mini" data-alact="vaCDel" data-i="${i}">✕</button></td><td>${I(`alva.cust.${i}.v`,c.v,100,'')}</td></tr>`).join('')}
  <tr class="tot"><td>Valor atual (RES)</td><td>terreno + aproveitável${R.ct?' − custos':''}</td><td class="c">${F(R.va)}</td></tr></table></div>
  <div class="btns"><button class="secondary mini" data-alact="vaCAdd">+ Custo de transformação / adaptação (a deduzir)</button></div>`;
  if(k.exeT){const X=R.X,rs=(j,v)=>`<select data-bind="alva.exeT.r.${j}" style="width:64px">${Array.from({length:11},(_,q)=>`<option value="${q*10}" ${Math.round((cstNum(v)??0)/10)===q?'selected':''}>${q*10}%</option>`).join('')}</select>`;
@@ -3334,7 +3375,7 @@ function autosize(t){if(!t||t.tagName!=='TEXTAREA')return;const y=window.scrollY
 /* teclado no ecrã tátil: cabeçalho deixa de ser fixo e a caixa fica à vista */
 const KBD_EL=e=>e&&(e.tagName==='TEXTAREA'||e.tagName==='SELECT'||(e.tagName==='INPUT'&&!/^(checkbox|radio|file|button|submit|range|color)$/i.test(e.type)));
 if(window.matchMedia&&matchMedia('(pointer:coarse)').matches){
- document.addEventListener('focusin',e=>{if(!KBD_EL(e.target))return;document.body.classList.add('kbd');const el=e.target;setTimeout(()=>{if(document.activeElement!==el)return;const vv=window.visualViewport,r=el.getBoundingClientRect(),top=vv?vv.offsetTop:0,h=vv?vv.height:innerHeight;if(r.top<top+8||r.bottom>top+h-8)el.scrollIntoView({block:'center',behavior:'smooth'})},350)});
+ document.addEventListener('focusin',e=>{if(!KBD_EL(e.target))return;document.body.classList.add('kbd');const el=e.target;setTimeout(()=>{if(document.activeElement!==el)return;const vv=window.visualViewport,r=el.getBoundingClientRect(),top=vv?vv.offsetTop:0,h=vv?vv.height:innerHeight;if(window.KBD_KEEP)return;if(r.top<top+8||r.bottom>top+h-8)el.scrollIntoView({block:'center',behavior:'smooth'})},350)});
  document.addEventListener('focusout',()=>{setTimeout(()=>{if(!KBD_EL(document.activeElement))document.body.classList.remove('kbd')},250)})}
 document.addEventListener('toggle',e=>{if(e.target.open)e.target.querySelectorAll?.('textarea').forEach(autosize)},true);
 document.addEventListener('input',e=>{
@@ -3357,11 +3398,16 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 })();
 
 
-/* @comum:teclado v1.0 — iPhone/iPad: não redesenhar o ecrã enquanto se escreve. Quando se passa de uma caixa de texto para outra, a mudança da primeira dispara «change»; se a app redesenhar nesse momento, o teclado fecha e reabre e o ecrã salta. O redesenho fica pendente e faz-se quando o foco sai das caixas. Regra: docs/regras/README.md (Teclado no iPhone). */
+/* @comum:teclado v1.1 — iPhone/iPad: não redesenhar o ecrã enquanto se escreve. Quando se passa de uma caixa de texto para outra, a mudança da primeira dispara «change»; se a app redesenhar nesse momento, o teclado fecha e reabre e o ecrã salta. O redesenho fica pendente e faz-se quando o foco sai das caixas. v1.1: mantém à vista a caixa onde se escreve quando o teclado abre; se a app usa o motor morph (window.KBD_MORPH), redesenha logo, sem destruir a caixa com o foco; se o morph não puder (estrutura mudou à volta da caixa), marca window.KBD_PEND e redesenha à saída. Regra: docs/regras/README.md (Teclado no iPhone). */
 (function(){const txtEl=e=>!!e&&(e.tagName==='TEXTAREA'||(e.tagName==='INPUT'&&!/^(checkbox|radio|file|button|submit|range|color)$/i.test(e.type)));
  let chgT=0,pend=false;window.addEventListener('change',e=>{if(txtEl(e.target))chgT=Date.now()},true);
- const R0=render;render=function(...a){if(Date.now()-chgT<2500&&txtEl(document.activeElement)){pend=true;return}pend=false;return R0.apply(this,a)};
- document.addEventListener('focusout',()=>setTimeout(()=>{if(pend&&!txtEl(document.activeElement)){pend=false;try{if(typeof S==='object'&&S)S.scrollTop=window.scrollY}catch(_){}render()}},300))})();
+ const R0=render;render=function(...a){if(!window.KBD_MORPH&&Date.now()-chgT<2500&&txtEl(document.activeElement)){pend=true;return}pend=false;return R0.apply(this,a)};
+ /* manter à vista a caixa onde se escreve: quando o teclado abre (o ecrã visível encolhe) ou a caixa cresce, desloca só o necessário, sem animação (a animação lutava com o deslocamento do próprio iOS) */
+ const vv=window.visualViewport;if(vv&&window.matchMedia&&matchMedia('(pointer:coarse)').matches){window.KBD_KEEP=true;let kt=0;
+  const keep=()=>{clearTimeout(kt);kt=setTimeout(()=>{const el=document.activeElement;if(!txtEl(el)&&!(el&&el.tagName==='SELECT'))return;const r=el.getBoundingClientRect(),top=vv.offsetTop,h=vv.height,alvo=top+Math.min(h*0.3,120);
+   if(r.top<top+8||r.bottom>top+h-8)window.scrollBy(0,(el.tagName==='TEXTAREA'&&r.height>h*0.5?Math.max(r.top,r.bottom-h*0.6):r.top)-alvo)},140)};
+  vv.addEventListener('resize',keep);document.addEventListener('focusin',keep);document.addEventListener('input',e=>{if(e.target&&e.target.tagName==='TEXTAREA')keep()})}
+ document.addEventListener('focusout',()=>setTimeout(()=>{if((pend||window.KBD_PEND)&&!txtEl(document.activeElement)){pend=false;window.KBD_PEND=false;try{if(typeof S==='object'&&S)S.scrollTop=window.scrollY}catch(_){}render()}},300))})();
 /* @fim:teclado */
 </script>
 </body>
