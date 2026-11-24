@@ -728,7 +728,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.24';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.25';const VERSION_DATA='2026-11-22';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1528,6 +1528,13 @@ const isCol=r=>r.modo==='colegial',isPart=r=>r.ambito==='particular';
 // quem o perito representa (termo de encerramento e respostas): «Perito nomeado pelo Tribunal» / «Perito indicado pela Parte 1 — <nome>»
 function represR(r,pe){const q=pe.qual||'';if(/tribunal/i.test(q))return 'Perito nomeado pelo Tribunal';const m=q.match(/Parte (\d)/);if(m){const nm=String(r['parte'+m[1]]||'').trim();return `Perito indicado pela Parte ${m[1]}${nm?' — '+nm:''}`}return 'Perito'}
 const qCode=i=>`1.${String(i+1).padStart(3,'0')}`;
+/* Função a desempenhar — o que se pretende (por ordem alfabética; «Outro» no fim) */
+const OBJ_FUN=[['conj','Estimar o valor de um conjunto de «x» ativos'],['edif','Estimar o valor de um edifício'],['terr','Estimar o valor de um terreno'],['casa','Estimar o valor de uma casa'],['mor','Estimar o valor de uma moradia'],['out','Outro (descrever)']];
+const OBJ_ALVO={edif:'um edifício',terr:'um terreno',casa:'uma casa',mor:'uma moradia'};
+const objNx=p=>{const r=ensureRel(p),n=parseInt(r.objNx);return n>0?n:alAtivas(p).length};
+function objAlvo(p){const r=ensureRel(p),k=r.objFun;if(k==='conj'){const n=objNx(p);return `um conjunto de ${n} ativo${n===1?'':'s'}`}if(k==='out')return String(r.objFunOutro||'').trim().replace(/^estimar o valor de\s+/i,'');return OBJ_ALVO[k]||''}
+function objTxt(p){const r=ensureRel(p),k=r.objFun;if(!k)return '';if(k==='out'){const t=String(r.objFunOutro||'').trim();return t?t.charAt(0).toLowerCase()+t.slice(1):''}return 'estimar o valor de '+objAlvo(p)}
+const BAD_NOTA='BAD — benefício económico de adjudicação direta: quando algum dos intervenientes (por exemplo, um comproprietário ou o arrendatário) manifesta interesse especial em adquirir o ativo, pode justificar-se uma redução ao valor estimado, por se evitarem os custos, prazos e riscos de uma venda em mercado aberto. A percentagem indicada é um limite máximo sugerido, a ponderar caso a caso.';
 const mesAno=()=>{const d=new Date();return `${MESES_R[d.getMonth()]} de ${d.getFullYear()}`};
 const RPICK=(k,L,val,lbl)=>`<select data-rpick="${k}" style="margin-top:4px"><option value="">${esc(lbl)}</option>${L.map(o=>`<option ${o===val?'selected':''}>${esc(o)}</option>`).join('')}</select>`;
 const RL=(k,lbl,val,ph='')=>`<label>${esc(lbl)}</label><input data-bind="r.${k}" value="${esc(val||'')}" placeholder="${esc(ph)}">`;
@@ -1552,8 +1559,9 @@ function relProcHTML(p){const r=ensureRel(p),col=isCol(r),part=isPart(r),hd=hdrD
     ${RL('versao','Versão do relatório',r.versao,'ex.: 1.01VF ou Draft00')}<p class="muted">Nome do ficheiro (e rodapé): <b>${esc(relFileName(p))}</b></p>`;
   const nq=r.quesitos.length;
   const QW=part?['queixa','queixas','Queixa']:['quesito','quesitos','Quesito'];
-  const t3=`${part?'<p class="muted">Particular: em princípio não há quesitos, mas uma lista de queixas sobre determinadas situações. O perito pode encontrar outras no decurso da inspeção (registe-as em Anomalias, origem P – Perito).</p>':''}${RL('objIntro','Frase de abertura',r.objIntro,'Pretende-se:')}
-    <div class="rows">${r.quesitos.map((q,i)=>`<div class="qbox"><div class="qhd"><b>${qCode(i)}</b><span class="grow"></span><button class="secondary mini" data-act="rMvQ" data-i="${i}" data-d="-1" ${i?'':'disabled'}>▲</button><button class="secondary mini" data-act="rMvQ" data-i="${i}" data-d="1" ${i<nq-1?'':'disabled'}>▼</button><button class="del" data-act="rDelQ" data-i="${i}">✕</button></div><textarea data-bind="q.${i}.txt" rows="3">${esc(q.txt||'')}</textarea></div>`).join('')||`<p class="muted">Ainda sem ${QW[1]}.</p>`}</div>
+  const t3o=`<label>Função a desempenhar — o que se pretende</label><div class="tks col">${OBJ_FUN.map(([k,l])=>tickBox('',r.objFun===k,l,`data-act="rObjFun" data-v="${k}"`)).join('')}</div>${r.objFun==='conj'?RL('objNx','N.º de ativos («x»)',r.objNx,String(alAtivas(p).length)+' (n.º de verbas)'):''}${r.objFun==='out'?RL('objFunOutro','Descrever o que se pretende',r.objFunOutro,'ex.: Estimar o valor de renda de uma loja'):''}${r.objFun?`<p class="muted">No relatório: «Pretende-se ${esc(objTxt(p)||'…')}.»</p>`:''}`;
+  const t3=`${t3o}${part?'<p class="muted">Particular: em princípio não há quesitos, mas uma lista de queixas sobre determinadas situações. O perito pode encontrar outras no decurso da inspeção (registe-as em Anomalias, origem P – Perito).</p>':''}${r.objFun?'<label>Questões complementares</label>':RL('objIntro','Frase de abertura',r.objIntro,'Pretende-se:')}
+    <div class="rows">${r.quesitos.map((q,i)=>`<div class="qbox"><div class="qhd"><b>${qCode(i)}</b><span class="grow"></span><button class="secondary mini" data-act="rMvQ" data-i="${i}" data-d="-1" ${i?'':'disabled'}>▲</button><button class="secondary mini" data-act="rMvQ" data-i="${i}" data-d="1" ${i<nq-1?'':'disabled'}>▼</button><button class="del" data-act="rDelQ" data-i="${i}">✕</button></div><input data-bind="q.${i}.de" value="${esc(q.de||'')}" placeholder="Colocada por (ex.: Autor, Réu, Tribunal) — opcional" style="margin-bottom:4px"><textarea data-bind="q.${i}.txt" rows="3">${esc(q.txt||'')}</textarea></div>`).join('')||`<p class="muted">Sem questões complementares — no relatório sai «Outras questões: nada a considerar».</p>`}</div>
     <div class="btns"><button class="secondary mini" data-act="rAddQ">+ ${QW[2]}</button><label class="btn secondary mini">📄 Do Word<input type="file" accept=".docx" data-act="rImpQ" data-k="docx" hidden></label><label class="btn secondary mini">📊 Do Excel<input type="file" accept=".xlsx" data-act="rImpQ" data-k="xlsx" hidden></label><button class="secondary mini" data-act="rPasteQ">📋 Colar texto</button></div>${qModHTML()}
     <p class="muted">Word: cada alínea (a), b)…, 1., 2.…) ou parágrafo passa a um quesito. Excel: 1.ª coluna da 1.ª folha (ignora a linha de títulos se disser «quesito»). Pode editar e reordenar depois.</p>`;
   const nd=DOCS_R.filter(d=>r.docs[d]).length;
@@ -1591,7 +1599,7 @@ async function importQuesitos(p,kind,file){const r=ensureRel(p);const u8=new Uin
 async function cropTo(data,ar,maxW=1200){const im=await loadImg(data);const W=im.naturalWidth,H=im.naturalHeight;let sw=W,sh=Math.round(W/ar);if(sh>H){sh=H;sw=Math.round(H*ar)}const sx=Math.round((W-sw)/2),sy=Math.round((H-sh)/2);const ow=Math.min(maxW,sw),oh=Math.round(ow/ar);const c=document.createElement('canvas');c.width=ow;c.height=oh;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,ow,oh);g.drawImage(im,sx,sy,sw,sh,0,0,ow,oh);return c.toDataURL('image/jpeg',.82)}
 function shuffleR(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 // ---------- construção do Word ----------
-async function buildRelat(p){ensureRel(p);alVisCapa(p);p.anomalias.forEach(a=>{alA(a);alValSync(a)});const r=p.rel,col=isCol(r),part=isPart(r);await loadFotos(p);
+async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r><w:rPr><w:vertAlign w:val="superscript"/></w:rPr><w:footnoteReference w:id="${FN.length}"/></w:r>`};ensureRel(p);alVisCapa(p);p.anomalias.forEach(a=>{alA(a);alValSync(a)});const r=p.rel,col=isCol(r),part=isPart(r);await loadFotos(p);
   const X=xesc,media=[],oleParts=[];let mid=9000;
   const R=(t,o={})=>String(t??'').split('\n').map((ln,i)=>`<w:r><w:rPr>${o.b?'<w:b/>':''}${o.i?'<w:i/>':''}${o.color?`<w:color w:val="${o.color}"/>`:''}${o.sz?`<w:sz w:val="${o.sz*2}"/><w:szCs w:val="${o.sz*2}"/>`:''}</w:rPr>${i?'<w:br/>':''}<w:t xml:space="preserve">${X(ln)}</w:t></w:r>`).join('');
   const P=(runs,o={})=>`<w:p><w:pPr><w:pStyle w:val="${o.st||'1-periTextogeral'}"/>${o.keep?'<w:keepNext/>':''}${o.bdrT?'<w:pBdr><w:top w:val="single" w:sz="6" w:space="1" w:color="808080"/></w:pBdr>':''}${o.sp!=null?`<w:spacing w:before="${o.sp[0]}" w:after="${o.sp[1]}"/>`:''}${o.ind?`<w:ind w:left="${o.ind}"/>`:''}${o.jc?`<w:jc w:val="${o.jc}"/>`:''}</w:pPr>${runs}</w:p>`;
@@ -1680,8 +1688,14 @@ async function buildRelat(p){ensureRel(p);alVisCapa(p);p.anomalias.forEach(a=>{a
   const comp=part||r.incComp===false?'':(col?COMP_COLEGIAL:(String(settings.compSingular||'').trim()||COMP_SINGULAR));
   if(!part){body+=H1('Compromisso de honra')+E()+(comp?T(comp,{jc:'both'}):T('[Texto do compromisso de honra — preencha em Definições › Relatório]',{i:true,color:'C00000'}))+E()}
   body+=H1('Objeto da avaliação')+H2(part?'Queixas apresentadas':'Matéria a responder')+E();
-  if(r.objIntro)body+=T(r.objIntro);
-  r.quesitos.forEach(q=>{body+=T(q.txt,{jc:'both'})+E()});
+  if(r.objFun&&!part){body+=T(`Pretende-se ${objTxt(p)||'…'}.`,{jc:'both'})+E();
+   const Qs=r.quesitos.filter(q=>String(q.txt||'').trim());
+   if(!Qs.length)body+=P(R('Outras questões: ',{b:true})+R('nada a considerar.'));
+   else{body+=P(R('Outras questões:',{b:true}),{keep:1});const grp=[...new Set(Qs.map(q=>String(q.de||'').trim()))];
+    for(const g of grp){if(grp.length>1||g)body+=P(R(g?`Colocadas por ${g}:`:'Outras:',{i:true}),{keep:1,sp:[120,40]});Qs.filter(q=>String(q.de||'').trim()===g).forEach(q=>{body+=T(`${qCode(r.quesitos.indexOf(q))} — ${q.txt}`,{jc:'both'})})}}
+   body+=E()}
+  else{if(r.objIntro)body+=T(r.objIntro);
+  r.quesitos.forEach(q=>{body+=T(q.txt,{jc:'both'})+E()})}
   body+=H1('Elementos de apoio e fundamentação')+H2('Lista de documentos fornecidos')+E()+(DOCS_R.filter(d=>r.docs[d]).map(d=>CHK(true,d)).join('')||T('—'))+E();
   body+=H2('Outros elementos')+T(String(r.docsOutros||'').trim()||'-');
   if(String(r.docsCom||'').trim())body+=H2('Comentários')+T(r.docsCom);
@@ -1754,11 +1768,22 @@ async function buildRelat(p){ensureRel(p);alVisCapa(p);p.anomalias.forEach(a=>{a
      body+=tbl([CW2,TWb-CW2],pr,false)+E()}}}
   // 7 — resposta ao solicitado
   body+=E()+H1(part?'Apreciação das queixas':'Resposta ao solicitado');
-  r.quesitos.forEach((q,i)=>{body+=H2(`${part?'Queixa':'Quesito'} ${qCode(i)}`)+E()+T(q.txt,{jc:'both'})+E();
+  if(r.objFun&&!part){const AP=alP(p),V=alAtivas(p),bad=!!AP.bad,tot=V.reduce((s1,a)=>s1+(alNum(a.al.valor)||0),0),alvo=objAlvo(p)||'o solicitado';
+   const B7='<w:tblBorders>'+['top','left','bottom','right','insideH','insideV'].map(k=>`<w:${k} w:val="single" w:sz="4" w:space="0" w:color="808080"/>`).join('')+'</w:tblBorders>';
+   const tc7=(t,w,o={})=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${o.span?`<w:gridSpan w:val="${o.span}"/>`:''}${o.fill?`<w:shd w:val="clear" w:color="auto" w:fill="${o.fill}"/>`:''}<w:vAlign w:val="center"/></w:tcPr><w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:spacing w:before="30" w:after="30"/><w:jc w:val="${o.jc||'left'}"/></w:pPr>${R(t,{b:o.b,sz:9})}</w:p></w:tc>`;
+   const tr7=(c,h)=>`<w:tr><w:trPr><w:cantSplit/>${h?'<w:tblHeader/>':''}</w:trPr>${c}</w:tr>`,tbl7=(W,rows)=>`<w:tbl><w:tblPr><w:tblW w:w="${W.reduce((x,y)=>x+y,0)}" w:type="dxa"/>${B7}<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>${W.map(w=>`<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>${rows}</w:tbl>`;
+   body+=P(R(`– Valor estimado para ${alvo}`,{b:true}),{keep:1})+T('De acordo com a análise:')+E();
+   if(V.length===1){const a=V[0];body+=P(R('Valor: ',{b:true})+R(alNum(a.al.valor)!=null?alEur(a.al.valor):'—',{b:true}))}
+   else if(V.length){const W=[1300,5338,3000];let rr=tr7(tc7('Verba',W[0],{b:1,fill:'D9D9D9'})+tc7('Designação',W[1],{b:1,fill:'D9D9D9'})+tc7('Valor',W[2],{b:1,fill:'D9D9D9',jc:'center'}),1);
+    V.forEach(a=>{rr+=tr7(tc7(alCode(p,a),W[0])+tc7(a.al.designacao||'—',W[1])+tc7(alNum(a.al.valor)!=null?alEur(a.al.valor):'—',W[2],{jc:'center'}))});
+    rr+=tr7(tc7('Total',W[0]+W[1],{span:2,b:1,fill:'F2F2F2'})+tc7(alEur(tot),W[2],{b:1,fill:'F2F2F2',jc:'center'}));body+=tbl7(W,rr)}
+   if(bad){const pc=String(AP.badPct||10);body+=E()+P(R(`BAD elegível — desconto sugerido: até ${pc} %`)+FNREF(BAD_NOTA)+R(V.length===1&&alNum(V[0].al.valor)!=null?` (valor com o desconto máximo: ${alEur(Math.round(alNum(V[0].al.valor)*(1-(+pc.replace(',','.')||0)/100)/100)*100)}).`:'.'))}
+   body+=E()}
+  r.quesitos.forEach((q,i)=>{if(r.objFun&&!part&&!String(q.txt||'').trim())return;body+=H2(r.objFun&&!part?`Questão complementar ${qCode(i)}${String(q.de||'').trim()?' — '+q.de:''}`:`${part?'Queixa':'Quesito'} ${qCode(i)}`)+E()+T(q.txt,{jc:'both'})+E();
     const cons=String(q.resp||'').trim();
-    if(cons||!col)body+=P(R('Resposta:',{b:true,i:true}))+T(cons||'—',{jc:'both'})+E();
+    if(cons||!col)body+=P(R(r.objFun&&!part?'Resposta':'Resposta:',{b:true,i:!(r.objFun&&!part)}))+T(cons||'—',{jc:'both'})+E();
     else{r.peritos.forEach((pe,j)=>{const t=String(q.rp?.[j]||'').trim();body+=P(R(`Resposta — ${pe.nome||'Perito '+(j+1)} (${represR(r,pe).replace(/^Perito /,'').replace(/^n/,'n')}):`,{b:true,i:true}))+T(t||'—',{jc:'both'})+E()})}});
-  if(!r.quesitos.length)body+=T('—');
+  if(!r.quesitos.length&&!(r.objFun&&!part))body+=T('—');
   // 8, 9
   if(r.incReservas!==false){body+=H1('Âmbito de utilização – reservas de análise');for(const l of String(r.reservas||RESERVAS_R).split('\n'))body+=/^\d+\.\s/.test(l)?P(R(l,{b:true}),{sp:[160,60]}):T(l,{jc:'both'})}
   if(r.incAmbiente!==false){body+=H1('Ambiente, sustentabilidade e conformidade de licenciamento')+T(String(r.ambiente||AMBIENTE_R),{jc:'both'})}
@@ -1804,6 +1829,7 @@ async function buildRelat(p){ensureRel(p);alVisCapa(p);p.anomalias.forEach(a=>{a
   if(H.rels)files.push({name:'word/_rels/header1.xml.rels',data:H.rels});
   if(H.img)files.push({name:'word/media/hdr_logo.png',data:b64ToU8('data:;base64,'+H.img)});
   F('word/footer1.xml').data=_enc.encode(TX(F('word/footer1.xml')).replace('{{FICHEIRO}}',X(fileName)));
+   if(FN.length){const fx=F('word/footnotes.xml');if(fx)fx.data=_enc.encode(TX(fx).replace('</w:footnotes>',FN.map((t,k)=>`<w:footnote w:id="${k+1}"><w:p><w:pPr><w:pStyle w:val="Textodenotaderodap"/><w:jc w:val="both"/></w:pPr><w:r><w:rPr><w:vertAlign w:val="superscript"/></w:rPr><w:footnoteRef/></w:r><w:r><w:rPr><w:sz w:val="16"/></w:rPr><w:t xml:space="preserve"> ${X(t)}</w:t></w:r></w:p></w:footnote>`).join('')+'</w:footnotes>'))}
   F('docProps/core.xml').data=_enc.encode(TX(F('docProps/core.xml')).replace('{{TITULO}}',X(`${titulo} — ${r.objeto||p.designacao||''}`)));
   const relsF=F('word/_rels/document.xml.rels');relsF.data=_enc.encode(TX(relsF).replace('</Relationships>',media.map(m=>`<Relationship Id="${m.rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="${m.name.slice(5)}"/>`).join('')+'</Relationships>'));
   for(const m of media)files.push({name:m.name,data:m.data});
@@ -3110,6 +3136,7 @@ document.addEventListener('click',async e=>{
     case 'rDelQ':{if(!await ask('Retirar este quesito (e as respostas)?',['Cancelar','Retirar'],1))return;ensureRel(p).quesitos.splice(+el.dataset.i,1);await saveProc();S.scrollTop=window.scrollY;break}
     case 'rMvQ':{const Q=ensureRel(p).quesitos,i=+el.dataset.i,j=i+(+el.dataset.d);if(j<0||j>=Q.length)return;[Q[i],Q[j]]=[Q[j],Q[i]];await saveProc();S.scrollTop=window.scrollY;break}
     case 'rPasteQ':{const t=prompt('Cole aqui os quesitos (uma alínea por linha: a), b)… ou 1., 2.…):');if(!t)return;const q=splitQuesitos(t.split('\n'));q.forEach(x=>ensureRel(p).quesitos.push({id:uid(),txt:x,resp:'',rp:{}}));await saveProc();toast(q.length+' quesito(s) acrescentado(s).');S.scrollTop=window.scrollY;break}
+    case 'rObjFun':{const r=ensureRel(p);r.objFun=r.objFun===el.dataset.v?'':el.dataset.v;await saveProc();S.scrollTop=window.scrollY;break}
     case 'rDoc':case 'rAnex':{const r=ensureRel(p),o=act==='rDoc'?r.docs:r.anexos,k=el.dataset.k;o[k]=!o[k];await saveProc();S.scrollTop=window.scrollY;break}
     case 'rTk':{const r=ensureRel(p),k=el.dataset.k;r[k]=r[k]===false;await saveProc();S.scrollTop=window.scrollY;break}
     case 'relPrev':{if(dirty)await saveProc();try{const d=await relBuildBlob(p);await previewDocx(d.blob,d.name,relCheck(p))}catch(err){busy(false);toast('Erro na pré-visualização: '+err.message,1)}return}
