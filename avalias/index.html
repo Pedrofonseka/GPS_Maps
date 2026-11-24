@@ -753,7 +753,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.38';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.39';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1086,7 +1086,7 @@ function avRev(bind,stored,auto,txt){if(String(stored??'').trim()===''||auto==nu
 document.addEventListener('focusin',e=>{const el=e.target;if(el.tagName==='INPUT'&&el.classList&&el.classList.contains('auto'))setTimeout(()=>{try{if(document.activeElement===el)el.select()}catch(_){}},0)});
 document.addEventListener('input',e=>{const el=e.target;if(el.classList&&el.classList.contains('auto')){el.classList.remove('auto');el.removeAttribute('title')}},true);
 document.addEventListener('click',e=>{const b=e.target.closest('[data-autoclr]');if(!b)return;e.preventDefault();e.stopImmediatePropagation();const el=document.querySelector(`[data-bind="${CSS.escape(b.dataset.autoclr)}"]`);if(!el)return;el.value='';el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));setTimeout(()=>{S.scrollTop=window.scrollY;render()},0)},true);
-function render_relat(){try{applyWide()}catch(_){}
+function render_relat(){try{applyWide()}catch(_){};setTimeout(()=>{try{if(S.coer)coerBar()}catch(_){}},0);
   document.title=`AvaLias · ${VERSION}`;
   const p=cur();if(!p&&['proc','anom','rel'].includes(S.view))S.view='home';
   const crumbs=p&&S.view!=='home'&&S.view!=='defs'?`${esc(p.codigo||'(sem código)')}${S.sub==='ficha'&&curA()?' › '+anCode(p,curA()):''}`:'';
@@ -1842,12 +1842,21 @@ function relCoer(p){const r=ensureRel(p),part=isPart(r),V=alAtivas(p),AP=alP(p),
 function coerModal(p){const O=relCoer(p),G=['Parte inicial','Análise específica','Parte final','Geral'],ic={erro:'⛔',aviso:'⚠️',info:'ℹ️'},ne=O.filter(o=>o.nv==='erro').length,na=O.filter(o=>o.nv==='aviso').length;
  const m=document.createElement('div');m.className='modal';m.id='coerM';
  m.innerHTML=`<div class="box" style="max-width:720px;max-height:90vh;overflow:auto;text-align:left"><h3 style="margin-top:0">🔎 Coerência do relatório</h3><p class="${ne?'':'muted'}" style="margin-top:0">${O.length?`${ne} erro(s) · ${na} aviso(s) · ${O.length-ne-na} nota(s). Toque numa linha para ir ao sítio onde se corrige.`:'✓ Nada a assinalar — o relatório está coerente do princípio ao fim.'}</p>
- ${G.map(g=>{const L=O.filter(o=>o.pt===g);return `<div class="algrp">${g}${L.length?'':' — ✓'}</div>${L.map(o=>`<div class="qbox" ${o.go?`data-coergo='${esc(JSON.stringify(o.go))}' style="cursor:pointer"`:''}>${ic[o.nv]} ${esc(o.txt)}${o.go?' <span class="muted">→</span>':''}</div>`).join('')}`}).join('')}
+ ${G.map(g=>{const L=O.filter(o=>o.pt===g);return `<div class="algrp">${g}${L.length?'':' — ✓'}</div>${L.map(o=>`<div class="qbox" ${o.go?`data-coergo="1" data-ci="${O.indexOf(o)}" style="cursor:pointer"`:''}>${ic[o.nv]} ${esc(o.txt)}${o.go?' <span class="muted">→</span>':''}</div>`).join('')}`}).join('')}
  <div class="btns"><button class="secondary" id="coerX">Fechar</button></div></div>`;
  document.body.appendChild(m);m.querySelector('#coerX').onclick=()=>m.remove();
- m.querySelectorAll('[data-coergo]').forEach(d=>d.onclick=()=>{const g=JSON.parse(d.dataset.coergo);m.remove();if(g.v==='defs'){S.view='defs';S.sub=null;render();return}
-  S.view=g.v;if(g.aid){S.aid=g.aid;S.sub='ficha';settings.mod='tudo'}else S.sub=null;if(g.o)S.open={...(S.open||{}),[g.o]:true};render();
-  setTimeout(()=>{const el=g.o&&document.querySelector(`#app details[data-key="${g.o}"]`);if(el){el.open=true;el.scrollIntoView({block:'start'});window.scrollBy(0,-120)}else window.scrollTo(0,0)},60)})}
+ m.querySelectorAll('[data-coergo]').forEach(d=>d.onclick=()=>{m.remove();coerGo(O[+d.dataset.ci],O)})}
+/* ir ao sítio de uma linha da verificação; fica uma barra fixa para voltar à lista ou passar à seguinte */
+function coerGo(o,O){if(!o||!o.go)return;const g=o.go;S.coer={txt:o.txt,k:(O||[]).indexOf(o)};
+ if(g.v==='defs'){S.view='defs';S.sub=null}else{S.view=g.v;if(g.aid){S.aid=g.aid;S.sub='ficha';settings.mod='tudo'}else S.sub=null;if(g.o)S.open={...(S.open||{}),[g.o]:true}}
+ render();coerBar();setTimeout(()=>{const el=g.o&&document.querySelector(`#app details[data-key="${g.o}"]`);if(el){el.open=true;el.scrollIntoView({block:'start'});window.scrollBy(0,-120)}else window.scrollTo(0,0)},60)}
+function coerNext(p){const O=relCoer(p).filter(o=>o.go);if(!O.length){S.coer=null;coerBar();toast('✓ Nada mais a assinalar na verificação de coerência.');return}
+ const j=O.findIndex(o=>o.txt===S.coer?.txt);const n=j>=0?O[(j+1)%O.length]:O[Math.min(S.coer?.k??0,O.length-1)];coerGo(n,O)}
+function coerBar(){let b=document.getElementById('coerBar');if(!S.coer||!cur()){b?.remove();return}const n=relCoer(cur()).filter(o=>o.go).length;
+ if(!b){b=document.createElement('div');b.id='coerBar';b.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom));z-index:9000;background:#34383d;color:#fff;border-radius:22px;padding:6px 8px;display:flex;gap:6px;align-items:center;box-shadow:0 4px 14px rgba(0,0,0,.3);font-size:13px;max-width:96vw';document.body.appendChild(b)}
+ b.innerHTML=`<span style="padding:0 6px">🔎 ${n} por ver</span><button class="secondary mini" data-coerbar="list">↩ Lista</button><button class="green mini" data-coerbar="next">Seguinte ▶</button><button class="secondary mini" data-coerbar="x" aria-label="Fechar">✕</button>`}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-coerbar]');if(!b)return;e.preventDefault();e.stopImmediatePropagation();const p=cur();if(!p)return;const k=b.dataset.coerbar;
+ if(k==='x'){S.coer=null;coerBar();return}if(k==='list'){coerModal(p);return}coerNext(p)},true);
 document.addEventListener('click',e=>{const b=e.target.closest('[data-coer]');if(!b)return;e.preventDefault();e.stopImmediatePropagation();const p=cur();if(p)coerModal(p)},true);
 // ---------- Separador Relatório ----------
 function relRelHTML(p){const r=ensureRel(p),col=isCol(r);
