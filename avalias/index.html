@@ -753,7 +753,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.35';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.36';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1776,6 +1776,74 @@ function relFimHTML(p){const r=ensureRel(p);r.res=r.res||{};r.resOff=r.resOff||{
   ${sec('ramb','Ambiente, sustentabilidade e conformidade de licenciamento',one('amb','incAmbiente','Ambiente, sustentabilidade e conformidade de licenciamento','r.ambiente',r.ambiente,AMBIENTE_R),{cnt:pill(r.incAmbiente===false?'não incluído':'✓'),def:false})}
   ${sec('rconf','Confidencialidade e conflito de interesse',one('conf','incConf','Declaração sobre confidencialidade e conflito de interesse','r.conf',r.conf,CONF_R),{cnt:pill(r.incConf===false?'não incluído':'✓'),def:false})}
   ${sec('rambito','Âmbito de utilização',one('ambito','incAmbito','Âmbito de utilização','r.ambito2',r.ambito2,AMBITO_R),{cnt:pill(r.incAmbito===false?'não incluído':'✓'),def:false})}`}
+
+/* ---------- Verificação de coerência do relatório (do princípio ao fim) ----------
+   Percorre o que vai escrito: parte inicial, análise de cada verba e parte final; aponta faltas e contradições, com atalho para o sítio onde se corrige. */
+const COER_Q=[[/(áreas?|medi[çc]|confronta)/i,'r4','c)','a conformidade das áreas documentadas e as medições certificadas (Limitações c)'],[/licen|legal|ilega|urban[íi]st/i,'r4','b)','a conformidade urbanística e os licenciamentos (Limitações b)'],[/titular|ónus|onus|registo predial|propriet[áa]rio/i,'r4','a)','a titularidade jurídica e os ónus ou encargos (Limitações a)'],[/fiscal|imposto|\bIMI\b|\bIMT\b/i,'r4','e)','as situações fiscais (Limitações e)'],[/habitabil|patolog|humidade|fissur|estrutur|estabilid|seguran|salubr|infiltra/i,'r5','b)','o diagnóstico de patologias, salubridade, segurança ou estabilidade (Exclusões técnicas b)']];
+function relCoer(p){const r=ensureRel(p),part=isPart(r),V=alAtivas(p),AP=alP(p),O=[];const add=(pt,nv,txt,go)=>O.push({pt,nv,txt,go});const v=x=>String(x||'').trim();
+ const PI='Parte inicial',AE='Análise específica',PF='Parte final';
+ // — parte inicial —
+ if(!part&&!v(r.entidade))add(PI,'aviso','Solicitante (tribunal / entidade) por preencher.',{v:'proc',o:'rp2'});
+ if(!part&&!v(r.procJud))add(PI,'aviso','N.º do processo por preencher.',{v:'proc',o:'rp2'});
+ if(!part){const k=objFunEf(p),n=V.length;
+  if(!k)add(PI,'erro','«O que foi solicitado» por definir.',{v:'proc',o:'rp3a'});
+  else{const um=['casa','mor','edif','terr','imo'].includes(k),T=V.map(a=>a.al.tipo);
+   if(um&&n>1)add(PI,'aviso',`Pede-se o valor de ${objAlvo(p)}, mas o processo tem ${n} verbas — escolha «um conjunto de ativos» ou «uma lista de ativos».`,{v:'proc',o:'rp3a'});
+   if((k==='conj'||k==='lst')&&n===1)add(PI,'aviso',`Pede-se o valor de ${objAlvo(p)}, mas o processo tem só 1 verba.`,{v:'proc',o:'rp3a'});
+   if(k==='conj'&&objNx(p)!==n)add(PI,'erro',`O texto diz «um conjunto de ${objNx(p)} ativos», mas há ${n} verba(s).`,{v:'proc',o:'rp3a'});
+   if(n===1){const t=T[0],okT={mor:['MOR','MBA'],casa:['CAS','FRA','MOR','MBA'],edif:['EDI','EDM'],terr:['TCI','TCM','TUR','TER']}[k];if(okT&&t&&!okT.includes(t))add(PI,'aviso',`Pede-se o valor de ${objAlvo(p)}, mas a verba é do tipo «${alTipoNome(V[0])}».`,{v:'proc',o:'rp3a'})}}
+  if(r.dataRefM==='outras'){const D=(r.dataRefs||[]).filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d||''));if(!D.length)add(PI,'erro','Data de referência: escolheu «outra(s) data(s)» mas não indicou nenhuma.',{v:'proc',o:'rp3a'});const hoje=new Date().toISOString().slice(0,10);D.filter(d=>d>hoje).forEach(d=>add(PI,'aviso',`Data de referência ${dPT(d)} é futura.`,{v:'proc',o:'rp3a'}))}
+  const nums=r.quesitos.map((q,i)=>qNum(r,i)),dup=[...new Set(nums.filter((x,i)=>nums.indexOf(x)!==i))];if(dup.length)add(PI,'erro',`Outras questões com numeração repetida: ${dup.join(', ')}.`,{v:'proc',o:'rp3'});
+  r.quesitos.forEach((q,i)=>{if(!v(q.txt))add(PI,'aviso',`Questão ${qNum(r,i)} sem texto.`,{v:'proc',o:'rp3'})});
+  // questões × reservas (limitações / exclusões técnicas)
+  const resOn=k=>r.incReservas!==false&&(r.resOff||{})[k]!==true,resTx=k=>String((r.res||{})[k]??'').trim()||(RES_R.find(x=>x[0]===k)||[])[2]||'';
+  r.quesitos.forEach((q,i)=>{for(const [re,k,al,txt] of COER_Q)if(re.test(q.txt||'')&&resOn(k)&&new RegExp('^'+al.replace(')','\\)'),'m').test(resTx(k)))add(PI,'aviso',`A questão ${qNum(r,i)} («${String(q.txt).slice(0,60)}») toca num ponto que as reservas põem fora do âmbito: ${txt} — confirme a resposta ou ajuste a reserva.`,{v:'proc',o:'rp3'})})}
+ const nd=DOCS_R.filter(d=>r.docs[d]).length;if(!nd)add(PI,'aviso','Nenhum documento fornecido assinalado.',{v:'proc',o:'rp4'});
+ const temArt=V.some(a=>(a.al.artigos||[]).some(x=>v(x.art)||alNum(x.at)!=null));
+ if(temArt&&!r.docs['Cadernetas prediais'])add(PI,'aviso','Há artigos matriciais nas verbas, mas «Cadernetas prediais» não está assinalado nos documentos fornecidos.',{v:'proc',o:'rp4'});
+ if(r.docs['Cadernetas prediais']&&!temArt&&V.some(a=>['imo','ter'].includes(alFam(a))))add(PI,'aviso','«Cadernetas prediais» assinalado, mas nenhuma verba tem artigos matriciais (com as áreas) — a conferência de áreas não é possível.',{v:'anom'});
+ if(!v(AP.finalidade))add(PI,'aviso','Finalidade por escolher (contexto de análise).',{v:'proc',o:'pctx'});
+ if(!v(AP.base))add(PI,'aviso','Base de valor por escolher (contexto de análise).',{v:'proc',o:'pctx'});
+ if(r.incPri!==false){const po=k=>(r.priOff||{})[k]!==true,M=V.filter(a=>alAreaMal(a).length),A=V.filter(a=>v(a.al.car?.anom));
+  const t33=String((r.pri||{}).p33||'').trim()||PRI_R[2][2];
+  if(po('p33')&&/não detetad/i.test(t33)&&(M.length||A.length))add(PI,'aviso',`«Situações anómalas ou discrepantes» diz «${t33.slice(0,40)}», mas há ${[M.length?`áreas que não batem certo (${M.map(a=>alCode(p,a)).join(', ')})`:'',A.length?`anomalias registadas (${A.map(a=>alCode(p,a)).join(', ')})`:''].filter(Boolean).join(' e ')}.`,{v:'proc',o:'rpri'});
+  if(r.pe1&&!M.length)add(PI,'aviso','A nota PE1 está assinalada, mas nenhuma verba tem áreas em desconformidade.',{v:'proc',o:'rpri'});
+  if(po('p35')&&!String((r.pri||{}).p35||'').trim()&&!priFundAuto(p))add(PI,'aviso','«Fundamentos dos valores de referência» fica vazio: escolha os métodos nas verbas.',{v:'proc',o:'rpri'})}
+ if(r.incVisita!==false){const s0=V.filter(a=>!a.vis?.data);if(s0.length)add(PI,'aviso',`Capítulo da visita incluído, mas ${s0.length} verba(s) sem data de visita (${s0.map(a=>alCode(p,a)).join(', ')}).`,{v:'proc',o:'rp5'})}
+ // — análise específica —
+ if(!V.length)add(AE,'erro','O processo não tem verbas.',{v:'anom'});
+ for(const a of V){const x=a.al,c=x.car||{},cd=alCode(p,a),go=o=>({v:'anom',aid:a.id,o});
+  const F=alFalta(a).filter(t=>t!=='justificação das áreas');if(F.length)add(AE,'aviso',`${cd}: falta ${F.join(', ')}.`,go('v1'));
+  if(alNum(x.valor)==null)add(AE,'erro',`${cd}: sem valor estimado.`,go('v8'));
+  const on=alMetOn(x);if(on.length&&!(x.mAdot&&x.met[x.mAdot]))add(AE,'aviso',`${cd}: há métodos aplicados, mas nenhum adotado.`,go('v7'));
+  if(x.mAdot&&x.met[x.mAdot]&&(x.valAuto===''||x.valAuto==null)){const mv=alMetVal(a,x.mAdot),vv=alNum(x.valor);if(mv!=null&&vv!=null&&Math.abs(vv-(mv+(alBft(a)||0)))>Math.max(1,0.01*mv))add(AE,'aviso',`${cd}: valor estimado escrito à mão (${alEur(vv)}) difere do método adotado (${alEur(Math.round(mv+(alBft(a)||0)))}).`,go('v8'))}
+  const rs=alResSug(a);if(rs&&!(x.met?.['Residual']&&x.va?.on))add(AE,'aviso',`${cd}: ${rs} — sugere-se o método residual (RES).`,go('v7'));
+  if(alAreaMal(a).length&&!(x.areaJust&&(x.areaJust!=='out'||v(x.fundArea))))add(AE,'erro',`${cd}: as áreas não batem certo (${alAreaMal(a).map(alAreaLin).join('; ')}) e falta a justificação.`,go('v5'));
+  if(x.cst?.on&&(x.met?.['Custo (reposição depreciado)']||x.met?.['Residual']))cstAreaAvisos(a).forEach(t=>add(AE,'aviso',`${cd}: ${t}.`,go('v7')));
+  const e=parseInt(rhdCod(c.estado));if(e>=6&&/profundas|demoli/i.test(c.obras||''))add(AE,'aviso',`${cd}: estado de conservação «${rhdCod(c.estado)}» (bom) e necessidade de obras «${c.obras}» — contraditório.`,go('v5'));
+  if(e>=1&&e<=2&&/^nenhuma/i.test(c.obras||''))add(AE,'aviso',`${cd}: estado de conservação «${rhdCod(c.estado)}» (mau) e necessidade de obras «Nenhuma» — contraditório.`,go('v5'));
+  if(/ruína/i.test(c.exec||'')&&e>=5)add(AE,'aviso',`${cd}: estado de execução «Em ruína» com estado de conservação «${rhdCod(c.estado)}» — contraditório.`,go('v5'));
+  const sl=relF(a).filter(f=>!v(f.legenda)).length;if(sl)add(AE,'info',`${cd}: ${sl} fotografia(s) sem legenda.`,go('vf'))}
+ // — parte final —
+ if(!part){r.quesitos.forEach((q,i)=>{if(v(q.txt)&&!v(q.resp)&&!Object.values(q.rp||{}).some(v))add(PF,'erro',`Questão ${qNum(r,i)} sem resposta.`,{v:'rel',o:'rr1'})})}
+ if(V.length&&!V.some(a=>alNum(a.al.valor)!=null))add(PF,'erro','Resposta às questões: nenhuma verba tem valor — o valor estimado sai vazio.',{v:'anom'});
+ if(r.incReservas===false||RES_R.every(([k])=>(r.resOff||{})[k]===true))add(PF,'aviso','O relatório sai sem reservas de análise.',{v:'rel',o:'rres'});
+ if(r.dataRefM==='outras'){const enc=String(r.dataEnc||'').trim();const D=(r.dataRefs||[]).filter(Boolean).sort();if(D.length&&D[D.length-1]>new Date().toISOString().slice(0,10))add(PF,'aviso','A data de referência é posterior à data de conclusão do relatório.',{v:'proc',o:'rp3a'})}
+ if(!isCol(r)&&!v(settings.peritoNome))add(PF,'aviso','Nome do perito por preencher (Definições › Relatório) — sai o nome por defeito.',{v:'defs'});
+ if(!isCol(r)&&!v(settings.peritoQual))add(PF,'info','Linha de qualificação do perito por preencher (Definições › Relatório).',{v:'defs'});
+ // — geral (verificação existente) —
+ for(const t of relCheck(p))if(!/: incompleta —|sem resposta|falta a finalidade|falta o valor|sem fotografias/.test(t))add('Geral','info',t,null);
+ return O}
+function coerModal(p){const O=relCoer(p),G=['Parte inicial','Análise específica','Parte final','Geral'],ic={erro:'⛔',aviso:'⚠️',info:'ℹ️'},ne=O.filter(o=>o.nv==='erro').length,na=O.filter(o=>o.nv==='aviso').length;
+ const m=document.createElement('div');m.className='modal';m.id='coerM';
+ m.innerHTML=`<div class="box" style="max-width:720px;max-height:90vh;overflow:auto;text-align:left"><h3 style="margin-top:0">🔎 Coerência do relatório</h3><p class="${ne?'':'muted'}" style="margin-top:0">${O.length?`${ne} erro(s) · ${na} aviso(s) · ${O.length-ne-na} nota(s). Toque numa linha para ir ao sítio onde se corrige.`:'✓ Nada a assinalar — o relatório está coerente do princípio ao fim.'}</p>
+ ${G.map(g=>{const L=O.filter(o=>o.pt===g);return `<div class="algrp">${g}${L.length?'':' — ✓'}</div>${L.map(o=>`<div class="qbox" ${o.go?`data-coergo='${esc(JSON.stringify(o.go))}' style="cursor:pointer"`:''}>${ic[o.nv]} ${esc(o.txt)}${o.go?' <span class="muted">→</span>':''}</div>`).join('')}`}).join('')}
+ <div class="btns"><button class="secondary" id="coerX">Fechar</button></div></div>`;
+ document.body.appendChild(m);m.querySelector('#coerX').onclick=()=>m.remove();
+ m.querySelectorAll('[data-coergo]').forEach(d=>d.onclick=()=>{const g=JSON.parse(d.dataset.coergo);m.remove();if(g.v==='defs'){S.view='defs';S.sub=null;render();return}
+  S.view=g.v;if(g.aid){S.aid=g.aid;S.sub='ficha';settings.mod='tudo'}else S.sub=null;if(g.o)S.open={...(S.open||{}),[g.o]:true};render();
+  setTimeout(()=>{const el=g.o&&document.querySelector(`#app details[data-key="${g.o}"]`);if(el){el.open=true;el.scrollIntoView({block:'start'});window.scrollBy(0,-120)}else window.scrollTo(0,0)},60)})}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-coer]');if(!b)return;e.preventDefault();e.stopImmediatePropagation();const p=cur();if(p)coerModal(p)},true);
 // ---------- Separador Relatório ----------
 function relRelHTML(p){const r=ensureRel(p),col=isCol(r);
   const qs=r.quesitos.map((q,i)=>{const resp=col?`${r.peritos.map((pe,j)=>`<label>${esc(pe.nome||('Perito '+(j+1)))} <span class="muted">(${esc(pe.qual||'')})</span></label><textarea data-bind="qp.${i}.${j}" rows="3">${esc(q.rp?.[j]||'')}</textarea><div class="btns" style="margin-top:2px"><button class="secondary mini" data-act="rUseCons" data-i="${i}" data-j="${j}">⤵ Usar como consenso</button></div>`).join('')||'<p class="muted">Acrescente os peritos em Processo › Tipo de relatório e gabinete.</p>'}<label>Resposta de consenso <span class="muted">(se preenchida, é a que sai no relatório)</span></label><textarea data-bind="q.${i}.resp" rows="3">${esc(q.resp||'')}</textarea>${rModHTML(i)}`:`<label>Resposta</label><textarea data-bind="q.${i}.resp" rows="4">${esc(q.resp||'')}</textarea>${rModHTML(i)}`;
@@ -1788,6 +1856,7 @@ function relRelHTML(p){const r=ensureRel(p),col=isCol(r);
   ${relFimHTML(p)}
   ${sec('rr4','Termo de encerramento',termo,{cnt:col?pill(r.unan?'unanimidade':'discordâncias',r.unan?'ok':'warn'):'',def:false})}
   ${sec('rr5','Em anexo',anex,{cnt:pill(ANEX_R.filter(d=>r.anexos[d]).length+(r.anexF||[]).length+' ✓'),def:false})}
+  ${(()=>{const O=relCoer(p),ne=O.filter(o=>o.nv==='erro').length,na=O.filter(o=>o.nv==='aviso').length;return `<div class="card ${ne?'':'chk ok'}" style="${ne?'background:#fff3f0;border-color:#e6a99a':''}"><b>🔎 Coerência do relatório</b><p class="muted" style="margin:4px 0">Percorre o que vai escrito, do princípio ao fim: parte inicial, cada verba e parte final.${O.length?` Agora: <b>${ne} erro(s)</b> · ${na} aviso(s).`:' ✓ Nada a assinalar.'}</p><div class="btns"><button class="green" data-coer="1">🔎 Verificar coerência</button></div></div>`})()}
   ${(()=>{const w=relCheck(p);return `<div class="card"><b>Verificação antes de gerar</b>${w.length?`<ul class="muted" style="margin:6px 0 0 18px;padding:0">${w.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'<p class="muted">✓ Tudo preenchido.</p>'}</div>`})()}
   <div class="card"><b>Relatório completo</b><p class="muted">Word com capa (mapa + fotos), índice, secções 1–12 e a análise das situações em texto corrido. Cabeçalho: ${esc((GABS_R.find(g=>g[0]===r.gab)||['',''])[1])}.</p><div class="exp"><button class="secondary" data-act="relPrev">👁 Pré-visualizar</button><button class="green" data-act="relWord">📘 Word</button><button class="green" data-act="relPdf">📕 PDF</button><button class="secondary" data-act="relZip">📦 Pasta completa (Word, PDF, Excel, fotos e ficha por verba, KML, anexos)</button></div></div>`}
 // ---------- importação de quesitos ----------
@@ -2604,7 +2673,7 @@ let L0;function vAnoms(){const p=cur();alP(p);L0=p.anomalias;L0.forEach(alA);con
 /* ---------- processo ---------- */
 function vProc(){const p=cur(),P=alP(p);
  const fin=AL_LISTS.proc_finalidade||[],bases=AL_LISTS.proc_base||[],posse=AL_LISTS.proc_posse||[];
- return `<h2>Processo</h2>${blk('A · Abertura do processo','Escritório — identificação, o que foi solicitado, questões, documentos e contexto (parte inicial do relatório)')}
+ return `<h2>Processo</h2><div class="btns" style="margin:0 0 6px"><button class="secondary mini" data-coer="1">🔎 Verificar coerência do relatório</button></div>${blk('A · Abertura do processo','Escritório — identificação, o que foi solicitado, questões, documentos e contexto (parte inicial do relatório)')}
  ${sec('p1','1 · Dados do processo',`${inp('p.codigo','N_Ref — código interno do processo',p.codigo,'ex.: Ava 2611')}${inp('p.designacao','Designação',p.designacao)}${inp('p.local','Local / morada (geral, se houver)',p.local)}`,{cnt:falta([p.codigo,p.designacao].filter(x=>!String(x||'').trim()).length)})}
  ${relProcHTML(p)}
  ${sec('pctx','Contexto de análise',`<label>Finalidade</label><div class="tks sm">${fin.map(o=>alTk(P.finalidade===o,esc(o),`data-alact="pset" data-k="finalidade" data-v="${esc(o)}"`)).join('')}</div>
