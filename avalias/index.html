@@ -755,7 +755,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.41';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.42';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -2080,7 +2080,7 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
       if(A.tac>0)rr+=tr([tc('TAC – apta para construção',Wp[0]),tc(f2(A.tac),Wp[1],{jc:'center'}),tc(APT_MT[Rt.tM],Wp[2]),tc(f2(Rt.uTac),Wp[3],{jc:'center'}),tc(Rt.vTac!=null?alEur(Rt.vTac):'—',Wp[4],{jc:'center'})].join(''));
       if(A.tof>0)rr+=tr([tc('TOF – outros fins',Wp[0]),tc(f2(A.tof),Wp[1],{jc:'center'}),tc(APT_MF[Rt.fM],Wp[2]),tc(f2(Rt.uTof),Wp[3],{jc:'center'}),tc(Rt.vTof!=null?alEur(Rt.vTof):'—',Wp[4],{jc:'center'})].join(''));
       rr+=tr([tc('Valor do terreno por partes',Wp[0]+Wp[1]+Wp[2]+Wp[3],{span:4,b:1,fill:'F2F2F2'}),tc(Rt.tot!=null?alEur(Rt.tot):'—',Wp[4],{b:1,jc:'center',fill:'F2F2F2'})].join(''));
-      body+=P(R('Valor do terreno por partes (TAC + TOF)',{b:true}),{keep:1,sp:[120,60]})+tbl(Wp,rr)+(Rt.tM==='ref'&&A.tac>0&&Rt.uTac!=null?T(`TAC – método referencial: IUS ${f2(Rt.ius)} m²/m² × custo de construção ${f2(alNum(x.car.tacCc)??alNum(x.cst?.C))} €/m² × ${f2(alNum(x.car.tacPct))} % = ${f2(Rt.uTac)} €/m² de terreno.`,{jc:'both'}):'')}
+      body+=P(R('Valor do terreno por partes (TAC + TOF)',{b:true}),{keep:1,sp:[120,60]})+(!S.noOle&&aptSheet(a)?alOlePara(aptSheet(a),oleParts):tbl(Wp,rr))+(Rt.tM==='ref'&&A.tac>0&&Rt.uTac!=null?T(`TAC – método referencial: IUS ${f2(Rt.ius)} m²/m² × custo de construção ${f2(alNum(x.car.tacCc)??alNum(x.cst?.C))} €/m² × ${f2(alNum(x.car.tacPct))} % = ${f2(Rt.uTac)} €/m² de terreno.`,{jc:'both'}):'')}
      if(String(x.merc||'').trim())body+=P(R('Análise de mercado',{b:true}),{keep:1,sp:[120,60]})+T(x.merc,{jc:'both'});
      body+=E()}}
     {const vs=x.met?.['Residual']&&vaSheet(a);if(vs){const Rv=vaRun(a);body+=H3('Valor atual — método residual (RES)')+T(`${VA_TIPO[x.va.tipo]||''}. Base: valor final a novo — ${vaBaseLbl(a)}. Valor atual = (valor final a novo − terreno) × % reutilizável + terreno${Rv.ct?' − custos de demolição, limpeza e transformação':''}: (${alEur(Rv.v100)} − ${alEur(Rv.vt)}) × ${CULT.fmt(Rv.exe*100,0)} % + ${alEur(Rv.vt)}${Rv.ct?` − ${alEur(Rv.ct)}`:''} = ${alEur(Rv.va)}.`,{jc:'both'});body+=!S.noOle?alOlePara(vs,oleParts):'';body+=E()}}
@@ -3378,6 +3378,13 @@ function vaHTML(a){const x=a.al,k=x.va;if(!k?.on)return `<div class="btns"><butt
   <div class="cstx"><table><tr><th>Capítulo</th><th>Peso %</th><th>Executado</th><th>Contributo</th></tr>${X.caps.map((c,j)=>`<tr><td>${esc(c.c)}</td><td><input data-bind="alva.exeT.p.${j}" inputmode="decimal" value="${esc(c.p)}" style="width:52px"></td><td>${rs(j,c.r)}</td><td class="c">${esc(CULT.fmt(c.ct*100,1))}%</td></tr>`).join('')}
   <tr class="tot"><td>% Exe</td><td class="c" style="${Math.abs(X.peso-100)>0.01?'color:#b71c1c':''}">${F(X.peso,0)}%</td><td></td><td class="c">${esc(CULT.fmt(X.tot*100,1))}%</td></tr></table></div>${Math.abs(X.peso-100)>0.01?'<p class="muted" style="color:#b71c1c">A soma dos pesos tem de dar 100 %.</p>':''}<p class="muted" style="margin-top:0">Pesos indicativos da tipologia — corrija se a obra tiver outra estrutura de custos.</p><div class="btns"><button class="secondary mini" data-alact="vaExeTog">Retirar a tabela (% Exe manual)</button></div>`}
  return h}
+/* PRT — terreno por partes, em folha de cálculo (regra: tabelas com cálculos vão para o Word em Excel) */
+function aptSheet(a){const R=aptRun(a),A=R.A;if(!(A.tac>0||A.tof>0))return null;const rows=[[{v:'Parte',s:2},{v:'Área (m²)',s:2},{v:'Método',s:2},{v:'€/m²',s:2},{v:'Valor (€)',s:2}]];
+ if(A.tac>0){const r=rows.length+1;rows.push(['TAC – apta para construção',{v:A.tac,s:3},APT_MT[R.tM],{v:R.uTac??0,s:3},{f:`ROUND(B${r}*D${r},0)`,v:R.vTac??0,s:7}])}
+ if(A.tof>0){const r=rows.length+1;rows.push(['TOF – outros fins',{v:A.tof,s:3},APT_MF[R.fM],{v:R.uTof??0,s:3},{f:`ROUND(B${r}*D${r},0)`,v:R.vTof??0,s:7}])}
+ const l=rows.length;rows.push([{v:'Valor do terreno por partes',s:1},{f:`SUM(B2:B${l})`,v:(A.tac||0)+(A.tof||0),s:4},'','',{f:`SUM(E2:E${l})`,v:R.tot??0,s:10}]);
+ if(R.tM==='ref'&&A.tac>0){const cc=alNum(a.al.car?.tacCc)??alNum(a.al.cst?.C),pc=alNum(a.al.car?.tacPct);rows.push([]);rows.push([{v:'TAC – método referencial',s:2},{v:'IUS',s:2},{v:'Custo constr. (€/m²)',s:2},{v:'% do solo',s:2},{v:'€/m² de terreno',s:2}]);const r=rows.length+1;rows.push(['',{v:R.ius??0,s:3},{v:cc??0,s:3},{v:(pc??0)/100,s:5},{f:`B${r}*C${r}*D${r}`,v:R.uTac??0,s:3}])}
+ return {name:'Terreno por partes',cols:[30,12,30,14,14],rows}}
 function vaSheet(a){const R=vaRun(a);if(!R)return null;const rows=[[{v:'Valor atual',s:2},{v:'Origem',s:2},{v:'Valor (€)',s:2}]];
  rows.push(['Valor final a novo (obra concluída 100 %)',cstNum(a.al.va.v100)==null?vaBaseLbl(a):'indicado',{v:R.v100,s:7}]);
  rows.push(['Terreno (parte desse valor)',R.vta!=null&&cstNum(a.al.va.vt)==null?'solo do CST':'indicado',{v:R.vt,s:7}]);
