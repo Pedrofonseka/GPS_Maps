@@ -144,6 +144,7 @@ table.pg{width:100%;border-collapse:collapse;table-layout:fixed}table.pg td{bord
 .cstx th:first-child{background:#f3efe9}.cstx tr.tot td:first-child{background:#f6f6f6}
 .cstx input,.cstx select{padding:4px 5px;font-size:16px;min-height:0;margin:0} /* 16px: abaixo disto o iPhone amplia o ecrã ao tocar na caixa */
 @media (pointer:coarse){input,select,textarea{font-size:16px!important}} /* iPhone: abaixo de 16px amplia o ecrã ao tocar na caixa e o ecrã salta */
+body.kbd .cstx th:first-child,body.kbd .cstx td:first-child{position:static}
 input.auto,textarea.auto{color:#1565c0;font-style:italic;background:#eef5ff}
 </style>
 </head>
@@ -729,7 +730,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.27';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.28';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1555,7 +1556,7 @@ function relCheck_relat(p){const r=ensureRel(p),col=isCol(r),part=isPart(r),w=[]
   if(!p.visita?.data)w.push('Data da visita por preencher — Processo › 2');
   if(!p.visita?.gps&&(r.capa||'fotosLoc')==='fotosLoc')w.push('Sem coordenadas GPS: a capa sai sem mapa — Processo › 2');
   if(!r.quesitos.length)w.push((part?'Sem queixas':'Sem quesitos')+' — Processo › R3');
-  const sr=r.quesitos.filter(q=>!v(q.resp)&&!(col&&r.peritos.some((_,j)=>v(q.rp?.[j])))).length;if(sr)w.push(`${sr} quesito(s) sem resposta — Relatório › Resposta ao solicitado`);
+  const sr=r.quesitos.filter(q=>!v(q.resp)&&!(col&&r.peritos.some((_,j)=>v(q.rp?.[j])))).length;if(sr)w.push(`${sr} quesito(s) sem resposta — Relatório › Resposta às questões colocadas`);
   if(col){if(r.peritos.length<2)w.push('Peritagem colegial com menos de 2 peritos — Processo › R1');if(r.peritos.some(x=>!v(x.nome)))w.push('Há peritos sem nome — Processo › R1');
     const semC=r.quesitos.filter(q=>!v(q.resp)).length;if(semC&&r.quesitos.length)w.push(`${semC} quesito(s) sem resposta de consenso (saem as respostas de cada perito)`);if(!r.unan&&!v(r.discord))w.push('Posições discordantes por descrever — Relatório › Termo')}
   if(!p.anomalias.length)w.push('Sem situações registadas — separador Anomalias');
@@ -1564,6 +1565,12 @@ const isCol=r=>r.modo==='colegial',isPart=r=>r.ambito==='particular';
 // quem o perito representa (termo de encerramento e respostas): «Perito nomeado pelo Tribunal» / «Perito indicado pela Parte 1 — <nome>»
 function represR(r,pe){const q=pe.qual||'';if(/tribunal/i.test(q))return 'Perito nomeado pelo Tribunal';const m=q.match(/Parte (\d)/);if(m){const nm=String(r['parte'+m[1]]||'').trim();return `Perito indicado pela Parte ${m[1]}${nm?' — '+nm:''}`}return 'Perito'}
 const qCode=i=>`1.${String(i+1).padStart(3,'0')}`;
+/* Outras questões: blocos por quem as coloca — A.01 Autor, R.01 Réu, T.01 Tribunal, ou sem prefixo (01). O n.º proposto é sequencial dentro do bloco; o utilizador pode escrever outro (alíneas, numeração do processo). */
+const QBL={A:'Autor',R:'Réu',T:'Tribunal'};
+const qBl=q=>q.bl!=null?q.bl:(/autor/i.test(q.de||'')?'A':/r[ée]u/i.test(q.de||'')?'R':/tribunal|juiz/i.test(q.de||'')?'T':'');
+function qAuto(r,i){const L=r.quesitos,b=qBl(L[i]);let n=0;for(let j=0;j<=i;j++)if(qBl(L[j])===b)n++;const nn=String(n).padStart(2,'0');return b?`${b}.${nn}`:nn}
+const qNum=(r,i)=>String(r.quesitos[i].num||'').trim()||qAuto(r,i);
+function qBlocos(r){const Qs=r.quesitos.map((q,i)=>({q,i})).filter(o=>String(o.q.txt||'').trim());return ['A','R','T',''].map(b=>({b,L:Qs.filter(o=>qBl(o.q)===b)})).filter(g=>g.L.length)}
 /* Função a desempenhar — o que se pretende (por ordem alfabética; «Outro» no fim) */
 const OBJ_FUN=[['conj','Estimar o valor de um conjunto de «x» ativos'],['edif','Estimar o valor de um edifício'],['terr','Estimar o valor de um terreno'],['casa','Estimar o valor de uma casa'],['mor','Estimar o valor de uma moradia'],['out','Outro (descrever)']];
 const OBJ_ALVO={edif:'um edifício',terr:'um terreno',casa:'uma casa',mor:'uma moradia'};
@@ -1598,8 +1605,8 @@ function relProcHTML(p){const r=ensureRel(p),col=isCol(r),part=isPart(r),hd=hdrD
   const nq=r.quesitos.length;
   const QW=part?['queixa','queixas','Queixa']:['quesito','quesitos','Quesito'];
   const t3o=`<label>Função a desempenhar — o que se pretende</label><div class="tks col">${OBJ_FUN.map(([k,l])=>tickBox('',objFunEf(p)===k,l,`data-act="rObjFun" data-v="${k}"`)).join('')}</div>${!r.objFun&&objFunAuto(p)?'<p class="muted" style="color:#1565c0">🔗 Proposta automática pelo tipo e n.º de verbas — toque noutra hipótese para mudar.</p>':''}${objFunEf(p)==='conj'?`<label>N.º de ativos («x») — automático: n.º de verbas</label><input data-bind="r.objNx" inputmode="numeric" ${avA(r.objNx,String(alAtivas(p).length))}>`:''}${r.objFun==='out'?RL('objFunOutro','Descrever o que se pretende',r.objFunOutro,'ex.: Estimar o valor de renda de uma loja'):''}${objFunEf(p)?`<p class="muted">No relatório: «Pretende-se ${esc(objTxt(p)||'…')}.»</p>`:''}`;
-  const t3=`${t3o}${part?'<p class="muted">Particular: em princípio não há quesitos, mas uma lista de queixas sobre determinadas situações. O perito pode encontrar outras no decurso da inspeção (registe-as em Anomalias, origem P – Perito).</p>':''}<label>Questões complementares</label>
-    <div class="rows">${r.quesitos.map((q,i)=>`<div class="qbox"><div class="qhd"><b>${qCode(i)}</b><span class="grow"></span><button class="secondary mini" data-act="rMvQ" data-i="${i}" data-d="-1" ${i?'':'disabled'}>▲</button><button class="secondary mini" data-act="rMvQ" data-i="${i}" data-d="1" ${i<nq-1?'':'disabled'}>▼</button><button class="del" data-act="rDelQ" data-i="${i}">✕</button></div><input data-bind="q.${i}.de" value="${esc(q.de||'')}" placeholder="Colocada por (ex.: Autor, Réu, Tribunal) — opcional" style="margin-bottom:4px"><textarea data-bind="q.${i}.txt" rows="3">${esc(q.txt||'')}</textarea></div>`).join('')||`<p class="muted">Sem questões complementares — no relatório sai «Outras questões: nada a considerar».</p>`}</div>
+  const t3=`${t3o}${part?'<p class="muted">Particular: em princípio não há quesitos, mas uma lista de queixas sobre determinadas situações. O perito pode encontrar outras no decurso da inspeção (registe-as em Anomalias, origem P – Perito).</p>':''}<label>Outras questões</label>
+    <div class="rows">${r.quesitos.map((q,i)=>`<div class="qbox"><div class="qhd">${part?`<b>${qCode(i)}</b>`:`<select data-act="rQbl" data-i="${i}" style="width:auto;max-width:150px" title="Quem coloca a questão">${[['A','A · Autor'],['R','R · Réu'],['T','T · Tribunal'],['','Sem bloco']].map(([v,l])=>`<option value="${v}" ${qBl(q)===v?'selected':''}>${l}</option>`).join('')}</select><input data-bind="q.${i}.num" ${avA(q.num,qAuto(r,i))} style="width:78px;margin-left:4px" title="N.º proposto em sequência — escreva outro se a numeração for diferente (ex.: A.03.a)">`}<span class="grow"></span><button class="secondary mini" data-act="rMvQ" data-i="${i}" data-d="-1" ${i?'':'disabled'}>▲</button><button class="secondary mini" data-act="rMvQ" data-i="${i}" data-d="1" ${i<nq-1?'':'disabled'}>▼</button><button class="del" data-act="rDelQ" data-i="${i}">✕</button></div><textarea data-bind="q.${i}.txt" rows="3">${esc(q.txt||'')}</textarea></div>`).join('')||`<p class="muted">Sem outras questões — no relatório sai «Nada a considerar».</p>`}</div>
     <div class="btns"><button class="secondary mini" data-act="rAddQ">+ ${QW[2]}</button><label class="btn secondary mini">📄 Do Word<input type="file" accept=".docx" data-act="rImpQ" data-k="docx" hidden></label><label class="btn secondary mini">📊 Do Excel<input type="file" accept=".xlsx" data-act="rImpQ" data-k="xlsx" hidden></label><button class="secondary mini" data-act="rPasteQ">📋 Colar texto</button></div>${qModHTML()}
     <p class="muted">Word: cada alínea (a), b)…, 1., 2.…) ou parágrafo passa a um quesito. Excel: 1.ª coluna da 1.ª folha (ignora a linha de títulos se disser «quesito»). Pode editar e reordenar depois.</p>`;
   const nd=DOCS_R.filter(d=>r.docs[d]).length;
@@ -1614,12 +1621,12 @@ function relProcHTML(p){const r=ensureRel(p),col=isCol(r),part=isPart(r),hd=hdrD
 // ---------- Separador Relatório ----------
 function relRelHTML(p){const r=ensureRel(p),col=isCol(r);
   const qs=r.quesitos.map((q,i)=>{const resp=col?`${r.peritos.map((pe,j)=>`<label>${esc(pe.nome||('Perito '+(j+1)))} <span class="muted">(${esc(pe.qual||'')})</span></label><textarea data-bind="qp.${i}.${j}" rows="3">${esc(q.rp?.[j]||'')}</textarea><div class="btns" style="margin-top:2px"><button class="secondary mini" data-act="rUseCons" data-i="${i}" data-j="${j}">⤵ Usar como consenso</button></div>`).join('')||'<p class="muted">Acrescente os peritos em Processo › R1.</p>'}<label>Resposta de consenso <span class="muted">(se preenchida, é a que sai no relatório)</span></label><textarea data-bind="q.${i}.resp" rows="3">${esc(q.resp||'')}</textarea>${rModHTML(i)}`:`<label>Resposta</label><textarea data-bind="q.${i}.resp" rows="4">${esc(q.resp||'')}</textarea>${rModHTML(i)}`;
-    return `<div class="qbox"><div class="qhd"><b>${isPart(r)?'Queixa':'Quesito'} ${qCode(i)}</b></div><div class="muted qtxt">${esc(q.txt||'')}</div>${resp}</div>`}).join('')||'<p class="muted">Sem quesitos — acrescente-os em Processo › R3.</p>';
+    return `<div class="qbox"><div class="qhd"><b>${isPart(r)?'Queixa '+qCode(i):'Questão '+qNum(r,i)}</b></div><div class="muted qtxt">${esc(q.txt||'')}</div>${resp}</div>`}).join('')||'<p class="muted">Sem quesitos — acrescente-os em Processo › R3.</p>';
   const nr=r.quesitos.filter(q=>String(q.resp||'').trim()).length;
   const termo=`${col?`<label>Conclusão</label>${segR('rUnan',[['1','Por unanimidade'],['0','Com posições discordantes']],r.unan?'1':'0')}${r.unan?'':RT('discord','Posições discordantes (perito e fundamento)',r.discord,4)}`:''}
     ${`<label>Concluído em</label><input data-bind="r.dataEnc" ${avA(r.dataEnc,mesAno())}>`}<p class="muted">${col?'Assinam os peritos do colégio.':'Assina o perito (nome em Definições).'}</p>`;
   const anex=`<div class="tks col">${ANEX_R.map(d=>tickBox('',!!r.anexos[d],d,`data-act="rAnex" data-k="${esc(d)}"`)).join('')}</div>${RT('anexosOutros','Outros anexos (um por linha)',r.anexosOutros,2)}${anexFilesHTML(p)}`;
-  return `${sec('rr1',isPart(r)?'Apreciação das queixas':'Resposta ao solicitado (quesitos)',qs,{cnt:pill(`${nr}/${r.quesitos.length}`,nr&&nr===r.quesitos.length?'ok':'warn')})}
+  return `${sec('rr1',isPart(r)?'Apreciação das queixas':'Resposta às questões colocadas',qs,{cnt:pill(`${nr}/${r.quesitos.length}`,nr&&nr===r.quesitos.length?'ok':'warn')})}
   ${sec('rr2','Resumo de análise — nota',RT('nota','Nota (sai a seguir aos gráficos)',r.nota,3)+'<p class="muted">Os quadros e gráficos vêm do «Resumo estatístico» (abaixo). Sem estatística e sem nota, a secção não sai no relatório.</p>',{def:false})}
   ${sec('rr3','Reservas e ambiente',`${tickBox('',r.incReservas!==false,'Incluir «Âmbito de utilização – reservas de análise»','data-act="rTk" data-k="incReservas"')}${RT('reservas','',r.reservas||RESERVAS_R,6)}${tickBox('',r.incAmbiente!==false,'Incluir «Ambiente, sustentabilidade e conformidade de licenciamento»','data-act="rTk" data-k="incAmbiente"')}${RT('ambiente','',r.ambiente||AMBIENTE_R,6)}`,{def:false})}
   ${sec('rr4','Termo de encerramento',termo,{cnt:col?pill(r.unan?'unanimidade':'discordâncias',r.unan?'ok':'warn'):'',def:false})}
@@ -1725,15 +1732,15 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
   // ---- secções ----
   const comp=part||r.incComp===false?'':(col?COMP_COLEGIAL:(String(settings.compSingular||'').trim()||COMP_SINGULAR));
   if(!part){body+=H1('Compromisso de honra')+E()+(comp?T(comp,{jc:'both'}):T('[Texto do compromisso de honra — preencha em Definições › Relatório]',{i:true,color:'C00000'}))+E()}
-  body+=H1('Objeto da avaliação')+H2(part?'Queixas apresentadas':'Matéria a responder')+E();
-  if(objFunEf(p)&&!part){body+=T(`Pretende-se ${objTxt(p)||'…'}.`,{jc:'both'})+E();
-   const Qs=r.quesitos.filter(q=>String(q.txt||'').trim());
-   if(!Qs.length)body+=P(R('Outras questões: ',{b:true})+R('nada a considerar.'));
-   else{body+=P(R('Outras questões:',{b:true}),{keep:1});const grp=[...new Set(Qs.map(q=>String(q.de||'').trim()))];
-    for(const g of grp){if(grp.length>1||g)body+=P(R(g?`Colocadas por ${g}:`:'Outras:',{i:true}),{keep:1,sp:[120,40]});Qs.filter(q=>String(q.de||'').trim()===g).forEach(q=>{body+=T(`${qCode(r.quesitos.indexOf(q))} — ${q.txt}`,{jc:'both'})})}}
-   body+=E()}
-  else{if(r.objIntro)body+=T(r.objIntro);
-  r.quesitos.forEach(q=>{body+=T(q.txt,{jc:'both'})+E()})}
+  const QBLK=(resp)=>{let h='';const G=qBlocos(r);if(!G.length)return T('Nada a considerar.')+E();
+   for(const g of G){if(G.length>1||g.b)h+=P(R(g.b?`Colocadas pelo ${QBL[g.b]}`:'Outras',{b:true,i:true}),{keep:1,sp:[120,60]});
+    for(const {q,i} of g.L){h+=P(R(qNum(r,i)+' – ',{b:true})+R(q.txt),{jc:'both',keep:resp?1:0});
+     if(resp){const cons=String(q.resp||'').trim();h+=E();if(cons||!col)h+=P(R('Resposta',{b:true}),{keep:1})+T(cons||'—',{jc:'both'})+E();
+      else r.peritos.forEach((pe,j)=>{const t=String(q.rp?.[j]||'').trim();h+=P(R(`Resposta — ${pe.nome||'Perito '+(j+1)} (${represR(r,pe).replace(/^Perito /,'')})`,{b:true}),{keep:1})+T(t||'—',{jc:'both'})+E()})}}
+    if(!resp)h+=E()}return h};
+  body+=H1('Objeto de análise');
+  if(part){body+=H2('Queixas apresentadas')+E();if(r.objIntro)body+=T(r.objIntro);r.quesitos.forEach(q=>{body+=T(q.txt,{jc:'both'})+E()})}
+  else{body+=E();if(objTxt(p))body+=T(`Pretende-se ${objTxt(p)}.`,{jc:'both'})+E();body+=H2('Outras questões')+E()+QBLK(false)}
   body+=H1('Elementos de apoio e fundamentação')+H2('Lista de documentos fornecidos')+E()+(DOCS_R.filter(d=>r.docs[d]).map(d=>CHK(true,d)).join('')||T('—'))+E();
   body+=H2('Outros elementos')+T(String(r.docsOutros||'').trim()||'-');
   if(String(r.docsCom||'').trim())body+=H2('Comentários')+T(r.docsCom);
@@ -1805,18 +1812,20 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
       pr+=`<w:tr><w:trPr><w:cantSplit/></w:trPr>${cells}</w:tr><w:tr><w:trPr><w:cantSplit/></w:trPr>${caps}</w:tr>`}
      body+=tbl([CW2,TWb-CW2],pr,false)+E()}}}
   // 7 — resposta ao solicitado
-  body+=E()+H1(part?'Apreciação das queixas':'Resposta ao solicitado');
-  if(objFunEf(p)&&!part){const AP=alP(p),V=alAtivas(p),bad=!!AP.bad,tot=V.reduce((s1,a)=>s1+(alNum(a.al.valor)||0),0),alvo=objAlvo(p)||'o solicitado';
-   body+=P(R(`– Valor estimado para ${alvo}`,{b:true}),{keep:1})+T('De acordo com a análise:')+E();
-   if(V.length===1){const a=V[0];body+=P(R('Valor: ',{b:true})+R(alNum(a.al.valor)!=null?alEur(a.al.valor):'—',{b:true}))}
-   else if(V.length){body+=P(R('Valor total: ',{b:true})+R(alEur(tot),{b:true}))+T('Discriminado por verba no quadro-resumo do capítulo «Valor estimado».',{jc:'both'})}
-   if(bad){const pc=String(AP.badPct||10);body+=E()+P(R(`BAD elegível — desconto sugerido: até ${pc} %`)+FNREF(BAD_NOTA)+R(V.length===1&&alNum(V[0].al.valor)!=null?` (valor com o desconto máximo: ${alEur(Math.round(alNum(V[0].al.valor)*(1-(+pc.replace(',','.')||0)/100)/100)*100)}).`:'.'))}
-   body+=E()}
-  r.quesitos.forEach((q,i)=>{if(objFunEf(p)&&!part&&!String(q.txt||'').trim())return;body+=H2(objFunEf(p)&&!part?`Questão complementar ${qCode(i)}${String(q.de||'').trim()?' — '+q.de:''}`:`${part?'Queixa':'Quesito'} ${qCode(i)}`)+E()+T(q.txt,{jc:'both'})+E();
+  if(part){body+=E()+H1('Apreciação das queixas');
+  r.quesitos.forEach((q,i)=>{body+=H2(`Queixa ${qCode(i)}`)+E()+T(q.txt,{jc:'both'})+E();
     const cons=String(q.resp||'').trim();
-    if(cons||!col)body+=P(R(objFunEf(p)&&!part?'Resposta':'Resposta:',{b:true,i:!(objFunEf(p)&&!part)}))+T(cons||'—',{jc:'both'})+E();
+    if(cons||!col)body+=P(R('Resposta:',{b:true,i:true}))+T(cons||'—',{jc:'both'})+E();
     else{r.peritos.forEach((pe,j)=>{const t=String(q.rp?.[j]||'').trim();body+=P(R(`Resposta — ${pe.nome||'Perito '+(j+1)} (${represR(r,pe).replace(/^Perito /,'').replace(/^n/,'n')}):`,{b:true,i:true}))+T(t||'—',{jc:'both'})+E()})}});
-  if(!r.quesitos.length&&!(objFunEf(p)&&!part))body+=T('—');
+  if(!r.quesitos.length)body+=T('—');}
+  else{const AP=alP(p),V=alAtivas(p),bad=!!AP.bad,tot=V.reduce((s1,a)=>s1+(alNum(a.al.valor)||0),0),alvo=objAlvo(p);
+   body+=E()+H1('Resposta às questões colocadas');
+   if(V.length){body+=H2('Valor estimado')+E();if(alvo)body+=T(`Valor estimado para ${alvo}, de acordo com a análise:`,{jc:'both'});
+    if(V.length===1){const a=V[0];body+=P(R('Valor: ',{b:true})+R(alNum(a.al.valor)!=null?alEur(a.al.valor):'—',{b:true}))}
+    else body+=P(R('Valor total: ',{b:true})+R(alEur(tot),{b:true}))+T('Discriminado por verba no quadro-resumo do capítulo «Valor estimado».',{jc:'both'});
+    if(bad){const pc=String(AP.badPct||10);body+=E()+P(R(`BAD elegível — desconto sugerido: até ${pc} %`)+FNREF(BAD_NOTA)+R(V.length===1&&alNum(V[0].al.valor)!=null?` (valor com o desconto máximo: ${alEur(Math.round(alNum(V[0].al.valor)*(1-(+pc.replace(',','.')||0)/100)/100)*100)}).`:'.'))}
+    body+=E()}
+   body+=H2('Outras questões')+E()+QBLK(true)}
   // 8, 9
   if(r.incReservas!==false){body+=H1('Âmbito de utilização – reservas de análise');for(const l of String(r.reservas||RESERVAS_R).split('\n'))body+=/^\d+\.\s/.test(l)?P(R(l,{b:true}),{sp:[160,60]}):T(l,{jc:'both'})}
   if(r.incAmbiente!==false){body+=H1('Ambiente, sustentabilidade e conformidade de licenciamento')+T(String(r.ambiente||AMBIENTE_R),{jc:'both'})}
@@ -1939,7 +1948,7 @@ async function relZip(p){const r=ensureRel(p);const x=await relPdf(p);busy(true,
   return {blob:new Blob([zipStore(files)],{type:'application/zip'}),name:base+'.zip'}}finally{busy(false)}}
 function qModHTML(){const M=settings.qModelos||[];return `<div class="btns">${M.length?`<select data-act="rLoadQMod" style="flex:1;min-width:0"><option value="">📚 Carregar modelo de quesitos…</option>${M.map((m,i)=>`<option value="${i}">${esc(m.nome)} (${m.quesitos.length})</option>`).join('')}</select>`:''}<button class="secondary mini" data-act="rSaveQMod">💾 Guardar como modelo</button></div>`}
 function rModHTML(i){const M=settings.rModelos||[];return `<div class="btns" style="margin-top:2px">${M.length?`<select data-act="rUseRMod" data-i="${i}" style="flex:1;min-width:0"><option value="">📚 Inserir resposta-modelo…</option>${M.map((m,k)=>`<option value="${k}">${esc(m.nome)}</option>`).join('')}</select>`:''}<button class="secondary mini" data-act="rSaveRMod" data-i="${i}">💾 Guardar resposta como modelo</button></div>`}
-function modDefsHTML(){const Q=settings.qModelos||[],R=settings.rModelos||[];return sec('d_mod','Relatório — modelos de quesitos e respostas',`<p class="muted">Guardam-se a partir do processo (Processo › R3 e Relatório › Resposta ao solicitado). Ficam só neste aparelho.</p><label>Modelos de quesitos</label>${Q.map((m,i)=>`<div class="rw"><span style="flex:1">${esc(m.nome)} <span class="muted">· ${m.quesitos.length} quesito(s)</span></span><button class="del" data-act="rDelMod" data-k="qModelos" data-i="${i}">✕</button></div>`).join('')||'<p class="muted">Nenhum.</p>'}<label>Respostas-modelo</label>${R.map((m,i)=>`<div class="rw"><span style="flex:1">${esc(m.nome)}</span><button class="del" data-act="rDelMod" data-k="rModelos" data-i="${i}">✕</button></div>`).join('')||'<p class="muted">Nenhuma.</p>'}`,{cnt:pill(`${Q.length} + ${R.length}`),def:false})}
+function modDefsHTML(){const Q=settings.qModelos||[],R=settings.rModelos||[];return sec('d_mod','Relatório — modelos de quesitos e respostas',`<p class="muted">Guardam-se a partir do processo (Processo › R3 e Relatório › Resposta às questões colocadas). Ficam só neste aparelho.</p><label>Modelos de quesitos</label>${Q.map((m,i)=>`<div class="rw"><span style="flex:1">${esc(m.nome)} <span class="muted">· ${m.quesitos.length} quesito(s)</span></span><button class="del" data-act="rDelMod" data-k="qModelos" data-i="${i}">✕</button></div>`).join('')||'<p class="muted">Nenhum.</p>'}<label>Respostas-modelo</label>${R.map((m,i)=>`<div class="rw"><span style="flex:1">${esc(m.nome)}</span><button class="del" data-act="rDelMod" data-k="rModelos" data-i="${i}">✕</button></div>`).join('')||'<p class="muted">Nenhuma.</p>'}`,{cnt:pill(`${Q.length} + ${R.length}`),def:false})}
 // mapa da capa pela Google (Static Maps API), se houver chave; senão, o mapa da app
 async function googleMapData(g,wPx,hPx){const k=String(settings.gmapsKey||'').trim();if(!k||!g)return null;const sc=2,w=Math.min(640,Math.round(wPx/sc)),h=Math.min(640,Math.round(hPx/sc));
   const u=`https://maps.googleapis.com/maps/api/staticmap?center=${g.lat},${g.lon}&zoom=${settings.gmapsZoom||18}&size=${w}x${h}&scale=${sc}&maptype=${settings.gmapsTipo||'hybrid'}&markers=color:red%7C${g.lat},${g.lon}&key=${encodeURIComponent(k)}`;
@@ -3312,6 +3321,7 @@ document.addEventListener('change',async e=>{
     const nomes=[];for(const f of fs){const v=prompt(`Nome do anexo no relatório (sai no índice):\n${f.name}`,f.name.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' '));if(v===null)return;nomes.push(v.trim())}
     let larg=ANEX_LARG;if(fs.some(f=>anexKind({nome:f.name,tipo:f.type}))){const v=prompt(`Largura no Word para ${fs.length>1?'estes anexos':'este anexo'} (cm)?\nPor defeito ${ANEX_LARG} cm = largura da página − 2 cm.`,String(ANEX_LARG).replace('.',','));if(v===null)return;const n=parseFloat(String(v).replace(',','.'));if(n>=3)larg=Math.min(19,n)}
     busy(true,'A preparar os anexos…');let n=0;const r0=ensureRel(p),k0=(r0.anexF||[]).length;try{n=await addAnexFiles(p,fs,larg);(r0.anexF||[]).slice(k0).forEach((a,j)=>{if(nomes[j])a.titulo=nomes[j]})}finally{busy(false)}await saveProc();toast(n+' ficheiro(s) anexado(s).');S.scrollTop=window.scrollY;render();return}
+  if(act==='rQbl'){const q=ensureRel(p).quesitos[+el.dataset.i];if(q){q.bl=el.value;q.de=QBL[el.value]||'';await saveProc();S.scrollTop=window.scrollY;render()}return}
   if(act==='rLoadQMod'){const m=(settings.qModelos||[])[+el.value];el.value='';if(!m)return;m.quesitos.forEach(t=>ensureRel(p).quesitos.push({id:uid(),txt:t,resp:'',rp:{}}));await saveProc();toast(m.quesitos.length+' quesito(s) acrescentado(s).');S.scrollTop=window.scrollY;render();return}
   if(act==='rUseRMod'){const m=(settings.rModelos||[])[+el.value];el.value='';if(!m)return;const q=ensureRel(p).quesitos[+el.dataset.i];q.resp=String(q.resp||'').trim()?q.resp.trim()+'\n'+m.texto:m.texto;await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='rGmTipo'){settings.gmapsTipo=el.value;await saveSettings();return}
@@ -3396,15 +3406,19 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 })();
 
 
-/* @comum:teclado v1.1 — iPhone/iPad: não redesenhar o ecrã enquanto se escreve. Quando se passa de uma caixa de texto para outra, a mudança da primeira dispara «change»; se a app redesenhar nesse momento, o teclado fecha e reabre e o ecrã salta. O redesenho fica pendente e faz-se quando o foco sai das caixas. v1.1: mantém à vista a caixa onde se escreve quando o teclado abre; se a app usa o motor morph (window.KBD_MORPH), redesenha logo, sem destruir a caixa com o foco; se o morph não puder (estrutura mudou à volta da caixa), marca window.KBD_PEND e redesenha à saída. Regra: docs/regras/README.md (Teclado no iPhone). */
+/* @comum:teclado v1.1 — iPhone/iPad: não redesenhar o ecrã enquanto se escreve. Quando se passa de uma caixa de texto para outra, a mudança da primeira dispara «change»; se a app redesenhar nesse momento, o teclado fecha e reabre e o ecrã salta. O redesenho fica pendente e faz-se quando o foco sai das caixas. v1.1: mantém à vista a caixa onde se escreve quando o teclado abre (só no fim do deslocamento do iPhone) e regista no diagnóstico os casos em que a caixa fica tapada; se a app usa o motor morph (window.KBD_MORPH), redesenha logo, sem destruir a caixa com o foco; se o morph não puder (estrutura mudou à volta da caixa), marca window.KBD_PEND e redesenha à saída. Regra: docs/regras/README.md (Teclado no iPhone). */
 (function(){const txtEl=e=>!!e&&(e.tagName==='TEXTAREA'||(e.tagName==='INPUT'&&!/^(checkbox|radio|file|button|submit|range|color)$/i.test(e.type)));
  let chgT=0,pend=false;window.addEventListener('change',e=>{if(txtEl(e.target))chgT=Date.now()},true);
  const R0=render;render=function(...a){if(!window.KBD_MORPH&&Date.now()-chgT<2500&&txtEl(document.activeElement)){pend=true;return}pend=false;return R0.apply(this,a)};
- /* manter à vista a caixa onde se escreve: quando o teclado abre (o ecrã visível encolhe) ou a caixa cresce, desloca só o necessário, sem animação (a animação lutava com o deslocamento do próprio iOS) */
- const vv=window.visualViewport;if(vv&&window.matchMedia&&matchMedia('(pointer:coarse)').matches){window.KBD_KEEP=true;let kt=0;
-  const keep=()=>{clearTimeout(kt);kt=setTimeout(()=>{const el=document.activeElement;if(!txtEl(el)&&!(el&&el.tagName==='SELECT'))return;const r=el.getBoundingClientRect(),top=vv.offsetTop,h=vv.height,alvo=top+Math.min(h*0.3,120);
-   if(r.top<top+8||r.bottom>top+h-8)window.scrollBy(0,(el.tagName==='TEXTAREA'&&r.height>h*0.5?Math.max(r.top,r.bottom-h*0.6):r.top)-alvo)},140)};
-  vv.addEventListener('resize',keep);document.addEventListener('focusin',keep);document.addEventListener('input',e=>{if(e.target&&e.target.tagName==='TEXTAREA')keep()})}
+ /* manter à vista a caixa onde se escreve: o iPhone faz o seu próprio deslocamento ao abrir o teclado; a app só corrige no fim (quando o ecrã visível deixa de mudar) e só se a caixa ficou tapada, sem animação. Diagnóstico: se a caixa acabar tapada ou a página saltar muito, fica uma linha «teclado» no registo de diagnóstico (Definições). */
+ const vv=window.visualViewport;if(vv&&window.matchMedia&&matchMedia('(pointer:coarse)').matches){window.KBD_KEEP=true;let kt=0,mine=0,D=null;
+  const box=el=>{const r=el.getBoundingClientRect(),top=vv.offsetTop,h=vv.height;return {r,top,h,ok:r.top>=top+4&&r.bottom<=top+h-4,hid:r.bottom<top+8||r.top>top+h-8}};
+  const keep=()=>{clearTimeout(kt);kt=setTimeout(()=>{const el=document.activeElement;if(!txtEl(el))return;const b=box(el);if(b.ok)return;
+   const alvo=b.top+Math.min(b.h*0.3,120),ref=el.tagName==='TEXTAREA'&&b.r.height>b.h*0.5?Math.max(b.r.top,b.r.bottom-b.h*0.6):b.r.top;mine++;window.scrollTo(0,Math.max(0,window.scrollY+ref-alvo))},350)};
+  vv.addEventListener('resize',keep);document.addEventListener('input',e=>{if(e.target&&e.target.tagName==='TEXTAREA')keep()});
+  window.addEventListener('scroll',()=>{if(D){D.mn=Math.min(D.mn,scrollY);D.mx=Math.max(D.mx,scrollY)}},{passive:true});
+  document.addEventListener('focusin',e=>{const el=e.target;if(!txtEl(el))return;const y=scrollY;mine=0;D={el,b:el.dataset&&(el.dataset.bind||el.dataset.act)||el.id||el.tagName,y0:y,mn:y,mx:y,h0:Math.round(vv.height),o0:Math.round(vv.offsetTop)};const d=D;
+   setTimeout(()=>{if(D!==d||document.activeElement!==el)return;const b=box(el);if(b.hid||d.mx-d.mn>250){try{if(typeof diagPush==='function')diagPush('teclado',`${d.b} · scroll ${d.y0}→${Math.round(scrollY)} (mín ${Math.round(d.mn)}, máx ${Math.round(d.mx)}) · ecrã visível ${d.h0}→${Math.round(vv.height)} desl. ${d.o0}→${Math.round(vv.offsetTop)} · caixa ${Math.round(b.r.top)}–${Math.round(b.r.bottom)} ${b.hid?'TAPADA':'visível'} · correções da app ${mine}`)}catch(_){}}D=null},2500)})}
  document.addEventListener('focusout',()=>setTimeout(()=>{if((pend||window.KBD_PEND)&&!txtEl(document.activeElement)){pend=false;window.KBD_PEND=false;try{if(typeof S==='object'&&S)S.scrollTop=window.scrollY}catch(_){}render()}},300))})();
 /* @fim:teclado */
 </script>
