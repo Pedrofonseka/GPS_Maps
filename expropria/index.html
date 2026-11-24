@@ -1,5 +1,8 @@
 <!doctype html>
 <!--
+ExPropria v0.17.1 — resumo
+- Numeração sequencial por defeito: a nova parcela continua a designação da anterior (P 701 → P 702), já assumida; corrigir se for preciso.
+
 ExPropria v0.17.0 — resumo
 - Imagens anexadas com as ferramentas das fotografias (regra comum docs/regras/imagens_anexas.md): extratos do PDM, imagens fornecidas e páginas dos anexos passam a ter «✏️ Marcar» (setas, círculos, letras, texto, balões — rotina comum das marcas); rodar 90° roda também as marcas; o Word e a pasta usam as imagens com as marcas.
 - Extratos do PDM com a lógica da AvaLias: até 4 (ordenamento, condicionantes e dois outros; 3 é o habitual), cada um com legenda, e «Comentários sobre a consulta ao PDM»; saem numa página própria do Word, com a altura útil repartida pelas imagens. Sem extratos nem comentários fica a grelha vazia do modelo.
@@ -809,7 +812,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
 <script>
 'use strict';
-const VERSION='0.17.0';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
+const VERSION='0.17.1';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
 function growFit(t){if(!t||!t.classList?.contains('grow')||!t.offsetParent)return;t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px'}
 function growAll(root){(root||document).querySelectorAll('textarea.grow').forEach(growFit)}
 document.addEventListener('input',e=>growFit(e.target),true);
@@ -2884,7 +2887,9 @@ const isDate=x=>!!x&&x!=='NA'&&x!=='NE';
 const parNome=(n,ord)=>{const t=String(n||'').trim();if(t)return /^P\s?[0-9A-Z]/i.test(t)&&!/^parcela/i.test(t)?t:`Parcela ${t}`;return ord?`Parcela ${ord} (designação por definir)`:'Parcela (designação por definir)'};
 /* parcelas pela ordem interna (1…n): é a ordem das setas de navegação */
 const parOrdList=()=>{(cur?.parcelas||[]).forEach((p,i)=>{if(!p.ord)p.ord=i+1});return (cur?.parcelas||[]).slice().sort((a,b)=>(a.ord||0)-(b.ord||0))};
-function mkParcela(ord,nPar=''){const last=cur.parcelas.at(-1);const p={id:uid(),ord,nome:parNome(nPar,ord),fotos:[],rel:{tipo:cur.fase,v:{nPar:String(nPar||'').trim(),expropriados:[],interessados:[],concelho:last?.rel?.v?.concelho||'',freguesia:last?.rel?.v?.freguesia||''}}};defaults(allArbFields(),p.rel.v);return p}
+/* numeração sequencial por defeito: a nova parcela continua a designação da anterior (P 701 → P 702); aceitar ou corrigir */
+const nParNext=last=>{const t=String(last?.rel?.v?.nPar||'').trim(),m=t.match(/^(.*?)(\d+)(\D*)$/);return m?m[1]+String(+m[2]+1).padStart(m[2].length,'0')+m[3]:''};
+function mkParcela(ord,nPar=''){const last=cur.parcelas.at(-1);if(!String(nPar||'').trim())nPar=nParNext(last);const p={id:uid(),ord,nome:parNome(nPar,ord),fotos:[],rel:{tipo:cur.fase,v:{nPar:String(nPar||'').trim(),expropriados:[],interessados:[],concelho:last?.rel?.v?.concelho||'',freguesia:last?.rel?.v?.freguesia||''}}};defaults(allArbFields(),p.rel.v);return p}
 async function parGo(d){const L=parOrdList();if(!L.length)return;clearTimeout(saveT);await saveCur();let i=curParcela&&view==='parcela'?L.indexOf(curParcela):-1;let j=i<0?(d<0?L.length-1:0):i+d;if(j<0||j>=L.length)return;curParcela=L[j];if(view!=='parcela'){view='parcela';tab='rel'}render()}
 const parSortKey=p=>{const m=String(p.rel?.v?.nPar||'').match(/\d+/);return m?+m[0]:1e9};
 function parInfoHTML(p){visNorm();const v=visOf(p),vs=cur.visitas.slice().sort((a,b)=>a.n-b.n),own=Array.isArray(p.expropriados);

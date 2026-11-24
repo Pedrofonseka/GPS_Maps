@@ -755,7 +755,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.42';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.43';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1750,6 +1750,8 @@ const BAD_NOTA='BAD — benefício económico de adjudicação direta: quando al
 const mesAno=()=>{const d=new Date();return `${MESES_R[d.getMonth()]} de ${d.getFullYear()}`};
 const RPICK=(k,L,val,lbl)=>`<select data-rpick="${k}" style="margin-top:4px"><option value="">${esc(lbl)}</option>${L.map(o=>`<option ${o===val?'selected':''}>${esc(o)}</option>`).join('')}</select>`;
 const RL=(k,lbl,val,ph='')=>`<label>${esc(lbl)}</label><input data-bind="r.${k}" value="${esc(val||'')}" placeholder="${esc(ph)}">`;
+const RLa=(k,lbl,val,auto)=>`<label>${esc(lbl)}</label><input data-bind="r.${k}" ${avA(val,auto)}>`;
+const RTa=(k,lbl,val,rows,auto)=>{const v=String(val??'');const vz=!v.trim();return `${lbl?`<label>${esc(lbl)}</label>`:''}<textarea data-bind="r.${k}" rows="${rows}" ${vz&&auto?`class="auto" title="${AUTO_T}"`:''}>${esc(vz?(auto||''):v)}</textarea>`};
 const RT=(k,lbl,val,rows=3,ph='')=>`${lbl?`<label>${esc(lbl)}</label>`:''}<textarea data-bind="r.${k}" rows="${rows}" placeholder="${esc(ph)}">${esc(val||'')}</textarea>`;
 const segR=(act,opts,cur)=>`<div class="seg">${opts.map(([k,t])=>`<button class="${cur===k?'on':''}" data-act="${act}" data-v="${k}">${esc(t)}</button>`).join('')}</div>`;
 function hdrDefaults(p){const r=p.rel;return {h1:`${r.funcao||'Peritagem'} - Relatório`,h3:r.objeto||p.designacao||'',h4a:r.procJud?`Proc. ${r.procJud}`:'',h4b:p.codigo?` - ${p.codigo}`:''}}
@@ -1760,7 +1762,7 @@ function relProcHTML(p){const r=ensureRel(p),col=isCol(r),part=isPart(r),hd=hdrD
     <label>Peritagem</label>${segR('rModo',[['singular','Singular'],['colegial','Colegial']],r.modo)}
     <label>Gabinete (cabeçalho das páginas)</label>${segR('rGab',GABS_R.map(([k,t])=>[k,t+(rec.includes(k)?' ✓':'')]),r.gab)}
     <p class="muted">✓ = habitual para este âmbito. NID = sem imagem de gabinete (cabeçalho genérico de 4 linhas). ${part?'Particular: sem compromisso de honra.':col?'Institucional colegial: compromisso de honra coletivo.':'Institucional singular: compromisso de honra do perito (texto em Definições).'}</p>
-    ${r.gab==='nid'?`<p class="muted">Cabeçalho genérico (4 linhas). Deixe vazio para usar o texto sugerido.</p>${RL('h1','Linha 1 — título',r.h1,hd.h1)}${RL('h3','Linha 3 — descrição (itálico)',r.h3,hd.h3)}<div class="grid2"><div>${RL('h4a','Linha 4 — à direita',r.h4a,hd.h4a)}</div><div>${RL('h4b','Linha 4 — parte a negrito',r.h4b,hd.h4b)}</div></div>`:''}
+    ${r.gab==='nid'?`<p class="muted">Cabeçalho genérico (4 linhas). Deixe vazio para usar o texto sugerido.</p>${RLa('h1','Linha 1 — título',r.h1,hd.h1)}${RLa('h3','Linha 3 — descrição (itálico)',r.h3,hd.h3)}<div class="grid2"><div>${RLa('h4a','Linha 4 — à direita',r.h4a,hd.h4a)}</div><div>${RLa('h4b','Linha 4 — parte a negrito',r.h4b,hd.h4b)}</div></div>`:''}
     ${col?`<label>Peritos do colégio</label><div class="rows">${r.peritos.map((x,i)=>`<div class="rw"><input data-bind="pe.${i}.nome" list="dlPeritos" value="${esc(x.nome||'')}" placeholder="Nome do perito (da base ou novo)" style="flex:1 1 55%;min-width:0"><select data-act="rQual" data-i="${i}" style="flex:1 1 40%;min-width:0">${QUAL_R.map(q=>`<option ${x.qual===q?'selected':''}>${q}</option>`).join('')}</select><button class="del" data-act="rDelPer" data-i="${i}">✕</button></div>`).join('')}</div><div class="btns"><button class="secondary mini" data-act="rAddPer">+ Perito</button></div>${perDL()}`:''}`;
   const t2=`<p class="muted">N_Ref (código interno): <b>${esc(p.codigo||'— preencha em «1 · Dados do processo»')}</b></p>${RL('procJud','N.º do processo (tribunal)',r.procJud,part?'Em situações particulares, normalmente não existe':'ex.: 1407/25.6T8CBR')}
     <p class="muted">O local está em «1 · Dados do processo».</p>
@@ -1778,7 +1780,7 @@ function relProcHTML(p){const r=ensureRel(p),col=isCol(r),part=isPart(r),hd=hdrD
     <div class="btns"><button class="secondary mini" data-act="rAddQ">+ ${QW[2]}</button><label class="btn secondary mini">📄 Do Word<input type="file" accept=".docx" data-act="rImpQ" data-k="docx" hidden></label><label class="btn secondary mini">📊 Do Excel<input type="file" accept=".xlsx" data-act="rImpQ" data-k="xlsx" hidden></label><button class="secondary mini" data-act="rPasteQ">📋 Colar texto</button></div>${qModHTML()}
     <p class="muted">Word: cada alínea (a), b)…, 1., 2.…) ou parágrafo passa a um quesito. Excel: 1.ª coluna da 1.ª folha (ignora a linha de títulos se disser «quesito»). Pode editar e reordenar depois.</p>`;
   const nd=DOCS_R.filter(d=>r.docs[d]).length;
-  const t4=`<div class="tks col">${DOCS_R.map(d=>tickBox('',!!r.docs[d],d,`data-act="rDoc" data-k="${esc(d)}"`)).join('')}</div>${RT('docsOutros','Outros elementos',r.docsOutros,2,'-')}${RT('docsCom','Comentários',r.docsCom,2)}`;
+  const t4=`<div class="tks col">${DOCS_R.map(d=>tickBox('',!!r.docs[d],d,`data-act="rDoc" data-k="${esc(d)}"`)).join('')}</div>${RTa('docsOutros','Outros elementos',r.docsOutros,2,'Nada a considerar.')}${RT('docsCom','Comentários',r.docsCom,2)}`;
   const t5=`<p class="muted">A data, a hora (🕘 Data-hora) e as presenças registam-se em cada verba (3 · Visita).</p>${RT('interv','Outros intervenientes e suas funções',r.interv,2,'Não houve.')}${RT('decurso','Decurso da diligência',r.decurso,3,'Com o acompanhamento dos presentes, foi visitado o interior e exterior do edifício, para analisar as situações que vinham definidas.')}${RT('constrang','Constrangimentos, impedimentos ou dúvidas relevantes',r.constrang,2,'Nada a considerar.')}`;
   return `${blk('R · Relatório','Tipo de peritagem, capa, objeto, documentos e visita')}
   ${sec('rp1','Tipo de relatório e gabinete',t1,{cnt:pill((r.ambito==='particular'?'Particular':'Institucional')+' · '+(col?'Colegial':'Singular')+' · '+(GABS_R.find(g=>g[0]===r.gab)||['',''])[1].split(' ')[0])})}
@@ -1786,7 +1788,7 @@ function relProcHTML(p){const r=ensureRel(p),col=isCol(r),part=isPart(r),hd=hdrD
   ${part?'':sec('rp3a','O que foi solicitado',t3o,{cnt:objFunEf(p)?pill('✓','ok'):falta(1),def:false})}
   ${sec('rp3',part?'Queixas apresentadas':'Outras questões',t3,{cnt:pill(nq?nq+' '+(nq===1?'questão':'questões'):'nada a considerar',nq?'ok':''),def:false})}
   ${sec('rp4','Documentos fornecidos e outros elementos',t4,{cnt:pill(nd+' ✓'),def:false})}`}
-function relVisHTML(p){const r=ensureRel(p);const t5=`<div class="tks col">${tickBox('',r.incVisita!==false,'Incluir o capítulo «Da visita aos locais» no relatório','data-act="rTk" data-k="incVisita"')}</div><p class="muted">A data, a hora (🕘 Data-hora) e as presenças registam-se em cada verba (3 · Visita) e saem também na ficha de cada verba.</p>${RT('interv','Outros intervenientes e suas funções',r.interv,2,'Não houve.')}${RT('decurso','Decurso da diligência',r.decurso,3,'Com o acompanhamento dos presentes, foram visitados os ativos identificados, para os caracterizar e recolher o levantamento fotográfico.')}${RT('constrang','Constrangimentos, impedimentos ou dúvidas relevantes',r.constrang,2,'Nada a considerar.')}`;
+function relVisHTML(p){const r=ensureRel(p);const t5=`<div class="tks col">${tickBox('',r.incVisita!==false,'Incluir o capítulo «Da visita aos locais» no relatório','data-act="rTk" data-k="incVisita"')}</div><p class="muted">A data, a hora (🕘 Data-hora) e as presenças registam-se em cada verba (3 · Visita) e saem também na ficha de cada verba.</p>${RTa('interv','Outros intervenientes e suas funções',r.interv,2,'Não houve.')}${RTa('decurso','Decurso da diligência',r.decurso,3,'Com o acompanhamento dos presentes, foram visitados os ativos identificados, para os caracterizar e recolher o levantamento fotográfico.')}${RTa('constrang','Constrangimentos, impedimentos ou dúvidas relevantes',r.constrang,2,'Nada a considerar.')}`;
  return sec('rp5','Da visita aos locais',t5,{cnt:pill(r.incVisita!==false?'no relatório':'só nas fichas'),def:false})}
 /* 3 · Princípios de análise — tópicos a incluir e textos (a numeração no Word acompanha) */
 function relPriHTML(p){const r=ensureRel(p);r.pri=r.pri||{};r.priOff=r.priOff||{};
@@ -2653,7 +2655,9 @@ function alA(a){const d={codigo:'',designacao:'',idTipo:'',idValor:'',concelho:'
   if(!x0.ids){x0.ids={};const t=String(x0.idTipo||'').trim(),v=String(x0.idValor||'').trim();if(t||v)x0.ids[AL_IDOLD[t]||t||'Outro']=v}
   const c0=x0.car;if(c0)for(const [k,M] of Object.entries(AL_LIST_OLD))if(typeof c0[k]==='string'&&M[c0[k]]!==undefined)c0[k]=M[c0[k]]}
  {const c=a.al.car;alCtxMig(c);if(c&&c.acessos&&!c.acesso){const t=alOpt(c.acessos);if(AL_ACESSO_OLD[t])c.acesso=AL_ACESSO_OLD[t]}}a.vis=a.vis||{data:'',presencas:'',gps:null};return a.al}
-function alCode(p,a){const c=String(a?.al?.codigo||'').trim();if(c)return c;const i=(p?.anomalias||[]).indexOf(a);return 'VB_'+String((i<0?0:i)+1).padStart(3,'0')}
+function alCode(p,a){const c=String(a?.al?.codigo||'').trim();if(c)return c;return alCodeAuto(p,a)}
+/* numeração sequencial por defeito: continua a da verba anterior (VB_010 → VB_011); aceitar ou corrigir */
+function alCodeAuto(p,a){const L=p?.anomalias||[],i=L.indexOf(a);if(i>0){const pc=alCode(p,L[i-1]),m=pc.match(/^(.*?)(\d+)(\D*)$/);if(m)return m[1]+String(+m[2]+1).padStart(m[2].length,'0')+m[3]}return 'VB_'+String((i<0?0:i)+1).padStart(3,'0')}
 function alNew(p){const a=newAnom('local',1);alA(a);return a}
 function alTemDados(a){const x=a.al||{};return !!(a.fotos?.length||String(a.descricao||'').trim()||x.tipo||x.valor||x.designacao||Object.keys(x.ids||{}).length||x.morada||a.vis?.gps||Object.values(x.car||{}).some(v=>Array.isArray(v)?v.length:String(v||'').trim())||Object.values(x.suc||{}).some(v=>String(v||'').trim()))}
 function alFeita(a){const x=a.al||{};return !!(x.tipo&&(a.fotos?.length||alNum(x.valor)!=null))}
@@ -2683,7 +2687,7 @@ function vFicha(){
  let h=alModBar();
  /* 1 identificação */
  const idOpts=fam?AL_IDTIPO[fam]:AL_IDTIPO.imo;
- h+=SM('v1','1 · Identificação',`<div class="row2">${inp('al.codigo',`Código da verba (vazio = ${'VB_'+String(idx+1).padStart(3,'0')})`,x.codigo,'VB_001')}${inp('al.designacao','Designação (curta — sai no quadro-resumo)',x.designacao,'ex.: Moradia T3, Ligeiro Renault Clio…')}</div>
+ h+=SM('v1','1 · Identificação',`<div class="row2"><label>Código da verba <span class="muted">(sequencial — aceite ou corrija)</span></label><input data-bind="al.codigo" ${avA(x.codigo,alCodeAuto(p,a))}>${inp('al.designacao','Designação (curta — sai no quadro-resumo)',x.designacao,'ex.: Moradia T3, Ligeiro Renault Clio…')}</div>
   <label>Identificação do ativo <span class="muted">(pode assinalar vários documentos, cada um com o seu número)</span></label><div class="tks sm">${idOpts.map(o=>alTk(o in (x.ids||{}),esc(AL_IDLBL[o]||o),`data-alact="idtog" data-v="${esc(o)}"`)).join('')}</div>${idOpts.map((o,i)=>o in (x.ids||{})?`<div class="inrow" style="margin-top:4px"><b style="min-width:52px">${esc(o.length>8?o.slice(0,8)+'…':o)}</b><input data-bind="alid.${i}" value="${esc(x.ids[o]||'')}" placeholder="${esc(AL_IDPH(o,x))}"></div>`:'').join('')}
   ${txt('a.descricao','Descrição sumária',a.descricao,3)}${fam==='imo'||fam==='ter'?alPredioHTML(a):''}`,{cnt:ok(x.designacao||a.descricao)});
  /* 2 localização */
@@ -2781,7 +2785,7 @@ function vProc(){const p=cur(),P=alP(p);
  ${sec('pctx','Contexto de análise',`<label>Finalidade</label><div class="tks sm">${fin.map(o=>alTk(P.finalidade===o,esc(o),`data-alact="pset" data-k="finalidade" data-v="${esc(o)}"`)).join('')}</div>
   <label>Base de valor</label><div class="tks sm">${bases.map(o=>alTk(P.base===o,esc(o),`data-alact="pset" data-k="base" data-v="${esc(o)}"`)).join('')}</div>${AL_BASE_EVS[P.base]?`<p class="muted" style="margin:4px 0">📘 ${esc(AL_BASE_EVS[P.base])}</p>`:''}${P.base==='Valor de renda de mercado'?'<p class="muted">Com renda de mercado, cada verba pede também a renda mensal e o quadro-resumo leva essa coluna.</p>':''}
   <label>Tipo de posse</label><div class="tks sm">${posse.map(o=>alTk(P.posse===o,esc(o),`data-alact="pset" data-k="posse" data-v="${esc(o)}"`)).join('')}</div>
-  <label>BAD — benefício económico de adjudicação direta</label><p class="muted" style="margin-top:0">Aplica-se quando algum dos intervenientes manifesta interesse especial em adquirir o ativo: sugere-se uma redução ao valor estimado.</p><div class="seg"><button class="${!P.bad?'on':''}" data-alact="pset" data-k="bad" data-v="0">Não aplicável</button><button class="${P.bad?'on':''}" data-alact="pset" data-k="bad" data-v="1">Aplicável</button></div>${P.bad?inp('pal.badPct','Redução por defeito, até (%)',P.badPct,'10'):''}`,{cnt:falta([P.finalidade,P.base].filter(x=>!x).length)})}
+  <label>BAD — benefício económico de adjudicação direta</label><p class="muted" style="margin-top:0">Aplica-se quando algum dos intervenientes manifesta interesse especial em adquirir o ativo: sugere-se uma redução ao valor estimado.</p><div class="seg"><button class="${!P.bad?'on':''}" data-alact="pset" data-k="bad" data-v="0">Não aplicável</button><button class="${P.bad?'on':''}" data-alact="pset" data-k="bad" data-v="1">Aplicável</button></div>${P.bad?inpA('pal.badPct','Redução por defeito, até (%)',P.badPct,'10'):''}`,{cnt:falta([P.finalidade,P.base].filter(x=>!x).length)})}
  ${cronoHTML(p)}
  ${blk('B · Princípios de análise','Escritório — textos-base que valem para todas as verbas')}${relPriHTML(p)}
  ${blk('C · Visita','Campo — o que vale para a visita no seu conjunto')}${relVisHTML(p)}
@@ -3505,9 +3509,10 @@ function alPredioHTML(a){const x=a.al,F=x.concelho?fregOf(x.concelho):[],ca=alAr
  ${(x.docsArea||[]).map((r,i)=>`<div class="inrow" style="margin-top:4px"><select data-aldoc="${i}" style="flex:1 1 55%;min-width:0"><option value="">— documento —</option>${AL_DOC_AREA.map(o=>`<option ${o===r.doc?'selected':''}>${esc(o)}</option>`).join('')}</select><input data-bind="aldoc.${i}.area" inputmode="decimal" value="${esc(r.area||'')}" placeholder="m²" style="flex:1 1 30%;min-width:0"><button class="del" data-alact="docDel" data-i="${i}">✕</button></div>`).join('')}
  <div class="btns"><button class="secondary mini" data-alact="docAdd">+ Documento com área</button></div>
  ${ca?`<p class="muted">Área segundo as cadernetas (Σ AT): <b>${num(ca)} m²</b></p>`:''}
- <div class="row2">${inp0('al.areaCons',`Área do prédio a considerar (m²)${ca?' — vazio = cadernetas':''}`,x.areaCons,ca?num(ca):'')}${inp0('al.fundArea','Fundamentação da área',x.fundArea,'ex.: Cadernetas prediais · Levantamento topográfico')}</div>
+ <div class="row2">${inpA('al.areaCons',`Área do prédio a considerar (m²)${ca?' — sugerida: soma das cadernetas':''}`,x.areaCons,ca?num(ca):'')}${inp0('al.fundArea','Fundamentação da área',x.fundArea,'ex.: Cadernetas prediais · Levantamento topográfico')}</div>
  ${dv.length?`<div class="cmres" style="background:#fff8e1">⚠ Diferenças em relação à área considerada (${num(c)} m²):<br>${dv.map(esc).join('<br>')}</div>`:''}
  ${c&&alNum(x.car?.at)!==c&&alFam(a)==='ter'?`<div class="btns"><button class="secondary mini" data-alact="areaUse">↧ Usar ${num(c)} m² como área de terreno (5 · Estado)</button></div>`:''}`}
+const inpA=(k,l,v,au)=>`<label>${esc(l)}</label><input data-bind="${k}" ${avA(v,au)}>`;
 const inp0=(k,l,v,ph)=>`<label>${esc(l)}</label><input data-bind="${k}" value="${esc(v||'')}" placeholder="${esc(ph||'')}">`;
 document.addEventListener('click',async e=>{const el=e.target.closest('[data-cultref]');if(!el)return;e.preventDefault();const a=curA();if(!a)return;alA(a);a.al.refV=el.dataset.cultref;a.al.refF=el.dataset.f||'';await saveProc();S.scrollTop=window.scrollY;render()});
 document.addEventListener('change',async e=>{const el=e.target.closest('[data-cultlib]');if(!el)return;await CULT.tofLibImport(el.files&&el.files[0]);el.value='';S.scrollTop=window.scrollY;render()});
