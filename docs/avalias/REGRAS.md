@@ -28,7 +28,7 @@ Regras definidas pelo utilizador que valem só para a AvaLias. As regras comuns 
 
 8i. **Estatuto do avaliador:** por baixo da assinatura, as credenciais escolhidas para cada relatório (AT, CMVM, Ordem dos Engenheiros, Lista Oficial do Ministério da Justiça, outra). Os textos (e n.º de registo) ficam em Definições, só no aparelho.
 
-8j. **Áreas e quantidades:** em cada verba decide-se se as áreas adotadas são as documentadas (e em que documentos) ou atribuídas por estimativa/medição expedita. O texto de 3.2 explica o dilema, o critério e o pressuposto de que a área apurada corresponde à realidade jurídica do ativo, ainda que a documentação não a tenha (ainda) regularizado.
+8j. **Áreas e quantidades:** 4 tipos — AT, ABC, ABP, ABD. Para cada um, em cada verba, adota-se a da documentação (caderneta, certidão de registo, levantamento topográfico, BUPi, planta, outro) ou a medição estimada por métodos expeditos. Um só sítio na app (1 · Identificação › Áreas adotadas) e uma só linha na ficha («Áreas adotadas»); o 3.2 só resume; o PE1 nasce das verbas marcadas. O texto de 3.2 explica o dilema, o critério e o pressuposto de que a área apurada corresponde à realidade jurídica do ativo, ainda que a documentação não a tenha (ainda) regularizado.
 8k. **Artigos matriciais:** concelho e freguesia em lista; confrontações só saem no relatório se o perito as quiser explicitar.
 
 ## Preenchimento (iPhone / PC)
