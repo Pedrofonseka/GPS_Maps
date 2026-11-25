@@ -131,3 +131,9 @@ Validar destinos; perguntas de caracterização por tipo; métodos de avaliaçã
 
 ## v1.62 (25/11/2026) — PDM em construções (EDC)
 - Nas verbas de construção (grupo EDC), o PDM fica desligado por defeito («Não se aplica»). Em situações especiais, como perceber se o terreno tem capacidade edificativa remanescente, o perito escolhe «Consultar o PDM»: aparecem os mesmos campos dos terrenos (instrumentos, classe, categoria, RAN/REN, restrições, edificabilidade/IUS) e os extratos do PDM, que saem no Word e no Excel.
+
+## v1.63 (25/11/2026) — obras sem autonomia funcional
+- Estado de construção: Não iniciada · Em andamento · Em stand-by · Por concluir · Abandonada · Concluída (os valores antigos passam automaticamente).
+- Nova pergunta na Construção: «Autonomia funcional — o ativo está em condições de funcionar por si?» Sim / Não, com «porquê».
+- Todas as perguntas de escolha têm NAP (não aplicável) e INX (inexistente).
+- Sem autonomia funcional, o método de custo (CST) deixa de avaliar a construção pela área global (Abp/Abd) e passa a: terreno [A] + benfeitorias existentes [B] − custos a deduzir [C] (retoma, demolições, limpezas, retificações). Tabelas Item · Unid. · Qtd · Pr/un · Parciais · Obs., com Parciais = Qtd × Pr/un e linhas livres. No Word sai uma frase de justificação e o quadro Excel com fórmulas. As construções que já existiam no cálculo ficam guardadas: respondendo «Sim», volta o cálculo normal.
