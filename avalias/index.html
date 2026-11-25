@@ -758,7 +758,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.60';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.61';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1946,6 +1946,13 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
   const H1=t=>{n1++;n2=0;n3=0;const nm='_Rel'+(++bmi);toc.push([1,`${n1}.`,t,nm]);return BL+`<w:p><w:pPr><w:pStyle w:val="Cabealho1"/></w:pPr><w:bookmarkStart w:id="${bmi}" w:name="${nm}"/>${R(t)}<w:bookmarkEnd w:id="${bmi}"/></w:p>`};
   const H2=t=>{n2++;n3=0;const nm='_Rel'+(++bmi);toc.push([2,`${n1}.${n2}`,t,nm]);return BL+`<w:p><w:pPr><w:pStyle w:val="Cabealho2"/></w:pPr><w:bookmarkStart w:id="${bmi}" w:name="${nm}"/>${R(t)}<w:bookmarkEnd w:id="${bmi}"/></w:p>`};
   const H3=t=>{n3++;const nm='_Rel'+(++bmi);toc.push([3,`${n1}.${n2}.${n3}`,t,nm]);return `<w:p><w:pPr><w:pStyle w:val="Cabealho3"/><w:numPr><w:ilvl w:val="2"/><w:numId w:val="6"/></w:numPr><w:spacing w:before="160" w:after="80"/></w:pPr><w:bookmarkStart w:id="${bmi}" w:name="${nm}"/>${R(t)}<w:bookmarkEnd w:id="${bmi}"/></w:p>`};
+  /* anexos em ficheiro (PDF de 1 ou várias páginas, imagens): cada página numa página do relatório, dentro da paginação geral.
+     a.onde: '' = no fim (Anexos) · 'pri' = depois dos Princípios · 'res' = depois do Resumo · 'v:<id>' = na ficha da verba · 'resp' = depois da Resposta às questões */
+  const anexXml=async(a,title,lv)=>{if(!(a.pages||[]).length){try{a.pages=await anexPages(a);a.larg=a.larg||ANEX_LARG}catch(e){return ''}}
+   const L=Math.min(19,+a.larg||ANEX_LARG),MAXH=22.5;let first=true,o='';
+   for(const pg of a.pages){let d=await anexData({id:pg.id});if(d&&(pg.marks||[]).length&&!pg.marksHidden){fotoCache.set(pg.id,d);try{await prepMark(pg)}catch(e){}d=fdOut(pg)}if(!d)continue;let w=L,h=w*pg.h/pg.w;const MH=first?MAXH-1:MAXH;if(h>MH){h=MH;w=h*pg.w/pg.h}
+    o+=BRK+(first?(lv===3?H3(title):H2(title)):'')+`<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:spacing w:before="0" w:after="0"/><w:ind w:left="-851" w:right="-284"/><w:jc w:val="center"/></w:pPr>${imgRun(d,w,h,'Anexo')}</w:p>`;first=false}return o};
+  const anexIn=async(pos,lv)=>{let o='';for(const a of (ensureRel(p).anexF||[]))if((a.onde||'')===pos&&a.inc!==false&&anexKind(a))o+=await anexXml(a,anexIntLbl(a),lv);return o};
   const CHK=(on,t)=>`<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:spacing w:before="20" w:after="20"/></w:pPr><w:sdt><w:sdtPr><w:id w:val="${1000+(++bmi)}"/><w14:checkbox><w14:checked w14:val="${on?1:0}"/><w14:checkedState w14:val="2612" w14:font="MS Gothic"/><w14:uncheckedState w14:val="2610" w14:font="MS Gothic"/></w14:checkbox></w:sdtPr><w:sdtContent><w:r><w:rPr><w:rFonts w:ascii="MS Gothic" w:eastAsia="MS Gothic" w:hAnsi="MS Gothic" w:hint="eastAsia"/></w:rPr><w:t>${on?'☒':'☐'}</w:t></w:r></w:sdtContent></w:sdt><w:r><w:t xml:space="preserve"> ${X(t)}</w:t></w:r></w:p>`;
   const BRK='<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
   const imgRun=(data,cxCm,cyCm,name)=>{const id=++mid;media.push({name:`word/media/relat_${id}.jpeg`,data:b64ToU8(data),rid:`rRel${id}`});const cx=Math.round(cxCm*360000),cy=Math.round(cyCm*360000);
@@ -2121,7 +2128,7 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
    {const pri=PRI_R.filter(([k])=>(r.priOff||{})[k]!==true);if(pri.length&&r.incPri!==false){body+=E()+H1('Princípios de análise');
     for(const [k,l,d] of pri){let t=String((r.pri||{})[k]??'').trim()||d;if(k==='p35')t=String((r.pri||{}).p35||'').trim()||priFundAuto(p);if(!t)continue;
      body+=H2(l);for(const ln of sgTxt(p,t).split('\n'))body+=T(ln,{jc:'both'});body+=E();if(k==='p33'||(k==='p32'&&!pri.some(x=>x[0]==='p33'))){const PE=peList(p);if(PE.length){body+=H2('Pressupostos especiais')+T('No âmbito do presente processo, são considerados como tal:',{jc:'both'});PE.forEach(t=>{body+=T(sgTxt(p,`- ${t}`),{jc:'both'})});body+=E()}}}}}
-   body+=BRK+E()+H1('Resumo de análise')+E()+T('De acordo com a análise, caraterização, abordagem e critérios, o valor estimado é:')+E();
+   body+=await anexIn('pri',2);body+=BRK+E()+H1('Resumo de análise')+E()+T('De acordo com a análise, caraterização, abordagem e critérios, o valor estimado é:')+E();
    const cV=1100,cT=2900,cVal=1500,cR=renda?1300:0,cB=bad?950:0,cD=TWb-cV-cT-cVal-cR-cB;const W=[cV,cD,cT,cVal,...(renda?[cR]:[]),...(bad?[cB]:[])];
    const H=['Verba','Designação','Tipo','Valor estimado',...(renda?['Renda mensal']:[]),...(bad?['BAD (até)']:[])];
    let rows=tr(H.map((h,k)=>tc(h,W[k],{b:1,fill:'D9D9D9',jc:k>=3?'center':''})).join(''),1);let tot=0,totR=0;
@@ -2133,7 +2140,7 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
    body+=H2('Considerações sobre o valor estimado')+E();{const b=baseDe(AP.base||'Valor de mercado');body+=T(sgTxt(p,AL_N[0]),{jc:'both'})+T(sgTxt(p,AL_N[1]),{jc:'both'})+E();if(b){body+=T(`N2 – O montante foi apurado, no contexto da Base de valor definida: ${b.n} e significa:`,{jc:'both'})+T(sgTxt(p,` - ${b.def} ${b.nota}`),{jc:'both'})}else body+=T(sgTxt(p,AL_N[2]),{jc:'both'})}
    if(bad){body+=E()+T('N3 – BAD – Benefício económico de adjudicação direta',{jc:'both'});for(const t of AL_BAD)body+=T(t,{jc:'both'});body+=E();body+=P(R('Nota:',{b:true}),{bdrT:1})+T(sgTxt(p,`Havendo especial interesse de algum dos intervenientes, considera-se aplicável o conceito de BAD – Benefício económico de adjudicação direta – sugerindo-se uma redução de valor até à percentagem indicada no quadro, para cada verba.`),{jc:'both'})}
    // análise específica de cada verba
-   body+=BRK+H1('Análise específica');
+   body+=await anexIn('res',2);body+=BRK+H1('Análise específica');
    const L1=2700,L2=TWb-L1;const krow=(l,v)=>String(v??'').trim()?tr(tc(l,L1,{b:1})+tc(v,L2)):'';
    for(const [vi,a] of V.entries()){const x=a.al,fam=alFam(a),g=a.vis?.gps;
     body+=(vi?BRK:'')+H2(`${alCode(p,a)}${x.designacao?' – '+x.designacao:''}`)+E();
@@ -2185,7 +2192,8 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
      /* 2 colunas × 3 linhas por página (6 fotografias); nova página a cada 6 */
      for(let k=0;k<F.length;k+=2){if(k&&k%6===0){body+=tbl([CW2,TWb-CW2],pr,false)+BRK;pr=''}let cells='',caps='';for(let c=0;c<2;c++){const f=F[k+c],i=k+c;cells+=`<w:tc><w:tcPr><w:tcW w:w="${CW2}" w:type="dxa"/></w:tcPr><w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:keepNext/><w:spacing w:before="40" w:after="0"/><w:jc w:val="left"/></w:pPr>${f?imgRun(await cropTo(fdOut(f),4/3,1000),8.0,6.0,'Foto'):''}</w:p></w:tc>`;caps+=`<w:tc><w:tcPr><w:tcW w:w="${CW2}" w:type="dxa"/></w:tcPr><w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:spacing w:before="20" w:after="80"/><w:jc w:val="left"/></w:pPr>${f?R(`${imgCode(p,a,i)}${f.legenda?' – '+f.legenda:''}`,{i:true,sz:8}):''}</w:p></w:tc>`}
       pr+=`<w:tr><w:trPr><w:cantSplit/></w:trPr>${cells}</w:tr><w:tr><w:trPr><w:cantSplit/></w:trPr>${caps}</w:tr>`}
-     body+=tbl([CW2,TWb-CW2],pr,false)+E()}}}
+     body+=tbl([CW2,TWb-CW2],pr,false)+E()}
+    body+=await anexIn('v:'+a.id,3)}}
   // 7 — resposta ao solicitado
   if(part){body+=BRK+H1('Apreciação das queixas');
   r.quesitos.forEach((q,i)=>{body+=H2(`Queixa ${qCode(i)}`)+E()+T(q.txt,{jc:'both'})+E();
@@ -2202,6 +2210,7 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
     body+=E()}
    body+=H2('Outras questões')+QBLK(true)}
   // 8, 9
+  body+=await anexIn('resp',2);
   {const L=RES_R.filter(([k])=>(r.resOff||{})[k]!==true);if(L.length&&r.incReservas!==false){body+=BRK+H1('Reservas de análise');
    L.forEach(([k,l,d],n)=>{body+=H2(l).slice(BL.length);for(const ln of sgTxt(p,String((r.res||{})[k]??'').trim()||d).split('\n'))body+=/^[a-z]\)\s/.test(ln)?`<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:ind w:left="425" w:hanging="425"/><w:jc w:val="both"/></w:pPr>${R(ln.slice(0,2))}<w:r><w:tab/></w:r>${R(ln.slice(2).trim())}</w:p>`:T(ln,{jc:'both'})})}}
   if(r.incAmbiente!==false){body+=E()+H1('Ambiente, sustentabilidade e conformidade de licenciamento');for(const ln of String(r.ambiente||AMBIENTE_R).split('\n'))body+=T(ln,{jc:'both'});body+=E()}
@@ -2213,15 +2222,11 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
     for(const pe of r.peritos)body+=P('',{sp:[360,0]})+P(R('_______________________________________'))+P(R(pe.nome||'',{b:true}))+P(R(represR(r,pe),{i:true,sz:9}))}
   else{body+=P('',{sp:[360,0]})+P(R('_______________________________________'))+P(R(String(settings.peritoNome||'').trim()||'Perito avaliador',{b:true}));if(String(settings.peritoQual||'').trim())body+=P(R(settings.peritoQual.trim(),{i:true,sz:9}));for(const c of credList())if(c.t&&credOn(r,c.k))body+=P(R(c.t,{i:true,sz:9}))}
   // 11, 12
-  const ax=ANEX_R.filter(d=>r.anexos[d]).map(d=>CHK(true,sgDoc(p,d))).join('')+String(r.anexosOutros||'').split('\n').filter(x=>x.trim()).map(x=>CHK(true,x.trim())).join('')+(r.anexF||[]).map((a,i)=>CHK(true,anexLbl(a,i))).join('');
+  const ax=ANEX_R.filter(d=>r.anexos[d]).map(d=>CHK(true,sgDoc(p,d))).join('')+String(r.anexosOutros||'').split('\n').filter(x=>x.trim()).map(x=>CHK(true,x.trim())).join('')+anexFim(r).map((a,i)=>CHK(true,anexLbl(a,i))).join('');
   if(ax)body+=H1('Em anexo')+ax;
   // página de separação «ANEXOS» e o conteúdo dos anexos (PDF/imagens em páginas): cada anexo em página nova, com o título (sub-tópico de «Em anexo» no índice), centrado; largura escolhida (por defeito 19 cm)
   if(ax)body+=BRK+'<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:spacing w:before="0" w:after="0" w:line="5600" w:lineRule="exact"/></w:pPr></w:p>'+P(R('ANEXOS',{b:true,sz:28}),{jc:'center',sp:[0,0]});
-  for(const [i,a] of (r.anexF||[]).entries()){if(a.inc===false||!anexKind(a))continue;
-    if(!(a.pages||[]).length){try{a.pages=await anexPages(a);a.larg=a.larg||ANEX_LARG}catch(e){continue}}
-    const L=Math.min(19,+a.larg||ANEX_LARG),MAXH=22.5;let first=true;
-    for(const pg of a.pages){let d=await anexData({id:pg.id});if(d&&(pg.marks||[]).length&&!pg.marksHidden){fotoCache.set(pg.id,d);try{await prepMark(pg)}catch(e){}d=fdOut(pg)}if(!d)continue;let w=L,h=w*pg.h/pg.w;if(h>MAXH){h=MAXH;w=h*pg.w/pg.h}
-      body+=BRK+(first?H2(anexLbl(a,i)):'')+`<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:spacing w:before="0" w:after="0"/><w:ind w:left="-851" w:right="-284"/><w:jc w:val="center"/></w:pPr>${imgRun(d,w,h,'Anexo')}</w:p>`;first=false}}
+  for(const [i,a] of anexFim(r).entries()){if(a.inc===false||!anexKind(a))continue;body+=await anexXml(a,anexLbl(a,i),2)}
   // ---- índice (campo TOC pré-preenchido; o Word atualiza os n.os de página) ----
   const tocE=toc.map(([lv,nm,t,bm])=>`<w:p><w:pPr><w:pStyle w:val="ndice${lv}"/><w:tabs><w:tab w:val="left" w:pos="${lv===1?440:lv===2?880:1320}"/><w:tab w:val="right" w:leader="dot" w:pos="9628"/></w:tabs></w:pPr><w:hyperlink w:anchor="${bm}" w:history="1"><w:r><w:t xml:space="preserve">${X(nm)}</w:t></w:r><w:r><w:tab/></w:r><w:r><w:t xml:space="preserve">${X(t)}</w:t></w:r><w:r><w:tab/></w:r><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> PAGEREF ${bm} \\h </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t></w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:hyperlink></w:p>`);
   if(tocE.length){tocE[0]=tocE[0].replace('<w:hyperlink',`<w:r><w:fldChar w:fldCharType="begin" w:dirty="true"/></w:r><w:r><w:instrText xml:space="preserve"> TOC \\o "1-3" \\h \\z \\u </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:hyperlink`);tocE[tocE.length-1]=tocE[tocE.length-1].replace(/<\/w:p>$/,'<w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>')}
@@ -2290,13 +2295,17 @@ async function addAnexFiles(p,files,larg){const r=ensureRel(p);r.anexF=r.anexF||
     r.anexF.push(a);n++}
   if(bad)toast(bad+' ficheiro(s) não foram convertidos para o Word (vão só na lista e na pasta ZIP).',1);return n}
 // anexo em ficheiro: «Anexo 01 – Planta: descrição do conteúdo» (tipo-padrão + descrição; sem tipo, usa o nome do ficheiro)
+/* anexos no fim (numerados) e intercalados (com título próprio) */
+const anexFim=r=>(r.anexF||[]).filter(a=>!a.onde||!anexKind(a));
+function anexIntLbl(a){const t=String(a.titulo||'').trim();if(t)return t;const tp=a.tipo2&&a.tipo2!=='Outros'?a.tipo2:'';const d=String(a.desc||'').trim();return tp?`${tp}${d?': '+d:''}`:d||String(a.nome||'Documento').replace(/\.[A-Za-z0-9]{1,5}$/,'')}
+const ANEX_ONDE=p=>[['','No fim — em «Anexos» (numerado)'],['pri','Intercalado — depois dos «Princípios de análise»'],['res','Intercalado — depois do «Resumo de análise»'],...alAtivas(p).map(a=>['v:'+a.id,`Intercalado — na ficha da verba ${alCode(p,a)}${a.al?.designacao?' ('+a.al.designacao+')':''}, depois das fotografias`]),['resp','Intercalado — depois da «Resposta às questões colocadas»']];
 function anexLbl(a,i){const n=`Anexo ${String(i+1).padStart(2,'0')}`;if(String(a.titulo||'').trim())return `${n} – ${String(a.titulo).trim()}`;const tp=a.tipo2&&a.tipo2!=='Outros'?a.tipo2:'';const d=String(a.desc||'').trim();const nm=String(a.nome||'').replace(/\.[A-Za-z0-9]{1,5}$/,'');
   return tp?`${n} – ${tp}${d?': '+d:''}`:d?`${n} – ${d}`:`${n} – ${nm}`}
 function anexFilesHTML(p){const r=ensureRel(p),L=r.anexF||[];return `<label>Ficheiros anexos <span class="muted">(saem na lista «Em anexo», na pasta ZIP e — PDF e imagens — dentro do Word)</span></label>
-  ${L.map((a,i)=>`<div class="qbox"><div class="rw" style="align-items:center"><b>Anexo ${String(i+1).padStart(2,'0')}</b><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📎 ${esc(a.nome)} <span class="muted">· ${fmtKB(a.tam||0)}</span></span><button class="del" data-act="rDelAnexF" data-i="${i}">✕</button></div>
+  ${L.map((a,i)=>`<div class="qbox"><div class="rw" style="align-items:center"><b>${a.onde&&anexKind(a)?'Intercalado':'Anexo '+String(anexFim(r).indexOf(a)+1).padStart(2,'0')}</b><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📎 ${esc(a.nome)} <span class="muted">· ${fmtKB(a.tam||0)}</span></span><button class="del" data-act="rDelAnexF" data-i="${i}">✕</button></div>
     <label>Nome no relatório <span class="muted">(sai no índice como sub-tópico de «Em anexo»)</span></label><input data-bind="ax.${i}.titulo" value="${esc(a.titulo||'')}" placeholder="ex.: Planta do 2.º andar com a localização das anomalias">
     <label>Conteúdo <span class="muted">(se não der nome)</span></label><select data-act="rAnexTipo" data-i="${i}"><option value="">— escolher —</option>${ANEXT_R.map(t=>`<option ${a.tipo2===t?'selected':''}>${t}</option>`).join('')}</select>
-    <input data-bind="ax.${i}.desc" value="${esc(a.desc||'')}" placeholder="${a.tipo2==='Outros'?'Descreva o conteúdo':'Descrição do conteúdo (opcional), ex.: artigo 1234 urbano'}"><p class="muted" style="margin:2px 0 0">No relatório: ${esc(anexLbl(a,i))}</p>
+    <input data-bind="ax.${i}.desc" value="${esc(a.desc||'')}" placeholder="${a.tipo2==='Outros'?'Descreva o conteúdo':'Descrição do conteúdo (opcional), ex.: artigo 1234 urbano'}">${anexKind(a)?`<label>Onde entra no relatório</label><select data-act="rAnexOnde" data-i="${i}">${ANEX_ONDE(p).map(([k,t])=>`<option value="${esc(k)}"${(a.onde||'')===k?' selected':''}>${esc(t)}</option>`).join('')}</select>`:''}<p class="muted" style="margin:2px 0 0">No relatório: ${esc(a.onde&&anexKind(a)?anexIntLbl(a)+' (intercalado, dentro da paginação)':anexLbl(a,anexFim(r).indexOf(a)))}</p>
     ${anexKind(a)?`<div class="rw" style="align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap">${tickBox('',a.inc!==false&&!!(a.pages||[]).length||(a.inc!==false&&!a.pages),`Incluir no Word${(a.pages||[]).length?` (${a.pages.length} pág.)`:''}`,`data-act="rAnexInc" data-i="${i}"`)}<label style="margin:0">Largura (cm)</label><input type="number" step="0.5" min="3" max="19" data-act="rAnexLarg" data-i="${i}" value="${a.larg||ANEX_LARG}" style="width:80px"></div><div class="muted" style="font-size:11px">Por defeito ${ANEX_LARG} cm = largura da página − 2 cm (centrado na página). Se a página for alta demais, a app reduz para caber.</div>${(a.pages||[]).length?`<div class="photos" style="margin-top:6px">${a.pages.map((pg,j)=>fotoCache.get(pg.id)?`<div style="border:1px solid #ddd;border-radius:6px;padding:4px"><img src="${fdOut(pg)}" style="width:100%;max-height:130px;object-fit:contain"><div class="muted" style="font-size:11px">Página ${j+1}${(pg.marks||[]).length?' · ✏️':''}</div>${IMGT.bar(`anx.${a.id}.${j}`,pg,{del:()=>{a.pages.splice(j,1);if(!a.pages.length)a.inc=false}})}</div>`:'').join('')}</div>`:''}`:'<div class="muted" style="font-size:11px;margin-top:4px">Este tipo de ficheiro vai só na lista «Em anexo» e na pasta ZIP. Para entrar no Word, junte-o em PDF ou imagem.</div>'}</div>`).join('')}
   <div class="btns"><label class="btn secondary mini">📄 Anexar documento (planta, certidão… PDF ou outro)<input type="file" multiple accept=".pdf,application/pdf,image/*,.doc,.docx,.xls,.xlsx,.dwg,.dxf,.zip" data-act="rAddAnexF" hidden></label><label class="btn secondary mini">🖼️ Anexar imagens<input type="file" multiple accept="image/*" data-act="rAddAnexF" data-k="img" hidden></label></div>
   <p class="muted" style="font-size:11px">PDF e imagens entram no Word, cada anexo em página própria a seguir à lista «Em anexo», com o seu título. As imagens seguem a rotina das fotografias (compressão e qualidade de Definições, com um mínimo para leitura em página inteira).</p>`}
@@ -3901,6 +3910,7 @@ document.addEventListener('change',async e=>{
   if(act==='tkParte'){const n=+el.dataset.v;if(parteOf(p,a)!=n){const old=anCode(p,a),po=parteOf(p,a);a.parte=n;a.origem=n==(p.parteLocal??4)?'local':'lista';const L=p.anomalias;L.splice(L.indexOf(a),1);let at=-1;L.forEach((x,i)=>{if(parteOf(p,x)==n)at=i});if(at<0)L.forEach((x,i)=>{if(parteOf(p,x)<n)at=i});L.splice(at+1,0,a);renumParte(p,po);renumParte(p,n);toast(`${old} passa a ${anCode(p,a)} — as partes ${po} e ${n} foram renumeradas por ordem.`)}await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='impParte'){S.impParte=+el.value;return}
   if(act==='filtParte'){S.filt.parte=el.value?+el.value:0;S.scrollTop=window.scrollY;render();return}
+  if(act==='rAnexOnde'){const a=ensureRel(p).anexF[+el.dataset.i];a.onde=el.value;await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='rAnexTipo'){const r=ensureRel(p);r.anexF[+el.dataset.i].tipo2=el.value;await saveProc();S.scrollTop=window.scrollY;render();return}
   if(act==='rAnexLarg'){const a=ensureRel(p).anexF[+el.dataset.i];let v=parseFloat(String(el.value).replace(',','.'));if(!(v>=3))v=ANEX_LARG;a.larg=Math.min(19,v);await saveProc();return}
   if(act==='rAnexInc'){const a=ensureRel(p).anexF[+el.dataset.i];a.inc=el.checked;if(a.inc&&!(a.pages||[]).length){busy(true,'A preparar o anexo…');try{a.pages=await anexPages(a);a.larg=a.larg||ANEX_LARG}catch(e){a.inc=false;toast('Não foi possível converter: '+e.message,1)}finally{busy(false)}}await saveProc();S.scrollTop=window.scrollY;render();return}
