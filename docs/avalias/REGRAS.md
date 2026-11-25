@@ -28,6 +28,9 @@ Regras definidas pelo utilizador que valem só para a AvaLias. As regras comuns 
 
 8i. **Estatuto do avaliador:** por baixo da assinatura, as credenciais escolhidas para cada relatório (AT, CMVM, Ordem dos Engenheiros, Lista Oficial do Ministério da Justiça, outra). Os textos (e n.º de registo) ficam em Definições, só no aparelho.
 
+8j. **Áreas e quantidades:** em cada verba decide-se se as áreas adotadas são as documentadas (e em que documentos) ou atribuídas por estimativa/medição expedita. O texto de 3.2 explica o dilema, o critério e o pressuposto de que a área apurada corresponde à realidade jurídica do ativo, ainda que a documentação não a tenha (ainda) regularizado.
+8k. **Artigos matriciais:** concelho e freguesia em lista; confrontações só saem no relatório se o perito as quiser explicitar.
+
 ## Preenchimento (iPhone / PC)
 9. **Ordem de preenchimento:**
    - **Processo:** A Abertura (escritório) · B Princípios · C Visita (campo) · D Verbas;
