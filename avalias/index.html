@@ -758,7 +758,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.66';const VERSION_DATA='2026-11-25';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.66.1';const VERSION_DATA='2026-11-25';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1498,6 +1498,8 @@ async function gpsSet(p,txt,src,acc){const pp=parseGpsTxt(txt);if(pp)ovTouchCur(
 const mapAttr=m=>m==='street'?'Mapa: © colaboradores do OpenStreetMap':'Imagem de satélite: Esri, Maxar, Earthstar Geographics';
 function loadTile(url){return new Promise((ok,no)=>{const i=new Image();i.crossOrigin='anonymous';i.onload=()=>ok(i);i.onerror=()=>no(new Error('sem acesso aos mosaicos do mapa'));i.src=url})}
 // Monta o mapa (3×3 mosaicos, zoom 17), recorta 512×384 centrado no ponto, marca o local e guarda-o no processo para o Word
+/* cada verba tem o seu mapa (antes todas gravavam por cima do mesmo «map_<processo>» e a capa podia mostrar o mapa de outra verba) */
+const mapIdOf=p=>{const a=(p.anomalias||[]).find(x=>x.vis===p.visita);return 'map_'+p.id+(a?'_'+a.id:'')};
 async function captureMap(p){const g=p.visita?.gps;if(!g)return false;const mode=p.visita.mapMode==='street'?'street':'satellite';const z=17,t=latLngToTile(g.lat,g.lon,z);
   const cv=document.createElement('canvas');cv.width=768;cv.height=768;const x=cv.getContext('2d');
   const tiles=[];for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)tiles.push(loadTile(gpsTileUrl(mode,z,{x:t.x+dx,y:t.y+dy})).then(im=>x.drawImage(im,(dx+1)*256,(dy+1)*256,256,256)));
@@ -1505,13 +1507,13 @@ async function captureMap(p){const g=p.visita?.gps;if(!g)return false;const mode
   const W=512,H=384,cx=256+t.fracX*256,cy=256+t.fracY*256;const out=document.createElement('canvas');out.width=W;out.height=H;const o=out.getContext('2d');
   o.drawImage(cv,Math.round(cx-W/2),Math.round(cy-H/2),W,H,0,0,W,H);
   o.lineWidth=4;o.strokeStyle='rgba(0,0,0,.75)';o.beginPath();o.arc(W/2,H/2,15,0,Math.PI*2);o.stroke();o.lineWidth=3;o.strokeStyle='#ffd400';o.beginPath();o.arc(W/2,H/2,15,0,Math.PI*2);o.stroke();
-  const data=out.toDataURL('image/jpeg',.85);const id='map_'+p.id;await fotoPut(id,data);
+  const data=out.toDataURL('image/jpeg',.85);const id=mapIdOf(p);await fotoPut(id,data);fotoCache.set(id,data);
   p.visita.map={id,w:W,h:H,mode,lat:g.lat,lon:g.lon,at:Date.now()};await saveProc();return true}
 const mapOk=p=>{const m=p.visita?.map,g=p.visita?.gps;return !!(m&&g&&m.lat===g.lat&&m.lon===g.lon&&fotoCache.has(m.id))};
 async function ensureMap(p,quiet){if(!p.visita?.gps)return false;const m=p.visita.map;const mode=p.visita.mapMode==='street'?'street':'satellite';
   if(m&&!fotoCache.has(m.id)){try{const r=await fotoGet(m.id);if(r)fotoCache.set(m.id,r.data)}catch(e){}}
-  if(mapOk(p)&&m.mode===mode)return true;
-  try{return await captureMap(p)}catch(e){if(!quiet)setGpsStatus('Não foi possível guardar o mapa para o Word ('+esc(e.message)+'). Verifique a rede e toque em «Ver mapa».');return mapOk(p)}}
+  if(mapOk(p)&&m.mode===mode&&m.id===mapIdOf(p))return true;
+  try{return await captureMap(p)}catch(e){if(!quiet)setGpsStatus('Não foi possível guardar o mapa para o Word ('+esc(e.message)+'). Verifique a rede e toque em «Ver mapa».');const m2=p.visita.map;return mapOk(p)&&(m2.id===mapIdOf(p)||!(p.anomalias||[]).some(x=>x.vis!==p.visita&&x.vis?.map?.id===m2.id))}}
 function showGpsPreview(p){const g=p.visita.gps;const box=$('#gpsPreview');if(!box||!g)return;const mode=p.visita.mapMode==='street'?'street':'satellite';const z=16,t=latLngToTile(g.lat,g.lon,z);
   let h=`<div style="position:relative;width:256px;height:256px;border-radius:8px;overflow:hidden;border:1px solid #ccc;margin:6px 0;background:#eef1f0">`;
   for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)h+=`<img src="${gpsTileUrl(mode,z,{x:t.x+dx,y:t.y+dy})}" alt="" style="position:absolute;width:256px;height:256px;max-width:none;left:${Math.round(128-t.fracX*256+dx*256)}px;top:${Math.round(128-t.fracY*256+dy*256)}px" ${!dx&&!dy?'id="gpsTile0"':''}>`;
