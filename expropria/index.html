@@ -1,5 +1,8 @@
 <!doctype html>
 <!--
+ExPropria v0.18.5 — resumo
+- Capa 12: letra do modelo do utilizador (Calibri 11, normal) em todo o quadro, título incluído.
+
 ExPropria v0.18.4 — resumo
 - Capa 12: o quadro tem sempre 4 linhas (título · solicitante · local · versão e datas), mesmo com dados por preencher (—).
 
@@ -832,7 +835,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
 <script>
 'use strict';
-const VERSION='0.18.4';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
+const VERSION='0.18.5';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
 function growFit(t){if(!t||!t.classList?.contains('grow')||!t.offsetParent)return;t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px'}
 function growAll(root){(root||document).querySelectorAll('textarea.grow').forEach(growFit)}
 document.addEventListener('input',e=>growFit(e.target),true);
@@ -1648,13 +1651,14 @@ async function capaEstilo(zip,doc,rels,ctDoc){const est=cur?.layout?.capaEst||'m
       const VIS_=mesAno(VIS_0);const LW=3300,VW=Math.min(TW-LW,6200),GW=LW+VW;
       const kr=(l,v)=>String(v||'').trim()?`<w:tr><w:trPr><w:cantSplit/></w:trPr><w:tc><w:tcPr><w:tcW w:w="${LW}" w:type="dxa"/></w:tcPr>${cp2(R(l,{sz:11}),{a:200})}</w:tc><w:tc><w:tcPr><w:tcW w:w="${VW}" w:type="dxa"/></w:tcPr>${String(v).split('\n').map((ln,i,A)=>cp2(R(ln,{sz:11}),{a:i===A.length-1?200:20})).join('')}</w:tc></w:tr>`:'';
       const nb=['top','left','bottom','right','insideH','insideV'].map(k=>`<w:${k} w:val="nil"/>`).join('');
+      const RC=t=>`<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr><w:t xml:space="preserve">${String(t??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}</w:t></w:r>`;/* letra do modelo do utilizador: Calibri 11, normal */
       const bd=['top','left','bottom','right','insideH','insideV'].map(k=>`<w:${k} w:val="single" w:sz="4" w:space="0" w:color="000000"/>`).join('');
       const LW2=2700,VW2=TW-LW2,IW=(TW-160)/567,IH=Math.min(11,IW*0.62);let CB=mapB||blobs[0]||null;if(!mapB&&v?.gps){try{const mb=await mapImage(v.gps,v.mapMode==='street'?'street':'satellite',1800,1100);if(mb)CB=mb}catch(e){}}
       const im=(CB?await img(CB,IW,IH,CB===mapB?'Localização':'Capa'):'');
       const kc=(w,c,o={})=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${o.span?'<w:gridSpan w:val="2"/>':''}</w:tcPr>${c}</w:tc>`;
-      const kl=t=>String(t).split('\n').map((ln,i,A)=>cp2(R(ln,{sz:11}),{b:i?0:60,a:i===A.length-1?60:0})).join('');
+      const kl=t=>String(t).split('\n').map((ln,i,A)=>cp2(RC(ln),{b:i?0:60,a:i===A.length-1?60:0})).join('');
       const qr=(l,v)=>`<w:tr><w:trPr><w:cantSplit/></w:trPr>${kc(LW2,kl(l))}${kc(VW2,kl(String(v||'').trim()||'—'))}</w:tr>`;
-      const q=`<w:tbl><w:tblPr><w:tblW w:w="${TW}" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders>${bd}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="100" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${LW2}"/><w:gridCol w:w="${VW2}"/></w:tblGrid><w:tr><w:trPr><w:cantSplit/></w:trPr>${kc(TW,cp2(R(TIT,{sz:12}),{b:80,a:80}),{span:1})}</w:tr>${qr('Solicitante:',SOL)}${qr('Endereço do local:',LOC)}${qr(`Relatório ${VER} / Datas:`,`Visita aos locais – ${VIS_||'—'}\nRelatório – ${dRel}`)}</w:tbl>`;
+      const q=`<w:tbl><w:tblPr><w:tblW w:w="${TW}" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders>${bd}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="100" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${LW2}"/><w:gridCol w:w="${VW2}"/></w:tblGrid><w:tr><w:trPr><w:cantSplit/></w:trPr>${kc(TW,cp2(RC(TIT),{b:60,a:60}),{span:1})}</w:tr>${qr('Solicitante:',SOL)}${qr('Endereço do local:',LOC)}${qr(`Relatório ${VER} / Datas:`,`Visita aos locais – ${VIS_||'—'}\nRelatório – ${dRel}`)}</w:tbl>`;
       const ib=im?`<w:tbl><w:tblPr><w:tblW w:w="${TW}" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders>${bd}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="60" w:type="dxa"/><w:left w:w="60" w:type="dxa"/><w:bottom w:w="60" w:type="dxa"/><w:right w:w="60" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${TW}"/></w:tblGrid><w:tr><w:trPr><w:cantSplit/></w:trPr><w:tc><w:tcPr><w:tcW w:w="${TW}" w:type="dxa"/></w:tcPr>${cp2(im,{jc:'center'})}</w:tc></w:tr></w:tbl>`+cp2('',{b:600}):'';
       X=frame(ib+q)}
  if(!X)return;
