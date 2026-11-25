@@ -758,7 +758,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.66.1';const VERSION_DATA='2026-11-25';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.67';const VERSION_DATA='2026-11-25';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -2150,10 +2150,16 @@ const krow=(l,v)=>!String(v??'').trim()?'':KTXT?`<w:p><w:pPr><w:pStyle w:val="1-
 const ktab=(h,rows)=>KTXT?rows+E():tbl([L1,L2],tr(tc('Elemento',L1,{b:1,bb:1})+tc(h,L2,{b:1,bb:1}),1)+rows,false)+E();
    for(const [vi,a] of V.entries()){const x=a.al,fam=alFam(a),g=a.vis?.gps;
     body+=(vi?BRK:'')+H2(`${alCode(p,a)}${x.designacao?' – '+x.designacao:''}`)+E();
+    /* mapa de localização da verba (o que se guarda ao indicar as coordenadas) — entra no tópico «Localização», com a legenda na linha a seguir, alinhada à esquerda */
+    let md=null,mm=null;if(g&&ensureRel(p).mapVerba!==false){const pv=p.visita;try{p.visita=a.vis;if(await ensureMap(p,true)){mm=a.vis.map;md=fotoCache.get(mm.id)}}catch(e){}p.visita=pv}
     let kr='',kfun='';
     kr+=krow('Identificação',alIdTxt(x));{const pr=alPredioRows(x);for(const [l,v] of pr)kr+=krow(l,v)}
     kr+=krow('Descrição sumária',a.descricao);
-    kr+=krow('Localização',[x.morada,alLocTxt(x),g?`GPS ${g.lat.toFixed(6)}°, ${g.lon.toFixed(6)}°`:''].filter(Boolean).join('\n'));
+    {const lt=[x.morada,alLocTxt(x),g?`GPS ${g.lat.toFixed(6)}°, ${g.lon.toFixed(6)}°`:''].filter(Boolean).join('\n');
+     if(md&&mm){const w=Math.min(11.5,(L2-200)/567),h=w*(mm.h||384)/(mm.w||512),pp=(c,o='')=>`<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/>${o}<w:spacing w:before="30" w:after="30"/>${KTXT?`<w:ind w:left="${L1}"/>`:''}<w:jc w:val="left"/></w:pPr>${c}</w:p>`;
+      const im=pp(imgRun(md,w,h,'Mapa'),'<w:keepNext/>')+pp(R(`Localização de ${alCode(p,a)} · ${mapAttr(mm.mode)}`,{i:true,sz:8}));
+      kr+=KTXT?krow('Localização',lt||'—')+im:tr(tc('Localização',L1,{b:1,v:'top',tb:1})+`<w:tc><w:tcPr><w:tcW w:w="${L2}" w:type="dxa"/><w:tcBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="808080"/></w:tcBorders><w:vAlign w:val="top"/></w:tcPr>${lt?pp(R(lt,{sz:9})):''}${im}</w:tc>`)}
+     else kr+=krow('Localização',lt)}
     kr+=krow('Visita',[[a.vis?.data,a.vis?.hora].filter(Boolean).join(' '),ovCod(a.ov)?'Ordem de visita: '+ovCod(a.ov):'',String(a.vis?.presencas||'').trim()?'Presenças: '+a.vis.presencas:''].filter(Boolean).join('\n'));
     kr+=krow('Tipo de ativo',x.tipo?`${alTipoNome(a)} (${alGrp(a)} – ${AL_GRUPOS[alGrp(a)]})`:'');kr+=krow('Destino',alDestTxt(a));
     if(fam){if(x.modo==='suc')for(const [k,l] of AL_SUC[fam])kr+=krow(l,x.suc[k]);
@@ -3167,7 +3173,7 @@ function alRvItems(p){const r=ensureRel(p),L=[];const add=(sec,lbl,key,o,k)=>L.p
  return L}
 document.addEventListener('click',async e=>{if(!e.target.closest('[data-alrv]'))return;e.preventDefault();e.stopImmediatePropagation();const p=cur();if(!p)return;const r=ensureRel(p);r.rvKeep=r.rvKeep||{};
  const done=rvRun(alRvItems(p),r.rvKeep);await saveProc();rvModal(done,r.rvKeep,async()=>{await saveProc();S.scrollTop=window.scrollY;render()})},true);
-function fichaFmtHTML(p){const r=ensureRel(p),t=r.fichaFmt==='txt';return sec('rfmt','Caracterização das verbas no Word',`<div class="tks col">${alTk(!t,'Em tabela — Elemento | Caracterização, tópico em cima e linha por cima de cada tópico (por defeito)','data-alact="fichaFmt" data-v=""')}${alTk(t,'Em texto — «Tópico:» seguido do valor, as linhas seguintes alinhadas pelo valor, sem tabela','data-alact="fichaFmt" data-v="txt"')}</div><p class="muted">Vale para a análise específica de cada verba (caracterização e análise funcional). Exporte nos dois modos para comparar.</p>`,{cnt:pill(t?'texto':'tabela')})}
+function fichaFmtHTML(p){const r=ensureRel(p),t=r.fichaFmt==='txt';return sec('rfmt','Caracterização das verbas no Word',`<div class="tks col">${alTk(!t,'Em tabela — Elemento | Caracterização, tópico em cima e linha por cima de cada tópico (por defeito)','data-alact="fichaFmt" data-v=""')}${alTk(t,'Em texto — «Tópico:» seguido do valor, as linhas seguintes alinhadas pelo valor, sem tabela','data-alact="fichaFmt" data-v="txt"')}</div><p class="muted">Vale para a análise específica de cada verba (caracterização e análise funcional). Exporte nos dois modos para comparar.</p><div class="tks col">${tickBox('',r.mapVerba!==false,'Mapa de localização em cada verba (a seguir à caracterização) — precisa de rede ao indicar as coordenadas','data-act="rTk" data-k="mapVerba"')}</div>`,{cnt:pill(t?'texto':'tabela')})}
 function ordSecHTML(p){const r=ensureRel(p),n=p.anomalias.filter(a=>+a.ov>0).length;return sec('rord','Ordem das verbas no relatório',`<div class="tks col">${alTk(!r.ordVis,'Pela ordem do processo (como foram listadas) — por defeito','data-alact="ordVis" data-v="0"')}${alTk(!!r.ordVis,`Pela ordem de visita (OV) — ${n} de ${p.anomalias.length} com ordem; as por visitar ficam no fim`,'data-alact="ordVis" data-v="1"')}</div><p class="muted">Os códigos das verbas (VB_xxx) não mudam; muda só a sequência no Word, no quadro-resumo e no livro Excel. A coluna OV aparece sempre no resumo.</p>`,{cnt:pill(r.ordVis?'Visita':'Processo'),def:false})}
 function vRel(){const p=cur();const box=document.createElement('div');box.innerHTML=vRel_relat();
  box.querySelectorAll('.card.chk,details[data-key="r1"],details[data-key="r5"],details[data-key="r2"],details[data-key="r3"],details[data-key="r4"],details[data-key="rr2"]').forEach(e=>e.remove());
