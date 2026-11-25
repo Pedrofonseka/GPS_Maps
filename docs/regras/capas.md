@@ -1,6 +1,9 @@
-# Capas do relatório Word — versão 1.1
+# Capas do relatório Word — versão 1.2
 
 Rotina comum às apps que geram relatório Word com capa (Relatório de Peritagem, AvaLias).
+
+## Numeração — REGRA COMUM (periText, AvaLias, ExPropria e as apps que venham a ter capas)
+Cada capa tem um número fixo, igual em todas as apps, e aparece na lista como «N · Nome»: **1** Mapa + fotos · **2** Uma imagem grande · **3** Grelha de fotos · **4** Só texto · **5** Título em destaque · **6** Fotografias e dados lado a lado · **7** Ficha técnica · **8** Faixa lateral · **9** Mosaico · **10** Carimbo técnico. **0** = capa própria do modelo da app (ExPropria: quadro N_Ref). Capa nova → número seguinte; um número nunca é reutilizado.
 
 ## Opções (lista `CAPAS`, campo `rel.capa`)
 | Chave | Nome | Composição |
@@ -35,6 +38,6 @@ Rotina comum às apps que geram relatório Word com capa (Relatório de Peritage
 | Relatório de Peritagem (relat) | 1.28.5 · Faixa lateral e Mosaico 1.31.1 · Carimbo técnico 1.31.2 |
 | AvaLias (avalias) — fotos das verbas; título «Função – Relatório»; escolha em **Relatório › Capa** (secção própria, aberta), dados em Processo › R2 | 1.1.1 · Faixa lateral e Mosaico 1.46 · Carimbo técnico 1.47 |
 
-**ExPropria 0.18.0:** «Estilo da capa» (Relatório › layout): Modelo do gabinete (quadro N_Ref, por defeito) · Faixa lateral · Mosaico · Carimbo técnico. Os dados vêm do quadro N_Ref já preenchido (uma ou várias parcelas; Finalidade em destaque, Versões em rodapé da capa) e da equipa do processo — «Perito(s)» ou, na arbitragem, «Árbitro(s)», com a função quando há mais de um. Imagens: fotografias marcadas «Capa», depois as outras; sem fotografias, o mapa. A capa substitui toda a página 1 do modelo; o índice continua na página 2.
+**ExPropria 0.18.0–0.18.1:** «Estilo da capa» (Relatório › layout): 0 Modelo do gabinete (quadro N_Ref, por defeito; as capas 1–4 correspondem às opções «Imagem da capa» do modelo) · 5 Título em destaque · 6 Lado a lado · 7 Ficha técnica · 8 Faixa lateral · 9 Mosaico · 10 Carimbo técnico. Os dados vêm do quadro N_Ref já preenchido (uma ou várias parcelas; Finalidade em destaque, Versões em rodapé da capa) e da equipa do processo — «Perito(s)» ou, na arbitragem, «Árbitro(s)», com a função quando há mais de um. Imagens: fotografias marcadas «Capa», depois as outras; sem fotografias, o mapa. A capa substitui toda a página 1 do modelo; o índice continua na página 2.
 
 **Sem lista de capas:** FullTopics (página de rosto com mapa), Regi e Revip (capa do modelo Word) — as capas novas entram quando essas apps passarem a ter escolha de capa.

@@ -36,7 +36,7 @@ Regras próprias de uma só app ficam na pasta da app (ex.: AvaLias — [../aval
 | Prioridade GUT (Gravidade × Urgência × Tendência) | ver abaixo | 1.0 |
 | Revisão do texto antes de exportar (gralhas, ortografia pt-PT, redundâncias, coerência) | ver abaixo | 1.0 |
 | Apoio de análise de fotografias por IA (sugestão, opcional) | ver abaixo | 1.1 |
-| Capas do relatório Word (10 opções, centradas, pré-visualização; novas: Faixa lateral, Mosaico e Carimbo técnico) | [capas.md](capas.md) | 1.1 |
+| **Capas do relatório Word — numeradas, iguais em todas as apps** (periText, AvaLias, ExPropria): 0 modelo próprio · 1 Mapa + fotos … 10 Carimbo técnico | [capas.md](capas.md) | 1.2 |
 | **Terrenos TOF — motor comum `comum/tof.js`** (valores de referência + rendimento das culturas com valores por defeito fundamentados; PDM e acessos/infraestruturas do CE nos terrenos; biblioteca de referências por ficheiro; sincronização `tools/sync_comum.py`) — ExPropria e AvaLias | [culturas.md](culturas.md) | 1.0 |
 | **Anexos em ficheiro no Word** (nome por anexo, largura por defeito 19 cm, PDF→páginas com pdf.js, «Em anexo» + página «ANEXOS» + cada anexo como sub-tópico no índice; cópias com os anexos) — Relatório de Peritagem 1.21+, AvaLias 1.5 | ver o relat (`addAnexFiles`, `anexPages`, `anexLbl`) | 1.0 |
 | **Base de peritos e gabinetes** (`comum/peritos.js`; troca por ficheiro) — ExPropria, AvaLias | [peritos.md](peritos.md) | 1.0 |
