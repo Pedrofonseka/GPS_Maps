@@ -499,7 +499,7 @@ function buildDocx({proc,settings,anoms,onePerPage,withResumo,withVistoria,bodyO
     for(let i=0;i<fotos.length;i+=cols){
       const grp=PCELLS.map((_,k)=>fotos[i+k]);const last=i+cols>=fotos.length;
       // foto e legenda na mesma célula: a legenda nunca se separa da imagem; a linha não se parte entre páginas
-      prow+=row(grp.map((f,k)=>cell(f?para(img(f),{jc:'center',keep:1,after:30})+para(run(`IMG ${code}.${i+k+1}`+(f.legenda?` – ${f.legenda}`:''),{i:true,sz:8}),{jc:'left',keep:last?0:1,after:last?0:100}):para('',{keep:last?0:1}),{w:sum(...PCELLS[k]),span:PCELLS[k][1],v:'top'})).join(''));
+      prow+=row(grp.map((f,k)=>cell(f?para(img(f),{jc:'left',keep:1,after:30})+para(run(`IMG ${code}.${i+k+1}`+(f.legenda?` – ${f.legenda}`:''),{i:true,sz:8}),{jc:'left',keep:last?0:1,after:last?0:100}):para('',{keep:last?0:1}),{w:sum(...PCELLS[k]),span:PCELLS[k][1],v:'top'})).join(''));
     }
     const tblWrap=r=>`<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/><w:jc w:val="center"/><w:tblBorders>${['top','left','bottom','right','insideH','insideV'].map(s=>`<w:${s} w:val="nil"/>`).join('')}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="40" w:type="dxa"/><w:left w:w="85" w:type="dxa"/><w:bottom w:w="40" w:type="dxa"/><w:right w:w="85" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${G.map(w=>`<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>${r}</w:tbl>`;
     if(TXT){ // ---- layout em texto corrido: sem grelha nem sombreados ----
@@ -721,7 +721,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
       const avail=BOT-y;if(tot()>avail){const fixed=nr*(CAP+RG);const k=(avail-fixed)/rows.reduce((s,h)=>s+h,0);
         if(k*Math.max(...rows)>=0.8*CM)rows=rows.map(h=>h*k);else{newPage();const k2=Math.min(1,(BOT-y-fixed)/rows.reduce((s,h)=>s+h,0));rows=rows.map(h=>h*k2)}}
       for(let r=0;r<nr;r++){const rh=rows[r];fotos.slice(r*cols,r*cols+cols).forEach(({f,im},k)=>{const x=X0+k*(cw+GAP);const w=Math.min(MAXW,cw,MAXH*im.w/im.h);const iw=Math.min(w,cw);
-          drawImg(im,x+(cw-iw)/2,y,iw,rh);const cap=`IMG ${code}.${r*cols+k+1}`+(f.legenda?` – ${f.legenda}`:'');const cl=wrap(cap,'i',8,cw)[0].t;text(cl,x,y+rh+2+8,'i',8)});y+=rh+CAP+RG}}
+          drawImg(im,x,y,iw,rh);const cap=`IMG ${code}.${r*cols+k+1}`+(f.legenda?` – ${f.legenda}`:'');const cl=wrap(cap,'i',8,cw)[0].t;text(cl,x,y+rh+2+8,'i',8)});y+=rh+CAP+RG}}
   });
   // ---------- estatística e resumo ----------
   if(nSt){newPage();if(IDX)H1('Resumo estatístico');else{text('Resumo estatístico',X0,y+12,'b',12);y+=24}
@@ -767,7 +767,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: periText (antes «Relatório de Peritagem») =====
-const VERSION='1.30.9';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.31.0';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):parteLista(p));
@@ -2309,7 +2309,7 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
   body+=H2('Constrangimentos, impedimentos ou dúvidas relevantes')+T(String(r.constrang||'').trim()||'Nada a considerar.')+E();
   // 3.5 imagens de contextualização (2 por linha, 4:3, com código e legenda)
   {const CF=relF(p.ctxA||{fotos:[]}).filter(f=>fd(f));if(CF.length){body+=H2('Imagens de contextualização');const W2=Math.floor(TW/2),pw=8.3,ph=6.22;
-    const cell=c=>`<w:tc><w:tcPr><w:tcW w:w="${W2}" w:type="dxa"/></w:tcPr>${c}</w:tc>`,cp=(runs,o='')=>`<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:spacing w:before="0" w:after="${o?60:0}"/><w:jc w:val="center"/></w:pPr>${runs}</w:p>`;
+    const cell=c=>`<w:tc><w:tcPr><w:tcW w:w="${W2}" w:type="dxa"/></w:tcPr>${c}</w:tc>`,cp=(runs,o='')=>`<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:spacing w:before="0" w:after="${o?60:0}"/><w:jc w:val="left"/></w:pPr>${runs}</w:p>`;
     let rows='';for(let k=0;k<CF.length;k+=2){let im='',cap='';for(let c=0;c<2;c++){const f=CF[k+c],i=k+c;im+=cell(cp(f?imgRun(await cropTo(fdOut(f),4/3,1200),pw,ph,'Contexto'):''));cap+=cell(cp(f?R(imgCode(p,p.ctxA,i),{b:true,sz:8})+(String(f.legenda||'').trim()?R(' – '+String(f.legenda).trim(),{sz:8}):''):'','a'))}
       rows+=`<w:tr><w:trPr><w:cantSplit/></w:trPr>${im}</w:tr><w:tr><w:trPr><w:cantSplit/></w:trPr>${cap}</w:tr>`}
     const noB2=['top','left','bottom','right','insideH','insideV'].map(x=>`<w:${x} w:val="nil"/>`).join('');

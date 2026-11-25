@@ -1,5 +1,8 @@
 <!doctype html>
 <!--
+ExPropria v0.17.2 — resumo
+- Quadros Excel embutidos no Word ficam centrados na página (regra comum).
+
 ExPropria v0.17.1 — resumo
 - Numeração sequencial por defeito: a nova parcela continua a designação da anterior (P 701 → P 702), já assumida; corrigir se for preciso.
 
@@ -812,7 +815,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
 <script>
 'use strict';
-const VERSION='0.17.1';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
+const VERSION='0.17.2';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
 function growFit(t){if(!t||!t.classList?.contains('grow')||!t.offsetParent)return;t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px'}
 function growAll(root){(root||document).querySelectorAll('textarea.grow').forEach(growFit)}
 document.addEventListener('input',e=>growFit(e.target),true);
@@ -2467,7 +2470,7 @@ async function oleInsert(doc,zip,rels,ctDoc,at,sh,first){const nr=sh.rows.length
  const png=await xlsPreview(sh,wPt,hPt);const iid=addImagePart(zip,rels,ctDoc,png,'png');const sid=`_x0000_i${2000+oleSeq}`;
  const st=at.nodeType===1&&at.localName==='p'?kids(at,'pPr')[0]:null;const ps=st&&kids(st,'pStyle')[0];
  const T75=first?'<v:shapetype id="_x0000_t75" coordsize="21600,21600" o:spt="75" o:preferrelative="t" path="m@4@5l@4@11@9@11@9@5xe" filled="f" stroked="f"><v:stroke joinstyle="miter"/><v:formulas><v:f eqn="if lineDrawn pixelLineWidth 0"/><v:f eqn="sum @0 1 0"/><v:f eqn="sum 0 0 @1"/><v:f eqn="prod @2 1 2"/><v:f eqn="prod @3 21600 pixelWidth"/><v:f eqn="prod @3 21600 pixelHeight"/><v:f eqn="sum @0 0 1"/><v:f eqn="prod @6 1 2"/><v:f eqn="prod @7 21600 pixelWidth"/><v:f eqn="sum @8 21600 0"/><v:f eqn="prod @7 21600 pixelHeight"/><v:f eqn="sum @10 21600 0"/></v:formulas><v:path o:extrusionok="f" gradientshapeok="t" o:connecttype="rect"/><o:lock v:ext="edit" aspectratio="t"/></v:shapetype>':'';
- const xml=`<w:p xmlns:w="${WNS}" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="${RNS}"><w:pPr>${ps?`<w:pStyle w:val="${ps.getAttributeNS(WNS,'val')}"/>`:''}<w:spacing w:before="60" w:after="120"/><w:jc w:val="left"/></w:pPr><w:r><w:object w:dxaOrig="${wPt*20}" w:dyaOrig="${hPt*20}">${T75}<v:shape id="${sid}" type="#_x0000_t75" style="width:${wPt}pt;height:${hPt}pt" o:ole=""><v:imagedata r:id="${iid}" o:title=""/></v:shape><o:OLEObject Type="Embed" ProgID="Excel.Sheet.12" ShapeID="${sid}" DrawAspect="Content" ObjectID="_${1900000000+oleSeq}" r:id="${pid}"/></w:object></w:r></w:p>`;
+ const xml=`<w:p xmlns:w="${WNS}" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="${RNS}"><w:pPr>${ps?`<w:pStyle w:val="${ps.getAttributeNS(WNS,'val')}"/>`:''}<w:spacing w:before="60" w:after="120"/><w:jc w:val="center"/></w:pPr><w:r><w:object w:dxaOrig="${wPt*20}" w:dyaOrig="${hPt*20}">${T75}<v:shape id="${sid}" type="#_x0000_t75" style="width:${wPt}pt;height:${hPt}pt" o:ole=""><v:imagedata r:id="${iid}" o:title=""/></v:shape><o:OLEObject Type="Embed" ProgID="Excel.Sheet.12" ShapeID="${sid}" DrawAspect="Content" ObjectID="_${1900000000+oleSeq}" r:id="${pid}"/></w:object></w:r></w:p>`;
  const n=doc.importNode(new DOMParser().parseFromString(xml,'application/xml').documentElement,true);at.parentNode.insertBefore(n,at);return n}
 /* os marcadores ⟦XLS:n⟧ (postos por calcExpand) passam a folhas embutidas; sem suporte, ficam quadros do Word */
 const CALCXLS=[];
