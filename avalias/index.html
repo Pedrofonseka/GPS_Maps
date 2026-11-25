@@ -757,7 +757,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.56.2';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.57';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1486,7 +1486,7 @@ function gpsBlock(p){const g=p.visita?.gps;
   <input id="gps" placeholder="Ex.: 41.1579, -8.6291" value="${esc(gpsTxt(g))}">
   <div class="btns"><button class="green" id="gpsAuto" data-act="gpsAuto" ${gpsBusy?'disabled':''}>📍 Obter GPS</button><a class="btn secondary" id="gpsMaps" data-act="gpsMapsInfo" href="${gpsMapsUrl(g)}" target="_blank" rel="noopener">Google Maps</a><button class="secondary" data-act="gpsPaste">Colar</button><button class="secondary" data-act="gpsPrev">Ver mapa</button><button class="secondary" data-act="gpsKml">Guardar KML</button>${g?'<button class="del" data-act="gpsDel">🗑</button>':''}</div>
   ${g?`<div class="muted">${esc(toDMS(g.lat,g.lon))}${g.acc?` · precisão ≈ ${Math.round(g.acc)} m`:''}${g.src?' · '+esc(g.src):''}${g.at?' · '+new Date(g.at).toLocaleString('pt-PT'):''}</div>`:''}
-  <div id="gpsPreview"></div>${mapOk(p)?`<div class="mapsaved"><img src="${fotoCache.get(p.visita.map.id)}"><span>✓ Mapa guardado para o Word (${p.visita.map.mode==='street'?'mapa':'satélite'})</span></div>`:''}<div id="gpsStatus" class="muted">${S.gpsMsg||''}</div>
+  ${VISTAS.html(g?.lat,g?.lon)}<div id="gpsPreview"></div>${mapOk(p)?`<div class="mapsaved"><img src="${fotoCache.get(p.visita.map.id)}"><span>✓ Mapa guardado para o Word (${p.visita.map.mode==='street'?'mapa':'satélite'})</span></div>`:''}<div id="gpsStatus" class="muted">${S.gpsMsg||''}</div>
   <div class="muted">Aceita decimal, graus/min/seg ou um link do Google Maps / Apple Maps — converte sozinho.</div></div>`}
 async function gpsSet(p,txt,src,acc){const pp=parseGpsTxt(txt);if(pp)ovTouchCur();
   if(!pp){setGpsStatus('O texto não tem coordenadas reconhecíveis. No Google Maps, mantém o dedo no local: as coordenadas aparecem no topo (ex.: 41.15794, -8.62910) — toca nelas para copiar.');return false}
@@ -2730,6 +2730,17 @@ const baseDe=nome=>{const t=String(nome||'').trim().toLowerCase();return BASES_V
 /* texto para o relatório: «Base de valor: X (ref). definição nota» */
 const baseTxt=nome=>{const b=baseDe(nome);return b?`Base de valor: ${b.n} (${b.ref}). ${b.def} ${b.nota}`:''};
 /* @fim:bases */
+/* @comum:vistas v1.0 — atalhos de vistas do local, junto à localização GPS: imagens históricas (Google Earth), Street View com datas anteriores, satélite e ortofotomapas oficiais da DGT (1995 → 2021, «Portugal Visto do Céu»). Abrem fora da app; a captura de ecrã entra depois como imagem anexa (rodar, marcar, legendar). */
+const VISTAS={
+ html(lat,lon){if(lat==null||lon==null||isNaN(lat)||isNaN(lon))return `<div id="vistas" class="muted" style="margin:4px 0">Vistas do local (Google Earth histórico, Street View, DGT): obtenha primeiro as coordenadas GPS.</div>`;
+  const L=(+lat).toFixed(6),G=(+lon).toFixed(6),c=`${L}, ${G}`,e=s=>String(s).replace(/"/g,'&quot;');
+  const B=[['🌍 Google Earth — histórico',`https://earth.google.com/web/@${L},${G},150a,600d,35y,0h,0t,0r`,'No Google Earth: botão «Imagens históricas» (globo com seta) para ver anos anteriores'],
+   ['🚶 Street View — datas',`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${L},${G}`,'No Street View: «Ver mais datas» mostra as imagens antigas da rua'],
+   ['🛰 Satélite',`https://www.google.com/maps/@?api=1&map_action=map&center=${L},${G}&zoom=19&basemap=satellite`,'Vista de satélite atual'],
+   ['🇵🇹 DGT — ortofotos 1995-2021','https://geo2.dgterritorio.gov.pt/portugal-visto-ceu','As coordenadas ficam copiadas: cole-as na pesquisa do visualizador; o comparador divide o ecrã entre dois anos']];
+  return `<div id="vistas" style="margin:6px 0"><div class="muted" style="font-size:12px;margin-bottom:4px">Vistas do local (abrem fora da app — faça captura de ecrã e junte-a como imagem anexa):</div><div class="btns" style="margin-top:0">${B.map(([t,u,h],i)=>`<a class="btn secondary mini" href="${e(u)}" target="_blank" rel="noopener" title="${e(h)}"${i===3?` data-vistacopy="${e(c)}"`:''}>${t}</a>`).join('')}</div></div>`}};
+document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('[data-vistacopy]');if(!a)return;try{navigator.clipboard.writeText(a.dataset.vistacopy)}catch(_){}},true);
+/* @fim:vistas */
 /* @comum:datahora v1.0 — REGRA GERAL (todas as apps): transferências entre aparelhos com data-hora, para nunca substituir dados mais recentes por mais antigos sem aviso. Regra: docs/regras/transferencias.md
    - cada unidade transferível (processo, verba, parcela…) guarda «alterado em», atualizado sozinho quando o conteúdo muda;
    - o nome do ficheiro enviado leva a data-hora do envio;
