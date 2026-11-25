@@ -31,6 +31,9 @@ Regras definidas pelo utilizador que valem só para a AvaLias. As regras comuns 
 8j. **Áreas e quantidades:** 4 tipos — AT, ABC, ABP, ABD. Para cada um, em cada verba, adota-se a da documentação (caderneta, certidão de registo, levantamento topográfico, BUPi, planta, outro) ou a medição estimada por métodos expeditos. Um só sítio na app (1 · Identificação › Áreas adotadas) e uma só linha na ficha («Áreas adotadas»); o 3.2 só resume; o PE1 nasce das verbas marcadas. O texto de 3.2 explica o dilema, o critério e o pressuposto de que a área apurada corresponde à realidade jurídica do ativo, ainda que a documentação não a tenha (ainda) regularizado.
 8k. **Artigos matriciais:** concelho e freguesia em lista; confrontações só saem no relatório se o perito as quiser explicitar.
 
+8l. **Modelo de referência (25/11/2026):** as partes inicial e final seguem o Word Trib_2644 revisto pelo utilizador (textos, tópicos e espaçamentos). Páginas novas: Resumo de análise; Análise específica; cada verba; Resposta às questões (e o resto da parte final); Reservas.
+8m. **Extratos do PDM:** nos terrenos a grelha sai sempre no Word, mesmo vazia, para colar os extratos no PC.
+
 ## Preenchimento (iPhone / PC)
 9. **Ordem de preenchimento:**
    - **Processo:** A Abertura (escritório) · B Princípios · C Visita (campo) · D Verbas;

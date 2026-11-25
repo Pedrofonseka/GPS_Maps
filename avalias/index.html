@@ -758,7 +758,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.59.2';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.60';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1620,8 +1620,9 @@ const QUAL_R=['Pelo Tribunal','Pela Parte 1','Pela Parte 2'];
 const DOCS_R=['Questões colocadas ao(s) perito(s)','Cadernetas prediais','Certidões de registo predial','Plantas','Levantamento topográfico','BUPi','Licença de utilização','Certificado energético','Documento único automóvel (DUA) / certificado de matrícula','Inventário / rol de bens','Alvará de concessão (sepultura)','Outros'];
 /* uma só verba: as expressões no plural passam ao singular (documentos e textos-base) */
 const SG_DOC={'Cadernetas prediais':'Caderneta predial','Certidões de registo predial':'Certidão de registo predial','Plantas':'Planta','Planta(s)':'Planta','Caderneta(s) predial(ais)':'Caderneta predial','Certidão(ões) de registo predial':'Certidão de registo predial','Inventário / rol de bens':'Inventário / rol de bens'};
-const SG_TXT=[[/exata dos ativos/g,'exata do ativo'],[/o valor dos ativos/g,'o valor do ativo'],[/os ativos estão disponíveis para a utilização que aparentam/g,'o ativo está disponível para a utilização que aparenta'],[/associadas aos bens/g,'associadas ao bem'],[/foram visitados os ativos identificados, para os caracterizar/g,'foi visitado o ativo identificado, para o caracterizar'],[/até à percentagem indicada no quadro, para cada verba\./g,'até à percentagem indicada no quadro.'],[/titularidade plena dos bens/g,'titularidade plena do bem']];
-const sgDoc=(p,d)=>alAtivas(p).length===1?(SG_DOC[d]||d):d;
+const SG_TXT=[[/exata dos ativos/g,'exata do ativo'],[/o valor dos ativos/g,'o valor do ativo'],[/os ativos estão disponíveis para a subsequente utilização que aparentam/g,'o ativo está disponível para a subsequente utilização que aparenta'],[/os ativos estão disponíveis para a utilização que aparentam/g,'o ativo está disponível para a utilização que aparenta'],[/associadas aos bens/g,'associadas ao bem'],[/foram visitados os ativos identificados, para os caracterizar/g,'foi visitado o ativo identificado, para o caracterizar'],[/até à percentagem indicada no quadro, para cada verba\./g,'até à percentagem indicada no quadro.'],[/titularidade plena dos bens/g,'titularidade plena do bem']];
+const DOC_OUT={'Certidões de registo predial':'Certidões de registo','Certidão de registo predial':'Certidão de registo'};
+const sgDoc=(p,d)=>{const t=alAtivas(p).length===1?(SG_DOC[d]||d):d;return DOC_OUT[t]||t};
 const sgTxt=(p,t)=>{if(alAtivas(p).length!==1)return t;let o=String(t);for(const [re,r] of SG_TXT)o=o.replace(re,r);return o};
 const ANEX_R=['Planta(s)','Levantamento topográfico','Esquematização de áreas','Extrato do PDM','Caderneta(s) predial(ais)','Certidão(ões) de registo predial','Fichas de caracterização','Outros'];
 const ANEXT_R=['Planta','Levantamento topográfico','Esquematização de áreas','Extrato do PDM','Caderneta predial','Certidão de registo predial','Outros'];
@@ -1643,22 +1644,24 @@ Os critérios de validação sobre medidas, áreas ou outras caraterísticas con
 No contexto do processo, as estimativas e opiniões fornecidas ao perito, designadamente por consultas externas, foram obtidas através de fontes consideradas confiáveis, julgadas verdadeiras e corretas.`;
 /* Parte inicial — 3 · Princípios de análise (textos-base, editáveis por processo) */
 const PRI_R=[
- ['p31','Sobre a estimativa de valor','A estimativa de valor é determinada em função das caraterísticas de utilidade que se consideram plausíveis na análise e caraterização específica.'],
- ['p32','Conformidade de áreas e quantidades',`Salvo indicação em contrário ou solicitação específica nesse sentido, esta função não tem por objetivo a aferição rigorosa das áreas reais, nem garantir o contexto de propriedade ou concluir da exatidão ou rigor dos limites de propriedade.
-É, no entanto, frequente que as áreas ou quantidades constatadas não coincidam com as documentadas, o que coloca sempre um dilema, com alguma margem de incerteza. Perante ele, segue-se o critério seguinte:
-- aceita-se como válida a área ou quantidade documentada, se nada for referido ou constatado em contrário;
-- adota-se como válida outra área ou quantidade, apurada por medição expedita ou estimativa, quando a diferença for percetível.
-Assim, quando as áreas ou quantidades são aparentemente diferentes das documentadas e não exista fundamento rigoroso sobre a sua magnitude (por exemplo, levantamento topográfico georreferenciado e aceite como válido), a sua validação é feita de forma simplificada, por estimativa ou medição expedita, considerando-se que a quantidade ou magnitude apurada representa a realidade de forma aceitável à finalidade.
-Daqui resulta o pressuposto de que essa área ou quantidade corresponde à realidade jurídica do ativo, ainda que a documentação possa não a ter (ainda) regularizado.
-As quantidades ou áreas mencionadas são válidas apenas para a presente finalidade e são acreditadas em função dos meios de fundamentação disponibilizados, designadamente, levantamento topográfico georreferenciado e aceite, caderneta predial, certidão de registo predial, BUPi, plantas, telas finais, autorização de utilização ou medição expedita.`],
- ['p33','Situações anómalas ou discrepantes','Não detetadas nem referidas.'],
+ ['p31','Sobre a estimativa de valor','A estimativa de valor é determinada em função das caraterísticas de utilidade que se consideram plausíveis de acordo com a análise e caraterização específica do que se consegue constatar e apreciar.'],
+ ['p32','Conformidade de áreas e quantidades',`Por princípio, adotam-se as áreas constantes na documentação fornecida.
+Salvo indicação em contrário ou solicitação específica nesse sentido, esta função não tem por objetivo a sua aferição rigorosa, nem garantir ou concluir sobre a exatidão ou rigor dos limites de propriedade.
+Havendo discrepância entre documentos, será usada a descrição considerada mais credível.
+Se for constatada ou referida, diferença aparente entre a realidade e a documentação, com repercussão significativa para a finalidade processual, e não tenha sido fornecido fundamento rigoroso (por exemplo, levantamento georreferenciado) poderão ser usados métodos simplificados de medição expedita de quantidades ou áreas, cujo rigor se considera aceitável à finalidade.
+Daqui resulta o pressuposto de que essa área ou quantidade corresponde à realidade jurídica do ativo, ainda que a documentação possa não a ter (ainda) regularizado.`],
+ ['p33','Outras situações discrepantes','Não detetadas nem referidas.'],
  ['p34','Critério de utilidade atual ou potencial',`Salvo indicação em contrário, a análise segue sempre a melhor utilidade, que pode corresponder:
 - Ao seu uso atual;
-- A um uso potencial/alternativo, tendo em atenção os pressupostos que lhe sejam subjacentes. Nas situações elegíveis, o potencial edificativo resulta das informações recolhidas nos instrumentos de planeamento em vigor para o local.`],
+- A um uso potencial/alternativo, tendo em atenção os pressupostos que lhe sejam subjacentes, de acordo com os instrumentos de gestão territorial em vigor para o local e as caraterísticas de urbanidade evidenciadas pela envolvente.`],
  ['p35','Fundamentos dos valores de referência','']];
 /* Pressupostos especiais: situações em dúvida que vinculam a análise — PE1 (desconformidade de áreas, automático) + os escritos pelo perito */
 const PE_AREA='Situações em notória desconformidade entre a realidade e a documentação fornecida, designadamente, situações omissas, aparentemente ilegais ou não mencionadas, na convicção de que, em função da sua especificidade e da forma como se integram na envolvente, sejam passíveis de regularizar. A magnitude de área será acreditada de forma aceitável à finalidade, através de algum dos meios suprarreferidos.';
-function peList(p){const r=ensureRel(p),L=[];const vA=alAtivas(p).filter(a=>a.al.arPE&&arEst(a)||a.al.areaJust==='pe1'&&!a.al.ar);if(vA.length)L.push(PE_AREA+(vA.length?` (${vA.map(a=>alCode(p,a)).join(', ')})`:''));for(const x of r.pes||[])if(String(x||'').trim())L.push(String(x).trim().replace(/[.;\s]*$/,'.'));return L}
+function peList(p){const r=ensureRel(p),L=[];const nf=v=>Number(v).toLocaleString('pt-PT',{maximumFractionDigits:2});
+ for(const a of alAtivas(p)){if(!['imo','ter'].includes(alFam(a)))continue;const x=a.al,D=arKs(a).map(([k,sg])=>{const g=arGet(a,k),v=arVal(a,k),c=arCad(x,k);return g.o==='est'&&v!=null?{sg,v,c}:null}).filter(Boolean);if(!D.length&&!x.arPE)continue;
+  const nota=String(x.arNota||'').trim().replace(/[.;\s]*$/,'');const dif=D.map(d=>`${d.sg} = ${nf(d.v)} m²${d.c!=null&&Math.abs(d.v-d.c)>0.005?` e não ${nf(d.c)} m²`:''}`).join('; ');
+  L.push(`A área considerada, da verba ${alCode(p,a)}, obtida por medição expedita${nota?(/^[a-zà-ú]/.test(nota)?' ':' — ')+nota:''}${dif?` (${dif})`:''}${x.arPE?', incluindo construção ou ampliação não declarada, que se considera passível de regularização':''}`)}
+ for(const x of r.pes||[])if(String(x||'').trim())L.push(String(x).trim().replace(/[.;\s]*$/,''));return L}
 const PRI_PE1=`Notas:
 Serão objeto de pressuposto especial, válido apenas para a presente finalidade:
 PE1 – situações em notória desconformidade entre a realidade e a documentação fornecida, designadamente, situações omissas, aparentemente ilegais/não mencionadas, na convicção de que, em função da sua especificidade e da forma como se integram na envolvente, sejam passíveis de regularizar;
@@ -1670,15 +1673,15 @@ function priFundAuto(p){const L=[];const ad=t=>{if(t&&!L.includes(t))L.push(t)};
 const RES_R=[
  ['r1','Do conteúdo','O relatório pretende traduzir o que foi possível observar e percecionar nas diligências levadas a efeito.'],
  ['r2','Normativos','A análise seguiu as orientações preconizadas em normativos diversos, ou suas partes elegíveis, designadamente, as normas E.V.S. – European Valuation Standards, em conjugação com a formação e experiência profissional do perito, bem como a bibliografia de referência aplicável.'],
- ['r3','Pressupostos gerais',`A análise pressupõe que:
-a) Não existe reclamação quanto à titularidade (salvo as eventuais divergências inerentes ao processo);
+ ['r3','Pressupostos gerais',`Além de outros eventuais pressupostos específicos, para os presentes efeitos, pressupõe-se que:
+a) Não existe reclamação quanto à titularidade (salvo as eventuais divergências inerentes à natureza do processo);
 b) A informação documental, factual e verbal disponibilizada é verdadeira e fiável, não tendo sido efetuada a respetiva validação jurídica ou administrativa, por extravasar o âmbito das funções;
 c) A informação complementar recolhida no local e no trabalho de gabinete considera-se com o rigor adequado à finalidade;
 d) As estimativas e opiniões recolhidas, designadamente por consultas ao mercado imobiliário e seus agentes, portais da internet, etc., foram obtidas através de fontes consideradas confiáveis, julgadas verdadeiras e corretas;
 e) As imagens, mapas, plantas, coordenadas geográficas e referências cartográficas utilizadas, incluindo as provenientes de plataformas públicas ou digitais, têm caráter meramente ilustrativo e de enquadramento, não vinculando quanto à configuração jurídica, delimitação legal ou caracterização técnica exata dos ativos;
 f) A correspondência entre a realidade física que se constata e a informação documental fornecida é da responsabilidade dos respetivos titulares ou apresentantes;
-g) Não são do conhecimento do perito, nem lhe foram referidas, situações ocultas, ónus, encargos, limitações ou desconformidades materiais suscetíveis de afetar significativamente o valor dos ativos, para além das explicitamente referidas no relatório;
-h) Salvo menção específica, os ativos estão disponíveis para a utilização que aparentam à data da inspeção, sem impedimentos materiais conhecidos ou informados.`],
+g) Para além do que for explicitamente referido, não são do conhecimento do perito, nem lhe foram referidas, situações ocultas, ónus, encargos, limitações ou desconformidades materiais suscetíveis de afetar significativamente a presente análise;
+h) Salvo menção específica, considera-se que os ativos estão disponíveis para a subsequente utilização que aparentam à data da inspeção, sem impedimentos materiais conhecidos ou informados.`],
  ['r4','Limitações',`Em função do que é solicitado, considera-se fora do âmbito de análise a verificação ou averiguação de:
 a) Titularidade jurídica, existência de ónus ou encargos registais;
 b) Conformidade urbanística, licenciamentos ou autorizações de utilização;
@@ -1694,8 +1697,8 @@ const CONF_R=`O relatório é confidencial e foi elaborado de forma independente
 O signatário declara não possuir qualquer interesse presente ou futuro no que está em análise, nem manter relações suscetíveis de afetar a sua independência, imparcialidade ou objetividade.`;
 const AMBITO_R=`O relatório considera-se válido apenas para a finalidade com que foi solicitado.
 É de uso exclusivo do solicitante, não podendo ser distribuído, publicado ou reproduzido total ou parcialmente em qualquer outro tipo de contexto, sem o consentimento escrito do seu autor.
-A estimativa de valor reflete o julgamento à data da avaliação, não constituindo garantia de valor de transação efetiva, a qual depende sempre de negociações entre partes, condições específicas de mercado e circunstâncias futuras não controláveis.
-A análise deverá ser revista sempre que os pressupostos ou a conjuntura se alterarem, relativamente à data em que foi elaborada.`;
+A estimativa de valor reflete o julgamento à data da análise, não constituindo garantia de valor de transação efetiva, a qual depende sempre de negociações entre partes, condições específicas de mercado e circunstâncias futuras não controláveis.
+Havendo interesse, deverá ser revista sempre que os pressupostos ou a conjuntura se alterarem, relativamente à data em que foi elaborada.`;
 const AMBIENTE_R=`Sendo assuntos para análise e aconselhamento especializado, que poderão recomendar a revisão do relatório, não foram referidos nem vistos, indícios ou efeitos de:
 - Poluição sonora;
 - Campos elétricos e/ou magnéticos;
@@ -2089,12 +2092,12 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
   body+=H1('Objeto de análise');
   if(part){body+=H2('Queixas apresentadas')+E();if(r.objIntro)body+=T(r.objIntro);r.quesitos.forEach(q=>{body+=T(q.txt,{jc:'both'})+E()})}
   else{const sol=[[part?'Solicitante':'Tribunal / entidade',r.entidade],['Processo n.º',r.procJud],['Contexto processual',r.contexto],['Partes',[r.parte1,r.parte2].filter(x=>String(x||'').trim()).join(' / ')]].filter(([,v])=>String(v||'').trim());
-   if(String(r.entidade||'').trim()){body+=H2('Solicitante')+E()+T(String(r.entidade).trim())+E()}
-   body+=H2('O que foi solicitado')+E();if(objTxt(p)){const t=objTxt(p);body+=T(t.charAt(0).toUpperCase()+t.slice(1)+'.',{jc:'both'})}
-   {const D=r.dataRefM==='outras'?(r.dataRefs||[]).map(d=>dPT(d)).filter(Boolean):[];body+=P(R(D.length>1?'Datas de referência:':'Data de referência:',{b:true}),{keep:1})+E();if(D.length)for(const d of D)body+=T(d);else body+=T('Data atual');body+=E()}
-   body+=H2('Outras questões')+E()+QBLK(false)}
-  body+=H2('Lista de documentos fornecidos')+E()+(DOCS_R.filter(d=>r.docs[d]).map(d=>CHK(true,sgDoc(p,d))).join('')||T('Nada a considerar.'))+E();
-  body+=H2('Outros elementos')+E()+T(String(r.docsOutros||'').trim().replace(/^-$/,'')||'Nada a considerar.',{jc:'both'});
+   if(String(r.entidade||'').trim()){body+=H2('Solicitante')+T(String(r.entidade).trim())+E()}
+   body+=H2('O que foi solicitado');if(objTxt(p)){const t=objTxt(p);body+=T(t.charAt(0).toUpperCase()+t.slice(1)+'.',{jc:'both'})}body+=E();
+   {const D=r.dataRefM==='outras'?(r.dataRefs||[]).map(d=>dPT(d)).filter(Boolean):[];body+=H2(D.length>1?'Datas de referência:':'Data de referência:');if(D.length)for(const d of D)body+=T(d);else body+=T('A data atual');body+=E()}
+   body+=H2('Outras questões')+QBLK(false)}
+  body+=H2('Lista de documentos fornecidos')+(DOCS_R.filter(d=>r.docs[d]).map(d=>CHK(true,sgDoc(p,d))).join('')||T('Nada a considerar.'))+E();
+  body+=H2('Outros elementos')+T(String(r.docsOutros||'').trim().replace(/^-$/,'')||'Nada a considerar.',{jc:'both'});
   if(String(r.docsCom||'').trim())body+=T(r.docsCom,{jc:'both'});
   // ---- AvaLias: contexto, visitas, valor estimado (quadro-resumo + BAD) e análise de cada verba ----
   {const AP=alP(p);p.anomalias.forEach(alA);const V=alAtivas(p);const TWb=9638,renda=AP.base==='Valor de renda de mercado',bad=!!AP.bad;
@@ -2104,21 +2107,21 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
    const tr=(cells,hdr)=>`<w:tr><w:trPr><w:cantSplit/>${hdr?'<w:tblHeader/>':''}</w:trPr>${cells}</w:tr>`;
    const KV=(l,v)=>`<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:tabs><w:tab w:val="left" w:pos="2268"/></w:tabs></w:pPr>${R(l,{b:true})}<w:r><w:tab/></w:r>${R(v||'—')}</w:p>`;
    // contexto da avaliação
-   body+=E()+H2('Contexto de análise')+E();
+   body+=E()+H2('Contexto de análise');
    body+=KV('Finalidade:',AP.finalidade==='Outra'?AP.finalidadeOutra:AP.finalidade)+KV('Base de valor:',AP.base)+KV('Tipo de posse:',AP.posse)+KV('Quantidade de verbas:',String(V.length));
    // visitas (capítulo opcional — por decidir se fica aqui ou só nas fichas)
    if(r.incVisita!==false){body+=E()+H1('Da visita aos locais')+E();
    const Wv=[1300,1500,TWb-2800];
    body+=tbl(Wv,tr(tc('Verba',Wv[0],{b:1,fill:'D9D9D9'})+tc('Data',Wv[1],{b:1,fill:'D9D9D9'})+tc('Presenças',Wv[2],{b:1,fill:'D9D9D9'}),1)+V.map(a=>tr(tc(alCode(p,a),Wv[0])+tc(a.vis?.data?`${a.vis.data}${a.vis.hora?' '+a.vis.hora:''}`:'—',Wv[1])+tc(String(a.vis?.presencas||'').trim()||'—',Wv[2]))).join(''));
-   body+=H2('Constrangimentos, impedimentos ou dúvidas relevantes')+T(String(r.constrang||'').trim()||'Nada a considerar.')+E()}
+   body+=E()+H2('Constrangimentos, impedimentos ou dúvidas relevantes')+(String(r.constrang||'').trim()?String(r.constrang).trim().split('\n').map(l=>T(l,{jc:'both'})).join(''):T('Nada a considerar.')+T('As condições de visita consideram-se suficientes para a análise que se pretende, nos termos em que vem definida.',{jc:'both'}))+E()}
    // cronologia do processo (opcional)
    {const CL=cronoList(r);if(CL.length&&r.cronoWord!==false){const Wc=[1500,TWb-1500];body+=H1('Cronologia do processo')+E()+tbl(Wc,tr(tc('Data',Wc[0],{b:1,fill:'D9D9D9'})+tc('Ocorrência',Wc[1],{b:1,fill:'D9D9D9'}),1)+CL.map(x=>tr(tc(dPT(x.data)||'—',Wc[0])+tc(x.desc,Wc[1]))).join(''))+E()}}
    // valor estimado — quadro-resumo
    // 3 · Princípios de análise (tópicos escolhidos; a numeração acompanha)
    {const pri=PRI_R.filter(([k])=>(r.priOff||{})[k]!==true);if(pri.length&&r.incPri!==false){body+=E()+H1('Princípios de análise');
     for(const [k,l,d] of pri){let t=String((r.pri||{})[k]??'').trim()||d;if(k==='p35')t=String((r.pri||{}).p35||'').trim()||priFundAuto(p);if(!t)continue;
-     body+=H2(l)+E();for(const ln of sgTxt(p,t).split('\n'))body+=T(ln,{jc:'both'});if(k==='p32'){const V2=alAtivas(p).filter(a=>['imo','ter'].includes(alFam(a))),E2=V2.filter(arEst);if(V2.length)body+=T(E2.length?`${E2.length===V2.length?(V2.length===1?'Na verba analisada':'Em todas as verbas'):`Na${E2.length>1?'s':''} verba${E2.length>1?'s':''} ${E2.map(a=>alCode(p,a)).join(', ')}`}, as áreas foram, no todo ou em parte, atribuídas por medição estimada por métodos expeditos — ver a ficha de cada verba.`:`${V2.length===1?'Na verba analisada foram adotadas as áreas documentadas':'Em todas as verbas foram adotadas as áreas documentadas'} — ver a ficha de cada verba.`,{jc:'both'})}if(k==='p32'&&false){body+=E();for(const ln of PRI_PE1.split('\n'))body+=/^Notas:/.test(ln)?P(R(ln,{b:true})):T(ln,{jc:'both'})}body+=E();if(k==='p32'){const PE=peList(p);if(PE.length){body+=H2('Pressupostos especiais')+E()+T('Serão objeto de pressuposto especial, válido apenas para a presente finalidade, as situações seguintes, que suscitam dúvida mas vinculam a análise:',{jc:'both'});PE.forEach((t,n)=>{body+=T(sgTxt(p,`PE${n+1} – ${t}`),{jc:'both'})});body+=E()}}}}}
-   body+=H1('Resumo de análise')+E()+T('De acordo com a análise, caraterização, abordagem e critérios:')+E();
+     body+=H2(l);for(const ln of sgTxt(p,t).split('\n'))body+=T(ln,{jc:'both'});body+=E();if(k==='p33'||(k==='p32'&&!pri.some(x=>x[0]==='p33'))){const PE=peList(p);if(PE.length){body+=H2('Pressupostos especiais')+T('No âmbito do presente processo, são considerados como tal:',{jc:'both'});PE.forEach(t=>{body+=T(sgTxt(p,`- ${t}`),{jc:'both'})});body+=E()}}}}}
+   body+=BRK+E()+H1('Resumo de análise')+E()+T('De acordo com a análise, caraterização, abordagem e critérios, o valor estimado é:')+E();
    const cV=1100,cT=2900,cVal=1500,cR=renda?1300:0,cB=bad?950:0,cD=TWb-cV-cT-cVal-cR-cB;const W=[cV,cD,cT,cVal,...(renda?[cR]:[]),...(bad?[cB]:[])];
    const H=['Verba','Designação','Tipo','Valor estimado',...(renda?['Renda mensal']:[]),...(bad?['BAD (até)']:[])];
    let rows=tr(H.map((h,k)=>tc(h,W[k],{b:1,fill:'D9D9D9',jc:k>=3?'center':''})).join(''),1);let tot=0,totR=0;
@@ -2127,13 +2130,13 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
    {const G=[...new Set(V.map(alGrp))];if(G.length>1)for(const g of Object.keys(AL_GRUPOS).filter(k=>G.includes(k))){const vv=V.filter(a=>alGrp(a)===g).map(a=>alNum(a.al.valor)).filter(v=>v!=null),st=vv.reduce((s1,v)=>s1+v,0);rows+=tr([tc(`Subtotal ${g} – ${AL_GRUPOS[g]}`,cV+cD+cT,{span:3,fill:'F8F8F8'}),tc(vv.length?alEur(st):'—',cVal,{jc:'center',fill:'F8F8F8'}),...(renda?[tc('',cR,{fill:'F8F8F8'})]:[]),...(bad?[tc('',cB,{fill:'F8F8F8'})]:[])].join(''))}}
    rows+=tr([tc('Total apurado',cV+cD+cT,{b:1,span:3,fill:'F2F2F2'}),tc(alEur(tot)||'—',cVal,{b:1,jc:'center',fill:'F2F2F2'}),...(renda?[tc(totR?alEur(totR)+'/mês':'—',cR,{b:1,jc:'center',fill:'F2F2F2'})]:[]),...(bad?[tc('',cB,{fill:'F2F2F2'})]:[])].join(''));
    if(!S.noOle&&V.length)body+=alOlePara(alResumoSheet(p),oleParts);else body+=tbl(W,rows);
-   body+=H2('Considerações sobre o valor estimado')+E();{const bt=baseTxt(AP.base||'Valor de mercado');for(const t of (bt?[AL_N[0],AL_N[1],'N2 – '+bt]:AL_N))body+=T(sgTxt(p,t),{jc:'both'})}
-   if(bad){body+=E();for(const t of AL_BAD)body+=T(t,{jc:'both'});body+=E();body+=P(R('Nota:',{b:true}),{bdrT:1})+T(sgTxt(p,`Havendo especial interesse de algum dos intervenientes, considera-se aplicável o conceito de BAD – Benefício económico de adjudicação direta – sugerindo-se uma redução de valor até à percentagem indicada no quadro, para cada verba.`),{jc:'both'})}
+   body+=H2('Considerações sobre o valor estimado')+E();{const b=baseDe(AP.base||'Valor de mercado');body+=T(sgTxt(p,AL_N[0]),{jc:'both'})+T(sgTxt(p,AL_N[1]),{jc:'both'})+E();if(b){body+=T(`N2 – O montante foi apurado, no contexto da Base de valor definida: ${b.n} e significa:`,{jc:'both'})+T(sgTxt(p,` - ${b.def} ${b.nota}`),{jc:'both'})}else body+=T(sgTxt(p,AL_N[2]),{jc:'both'})}
+   if(bad){body+=E()+T('N3 – BAD – Benefício económico de adjudicação direta',{jc:'both'});for(const t of AL_BAD)body+=T(t,{jc:'both'});body+=E();body+=P(R('Nota:',{b:true}),{bdrT:1})+T(sgTxt(p,`Havendo especial interesse de algum dos intervenientes, considera-se aplicável o conceito de BAD – Benefício económico de adjudicação direta – sugerindo-se uma redução de valor até à percentagem indicada no quadro, para cada verba.`),{jc:'both'})}
    // análise específica de cada verba
    body+=BRK+H1('Análise específica');
    const L1=2700,L2=TWb-L1;const krow=(l,v)=>String(v??'').trim()?tr(tc(l,L1,{b:1})+tc(v,L2)):'';
-   for(const a of V){const x=a.al,fam=alFam(a),g=a.vis?.gps;
-    body+=H2(`${alCode(p,a)}${x.designacao?' – '+x.designacao:''}`)+E();
+   for(const [vi,a] of V.entries()){const x=a.al,fam=alFam(a),g=a.vis?.gps;
+    body+=(vi?BRK:'')+H2(`${alCode(p,a)}${x.designacao?' – '+x.designacao:''}`)+E();
     let kr='',kfun='';
     kr+=krow('Identificação',alIdTxt(x));{const pr=alPredioRows(x);for(const [l,v] of pr)kr+=krow(l,v)}
     kr+=krow('Descrição sumária',a.descricao);
@@ -2151,7 +2154,8 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
     kr+=krow(veOn(a)?'Valor estimado (valor especial)':'Valor estimado',[alNum(x.valor)!=null?alEur(x.valor):'',renda&&alNum(x.renda)!=null?'Renda mensal: '+alEur(x.renda)+'/mês':'',x.valObs].filter(s=>String(s||'').trim()).join('\n'));
     if(kr)body+=tbl([L1,L2],tr(tc('Elemento',L1,{b:1,bb:1})+tc('Caracterização',L2,{b:1,bb:1}),1)+kr,false)+E();
     if(kfun)body+=H3('Análise funcional')+tbl([L1,L2],tr(tc('Elemento',L1,{b:1,bb:1})+tc('Apreciação',L2,{b:1,bb:1}),1)+kfun,false)+E();
-    {const G=(x.pdmF||[]).map((g,i)=>g&&fd(g)?{g,i}:null).filter(Boolean),com=String(x.car?.pdmCom||'').trim();if(fam==='ter'&&(G.length||com)){body+=BRK+P(R('Extratos do PDM',{b:true}),{keep:1,sp:[0,80]});
+    {const G=(x.pdmF||[]).map((g,i)=>g&&fd(g)?{g,i}:null).filter(Boolean),com=String(x.car?.pdmCom||'').trim();if(fam==='ter'&&!G.length){const MW=16.9,MH=4.6;body+=BRK+P(R('Extratos do PDM',{b:true}),{keep:1,sp:[0,80]});for(let i=0;i<PDM_SLOTS.length;i++){const lg=String((x.pdmF||[])[i]?.leg||'').trim()||PDM_SLOTS[i];body+=`<w:tbl><w:tblPr><w:tblW w:w="${Math.round(MW*567)}" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders>${['top','left','bottom','right'].map(k=>`<w:${k} w:val="dashed" w:sz="4" w:space="0" w:color="A0A0A0"/>`).join('')}</w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="${Math.round(MW*567)}"/></w:tblGrid><w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="${Math.round(MH*567)}" w:hRule="exact"/></w:trPr><w:tc><w:tcPr><w:tcW w:w="${Math.round(MW*567)}" w:type="dxa"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:jc w:val="center"/></w:pPr>${R('(colar aqui o extrato)',{i:true,sz:8,color:'A0A0A0'})}</w:p></w:tc></w:tr></w:tbl>`+P(R(lg,{i:true,sz:8}),{sp:[20,100]})}body+=P(R('Comentários sobre a consulta ao PDM',{b:true}),{keep:1,sp:[60,40]});for(const ln of (com||'—').split('\n'))body+=T(ln,{jc:'both'});body+=BRK}
+     else if(fam==='ter'&&(G.length||com)){body+=BRK+P(R('Extratos do PDM',{b:true}),{keep:1,sp:[0,80]});
      const nl=Math.ceil(com.length/95)+(com?1:0),MH=Math.min(6.5,(22.5-0.8-G.length*0.6-nl*0.5)/Math.max(1,G.length));
      for(const {g,i} of G){const MW=16.9;let w=MW,h=MW*(g.h||3)/(g.w||4);if(h>MH){h=MH;w=MH*(g.w||4)/(g.h||3)}const ind=Math.max(0,Math.round((MW-w)/2*567));body+=`<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:keepNext/><w:spacing w:before="60" w:after="0"/><w:ind w:left="${ind}"/><w:jc w:val="left"/></w:pPr>${imgRun(fdOut(g),w,h,'PDM')}</w:p><w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:spacing w:before="20" w:after="100"/><w:ind w:left="${ind}"/><w:jc w:val="left"/></w:pPr>${R(String(g.leg||'').trim()||PDM_SLOTS[i],{i:true,sz:8})}</w:p>`}
      if(com){body+=P(R('Comentários sobre a consulta ao PDM',{b:true}),{keep:1,sp:[60,40]});for(const ln of com.split('\n'))body+=T(ln,{jc:'both'})}body+=BRK}}
@@ -2191,20 +2195,20 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
   if(!r.quesitos.length)body+=T('—');}
   else{const AP=alP(p),V=alAtivas(p),bad=!!AP.bad,tot=V.reduce((s1,a)=>s1+(alNum(a.al.valor)||0),0),alvo=objAlvo(p);
    body+=BRK+H1('Resposta às questões colocadas');
-   if(V.length){body+=H2('Valor estimado')+E()+T(`De acordo com a análise, o valor estimado${(()=>{const b=baseDe(AP.base||'Valor de mercado');return b?`, na base «${b.n}» (${b.ref}),`:''})()} é de:`,{jc:'both'});
+   if(V.length){body+=H2('Valor estimado')+E()+T('De acordo com a análise, o valor estimado é de:',{jc:'both'})+E();
     if(V.length===1){const a=V[0];body+=P(R('Valor: ',{b:true})+R(alNum(a.al.valor)!=null?alEur(a.al.valor):'—',{b:true}))}
     else body+=P(R('Valor total: ',{b:true})+R(alEur(tot),{b:true}))+T('Discriminado por verba no quadro do «Resumo de análise».',{jc:'both'});
     if(bad){const pc=String(AP.badPct||10);body+=E()+P(R(`BAD elegível — desconto sugerido: até ${pc} %`)+R(V.length===1&&alNum(V[0].al.valor)!=null?` (valor com o desconto máximo: ${alEur(Math.round(alNum(V[0].al.valor)*(1-(+pc.replace(',','.')||0)/100)/100)*100)})`:'')+R(' — ver N3 das considerações sobre o valor estimado.'))}
     body+=E()}
-   body+=H2('Outras questões')+E()+QBLK(true)}
+   body+=H2('Outras questões')+QBLK(true)}
   // 8, 9
   {const L=RES_R.filter(([k])=>(r.resOff||{})[k]!==true);if(L.length&&r.incReservas!==false){body+=BRK+H1('Reservas de análise');
-   L.forEach(([k,l,d],n)=>{body+=P(R(`${n+1}. ${l}`,{b:true}),{keep:1,sp:[160,60]});for(const ln of sgTxt(p,String((r.res||{})[k]??'').trim()||d).split('\n'))body+=/^[a-z]\)\s/.test(ln)?`<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:ind w:left="425" w:hanging="425"/><w:jc w:val="both"/></w:pPr>${R(ln.slice(0,2))}<w:r><w:tab/></w:r>${R(ln.slice(2).trim())}</w:p>`:T(ln,{jc:'both'})})}}
-  if(r.incAmbiente!==false){body+=H1('Ambiente, sustentabilidade e conformidade de licenciamento');for(const ln of String(r.ambiente||AMBIENTE_R).split('\n'))body+=T(ln,{jc:'both'})}
-  if(r.incConf!==false){body+=H1('Declaração sobre confidencialidade e conflito de interesse');for(const ln of sgTxt(p,String(r.conf||CONF_R)).split('\n'))body+=T(ln,{jc:'both'})}
-  if(r.incAmbito!==false){body+=H1('Âmbito de utilização');for(const ln of sgTxt(p,String(r.ambito2||AMBITO_R)).split('\n'))body+=T(ln,{jc:'both'})}
+   L.forEach(([k,l,d],n)=>{body+=H2(l).slice(BL.length);for(const ln of sgTxt(p,String((r.res||{})[k]??'').trim()||d).split('\n'))body+=/^[a-z]\)\s/.test(ln)?`<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:ind w:left="425" w:hanging="425"/><w:jc w:val="both"/></w:pPr>${R(ln.slice(0,2))}<w:r><w:tab/></w:r>${R(ln.slice(2).trim())}</w:p>`:T(ln,{jc:'both'})})}}
+  if(r.incAmbiente!==false){body+=E()+H1('Ambiente, sustentabilidade e conformidade de licenciamento');for(const ln of String(r.ambiente||AMBIENTE_R).split('\n'))body+=T(ln,{jc:'both'});body+=E()}
+  if(r.incConf!==false){body+=H1('Declaração sobre confidencialidade e conflito de interesse');for(const ln of sgTxt(p,String(r.conf||CONF_R)).split('\n'))body+=T(ln,{jc:'both'});body+=E()}
+  if(r.incAmbito!==false){body+=H1('Âmbito de utilização');for(const ln of sgTxt(p,String(r.ambito2||AMBITO_R)).split('\n'))body+=T(ln,{jc:'both'});body+=E()}
   // 10 termo
-  body+=H1('Termo de encerramento')+E()+T('Relatório dá-se por concluído em:')+T(String(r.dataEnc||'').trim()||mesAno())+E();
+  body+=H1('Termo de encerramento')+T('Relatório concluído em:')+T(String(r.dataEnc||'').trim()||mesAno())+E();
   if(col){body+=T(r.unan?'O presente relatório foi elaborado por unanimidade dos peritos.':'O presente relatório não reúne unanimidade, manifestando-se as seguintes posições discordantes:',{jc:'both'});if(!r.unan&&String(r.discord||'').trim())body+=T(r.discord,{jc:'both'});body+=E();
     for(const pe of r.peritos)body+=P('',{sp:[360,0]})+P(R('_______________________________________'))+P(R(pe.nome||'',{b:true}))+P(R(represR(r,pe),{i:true,sz:9}))}
   else{body+=P('',{sp:[360,0]})+P(R('_______________________________________'))+P(R(String(settings.peritoNome||'').trim()||'Perito avaliador',{b:true}));if(String(settings.peritoQual||'').trim())body+=P(R(settings.peritoQual.trim(),{i:true,sz:9}));for(const c of credList())if(c.t&&credOn(r,c.k))body+=P(R(c.t,{i:true,sz:9}))}
@@ -2223,6 +2227,8 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
   if(tocE.length){tocE[0]=tocE[0].replace('<w:hyperlink',`<w:r><w:fldChar w:fldCharType="begin" w:dirty="true"/></w:r><w:r><w:instrText xml:space="preserve"> TOC \\o "1-3" \\h \\z \\u </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:hyperlink`);tocE[tocE.length-1]=tocE[tocE.length-1].replace(/<\/w:p>$/,'<w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>')}
   const idx=P(R('Índice',{b:true,sz:12}),{sp:[0,200]})+tocE.join('')+BRK;
   body=body.replace(/(<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"\/><\/w:pPr><\/w:p>){2,}/g,'$1');
+  /* espaçamento como no modelo: nunca duas linhas em branco seguidas; sem linha em branco entre um título 1 e o título 2 que se lhe segue */
+  for(const z of [BRK+BL+BRK,BRK+BRK])while(body.includes(z))body=body.split(z).join(BRK);body=body.split(BL+BL).join(BL);while(body.includes(BL+BL))body=body.split(BL+BL).join(BL);body=body.replace(/(<w:p><w:pPr><w:pStyle w:val="Cabealho1"\/><\/w:pPr>(?:(?!<\/w:p>).)*<\/w:p>)<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"\/><\/w:pPr><\/w:p>(?=<w:p><w:pPr><w:pStyle w:val="Cabealho2")/g,'$1');
   let full=coverXml+'<!--CAPA_FIM-->'+idx+body+'<w:p><w:pPr><w:spacing w:before="0" w:after="0"/></w:pPr></w:p>';
   // dentro das tabelas, o parágrafo não leva o fundo branco do estilo do gabinete (senão fica uma moldura à volta do texto nas células com fundo)
   {let d=0;full=full.replace(/<w:tbl>|<\/w:tbl>|(<w:pPr><w:pStyle w:val="1-periTextogeral"\/>(?:<w:keepNext\/>|<w:keepLines\/>|<w:pageBreakBefore\/>|<w:widowControl\/>)*)(?!<w:pBdr|<w:shd)/g,(m,g)=>{if(m==='<w:tbl>'){d++;return m}if(m==='</w:tbl>'){d--;return m}return d>0?g+'<w:shd w:val="clear" w:color="auto" w:fill="auto"/>':m})}
@@ -2704,7 +2710,7 @@ const AL_N=[
  'Em situação de titularidade repartida, deverá ser feita a proporção em função da respetiva quota-parte.',
  'N2 – O valor indicado, pressupõe uma situação de transação em mercado normal, com exposição ao mercado durante adequado período de comercialização até se encontrar um comprador normal disponível em satisfazer o valor pedido, sem relação ou interesse especial o mova.'];
 const AL_BAD=[
- 'N3 - Na eventualidade de algum dos intervenientes manifestar interesse especial em adquirir o ativo, entende-se que deverá haver redução de preço relativamente ao valor estimado, pois, o ativo deixa de estar sujeito ao mercado normal e respetivo desgaste temporal de preço, até aparecer um comprador disponível.',
+ 'Na eventualidade de algum dos intervenientes manifestar interesse especial em adquirir o ativo, entende-se que deverá haver redução de preço relativamente ao valor estimado, pois, o ativo deixa de estar sujeito ao mercado normal e respetivo desgaste temporal de preço, até aparecer um comprador disponível.',
  'Muito embora esta perspetiva não corresponda a uma base institucional de valor, constitui uma prática corrente em situações desta natureza que pode ser adotada e se considera mais ajustada a esse tipo de contexto.',
  'Na prática, é um benefício de adjudicação direta – «BAD».'];
 const alOpt=x=>{const t=String(x||'');const k=t.indexOf(' — ');return k>=0?t.slice(k+3):t};
@@ -2725,9 +2731,9 @@ AL_LISTS.edc2_classe_energetica=[...NAPNAN,'NFN - Não fornecido',...AL_LISTS.ed
 AL_LISTS.atratividade=[...NAPNAN,...AL_LISTS.atratividade.filter(x=>!/NAP/.test(x))];
 /* bases de valor — Normas Europeias de Avaliação (EVS 2025, TEGOVA): EVS 1 valor e renda de mercado; EVS 2 bases que não o valor de mercado; pressupostos especiais do EVS 1 */
 AL_LISTS.proc_base=['Valor de mercado','Valor de renda de mercado','Justo Valor','Valor Especial','Valor de Investimento','Valor Hipotecário','Valor Seguro','Valor de uso alternativo','Valor de Liquidação (venda forçada)'];
-/* @comum:bases v1.0 — Biblioteca de bases de valor (EVS — normas europeias de avaliação, TEGoVA). Cada base: nome · referência · definição (redação própria, fiel ao conceito) · nota para o relatório. O relatório junta a definição da base escolhida às considerações sobre o valor (fecho / conclusão / resumo). Regra: docs/regras/bases_valor.md */
+/* @comum:bases v1.1 — Biblioteca de bases de valor (EVS — normas europeias de avaliação, TEGoVA). Cada base: nome · referência · definição (redação própria, fiel ao conceito) · nota para o relatório. O relatório junta a definição da base escolhida às considerações sobre o valor (fecho / conclusão / resumo). Regra: docs/regras/bases_valor.md */
 const BASES_VALOR=[
- {n:'Valor de mercado',al:[],ref:'EVS 1',def:'Montante estimado pelo qual o ativo seria transacionado, na data da avaliação, entre um comprador e um vendedor interessados, numa transação em condições normais de mercado, após adequada comercialização, agindo ambas as partes com conhecimento, prudência e sem coação.',
+ {n:'Valor de mercado',al:[],ref:'EVS 1',def:'O montante estimado pelo qual um ativo seria transacionado, na data da avaliação, entre comprador e vendedor interessados, numa transação em condições normais de mercado, após adequada comercialização, agindo ambas as partes com conhecimento, prudência e sem coação.',
   nota:'O valor indicado pressupõe uma situação de transação em mercado normal, com exposição ao mercado durante adequado período de comercialização até se encontrar um comprador normal disponível em satisfazer o valor pedido, sem que relação ou interesse especial o mova.'},
  {n:'Valor de renda de mercado',al:[],ref:'EVS 1',def:'Renda estimada pela qual o ativo seria arrendado, na data da avaliação, entre um senhorio e um arrendatário interessados, em condições contratuais adequadas, numa transação em condições normais de mercado, após adequada comercialização, agindo ambas as partes com conhecimento, prudência e sem coação.',
   nota:'A renda indicada pressupõe um contrato em condições correntes de mercado para o tipo de ativo (prazo, atualizações e encargos habituais), sem relação especial entre as partes.'},
