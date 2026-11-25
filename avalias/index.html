@@ -173,6 +173,7 @@ input.auto,textarea.auto{color:#1565c0;font-style:italic;background:#eef5ff}
 #mkOv .mkHead{display:flex;align-items:center;gap:8px}
 .ph .mkBtn{position:absolute;left:6px;top:114px;margin:0;padding:3px 8px;min-height:0;font-size:12px;background:#fffe}
 .imgt{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.capf{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0}.capfi{width:104px;border:2px solid #ddd;border-radius:8px;padding:4px;background:#fff}.capfi.on{border-color:#2e7d32}.capfi img,.capfp img{width:100%;height:70px;object-fit:cover;border-radius:5px;display:block}.capfi small{display:block;font-size:11px;color:#666;margin:2px 0}.capfi .btns{margin:2px 0 0;gap:4px}.capfp{width:96px;padding:2px;border:1px solid #ccc;border-radius:6px;background:#fff}
 </style>
 </head>
 <body>
@@ -757,7 +758,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.58.2';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.59';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1949,7 +1950,7 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
   // ---- capa ----
   const TW=9638,CW=3212;const g=p.visita?.gps;const allF0=()=>p.anomalias.flatMap(a=>relF(a)).filter(f=>fd(f)).length;
   let mapData=null;if(g&&['fotosLoc','imgMapa','colunas','faixa','mosaico','carimbo','classica'].includes(r.capa||'fotosLoc')){mapData=await googleMapData(g,1600,Math.round(1600*(allF0()<6?9.2:5.0)/16.9));if(!mapData){try{if(await ensureMap(p,true))mapData=fotoCache.get(p.visita.map.id)}catch(e){}}}
-  const allF=(()=>{/* fotografias para a capa: de TODAS as verbas — uma de cada verba por volta (ordem das verbas baralhada), as marcadas «capa» primeiro dentro de cada verba */const G=shuffleR(p.anomalias.filter(a=>!a.al||alAtivas(p).includes(a))).map(a=>{const L=relF(a).filter(f=>fd(f));return [...shuffleR(L.filter(f=>f.capa)),...shuffleR(L.filter(f=>!f.capa))]}).filter(L=>L.length);const o=[];for(let i=0;G.some(L=>L[i]);i++)for(const L of G)if(L[i])o.push(L[i]);return o})(); // fotografias das verbas
+  const allF=capaOrdem(p).filter(f=>fd(f)); /* fotografias da capa: escolhidas + sugeridas (todas as verbas) */ // fotografias das verbas
   const CM=r.capa==='imgMapa'?'fotosLoc':(r.capa||'fotosLoc');const nF=CM==='fotos'?Math.min(9,allF.length):(['nenhuma','destaque','titulo','colunas','ficha','faixa','mosaico','carimbo','tipo','classica'].includes(CM))?0:(allF.length>=6?6:Math.min(3,allF.length));const big=nF<6;
   const mapH=big?9.2:5.0,phW=5.55,phH=4.16;
   const cellM=(content,w,o={})=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${o.span?`<w:gridSpan w:val="${o.span}"/>`:''}<w:vAlign w:val="center"/></w:tcPr>${content}</w:tc>`;
@@ -3095,7 +3096,23 @@ function alSugHist(){if(S.view!=='anom'||S.sub!=='ficha')return;const a=curA();i
 /* ecrã Relatório: só o que serve a avaliação (sem os blocos de anomalias do Regi) */
 // capa: secção própria no Relatório (escolha, «👁 Ver» e «✓ Usar esta capa»); os dados da capa estão em Processo › Identificação e solicitante
 function capaSecHTML(p){const r=ensureRel(p);const c=CAPAS.find(x=>x[0]===(r.capa||'fotosLoc'))||CAPAS[0];
-  return sec('rcapa','Capa',`<p class="muted">Escolha o tipo de capa; «👁 Ver» mostra a capa com os dados deste processo. Os dados (entidade, objeto, contexto…) estão em Processo › Identificação e solicitante.</p>${CAP_UI(r)}`,{cnt:pill(c[1]),def:true})}
+  return sec('rcapa','Capa',`<p class="muted">Escolha o tipo de capa; «👁 Ver» mostra a capa com os dados deste processo. Os dados (entidade, objeto, contexto…) estão em Processo › Identificação e solicitante.</p>${CAP_UI(r)}${capaFotosHTML(p)}`,{cnt:pill(c[1]),def:true})}
+/* FOTOGRAFIAS DA CAPA: sugeridas de TODAS as verbas (uma de cada por volta); cada lugar pode ser aceite (✓) ou trocado (↻) por outra fotografia; «🔀 Nova sugestão» baralha as não fixadas */
+const CAPA_N={fotosLoc:6,imgMapa:6,fotos:9,destaque:1,titulo:1,colunas:6,ficha:3,faixa:1,mosaico:3,carimbo:1,classica:1,tipo:0,nenhuma:0};
+const capaPoolF=p=>p.anomalias.flatMap(a=>relF(a).map(f=>({f,a})));
+function capaRR(p){const G=shuffleR(p.anomalias).map(a=>{const L=relF(a);return [...shuffleR(L.filter(f=>f.capa)),...shuffleR(L.filter(f=>!f.capa))]}).filter(L=>L.length);const o=[];for(let i=0;G.some(L=>L[i]);i++)for(const L of G)if(L[i])o.push(L[i]);return o}
+function capaOrdem(p){const r=ensureRel(p),pool=capaPoolF(p),byId=new Map(pool.map(o=>[o.f.id,o.f]));
+ if(!(r.capaSug||[]).some(id=>byId.has(id)))r.capaSug=capaRR(p).slice(0,12).map(f=>f.id);
+ const N=Math.max(CAPA_N[r.capa||'fotosLoc']??6,0),fix=r.capaF||[],used=new Set(),out=[];const sug=(r.capaSug||[]).filter(id=>byId.has(id));let si=0;
+ for(let i=0;i<N;i++){let id=fix[i]&&byId.has(fix[i])&&!used.has(fix[i])?fix[i]:null;while(!id&&si<sug.length){const c=sug[si++];if(!used.has(c)&&!fix.includes(c))id=c}if(!id)break;used.add(id);out.push(byId.get(id))}
+ for(const f of capaRR(p))if(!used.has(f.id)){used.add(f.id);out.push(f)}return out}
+function capaFotosHTML(p){const r=ensureRel(p),N=CAPA_N[r.capa||'fotosLoc']??6;if(!N)return '';const O=capaOrdem(p).slice(0,N),fix=r.capaF||[];if(!O.length)return `<p class="muted">Ainda não há fotografias nas verbas (marcadas para o relatório).</p>`;
+ const vb=f=>{const a=p.anomalias.find(a=>a.fotos.includes(f));return a?alCode(p,a):''};
+ return `<label>Fotografias da capa <span class="muted">(sugeridas de todas as verbas — ✓ aceite ou ↻ troque cada uma)</span></label><div class="capf">${O.map((f,i)=>{const ok=fix[i]===f.id;const d=fd(f);return `<div class="capfi ${ok?'on':''}">${d?`<img src="${d}" alt="">`:'<div class="noimg">📷</div>'}<small>${esc(vb(f))} · ${ok?'escolhida':'sugerida'}</small><div class="btns"><button class="${ok?'green':'secondary'} mini" data-act="capfOk" data-i="${i}" data-id="${f.id}">✓</button><button class="secondary mini" data-act="capfTroca" data-i="${i}">↻ Trocar</button></div></div>`}).join('')}</div>
+ <div class="btns"><button class="secondary mini" data-act="capfNova">🔀 Nova sugestão</button>${fix.some(Boolean)?'<button class="secondary mini" data-act="capfLimpa">Limpar escolhas</button>':''}</div>`}
+function capaPick(p){return new Promise(ok=>{const m=document.createElement('div');m.className='modal';
+ m.innerHTML=`<div class="box"><b style="font-size:17px">Escolher fotografia para a capa</b>${p.anomalias.map(a=>{const L=relF(a);return L.length?`<div class="muted" style="margin:8px 0 4px">${esc(alCode(p,a))} ${esc(a.al?.designacao||'')}</div><div class="capf">${L.map(f=>`<button class="capfp" data-id="${f.id}">${fd(f)?`<img src="${fd(f)}">`:'📷'}</button>`).join('')}</div>`:''}).join('')}<div class="btns"><button class="secondary" data-no>Cancelar</button></div></div>`;
+ m.onclick=e=>{const b=e.target.closest('[data-id]');if(b){m.remove();ok(b.dataset.id)}else if(e.target.closest('[data-no]')){m.remove();ok(null)}};document.body.appendChild(m)})}
 const CAP_UI=r=>`<label>Tipo de capa <span class="muted">(fotografias das verbas)</span></label><div class="capas">${CAPAS.map(([k,t,d])=>`<div class="capa ${(r.capa||'fotosLoc')===k?'on':''}"><button class="capasel" data-act="rCapa" data-v="${k}"><b>${(r.capa||'fotosLoc')===k?'● ':'○ '}${t}</b><small>${d}</small></button><button class="secondary mini" data-act="capaPrev" data-v="${k}">👁 Ver</button></div>`).join('')}</div>`;
 /* textos do processo e das verbas para a revisão (regra docs/regras/revisao.md) */
 function alRvItems(p){const r=ensureRel(p),L=[];const add=(sec,lbl,key,o,k)=>L.push({sec,lbl,key,get:()=>o[k]||'',set:v=>{o[k]=v}});
@@ -3757,6 +3774,10 @@ document.addEventListener('click',async e=>{
     case 'capaPrev':{if(dirty)await saveProc();const k=el.dataset.v,nm=(CAPAS.find(c=>c[0]===k)||['',k])[1];busy(true,'A preparar a capa…');const tp=settings.txtPhotos;
       try{const q=JSON.parse(JSON.stringify(p));q.rel.capa=k;settings.txtPhotos=false;const o=await buildRelat(q);settings.txtPhotos=tp;busy(false);await previewDocx(new Blob([o.bytes],{type:DOCX_MIME}),'Capa — '+nm,[],{firstOnly:true,useCapa:k})}catch(err){settings.txtPhotos=tp;busy(false);toast('Erro na pré-visualização: '+err.message,1)}return}
     case 'rCapa':ensureRel(p).capa=el.dataset.v;await saveProc();S.scrollTop=window.scrollY;break;
+    case 'capfOk':{const r=ensureRel(p),i=+el.dataset.i;r.capaF=r.capaF||[];r.capaF[i]=r.capaF[i]===el.dataset.id?null:el.dataset.id;await saveProc();S.scrollTop=window.scrollY;break}
+    case 'capfTroca':{await loadFotos(p);const id=await capaPick(p);if(!id)return;const r=ensureRel(p),i=+el.dataset.i;r.capaF=r.capaF||[];const j=r.capaF.indexOf(id);if(j>=0&&j!==i)r.capaF[j]=null;r.capaF[i]=id;await saveProc();S.scrollTop=window.scrollY;break}
+    case 'capfNova':{const r=ensureRel(p);r.capaSug=capaRR(p).slice(0,12).map(f=>f.id);await saveProc();S.scrollTop=window.scrollY;break}
+    case 'capfLimpa':{const r=ensureRel(p);r.capaF=[];await saveProc();S.scrollTop=window.scrollY;break}
     case 'rUnan':ensureRel(p).unan=el.dataset.v==='1';await saveProc();S.scrollTop=window.scrollY;break;
     case 'relWord':{if(dirty)await saveProc();toast('A gerar o relatório…');try{const o=await buildRelat(p);await saveBlob(new Blob([o.bytes],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}),o.name)}catch(err){toast('Erro ao gerar o relatório: '+err.message,1)}return}
     case 'filt':S.filt.st=el.dataset.v;S.scrollTop=window.scrollY;break;

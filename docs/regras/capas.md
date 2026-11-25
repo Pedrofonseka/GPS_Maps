@@ -7,6 +7,8 @@ Cada capa tem um número fixo, igual em todas as apps, e aparece na lista como �
 
 **Capas com dados em 2 colunas (7, 9):** coluna esquerda = processo (Entidade/Solicitante · Contexto processual · Data da visita); coluna direita = Local · Parte 1 · Parte 2; Versão a toda a largura no fim.
 
+**Fotografias da capa (AvaLias 1.59):** sugeridas de todas as verbas (uma de cada por volta); no ecrã, cada lugar pode ser aceite (✓, fica fixo) ou trocado (↻, escolher outra); «🔀 Nova sugestão» baralha as não fixadas; o Word usa a mesma ordem (rel.capaF = fixadas, rel.capaSug = sugestão guardada).
+
 ## Opções (lista `CAPAS`, campo `rel.capa`)
 | Chave | Nome | Composição |
 |---|---|---|
