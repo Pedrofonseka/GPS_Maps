@@ -757,7 +757,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.51';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.52';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1440,7 +1440,7 @@ function applyWide(){const m=settings.largura||'auto',w=m==='larga'||(m==='auto'
 window.addEventListener('resize',()=>{try{applyWide()}catch(_){}});
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-largura]');if(!b)return;e.preventDefault();e.stopImmediatePropagation();settings.largura=b.dataset.largura;await saveSettings();applyWide();S.scrollTop=window.scrollY;render()},true);
 const largHTML=()=>sec('d_larg','Ecrã — largura do formulário',`<p class="muted">No PC, o modo largo aproveita a largura do ecrã: formulário mais largo, escolhas em várias colunas e 4 fotografias por linha. No iPhone fica sempre estreito, salvo se escolher «Larga».</p><div class="seg">${[['auto','Automática'],['estreita','Estreita (telemóvel)'],['larga','Larga (PC)']].map(([k,t])=>`<button class="${(settings.largura||'auto')===k?'on':''}" data-largura="${k}">${t}</button>`).join('')}</div>`,{def:false});
-function relDefsHTML(){return largHTML()+sec('d_relat','Relatório — perito (singular)',`<p class="muted">Usado no compromisso de honra das peritagens institucionais singulares e na assinatura do termo de encerramento. Fica só neste aparelho.</p><label>Nome do perito (assinatura)</label><input data-bind="s.peritoNome" list="dlPeritos" value="${esc(settings.peritoNome||'')}" placeholder="Nome">${perDL()}<label>Linha de qualificação (por baixo do nome, no termo de encerramento)</label><input data-bind="s.peritoQual" value="${esc(settings.peritoQual||'')}" placeholder="ex.: Perito avaliador registado na CMVM * lista oficial …"><label>Compromisso de honra — perícia singular</label><textarea data-bind="s.compSingular" rows="7" placeholder="Nome, profissão, perito-avaliador da Lista Oficial…, jura por sua honra desempenhar as funções que lhe foram atribuídas, com lealdade e proficiência.">${esc(settings.compSingular||'')}</textarea><p class="muted">Perícia colegial: «${esc(COMP_COLEGIAL)}» · Particular: sem compromisso.</p>`,{cnt:settings.compSingular?pill('✓','ok'):pill('por preencher','warn'),def:false})}
+function relDefsHTML(){return largHTML()+sec('d_relat','Relatório — perito (singular)',`<p class="muted">Usado no compromisso de honra das peritagens institucionais singulares e na assinatura do termo de encerramento. Fica só neste aparelho.</p><label>Nome do perito (assinatura)</label><input data-bind="s.peritoNome" list="dlPeritos" value="${esc(settings.peritoNome||'')}" placeholder="Nome">${perDL()}<label>Linha de qualificação (por baixo do nome, no termo de encerramento)</label><input data-bind="s.peritoQual" value="${esc(settings.peritoQual||'')}" placeholder="ex.: Perito avaliador registado na CMVM * lista oficial …"><label>Credenciais (cada uma numa linha por baixo da assinatura; acrescente o n.º de registo, se quiser — fica só neste aparelho)</label>${credList().map((c,i)=>`<input data-bind="s.${c.k}" value="${esc(c.t)}" placeholder="${i===4?'Outra credencial (opcional)':esc(CRED_DEF[i])}" style="margin-bottom:4px">`).join('')}<label>Compromisso de honra — perícia singular</label><textarea data-bind="s.compSingular" rows="7" placeholder="Nome, profissão, perito-avaliador da Lista Oficial…, jura por sua honra desempenhar as funções que lhe foram atribuídas, com lealdade e proficiência.">${esc(settings.compSingular||'')}</textarea><p class="muted">Perícia colegial: «${esc(COMP_COLEGIAL)}» · Particular: sem compromisso.</p>`,{cnt:settings.compSingular?pill('✓','ok'):pill('por preencher','warn'),def:false})}
 function vDefs(){
   const TY={choice:'Escolha única',multi:'Escolha múltipla',catalog:'Catálogo',text:'Texto curto',long:'Texto longo'};
   const catSec=([ck,lab],n)=>sec('dc_'+ck,`${n} · ${esc(lab)}`,`<div class="rows">${settings[ck].map((c,i)=>`<div class="rw"><input data-catedit="${ck}" data-i="${i}" value="${esc(c)}"><button class="del" data-act="delCat" data-k="${ck}" data-i="${i}" aria-label="Retirar">✕</button></div>`).join('')}</div>
@@ -1906,7 +1906,7 @@ function relRelHTML(p){const r=ensureRel(p),col=isCol(r);
     return `<div class="qbox"><div class="qhd"><b>${isPart(r)?'Queixa '+qCode(i):'Questão '+qNum(r,i)}</b></div><div class="muted qtxt">${esc(q.txt||'')}</div>${resp}</div>`}).join('')||'<p class="muted">Sem quesitos — acrescente-os em Processo › Outras questões.</p>';
   const nr=r.quesitos.filter(q=>String(q.resp||'').trim()).length;
   const termo=`${col?`<label>Conclusão</label>${segR('rUnan',[['1','Por unanimidade'],['0','Com posições discordantes']],r.unan?'1':'0')}${r.unan?'':RT('discord','Posições discordantes (perito e fundamento)',r.discord,4)}`:''}
-    ${`<label>Concluído em</label><input data-bind="r.dataEnc" ${avA(r.dataEnc,mesAno())}>`}<p class="muted">${col?'Assinam os peritos do colégio.':'Assina o perito — nome e linha de qualificação em Definições › Relatório.'}</p>`;
+    ${`<label>Concluído em</label><input data-bind="r.dataEnc" ${avA(r.dataEnc,mesAno())}>`}<p class="muted">${col?'Assinam os peritos do colégio.':'Assina o perito — nome e linha de qualificação em Definições › Relatório.'}</p>${col?'':`<label>Credenciais por baixo da assinatura <span class="muted">(escolha as que interessam a este relatório; textos em Definições › Relatório)</span></label><div class="tks col">${credList().filter(c=>c.t).map(c=>tickBox('',credOn(r,c.k),esc(c.t),`data-act="rCred" data-k="${c.k}"`)).join('')}</div>`}`;
   const anex=`<div class="tks col">${ANEX_R.map(d=>tickBox('',!!r.anexos[d],d,`data-act="rAnex" data-k="${esc(d)}"`)).join('')}</div>${RT('anexosOutros','Outros anexos (um por linha)',r.anexosOutros,2)}${anexFilesHTML(p)}`;
   return `${sec('rr1',isPart(r)?'Apreciação das queixas':'Resposta às questões colocadas',qs,{cnt:pill(`${nr}/${r.quesitos.length}`,nr&&nr===r.quesitos.length?'ok':'warn')})}
   ${relFimHTML(p)}
@@ -2198,7 +2198,7 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
   body+=H1('Termo de encerramento')+E()+T('Relatório dá-se por concluído em:')+T(String(r.dataEnc||'').trim()||mesAno())+E();
   if(col){body+=T(r.unan?'O presente relatório foi elaborado por unanimidade dos peritos.':'O presente relatório não reúne unanimidade, manifestando-se as seguintes posições discordantes:',{jc:'both'});if(!r.unan&&String(r.discord||'').trim())body+=T(r.discord,{jc:'both'});body+=E();
     for(const pe of r.peritos)body+=P('',{sp:[360,0]})+P(R('_______________________________________'))+P(R(pe.nome||'',{b:true}))+P(R(represR(r,pe),{i:true,sz:9}))}
-  else{body+=P('',{sp:[360,0]})+P(R('_______________________________________'))+P(R(String(settings.peritoNome||'').trim()||'Pedro Fonseca, Eng.',{b:true}));if(String(settings.peritoQual||'').trim())body+=P(R(settings.peritoQual.trim(),{i:true,sz:9}))}
+  else{body+=P('',{sp:[360,0]})+P(R('_______________________________________'))+P(R(String(settings.peritoNome||'').trim()||'Perito avaliador',{b:true}));if(String(settings.peritoQual||'').trim())body+=P(R(settings.peritoQual.trim(),{i:true,sz:9}));for(const c of credList())if(c.t&&credOn(r,c.k))body+=P(R(c.t,{i:true,sz:9}))}
   // 11, 12
   const ax=ANEX_R.filter(d=>r.anexos[d]).map(d=>CHK(true,sgDoc(p,d))).join('')+String(r.anexosOutros||'').split('\n').filter(x=>x.trim()).map(x=>CHK(true,x.trim())).join('')+(r.anexF||[]).map((a,i)=>CHK(true,anexLbl(a,i))).join('');
   if(ax)body+=H1('Em anexo')+ax;
@@ -2658,6 +2658,10 @@ function alMetHTML(a,p){const x=a.al,on=alMetOn(x),bft=alBft(a),ad=x.mAdot&&x.me
   const vaR=vaRun(a);h+=ad?`<p class="cmres" style="margin-top:8px">Adotado: <b>${esc(alMetLbl(ad))}</b> ${va!=null?esc(alEur(va)):'— (sem valor)'}${vaR?` → valor atual ${esc(alEur(vaR.va))}`:''}${bft?` + BFT ${esc(alEur(bft))}`:''}${va!=null?` = <b>${esc(alEur((vaR?vaR.va:va)+(bft||0)))}</b>`:''}${x.valAuto===''?'<br><span class="muted">O valor estimado (8 · Valor) foi escrito à mão e prevalece; volte a carregar em «Adotado» para o repor.</span>':''}</p>`:'<p class="muted">Assinale qual o método adotado.</p>'}
  return h}
 /* texto do modelo «Ava_Context» (Valor estimado — considerações e BAD) */
+/* credenciais do perito por baixo da assinatura: textos em Definições (só no aparelho); em cada relatório escolhe-se quais saem */
+const CRED_DEF=['Perito avaliador da Autoridade Tributária e Aduaneira (AT)','Perito avaliador de imóveis registado na CMVM','Membro da Ordem dos Engenheiros','Perito da Lista Oficial de Peritos do Ministério da Justiça',''];
+const credList=()=>CRED_DEF.map((d,i)=>({k:'cred'+(i+1),t:String(settings['cred'+(i+1)]??d).trim()}));
+const credOn=(r,k)=>r.cred&&k in r.cred?!!r.cred[k]:true;
 const AL_N=[
  'N1 - O Valor indicado refere-se à totalidade do ativo (100% de quota-parte), não incluindo taxas nem comissões de mediação imobiliária.',
  'Em situação de titularidade repartida, deverá ser feita a proporção em função da respetiva quota-parte.',
@@ -3628,7 +3632,7 @@ document.addEventListener('click',async e=>{const el=e.target.closest('[data-cul
  CULT.calcOpen({rows:[row]},'rows',0,async()=>{x.calc=row.calc;x.valAuto='calc';x.calcW=row.calcW||null;x.calcTxt=row.calcTxt||[];x.vun=row.vun;x.fund=row.fund||'';const v=alNum(row.vun);if(v!=null&&at)x.valor=String(Math.round(at*v));await saveProc();S.scrollTop=window.scrollY;render();toast(at?'Valor estimado atualizado pelo cálculo.':'Cálculo guardado — falta a área do terreno.')})});
 
 document.addEventListener('click',async e=>{
-  const el=e.target.closest('[data-act]');if(!el||el.tagName==='INPUT'&&el.type!=='button'&&!(el.type==='checkbox'&&/^(rDoc|rAnex|rObjFun|rTit|rTk|rTk2|rPriTk|rResTk)$/.test(el.dataset.act))||el.tagName==='SELECT')return;
+  const el=e.target.closest('[data-act]');if(!el||el.tagName==='INPUT'&&el.type!=='button'&&!(el.type==='checkbox'&&/^(rDoc|rAnex|rObjFun|rTit|rTk|rTk2|rPriTk|rResTk|rCred)$/.test(el.dataset.act))||el.tagName==='SELECT')return;
   const act=el.dataset.act,p=cur(),a=curA();
   switch(act){
     case 'undo':return doUndo(-1);case 'redo':return doUndo(1);
@@ -3666,6 +3670,7 @@ document.addEventListener('click',async e=>{
     case 'rDRef':{const r=ensureRel(p);r.dataRefM=el.dataset.v;if(r.dataRefM==='outras'&&!(r.dataRefs||[]).length)r.dataRefs=[''];await saveProc();S.scrollTop=window.scrollY;break}
     case 'rDRefAdd':{const r=ensureRel(p);(r.dataRefs=r.dataRefs||[]).push('');await saveProc();S.scrollTop=window.scrollY;break}
     case 'rDRefDel':{const r=ensureRel(p);(r.dataRefs||[]).splice(+el.dataset.i,1);await saveProc();S.scrollTop=window.scrollY;break}
+    case 'rCred':{const r=ensureRel(p),k=el.dataset.k;r.cred=r.cred||{};r.cred[k]=!credOn(r,k);await saveProc();S.scrollTop=window.scrollY;break}
     case 'rTk':{const r=ensureRel(p),k=el.dataset.k;r[k]=r[k]===false;await saveProc();S.scrollTop=window.scrollY;break}
     case 'relPrev':{if(dirty)await saveProc();try{const d=await relBuildBlob(p);await previewDocx(d.blob,d.name,relCheck(p))}catch(err){busy(false);toast('Erro na pré-visualização: '+err.message,1)}return}
     case 'relPdf':{if(dirty)await saveProc();try{const x=await relPdf(p);await saveBlob(x.blob,x.name)}catch(err){busy(false);toast('Erro ao gerar o PDF: '+err.message,1)}return}

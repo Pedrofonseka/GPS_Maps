@@ -26,6 +26,8 @@ Regras definidas pelo utilizador que valem só para a AvaLias. As regras comuns 
 8g. **Sem «Decurso das diligências»** (nem no Word, nem na app).
 8h. **Datas de referência:** título «Data(s) de referência:», linha em branco e uma data por linha (pode haver várias).
 
+8i. **Estatuto do avaliador:** por baixo da assinatura, as credenciais escolhidas para cada relatório (AT, CMVM, Ordem dos Engenheiros, Lista Oficial do Ministério da Justiça, outra). Os textos (e n.º de registo) ficam em Definições, só no aparelho.
+
 ## Preenchimento (iPhone / PC)
 9. **Ordem de preenchimento:**
    - **Processo:** A Abertura (escritório) · B Princípios · C Visita (campo) · D Verbas;
