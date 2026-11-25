@@ -757,7 +757,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.58';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.58.1';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1949,7 +1949,7 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
   // ---- capa ----
   const TW=9638,CW=3212;const g=p.visita?.gps;const allF0=()=>p.anomalias.flatMap(a=>relF(a)).filter(f=>fd(f)).length;
   let mapData=null;if(g&&['fotosLoc','imgMapa','colunas','faixa','mosaico','carimbo','classica'].includes(r.capa||'fotosLoc')){mapData=await googleMapData(g,1600,Math.round(1600*(allF0()<6?9.2:5.0)/16.9));if(!mapData){try{if(await ensureMap(p,true))mapData=fotoCache.get(p.visita.map.id)}catch(e){}}}
-  const allF=shuffleR(p.anomalias.flatMap(a=>relF(a)).filter(f=>fd(f))); // fotografias das verbas
+  const allF=(()=>{/* fotografias para a capa: de TODAS as verbas — uma de cada verba por volta (ordem das verbas baralhada), as marcadas «capa» primeiro dentro de cada verba */const G=shuffleR(p.anomalias.filter(a=>!a.al||alAtivas(p).includes(a))).map(a=>{const L=relF(a).filter(f=>fd(f));return [...shuffleR(L.filter(f=>f.capa)),...shuffleR(L.filter(f=>!f.capa))]}).filter(L=>L.length);const o=[];for(let i=0;G.some(L=>L[i]);i++)for(const L of G)if(L[i])o.push(L[i]);return o})(); // fotografias das verbas
   const CM=r.capa==='imgMapa'?'fotosLoc':(r.capa||'fotosLoc');const nF=CM==='fotos'?Math.min(9,allF.length):(['nenhuma','destaque','titulo','colunas','ficha','faixa','mosaico','carimbo','tipo','classica'].includes(CM))?0:(allF.length>=6?6:Math.min(3,allF.length));const big=nF<6;
   const mapH=big?9.2:5.0,phW=5.55,phH=4.16;
   const cellM=(content,w,o={})=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${o.span?`<w:gridSpan w:val="${o.span}"/>`:''}<w:vAlign w:val="center"/></w:tcPr>${content}</w:tc>`;
