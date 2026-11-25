@@ -45,6 +45,7 @@ Regras próprias de uma só app ficam na pasta da app (ex.: AvaLias — [../aval
 | **Ordem de visita** (`OV_xxx`, `comum/visita.js`: sugestão pelo 1.º registo no local, aceitar/corrigir, lista e relatório por processo ou por visita) — AvaLias, Relatório de Peritagem, ExPropria | [visita.md](visita.md) | 1.0 |
 | **Legendas das imagens — REGRA GERAL (todas as apps)**: a legenda de uma fotografia, imagem ou anexo fica sempre na linha a seguir à imagem, alinhada à esquerda dessa imagem (mesmo avanço; nunca centrada por baixo) — AvaLias 1.45 (fotos e extratos do PDM), periText 1.31.0 (fotos e contextualização; também no PDF), ExPropria 0.17.2 (extratos do PDM) | — | 1.0 |
 | **Quadros Excel no Word centrados — REGRA GERAL**: a folha de cálculo embutida nunca passa da largura útil da página (encolhem as colunas de texto mais largas, as numéricas mantêm-se) e, sendo mais estreita, fica centrada — AvaLias 1.45, ExPropria 0.17.2 | [folhas_word.md](folhas_word.md) | 1.1 |
+| **Biblioteca de siglas** (sigla · significado · grupo; lista de siglas do relatório e aviso de siglas desconhecidas) | [siglas.md](siglas.md) · `comum/siglas.js` | 1.0 |
 | **Motores comuns** (`comum/*.js`, copiados para dentro das apps entre `@comum:<nome>` e `@fim:<nome>`; nunca editar nas apps) | `tools/sync_comum.py` | 1.0 |
 
 ### Imagens no Word — controlo de conteúdo
