@@ -767,7 +767,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: periText (antes «Relatório de Peritagem») =====
-const VERSION='1.32.1';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.32.2';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):parteLista(p));
@@ -2263,6 +2263,8 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
     // ---- capas de desenho próprio (os mesmos dados, outra composição) ----
   if(['titulo','colunas','ficha','faixa','mosaico','carimbo','tipo','classica'].includes(CM)){const D=[];const pt=r.procJud?`Proc. ${r.procJud}`:'';D.push([part?'Solicitante':'Entidade',[r.entidade,pt].filter(x=>String(x||'').trim()).join(' · ')]);
     if(p.local)D.push(['Local',p.local]);if(r.contexto)D.push(['Contexto / finalidade',r.contexto]);if(!part){D.push(['Parte 1',r.parte1||'']);D.push(['Parte 2',r.parte2||''])}if(dlAll)D.push([VIS.filter(v=>v.data).length>1?'Datas das visitas':'Data da visita',dlAll]);
+    /* capas em 2 colunas: à esquerda o processo (entidade, contexto, data), à direita o local e as partes */
+    const D2=(()=>{const g=l=>D.find(d=>d[0]===l),Lc=[D[0],g('Contexto processual'),g('Data da visita')].filter(Boolean),Rc=[g('Local'),g('Parte 1'),g('Parte 2')].filter(Boolean),o=[];for(let i=0;i<Math.max(Lc.length,Rc.length);i++){o.push(Lc[i]||['',''],Rc[i]||['',''])}const rest=D.filter(d=>!Lc.includes(d)&&!Rc.includes(d));return [...o,...rest]})();
     const ver=`Versão ${r.versao||'1.00'} – ${new Date().toLocaleDateString('pt-PT')}`;const cp2=(runs,o={})=>`<w:p><w:pPr><w:spacing w:before="${o.b||0}" w:after="${o.a||0}"/>${o.jc?`<w:jc w:val="${o.jc}"/>`:''}${o.bd?`<w:pBdr><w:bottom w:val="single" w:sz="${o.bd}" w:space="4" w:color="${o.bc||'008080'}"/></w:pBdr>`:''}</w:pPr>${runs}</w:p>`;
     const tb=(grid,rows,o={})=>`<w:tbl><w:tblPr><w:tblW w:w="${o.w||TW}" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders>${o.borders||noB}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="${o.m??40}" w:type="dxa"/><w:left w:w="${o.m??80}" w:type="dxa"/><w:bottom w:w="${o.m??40}" w:type="dxa"/><w:right w:w="${o.m??80}" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${grid.map(w=>`<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>${rows}</w:tbl>`;
     const tc=(w,c,o={})=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${o.span?`<w:gridSpan w:val="${o.span}"/>`:''}${o.sh?`<w:shd w:val="clear" w:color="auto" w:fill="${o.sh}"/>`:''}${o.bd?`<w:tcBorders>${['top','left','bottom','right'].map(k=>`<w:${k} w:val="single" w:sz="4" w:color="BFBFBF"/>`).join('')}</w:tcBorders>`:''}<w:vAlign w:val="${o.v||'top'}"/></w:tcPr>${c}</w:tc>`;
@@ -2293,7 +2295,7 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
       if(big){const s1=await im(1,sw,sh,900),s2=await im(2,sw,sh,900);
         M+=s1||s2?tb([BW,G,SW],`<w:tr><w:trPr><w:cantSplit/></w:trPr>${tc(BW,cp2(big,{}))}${tc(G,cp2('',{}))}${tc(SW,cp2(s1,{a:s2?G:0})+(s2?cp2(s2,{}):''))}</w:tr>`,{m:0}):cp2(imgRun(await cropTo(src[0]?fdOut(src[0]):mapData,TW/567/H,1600),TW/567,H,'Capa'),{})}
       M+=cp2(String(p.codigo||'').trim()?R(String(p.codigo),{sz:9,color:'808080'}):'',{b:360,a:60})+cp2(R(titulo,{b:true,sz:24}),{a:80})+cp2(R(r.objeto||'',{i:true,sz:12}),{a:200,bd:6,bc:'808080'});
-      const W2=Math.floor(TW/2);let rr='';for(let k=0;k<D.length;k+=2)rr+=`<w:tr><w:trPr><w:cantSplit/></w:trPr>${tc(W2,lbv(D[k][0],D[k][1]))}${tc(TW-W2,D[k+1]?lbv(D[k+1][0],D[k+1][1]):'<w:p/>')}</w:tr>`;
+      const W2=Math.floor(TW/2);let rr='';for(let k=0;k<D2.length;k+=2)rr+=`<w:tr><w:trPr><w:cantSplit/></w:trPr>${tc(W2,D2[k][0]?lbv(D2[k][0],D2[k][1]):'<w:p/>')}${tc(TW-W2,D2[k+1]&&D2[k+1][0]?lbv(D2[k+1][0],D2[k+1][1]):'<w:p/>')}</w:tr>`;
       M+=tb([W2,TW-W2],rr,{m:0})+cp2(R(ver,{sz:8,color:'808080'}),{b:240});
       X=frame(M,'center')}
     if(CM==='carimbo'){// folha de desenho técnico: margem desenhada, título e fotografia em cima, carimbo no canto inferior direito
@@ -2339,8 +2341,8 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
       X=frame(ib+q,'center')}
     if(CM==='ficha'){const FM=200,FW=TW-2*FM,W2=Math.floor(FW/2),CF=Math.floor(FW/3),pw=(CF-40)/567,ph=pw*3/4;let F='';
       F+=tb([1700,FW-1700],`<w:tr><w:trPr><w:trHeight w:val="620"/></w:trPr>${tc(1700,cp2(R(String(p.codigo||''),{b:true,sz:10,color:'FFFFFF'}),{jc:'center'}),{sh:'008080',v:'center'})}${tc(FW-1700,cp2(R(titulo,{b:true,sz:15}),{})+cp2(R(r.objeto||'',{i:true,sz:11}),{}),{sh:'EAF4F4',v:'center'})}</w:tr>`,{m:60,w:FW})+cp2('',{a:120});
-      let rr='';for(let k=0;k<D.length;k+=2){rr+=`<w:tr><w:trPr><w:cantSplit/></w:trPr>${tc(W2,lbv(D[k][0],D[k][1]),{bd:1})}${D[k+1]?tc(FW-W2,lbv(D[k+1][0],D[k+1][1]),{bd:1}):tc(FW-W2,lbv('Versão',ver),{bd:1})}</w:tr>`}
-      if(D.length%2===0)rr+=`<w:tr>${tc(FW,lbv('Versão',ver),{bd:1,span:2})}</w:tr>`;F+=tb([W2,FW-W2],rr,{m:80,w:FW});
+      const lb2=(d)=>d[0]?lbv(d[0],d[1]):'<w:p/>';let rr='';for(let k=0;k<D2.length;k+=2){rr+=`<w:tr><w:trPr><w:cantSplit/></w:trPr>${tc(W2,lb2(D2[k]),{bd:1})}${D2[k+1]?tc(FW-W2,lb2(D2[k+1]),{bd:1}):tc(FW-W2,lbv('Versão',ver),{bd:1})}</w:tr>`}
+      if(D2.length%2===0)rr+=`<w:tr>${tc(FW,lbv('Versão',ver),{bd:1,span:2})}</w:tr>`;F+=tb([W2,FW-W2],rr,{m:80,w:FW});
       const sel=allF.slice(0,3);if(sel.length){let cells='';for(let c=0;c<3;c++){const f=sel[c];cells+=tc(c<2?CF:FW-2*CF,cp2(f?imgRun(await cropTo(fdOut(f),4/3,900),pw,ph,'Foto'):'',{jc:'center'}))}F+=cp2('',{a:160})+tb([CF,CF,FW-2*CF],`<w:tr><w:trPr><w:cantSplit/></w:trPr>${cells}</w:tr>`,{m:20,w:FW})}
       // caixilho a envolver todo o bloco
       const fb=['top','left','bottom','right'].map(k=>`<w:${k} w:val="single" w:sz="12" w:space="0" w:color="008080"/>`).join('');

@@ -5,6 +5,8 @@ Rotina comum às apps que geram relatório Word com capa (Relatório de Peritage
 ## Numeração — REGRA COMUM (periText, AvaLias, ExPropria e as apps que venham a ter capas)
 Cada capa tem um número fixo, igual em todas as apps, e aparece na lista como «N · Nome»: **1** Mapa + fotos · **2** Uma imagem grande · **3** Grelha de fotos · **4** Só texto · **5** Título em destaque · **6** Fotografias e dados lado a lado · **7** Ficha técnica · **8** Faixa lateral · **9** Mosaico · **10** Carimbo técnico · **11** Tipográfica (só texto) · **12** Imagem e quadro. **0** = capa própria do modelo da app (ExPropria: quadro N_Ref). Capa nova → número seguinte; um número nunca é reutilizado.
 
+**Capas com dados em 2 colunas (7, 9):** coluna esquerda = processo (Entidade/Solicitante · Contexto processual · Data da visita); coluna direita = Local · Parte 1 · Parte 2; Versão a toda a largura no fim.
+
 ## Opções (lista `CAPAS`, campo `rel.capa`)
 | Chave | Nome | Composição |
 |---|---|---|
