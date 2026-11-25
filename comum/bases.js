@@ -1,0 +1,24 @@
+/* @comum:bases v1.0 — Biblioteca de bases de valor (EVS — normas europeias de avaliação, TEGoVA). Cada base: nome · referência · definição (redação própria, fiel ao conceito) · nota para o relatório. O relatório junta a definição da base escolhida às considerações sobre o valor (fecho / conclusão / resumo). Regra: docs/regras/bases_valor.md */
+const BASES_VALOR=[
+ {n:'Valor de mercado',al:[],ref:'EVS 1',def:'Montante estimado pelo qual o ativo seria transacionado, na data da avaliação, entre um comprador e um vendedor interessados, numa transação em condições normais de mercado, após adequada comercialização, agindo ambas as partes com conhecimento, prudência e sem coação.',
+  nota:'O valor indicado pressupõe uma situação de transação em mercado normal, com exposição ao mercado durante adequado período de comercialização até se encontrar um comprador normal disponível em satisfazer o valor pedido, sem que relação ou interesse especial o mova.'},
+ {n:'Valor de renda de mercado',al:[],ref:'EVS 1',def:'Renda estimada pela qual o ativo seria arrendado, na data da avaliação, entre um senhorio e um arrendatário interessados, em condições contratuais adequadas, numa transação em condições normais de mercado, após adequada comercialização, agindo ambas as partes com conhecimento, prudência e sem coação.',
+  nota:'A renda indicada pressupõe um contrato em condições correntes de mercado para o tipo de ativo (prazo, atualizações e encargos habituais), sem relação especial entre as partes.'},
+ {n:'Valor Especial',al:['Valor especial'],ref:'EVS 2',def:'Valor que incorpora características do ativo com valor particular para um comprador especial — alguém para quem o ativo vale mais do que para os restantes participantes no mercado, por exemplo pela sinergia com um ativo contíguo ou com a atividade que já exerce no local.',
+  nota:'O valor especial pode diferir do valor de mercado e só é devido ao comprador especial identificado. Se a mesma vantagem estiver ao alcance de vários interessados, deixa de ser especial e corresponde ao valor de mercado.'},
+ {n:'Valor de Investimento',al:['Valor de investimento'],ref:'EVS 2',def:'Valor do ativo para um investidor ou proprietário concreto, tendo em conta os seus objetivos de investimento ou operacionais próprios.',
+  nota:'O valor de investimento é subjetivo e pode diferir do valor de mercado; reflete os pressupostos do investidor identificado.'},
+ {n:'Justo Valor',al:['Justo valor','Justo valor (IFRS 13)'],ref:'EVS 2 / IFRS 13',def:'Preço que seria recebido pela venda de um ativo numa transação ordenada entre participantes no mercado, na data de mensuração (justo valor para relato financeiro, IFRS 13).',
+  nota:'Para relato financeiro, o justo valor coincide em regra com o valor de mercado, salvo pressupostos contabilísticos próprios da entidade.'},
+ {n:'Valor Hipotecário',al:['Valor hipotecário'],ref:'EVS 2',def:'Valor prudente do ativo, assente na sua capacidade de manter valor a longo prazo, considerando apenas as características duradouras do ativo e do mercado e excluindo elementos especulativos, para garantia de crédito.',
+  nota:'O valor hipotecário é, em regra, igual ou inferior ao valor de mercado, por excluir elementos conjunturais e especulativos.'},
+ {n:'Valor Seguro',al:['Valor seguro','Valor de seguro'],ref:'EVS 2',def:'Valor pelo qual o ativo deve ser seguro: custo de reconstrução ou de substituição das construções e equipamentos, com os custos associados, excluindo o valor do terreno.',
+  nota:'O valor seguro não corresponde a um valor de transação e não inclui o terreno.'},
+ {n:'Valor de Liquidação',al:['Valor de Liquidação (venda forçada)','Valor de liquidação'],ref:'EVS 1 — pressuposto especial',def:'Valor de mercado sob o pressuposto especial de venda forçada, com um prazo de comercialização inferior ao adequado para o tipo de ativo; não é uma base autónoma.',
+  nota:'O valor de liquidação reflete a redução do prazo de comercialização e é, em regra, inferior ao valor de mercado.'},
+ {n:'Valor de uso alternativo',al:[],ref:'EVS 1 — pressuposto especial',def:'Valor de mercado sob o pressuposto especial de um uso diferente do atual, legalmente possível, fisicamente viável e financeiramente justificado; não é uma base autónoma.',
+  nota:'O valor de uso alternativo depende da concretização desse uso, indicada como pressuposto especial.'}];
+const baseDe=nome=>{const t=String(nome||'').trim().toLowerCase();return BASES_VALOR.find(b=>b.n.toLowerCase()===t||b.al.some(x=>x.toLowerCase()===t))||null};
+/* texto para o relatório: «Base de valor: X (ref). definição nota» */
+const baseTxt=nome=>{const b=baseDe(nome);return b?`Base de valor: ${b.n} (${b.ref}). ${b.def} ${b.nota}`:''};
+/* @fim:bases */

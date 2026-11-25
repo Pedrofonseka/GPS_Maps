@@ -757,7 +757,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.50.5';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.51';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -2119,7 +2119,7 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
    {const G=[...new Set(V.map(alGrp))];if(G.length>1)for(const g of Object.keys(AL_GRUPOS).filter(k=>G.includes(k))){const vv=V.filter(a=>alGrp(a)===g).map(a=>alNum(a.al.valor)).filter(v=>v!=null),st=vv.reduce((s1,v)=>s1+v,0);rows+=tr([tc(`Subtotal ${g} – ${AL_GRUPOS[g]}`,cV+cD+cT,{span:3,fill:'F8F8F8'}),tc(vv.length?alEur(st):'—',cVal,{jc:'center',fill:'F8F8F8'}),...(renda?[tc('',cR,{fill:'F8F8F8'})]:[]),...(bad?[tc('',cB,{fill:'F8F8F8'})]:[])].join(''))}}
    rows+=tr([tc('Total apurado',cV+cD+cT,{b:1,span:3,fill:'F2F2F2'}),tc(alEur(tot)||'—',cVal,{b:1,jc:'center',fill:'F2F2F2'}),...(renda?[tc(totR?alEur(totR)+'/mês':'—',cR,{b:1,jc:'center',fill:'F2F2F2'})]:[]),...(bad?[tc('',cB,{fill:'F2F2F2'})]:[])].join(''));
    if(!S.noOle&&V.length)body+=alOlePara(alResumoSheet(p),oleParts);else body+=tbl(W,rows);
-   body+=H2('Considerações sobre o valor estimado')+E();for(const t of AL_N)body+=T(t,{jc:'both'});
+   body+=H2('Considerações sobre o valor estimado')+E();{const bt=baseTxt(AP.base||'Valor de mercado');for(const t of (bt?[AL_N[0],AL_N[1],'N2 – '+bt]:AL_N))body+=T(sgTxt(p,t),{jc:'both'})}
    if(bad){body+=E();for(const t of AL_BAD)body+=T(t,{jc:'both'});body+=E();body+=P(R('Nota:',{b:true}),{bdrT:1})+T(sgTxt(p,`Havendo especial interesse de algum dos intervenientes, considera-se aplicável o conceito de BAD – Benefício económico de adjudicação direta – sugerindo-se uma redução de valor até à percentagem indicada no quadro, para cada verba.`),{jc:'both'})}
    // análise específica de cada verba
    body+=BRK+H1('Análise específica');
@@ -2182,7 +2182,7 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
   if(!r.quesitos.length)body+=T('—');}
   else{const AP=alP(p),V=alAtivas(p),bad=!!AP.bad,tot=V.reduce((s1,a)=>s1+(alNum(a.al.valor)||0),0),alvo=objAlvo(p);
    body+=BRK+H1('Resposta às questões colocadas');
-   if(V.length){body+=H2('Valor estimado')+E()+T('De acordo com a análise, o valor estimado é de:',{jc:'both'});
+   if(V.length){body+=H2('Valor estimado')+E()+T(`De acordo com a análise, o valor estimado${(()=>{const b=baseDe(AP.base||'Valor de mercado');return b?`, na base «${b.n}» (${b.ref}),`:''})()} é de:`,{jc:'both'});
     if(V.length===1){const a=V[0];body+=P(R('Valor: ',{b:true})+R(alNum(a.al.valor)!=null?alEur(a.al.valor):'—',{b:true}))}
     else body+=P(R('Valor total: ',{b:true})+R(alEur(tot),{b:true}))+T('Discriminado por verba no quadro do «Resumo de análise».',{jc:'both'});
     if(bad){const pc=String(AP.badPct||10);body+=E()+P(R(`BAD elegível — desconto sugerido: até ${pc} %`)+R(V.length===1&&alNum(V[0].al.valor)!=null?` (valor com o desconto máximo: ${alEur(Math.round(alNum(V[0].al.valor)*(1-(+pc.replace(',','.')||0)/100)/100)*100)})`:'')+R(' — ver N3 das considerações sobre o valor estimado.'))}
@@ -2684,6 +2684,30 @@ AL_LISTS.edc2_classe_energetica=[...NAPNAN,'NFN - Não fornecido',...AL_LISTS.ed
 AL_LISTS.atratividade=[...NAPNAN,...AL_LISTS.atratividade.filter(x=>!/NAP/.test(x))];
 /* bases de valor — Normas Europeias de Avaliação (EVS 2025, TEGOVA): EVS 1 valor e renda de mercado; EVS 2 bases que não o valor de mercado; pressupostos especiais do EVS 1 */
 AL_LISTS.proc_base=['Valor de mercado','Valor de renda de mercado','Justo Valor','Valor Especial','Valor de Investimento','Valor Hipotecário','Valor Seguro','Valor de uso alternativo','Valor de Liquidação (venda forçada)'];
+/* @comum:bases v1.0 — Biblioteca de bases de valor (EVS — normas europeias de avaliação, TEGoVA). Cada base: nome · referência · definição (redação própria, fiel ao conceito) · nota para o relatório. O relatório junta a definição da base escolhida às considerações sobre o valor (fecho / conclusão / resumo). Regra: docs/regras/bases_valor.md */
+const BASES_VALOR=[
+ {n:'Valor de mercado',al:[],ref:'EVS 1',def:'Montante estimado pelo qual o ativo seria transacionado, na data da avaliação, entre um comprador e um vendedor interessados, numa transação em condições normais de mercado, após adequada comercialização, agindo ambas as partes com conhecimento, prudência e sem coação.',
+  nota:'O valor indicado pressupõe uma situação de transação em mercado normal, com exposição ao mercado durante adequado período de comercialização até se encontrar um comprador normal disponível em satisfazer o valor pedido, sem que relação ou interesse especial o mova.'},
+ {n:'Valor de renda de mercado',al:[],ref:'EVS 1',def:'Renda estimada pela qual o ativo seria arrendado, na data da avaliação, entre um senhorio e um arrendatário interessados, em condições contratuais adequadas, numa transação em condições normais de mercado, após adequada comercialização, agindo ambas as partes com conhecimento, prudência e sem coação.',
+  nota:'A renda indicada pressupõe um contrato em condições correntes de mercado para o tipo de ativo (prazo, atualizações e encargos habituais), sem relação especial entre as partes.'},
+ {n:'Valor Especial',al:['Valor especial'],ref:'EVS 2',def:'Valor que incorpora características do ativo com valor particular para um comprador especial — alguém para quem o ativo vale mais do que para os restantes participantes no mercado, por exemplo pela sinergia com um ativo contíguo ou com a atividade que já exerce no local.',
+  nota:'O valor especial pode diferir do valor de mercado e só é devido ao comprador especial identificado. Se a mesma vantagem estiver ao alcance de vários interessados, deixa de ser especial e corresponde ao valor de mercado.'},
+ {n:'Valor de Investimento',al:['Valor de investimento'],ref:'EVS 2',def:'Valor do ativo para um investidor ou proprietário concreto, tendo em conta os seus objetivos de investimento ou operacionais próprios.',
+  nota:'O valor de investimento é subjetivo e pode diferir do valor de mercado; reflete os pressupostos do investidor identificado.'},
+ {n:'Justo Valor',al:['Justo valor','Justo valor (IFRS 13)'],ref:'EVS 2 / IFRS 13',def:'Preço que seria recebido pela venda de um ativo numa transação ordenada entre participantes no mercado, na data de mensuração (justo valor para relato financeiro, IFRS 13).',
+  nota:'Para relato financeiro, o justo valor coincide em regra com o valor de mercado, salvo pressupostos contabilísticos próprios da entidade.'},
+ {n:'Valor Hipotecário',al:['Valor hipotecário'],ref:'EVS 2',def:'Valor prudente do ativo, assente na sua capacidade de manter valor a longo prazo, considerando apenas as características duradouras do ativo e do mercado e excluindo elementos especulativos, para garantia de crédito.',
+  nota:'O valor hipotecário é, em regra, igual ou inferior ao valor de mercado, por excluir elementos conjunturais e especulativos.'},
+ {n:'Valor Seguro',al:['Valor seguro','Valor de seguro'],ref:'EVS 2',def:'Valor pelo qual o ativo deve ser seguro: custo de reconstrução ou de substituição das construções e equipamentos, com os custos associados, excluindo o valor do terreno.',
+  nota:'O valor seguro não corresponde a um valor de transação e não inclui o terreno.'},
+ {n:'Valor de Liquidação',al:['Valor de Liquidação (venda forçada)','Valor de liquidação'],ref:'EVS 1 — pressuposto especial',def:'Valor de mercado sob o pressuposto especial de venda forçada, com um prazo de comercialização inferior ao adequado para o tipo de ativo; não é uma base autónoma.',
+  nota:'O valor de liquidação reflete a redução do prazo de comercialização e é, em regra, inferior ao valor de mercado.'},
+ {n:'Valor de uso alternativo',al:[],ref:'EVS 1 — pressuposto especial',def:'Valor de mercado sob o pressuposto especial de um uso diferente do atual, legalmente possível, fisicamente viável e financeiramente justificado; não é uma base autónoma.',
+  nota:'O valor de uso alternativo depende da concretização desse uso, indicada como pressuposto especial.'}];
+const baseDe=nome=>{const t=String(nome||'').trim().toLowerCase();return BASES_VALOR.find(b=>b.n.toLowerCase()===t||b.al.some(x=>x.toLowerCase()===t))||null};
+/* texto para o relatório: «Base de valor: X (ref). definição nota» */
+const baseTxt=nome=>{const b=baseDe(nome);return b?`Base de valor: ${b.n} (${b.ref}). ${b.def} ${b.nota}`:''};
+/* @fim:bases */
 const AL_BASE_EVS={'Valor de mercado':'EVS 1 — valor de mercado','Valor de renda de mercado':'EVS 1 — renda de mercado','Justo Valor':'EVS 2 — justo valor (fair value)','Valor Especial':'EVS 2 — valor especial','Valor de Investimento':'EVS 2 — valor de investimento','Valor Hipotecário':'EVS 2 — valor hipotecário (mortgage lending value)','Valor Seguro':'EVS 2 — valor seguro (insurable value)','Valor de uso alternativo':'EVS 1 — pressuposto especial: uso alternativo (não é uma base autónoma; acompanha o valor de mercado)','Valor de Liquidação (venda forçada)':'EVS 1 — pressuposto especial: venda forçada (não é uma base autónoma; acompanha o valor de mercado)'};
 const AL_BASE_OLD={'Valor de Liquidação':'Valor de Liquidação (venda forçada)'};
 AL_LISTS.proc_finalidade=['Arrendamento','Compra/venda','Hipoteca','Particular','Partilha'];
@@ -2861,7 +2885,7 @@ function vProc(){const p=cur(),P=alP(p);
  ${sec('p1','1 · Dados do processo',`${inp('p.codigo','N_Ref — código interno do processo',p.codigo,'ex.: Ava 2611')}${inp('p.designacao','Designação',p.designacao)}${inp('p.local','Local / morada (geral, se houver)',p.local)}`,{cnt:falta([p.codigo,p.designacao].filter(x=>!String(x||'').trim()).length)})}
  ${relProcHTML(p)}
  ${sec('pctx','Contexto de análise',`<label>Finalidade</label><div class="tks sm">${fin.map(o=>alTk(P.finalidade===o,esc(o),`data-alact="pset" data-k="finalidade" data-v="${esc(o)}"`)).join('')}</div>
-  <label>Base de valor</label><div class="tks sm">${bases.map(o=>alTk(P.base===o,esc(o),`data-alact="pset" data-k="base" data-v="${esc(o)}"`)).join('')}</div>${AL_BASE_EVS[P.base]?`<p class="muted" style="margin:4px 0">📘 ${esc(AL_BASE_EVS[P.base])}</p>`:''}${P.base==='Valor de renda de mercado'?'<p class="muted">Com renda de mercado, cada verba pede também a renda mensal e o quadro-resumo leva essa coluna.</p>':''}
+  <label>Base de valor</label><div class="tks sm">${bases.map(o=>alTk(P.base===o,esc(o),`data-alact="pset" data-k="base" data-v="${esc(o)}"`)).join('')}</div>${baseDe(P.base)?`<p class="muted" style="margin:4px 0">📘 <b>${esc(baseDe(P.base).ref)}</b> — ${esc(baseDe(P.base).def)} <i>${esc(baseDe(P.base).nota)}</i><br>Sai no relatório em «Considerações sobre o valor estimado» (N2) e na resposta «Valor estimado».</p>`:(AL_BASE_EVS[P.base]?`<p class="muted" style="margin:4px 0">📘 ${esc(AL_BASE_EVS[P.base])}</p>`:'')}${P.base==='Valor de renda de mercado'?'<p class="muted">Com renda de mercado, cada verba pede também a renda mensal e o quadro-resumo leva essa coluna.</p>':''}
   <label>Tipo de posse</label><div class="tks sm">${posse.map(o=>alTk(P.posse===o,esc(o),`data-alact="pset" data-k="posse" data-v="${esc(o)}"`)).join('')}</div>
   <label>BAD — benefício económico de adjudicação direta</label><p class="muted" style="margin-top:0">Aplica-se quando algum dos intervenientes manifesta interesse especial em adquirir o ativo: sugere-se uma redução ao valor estimado.</p><div class="seg"><button class="${!P.bad?'on':''}" data-alact="pset" data-k="bad" data-v="0">Não aplicável</button><button class="${P.bad?'on':''}" data-alact="pset" data-k="bad" data-v="1">Aplicável</button></div>${P.bad?inpA('pal.badPct','Redução por defeito, até (%)',P.badPct,'10'):''}`,{cnt:falta([P.finalidade,P.base].filter(x=>!x).length)})}
  ${cronoHTML(p)}
