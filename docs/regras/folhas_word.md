@@ -21,3 +21,9 @@
 |---|---|---|
 | AvaLias | 1.6 | motor comum `comum/tof.js` v1.2 (`calcXls` passou para o motor) · `alXlsx` (zip próprio) · `alXlsPng` · `alOlePara`; o cálculo é refeito ao exportar e só se embute se der o mesmo V_Un; a pasta ZIP leva também `VB_xxx_Calculo.xlsx` |
 | ExPropria | 0.14.0 | `calcXls` (rotação, eucaliptal, pinhal, soma de rendimentos) · `xlsxBuild` · `oleInsert` · `xlsEmbedAll` |
+
+## Aspeto de folha de Excel feita à mão (v1.1 — AvaLias 1.66)
+- Todas as folhas embutidas no Word: as linhas com conteúdo levam limites finos em todas as células; cabeçalhos com fundo cinzento (D9D9D9) e totais com cinzento-claro (F2F2F2); um texto seguido de células vazias ocupa-as (células unidas), exceto a última coluna (valores).
+- O mesmo aspeto na imagem que o Word mostra antes de abrir o objeto.
+- Implementação no AvaLias: `gridSheet` (aplicada em `alOlePara`), estilos 12–23 (= 0–11 com limites) em `XL_STYLES`, `alXlsPng` com grelha e células unidas.
+- Falta aplicar no periText e no ExPropria.

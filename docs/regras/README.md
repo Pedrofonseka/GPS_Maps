@@ -18,7 +18,7 @@ Regras próprias de uma só app ficam na pasta da app (ex.: AvaLias — [../aval
 | Navegar entre unidades sem sair da secção | ver abaixo | 1.0 |
 | Nome do ficheiro no rodapé como campo FILENAME | ver abaixo | 1.0 |
 | Verificação de gralhas e coerência (Word gerado e importado) | [verificacao.md](verificacao.md) | 1.0 |
-| Cálculos no Word como folha de cálculo embutida (editável) | [folhas_word.md](folhas_word.md) | 1.0 |
+| Cálculos no Word como folha de cálculo embutida (editável); aspeto de folha de Excel feita à mão (limites, cabeçalhos a cinzento) | [folhas_word.md](folhas_word.md) | 1.1 |
 | Marcas nas fotografias (setas, círculos, letras, texto, balões) | [marcas_fotos.md](marcas_fotos.md) | 1.0 |
 | Imagens anexadas — as mesmas ferramentas das fotografias (ver, rodar, marcar, eliminar) | [imagens_anexas.md](imagens_anexas.md) | 1.0 |
 | **Exportação para Word — REGRA SEMPRE** (todas as apps): **fotografias com a rotina das fotos** ([fotos.md](fotos.md), [tamanho.md](tamanho.md)) e **cada imagem dentro do controlo de conteúdo «Imagem» do separador Programador** (troca com um clique no Word) · **tabelas com cálculos em Excel** (folha embutida e editável no Word — [folhas_word.md](folhas_word.md)). Estado em 24/11/2026 — controlo «Imagem»: AvaLias ✓, periText ✓, ExPropria ✓, AVA_Input ✓; Regi, FullTopics, Revip ✗ (por aplicar). Tabelas em Excel: AvaLias ✓ (resumo, métodos, CST, RND, RES, culturas, terreno por partes), ExPropria ✓; periText ✗ (medição e estimativa de custo saem em tabela Word); Regi, FullTopics, Revip — a verificar. | — | 1.1 |
