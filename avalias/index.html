@@ -758,7 +758,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.59';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.59.1';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -3096,7 +3096,7 @@ function alSugHist(){if(S.view!=='anom'||S.sub!=='ficha')return;const a=curA();i
 /* ecrã Relatório: só o que serve a avaliação (sem os blocos de anomalias do Regi) */
 // capa: secção própria no Relatório (escolha, «👁 Ver» e «✓ Usar esta capa»); os dados da capa estão em Processo › Identificação e solicitante
 function capaSecHTML(p){const r=ensureRel(p);const c=CAPAS.find(x=>x[0]===(r.capa||'fotosLoc'))||CAPAS[0];
-  return sec('rcapa','Capa',`<p class="muted">Escolha o tipo de capa; «👁 Ver» mostra a capa com os dados deste processo. Os dados (entidade, objeto, contexto…) estão em Processo › Identificação e solicitante.</p>${CAP_UI(r)}${capaFotosHTML(p)}`,{cnt:pill(c[1]),def:true})}
+  return sec('rcapa','Capa',`<p class="muted">Escolha o tipo de capa; «👁 Ver» mostra a capa com os dados deste processo. Os dados (entidade, objeto, contexto…) estão em Processo › Identificação e solicitante.</p>${capaFotosHTML(p)}${CAP_UI(r)}`,{cnt:pill(c[1]),def:true})}
 /* FOTOGRAFIAS DA CAPA: sugeridas de TODAS as verbas (uma de cada por volta); cada lugar pode ser aceite (✓) ou trocado (↻) por outra fotografia; «🔀 Nova sugestão» baralha as não fixadas */
 const CAPA_N={fotosLoc:6,imgMapa:6,fotos:9,destaque:1,titulo:1,colunas:6,ficha:3,faixa:1,mosaico:3,carimbo:1,classica:1,tipo:0,nenhuma:0};
 const capaPoolF=p=>p.anomalias.flatMap(a=>relF(a).map(f=>({f,a})));
