@@ -9,6 +9,9 @@ Motor comum `comum/bases.js` (copiado para as apps por `tools/sync_comum.py`). R
 - Valor especial: o relatório tem de dizer que pode diferir do valor de mercado; se a vantagem estiver ao alcance de vários interessados, é valor de mercado (EVS 2).
 - Liquidação e uso alternativo não são bases autónomas: são pressupostos especiais do valor de mercado.
 
+## Valor especial na AvaLias (1.53)
+Com a base «Valor Especial», cada verba tem: comprador especial · fundamento da sinergia · valor de mercado (do método adotado, automático) · prémio de sinergia (%) → valor especial = valor estimado. Sai na grelha da verba; a coerência avisa se faltar o comprador ou o fundamento.
+
 ## Bases
 | Base | Referência |
 |---|---|
