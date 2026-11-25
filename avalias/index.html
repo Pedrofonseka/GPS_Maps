@@ -758,7 +758,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.67';const VERSION_DATA='2026-11-25';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.67.1';const VERSION_DATA='2026-11-25';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1499,20 +1499,28 @@ const mapAttr=m=>m==='street'?'Mapa: © colaboradores do OpenStreetMap':'Imagem 
 function loadTile(url){return new Promise((ok,no)=>{const i=new Image();i.crossOrigin='anonymous';i.onload=()=>ok(i);i.onerror=()=>no(new Error('sem acesso aos mosaicos do mapa'));i.src=url})}
 // Monta o mapa (3×3 mosaicos, zoom 17), recorta 512×384 centrado no ponto, marca o local e guarda-o no processo para o Word
 /* cada verba tem o seu mapa (antes todas gravavam por cima do mesmo «map_<processo>» e a capa podia mostrar o mapa de outra verba) */
+const MAPW_H=5.5;
+/* imagem larga do mapa: a guardada; se for um mapa antigo (só 4:3), recorta-se o centro */
+async function mapWideData(mm){if(!mm)return null;if(mm.wid){if(!fotoCache.has(mm.wid)){try{const r=await fotoGet(mm.wid);if(r)fotoCache.set(mm.wid,r.data)}catch(e){}}if(fotoCache.has(mm.wid))return {data:fotoCache.get(mm.wid),w:mm.ww,h:mm.wh}}
+ const src=fotoCache.get(mm.id);if(!src)return null;const im=await new Promise((ok,ko)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=ko;i.src=src});const W=im.width,H=Math.round(W*MAPW_H/16.9),c=document.createElement('canvas');c.width=W;c.height=H;c.getContext('2d').drawImage(im,0,Math.round((im.height-H)/2),W,H,0,0,W,H);return {data:c.toDataURL('image/jpeg',.85),w:W,h:H}}
 const mapIdOf=p=>{const a=(p.anomalias||[]).find(x=>x.vis===p.visita);return 'map_'+p.id+(a?'_'+a.id:'')};
 async function captureMap(p){const g=p.visita?.gps;if(!g)return false;const mode=p.visita.mapMode==='street'?'street':'satellite';const z=17,t=latLngToTile(g.lat,g.lon,z);
-  const cv=document.createElement('canvas');cv.width=768;cv.height=768;const x=cv.getContext('2d');
-  const tiles=[];for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)tiles.push(loadTile(gpsTileUrl(mode,z,{x:t.x+dx,y:t.y+dy})).then(im=>x.drawImage(im,(dx+1)*256,(dy+1)*256,256,256)));
+  const cv=document.createElement('canvas');cv.width=1280;cv.height=768;const x=cv.getContext('2d');
+  const tiles=[];for(let dy=-1;dy<=1;dy++)for(let dx=-2;dx<=2;dx++)tiles.push(loadTile(gpsTileUrl(mode,z,{x:t.x+dx,y:t.y+dy})).then(im=>x.drawImage(im,(dx+2)*256,(dy+1)*256,256,256)));
   await Promise.all(tiles);
-  const W=512,H=384,cx=256+t.fracX*256,cy=256+t.fracY*256;const out=document.createElement('canvas');out.width=W;out.height=H;const o=out.getContext('2d');
+  const W=512,H=384,cx=512+t.fracX*256,cy=256+t.fracY*256;const out=document.createElement('canvas');out.width=W;out.height=H;const o=out.getContext('2d');
   o.drawImage(cv,Math.round(cx-W/2),Math.round(cy-H/2),W,H,0,0,W,H);
   o.lineWidth=4;o.strokeStyle='rgba(0,0,0,.75)';o.beginPath();o.arc(W/2,H/2,15,0,Math.PI*2);o.stroke();o.lineWidth=3;o.strokeStyle='#ffd400';o.beginPath();o.arc(W/2,H/2,15,0,Math.PI*2);o.stroke();
   const data=out.toDataURL('image/jpeg',.85);const id=mapIdOf(p);await fotoPut(id,data);fotoCache.set(id,data);
-  p.visita.map={id,w:W,h:H,mode,lat:g.lat,lon:g.lon,at:Date.now()};await saveProc();return true}
+  /* versão larga para o Word (largura da página × 5,5 cm, como os extratos do PDM) */
+  const W2=1024,H2=Math.round(1024*MAPW_H/16.9),o2c=document.createElement('canvas');o2c.width=W2;o2c.height=H2;const o2=o2c.getContext('2d');o2.drawImage(cv,Math.round(cx-W2/2),Math.round(cy-H2/2),W2,H2,0,0,W2,H2);
+  o2.lineWidth=4;o2.strokeStyle='rgba(0,0,0,.75)';o2.beginPath();o2.arc(W2/2,H2/2,15,0,Math.PI*2);o2.stroke();o2.lineWidth=3;o2.strokeStyle='#ffd400';o2.beginPath();o2.arc(W2/2,H2/2,15,0,Math.PI*2);o2.stroke();
+  const d2=o2c.toDataURL('image/jpeg',.85),wid=id+'_w';await fotoPut(wid,d2);fotoCache.set(wid,d2);
+  p.visita.map={id,w:W,h:H,wid,ww:W2,wh:H2,mode,lat:g.lat,lon:g.lon,at:Date.now()};await saveProc();return true}
 const mapOk=p=>{const m=p.visita?.map,g=p.visita?.gps;return !!(m&&g&&m.lat===g.lat&&m.lon===g.lon&&fotoCache.has(m.id))};
 async function ensureMap(p,quiet){if(!p.visita?.gps)return false;const m=p.visita.map;const mode=p.visita.mapMode==='street'?'street':'satellite';
   if(m&&!fotoCache.has(m.id)){try{const r=await fotoGet(m.id);if(r)fotoCache.set(m.id,r.data)}catch(e){}}
-  if(mapOk(p)&&m.mode===mode&&m.id===mapIdOf(p))return true;
+  if(mapOk(p)&&m.mode===mode&&m.id===mapIdOf(p)&&m.wid)return true;
   try{return await captureMap(p)}catch(e){if(!quiet)setGpsStatus('Não foi possível guardar o mapa para o Word ('+esc(e.message)+'). Verifique a rede e toque em «Ver mapa».');const m2=p.visita.map;return mapOk(p)&&(m2.id===mapIdOf(p)||!(p.anomalias||[]).some(x=>x.vis!==p.visita&&x.vis?.map?.id===m2.id))}}
 function showGpsPreview(p){const g=p.visita.gps;const box=$('#gpsPreview');if(!box||!g)return;const mode=p.visita.mapMode==='street'?'street':'satellite';const z=16,t=latLngToTile(g.lat,g.lon,z);
   let h=`<div style="position:relative;width:256px;height:256px;border-radius:8px;overflow:hidden;border:1px solid #ccc;margin:6px 0;background:#eef1f0">`;
@@ -2156,9 +2164,9 @@ const ktab=(h,rows)=>KTXT?rows+E():tbl([L1,L2],tr(tc('Elemento',L1,{b:1,bb:1})+t
     kr+=krow('Identificação',alIdTxt(x));{const pr=alPredioRows(x);for(const [l,v] of pr)kr+=krow(l,v)}
     kr+=krow('Descrição sumária',a.descricao);
     {const lt=[x.morada,alLocTxt(x),g?`GPS ${g.lat.toFixed(6)}°, ${g.lon.toFixed(6)}°`:''].filter(Boolean).join('\n');
-     if(md&&mm){const w=Math.min(11.5,(L2-200)/567),h=w*(mm.h||384)/(mm.w||512),pp=(c,o='')=>`<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/>${o}<w:spacing w:before="30" w:after="30"/>${KTXT?`<w:ind w:left="${L1}"/>`:''}<w:jc w:val="left"/></w:pPr>${c}</w:p>`;
-      const im=pp(imgRun(md,w,h,'Mapa'),'<w:keepNext/>')+pp(R(`Localização de ${alCode(p,a)} · ${mapAttr(mm.mode)}`,{i:true,sz:8}));
-      kr+=KTXT?krow('Localização',lt||'—')+im:tr(tc('Localização',L1,{b:1,v:'top',tb:1})+`<w:tc><w:tcPr><w:tcW w:w="${L2}" w:type="dxa"/><w:tcBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="808080"/></w:tcBorders><w:vAlign w:val="top"/></w:tcPr>${lt?pp(R(lt,{sz:9})):''}${im}</w:tc>`)}
+     if(md&&mm){const W=await mapWideData(mm);if(W){const w=(TWb-160)/567,h=w*W.h/W.w,pp=(c,o='')=>`<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/>${o}<w:spacing w:before="20" w:after="20"/><w:jc w:val="left"/></w:pPr>${c}</w:p>`;
+      const im=pp(imgRun(W.data,w,h,'Mapa'),'<w:keepNext/>')+pp(R(`Localização de ${alCode(p,a)} · ${mapAttr(mm.mode)}`,{i:true,sz:8}));
+      kr+=krow('Localização',lt||'—')+(KTXT?im:tr(`<w:tc><w:tcPr><w:tcW w:w="${TWb}" w:type="dxa"/><w:gridSpan w:val="2"/><w:vAlign w:val="top"/></w:tcPr>${im}</w:tc>`))}else kr+=krow('Localização',lt)}
      else kr+=krow('Localização',lt)}
     kr+=krow('Visita',[[a.vis?.data,a.vis?.hora].filter(Boolean).join(' '),ovCod(a.ov)?'Ordem de visita: '+ovCod(a.ov):'',String(a.vis?.presencas||'').trim()?'Presenças: '+a.vis.presencas:''].filter(Boolean).join('\n'));
     kr+=krow('Tipo de ativo',x.tipo?`${alTipoNome(a)} (${alGrp(a)} – ${AL_GRUPOS[alGrp(a)]})`:'');kr+=krow('Destino',alDestTxt(a));
