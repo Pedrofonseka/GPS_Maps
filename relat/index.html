@@ -545,7 +545,7 @@ function buildDocx({proc,settings,anoms,onePerPage,withResumo,withVistoria,bodyO
   const s9='<w:i/><w:iCs/><w:sz w:val="18"/><w:szCs w:val="18"/>',s8='<w:sz w:val="16"/>',s11='<w:sz w:val="22"/>';
   const footer=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:ftr ${NSW}><w:p><w:pPr>${FP}<w:pBdr><w:top w:val="dashed" w:sz="4" w:space="1" w:color="000000"/></w:pBdr><w:jc w:val="center"/></w:pPr>${R('Relatório de utilização restringida a esta finalidade e contexto processual',s9)}</w:p><w:p><w:pPr>${FP}</w:pPr>${FLD('FILENAME',fileName||'Relatorio_Peritagem.docx',s8)}</w:p><w:p><w:pPr><w:tabs><w:tab w:val="center" w:pos="4819"/><w:tab w:val="right" w:pos="8504"/></w:tabs><w:spacing w:before="80" w:after="0"/></w:pPr><w:r><w:rPr><w:i/>${s8}</w:rPr><w:tab/></w:r><w:r><w:rPr>${s11}</w:rPr><w:tab/><w:t xml:space="preserve">Pag. </w:t></w:r>${FLD('PAGE','1',s11)}</w:p></w:ftr>`;
   const hb='<w:pBdr><w:top w:val="single" w:sz="4" w:space="1" w:color="auto"/></w:pBdr>';
-  const header=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr ${NSW}><w:p><w:pPr>${FP}<w:jc w:val="center"/></w:pPr></w:p><w:p><w:pPr>${FP}</w:pPr>${R('Perícia - Análise de anomalias',`<w:sz w:val="24"/><w:szCs w:val="24"/>`)}</w:p><w:p><w:pPr>${FP}${hb}</w:pPr>${R([proc.designacao,proc.local].filter(Boolean).join(' - ')||' ',s9)}</w:p><w:p><w:pPr>${FP}${hb}<w:jc w:val="right"/></w:pPr>${proc.codigo?R('Proc. '+proc.codigo,'<w:i/><w:sz w:val="21"/><w:szCs w:val="21"/>'):''}</w:p></w:hdr>`;
+  const header=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr ${NSW}><w:p><w:pPr>${FP}<w:jc w:val="center"/></w:pPr></w:p><w:p><w:pPr>${FP}</w:pPr>${R('Perícia - Análise de anomalias',`<w:sz w:val="24"/><w:szCs w:val="24"/>`)}</w:p><w:p><w:pPr>${FP}${hb}</w:pPr>${R([proc.local].filter(Boolean).join(' - ')||' ',s9)}</w:p><w:p><w:pPr>${FP}${hb}<w:jc w:val="right"/></w:pPr>${proc.codigo?R('Proc. '+proc.codigo,'<w:i/><w:sz w:val="21"/><w:szCs w:val="21"/>'):''}</w:p></w:hdr>`;
   const styles=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="${FONT}" w:hAnsi="${FONT}" w:cs="${FONT}" w:eastAsia="${FONT}"/><w:sz w:val="20"/><w:szCs w:val="20"/><w:lang w:val="pt-PT"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style></w:styles>`;
   const rels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rHdr1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/><Relationship Id="rFtr1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>${media.map(m=>`<Relationship Id="${m.rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="${m.name.slice(5)}"/>`).join('')}</Relationships>`;
   const ct=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="jpeg" ContentType="image/jpeg"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>`;
@@ -561,7 +561,7 @@ async function buildDocxTpl(opts,tpl){
   const F=n=>files.find(f=>f.name===n);const T=f=>_dec.decode(f.data);
   const docF=F('word/document.xml');if(!docF)throw new Error('O modelo não é um documento Word (.docx) válido');
   const p=opts.proc,d=new Date();
-  const vars={PROCESSO:p.codigo||'',DESIGNACAO:p.designacao||'',LOCAL:p.local||'',DATA:p.visita?.data||'',DATA_HOJE:`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`};
+  const vars={PROCESSO:p.codigo||'',DESIGNACAO:'',LOCAL:p.local||'',DATA:p.visita?.data||'',DATA_HOJE:`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`};
   const fillVars=x=>x.replace(/\{\{(\w+)\}\}/g,(m,k)=>k in vars?xesc(vars[k]):m);
   let doc=T(docF);
   const NS={wp:'http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing',a:'http://schemas.openxmlformats.org/drawingml/2006/main',pic:'http://schemas.openxmlformats.org/drawingml/2006/picture',r:'http://schemas.openxmlformats.org/officeDocument/2006/relationships'};
@@ -744,7 +744,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
       text(dots,x2-tw(dots,f,s),y+s,f,s,'808080');text(pn,xr-tw(pn,f,s),y+s,f,s);pg.links.push({x:X0,y,w:W,h:LH(s),page:e.page,ty:e.y});y+=LH(s)+3}}
   // ---------- cabeçalho e rodapé em todas as páginas ----------
   pages.forEach((p,i)=>{pg=p;const hy=0.5*CM;text('Perícia - Análise de anomalias',X0,hy+12+14,'r',12);hline(X0,X0+W,hy+30,false,'000000',0.5);
-    text([proc.designacao,proc.local].filter(Boolean).join(' - '),X0,hy+30+10,'i',9);hline(X0,X0+W,hy+44,false,'000000',0.5);if(proc.codigo){const t='Proc. '+proc.codigo;text(t,X0+W-tw(t,'i',10.5),hy+44+12,'i',10.5)}
+    text([proc.local].filter(Boolean).join(' - '),X0,hy+30+10,'i',9);hline(X0,X0+W,hy+44,false,'000000',0.5);if(proc.codigo){const t='Proc. '+proc.codigo;text(t,X0+W-tw(t,'i',10.5),hy+44+12,'i',10.5)}
     const fy=PHt-0.5*CM;text('Pag. '+(i+1),X0+15*CM-tw('Pag. '+(i+1),'r',11),fy-3,'r',11);text(fileName||'',X0,fy-18,'r',8);
     const disc='Relatório de utilização restringida a esta finalidade e contexto processual';text(disc,X0+(W-tw(disc,'i',9))/2,fy-29,'i',9);hline(X0,X0+W,fy-40,true,'000000',0.5)});
   // ---------- montagem do ficheiro ----------
@@ -768,7 +768,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: periText (antes «Relatório de Peritagem») =====
-const VERSION='1.33.1';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.33.2';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):parteLista(p));
@@ -1224,13 +1224,13 @@ function vHome(){
 const MODOS=[['confirma','Situações colocadas por alguém','As situações vêm indicadas por quem pede (lista importada ou escrita). No local, o perito confirma ou não (Status), comenta e classifica.'],['livre','Situações detetadas pelo perito','O perito observa, descreve, fotografa e classifica as situações que encontra no local.'],['misto','Ambas','Situações indicadas a confirmar + outras detetadas pelo perito no local.']];
 function vProc(){
   const p=cur(),v=p.visita,an=p.anomalias;
-  const f1=[p.codigo,p.designacao,p.local].filter(x=>!String(x||'').trim()).length;
+  const f1=[p.codigo,p.local].filter(x=>!String(x||'').trim()).length;
   const r=ensureRel(p);
   return `<h2>1 · Processo</h2><p class="muted" style="margin-top:-6px">Quem pede, o quê, onde — dados que não mudam durante o trabalho.</p>${blk('Tipo de trabalho','Decida primeiro: que relatório e de onde vêm as situações')}
   ${sec('p0','Título e abordagem',`<label>Título do trabalho <span class="muted">(1.ª linha da capa e topo da 1.ª página do texto)</span></label><div class="tks col">${[...TITULOS,'Outro'].map(t=>tickBox('',(r.titulo||'Relatório de Peritagem')===t,t,`data-act="rTitulo" data-v="${esc(t)}"`)).join('')}</div>${r.titulo==='Outro'?RL('tituloOutro','Título (outro)',r.tituloOutro,'ex.: Relatório de vistoria técnica'):''}
     <label>Abordagem — de onde vêm as situações</label><div class="seg">${MODOS.map(([k,t])=>`<button class="${(p.modo||'misto')===k?'on':''}" data-act="setModo" data-v="${k}">${t}</button>`).join('')}</div><p class="muted">${MODOS.find(m=>m[0]===(p.modo||'misto'))[2]}</p>`,{cnt:pill(relTitulo(r)+' · '+MODOS.find(m=>m[0]===(p.modo||'misto'))[1])})}
   ${blk('Identificação do processo','Código, designação e local')}
-  ${sec('p1','Dados do processo',`${inp('p.codigo','N_Ref — código interno do processo',p.codigo,'ex.: Trib 2630')}${inp('p.designacao','Designação',p.designacao)}${inp('p.local','Local / morada',p.local)}`,{cnt:falta(f1)})}
+  ${sec('p1','Dados do processo',`${inp('p.codigo','N_Ref — código interno do processo',p.codigo,'ex.: Trib 2630')}${inp('p.designacao','Tag — etiqueta interna para identificar o processo (não sai no relatório)',p.designacao,'ex.: Casa da Rua X — herdeiros')}${inp('p.local','Local / morada',p.local)}`,{cnt:falta(f1)})}
   ${relProcHTML(p)}
   ${nextBtn('anom','2 · Situações')}
   <div class="btns" style="margin-top:30px"><button class="del" data-act="delProc">Eliminar processo</button></div>`;
@@ -2138,7 +2138,7 @@ const CAPAS=[['fotosLoc','1 · Mapa + fotos','mapa à largura e 3 ou 6 fotos; qu
 const MTOP=g=>1984; // twips: 3,5 cm (todos os gabinetes)
 const PAGE_HU=23.7; // altura útil de texto estimada (cm): 29,7 − 3,5 − 1,5 − 1,0 de rodapé e folga
 const relTitulo=r=>r.titulo==='Outro'?(String(r.tituloOutro||'').trim()||'Relatório'):(r.titulo||'Relatório de Peritagem');
-function hdrDefaults(p){const r=p.rel;return {h1:relTitulo(r),h3:r.objeto||p.designacao||'',h4a:r.procJud?`Proc. ${r.procJud}`:'',h4b:p.codigo?` - ${p.codigo}`:''}}
+function hdrDefaults(p){const r=p.rel;return {h1:relTitulo(r),h3:r.objeto||'',h4a:r.procJud?`Proc. ${r.procJud}`:'',h4b:p.codigo?` - ${p.codigo}`:''}}
 // ---------- Separador Processo: blocos do relatório ----------
 function relProcHTML(p,which='proc'){const r=ensureRel(p),col=isCol(r),part=isPart(r),hd=hdrDefaults(p);
   const rec=AMB_GAB[r.ambito]||[];
@@ -2569,7 +2569,7 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
   if(H.rels)files.push({name:'word/_rels/header1.xml.rels',data:H.rels});
   if(H.img)files.push({name:'word/media/hdr_logo.png',data:b64ToU8('data:;base64,'+H.img)});
   F('word/footer1.xml').data=_enc.encode(TX(F('word/footer1.xml')).replace('{{FICHEIRO}}',X(fileName)));
-  F('docProps/core.xml').data=_enc.encode(TX(F('docProps/core.xml')).replace('{{TITULO}}',X(`${titulo} — ${r.objeto||p.designacao||''}`)));
+  F('docProps/core.xml').data=_enc.encode(TX(F('docProps/core.xml')).replace('{{TITULO}}',X(`${titulo} — ${r.objeto||''}`)));
   const relsF=F('word/_rels/document.xml.rels');relsF.data=_enc.encode(TX(relsF).replace('</Relationships>',media.map(m=>`<Relationship Id="${m.rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="${m.name.slice(5)}"/>`).join('')+'</Relationships>'));
   for(const m of media)files.push({name:m.name,data:m.data});
   return {bytes:zipStore(files),name:fileName}}
