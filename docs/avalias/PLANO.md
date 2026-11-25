@@ -137,3 +137,10 @@ Validar destinos; perguntas de caracterização por tipo; métodos de avaliaçã
 - Nova pergunta na Construção: «Autonomia funcional — o ativo está em condições de funcionar por si?» Sim / Não, com «porquê».
 - Todas as perguntas de escolha têm NAP (não aplicável) e INX (inexistente).
 - Sem autonomia funcional, o método de custo (CST) deixa de avaliar a construção pela área global (Abp/Abd) e passa a: terreno [A] + benfeitorias existentes [B] − custos a deduzir [C] (retoma, demolições, limpezas, retificações). Tabelas Item · Unid. · Qtd · Pr/un · Parciais · Obs., com Parciais = Qtd × Pr/un e linhas livres. No Word sai uma frase de justificação e o quadro Excel com fórmulas. As construções que já existiam no cálculo ficam guardadas: respondendo «Sim», volta o cálculo normal.
+
+## v1.64 (25/11/2026) — listas e textos
+- Tipo de ativo: + Moradia com quintal (MQU, EDC); «Equipamento» passa a «Máquina / Equipamento» (grupo MEQ). Veículo já existia (VEI).
+- «Fora do aglomerado» sai do Aglomerado e passa para a Centralidade, a seguir a Periferia (migração automática). Padrão urbano: NAP · NAN · Estigmatizado · Razoável · Normal · Bom · Muito bom (sem Núcleo antigo). Estas listas de contexto não levam INX.
+- Estado de conservação 2: «Deficiente / Reparação significativa».
+- Textos: «Nada a relevar.» nos constrangimentos; p32 «retrata de forma aceitável a realidade jurídica»; N1 «reflete sempre…» e «indivisibilidade/titularidade repartida».
+- Tabelas de texto no Word (ficha da verba, análise funcional): tópico da coluna da esquerda alinhado acima e linha horizontal por cima de cada tópico.
