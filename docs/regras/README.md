@@ -155,3 +155,6 @@ Cada app mostra na régua (cabeçalho) a versão **e a data da release**, ex.: `
 
 
 > Nota (23/11/2026): a app «Relatório de Peritagem» (pasta `relat`) passou a chamar-se **periText** — relatórios de peritagem de engenharia e construção. A pasta e os endereços mantêm-se.
+
+## Apps de ensaio
+- **ProspeMerc** (`prospe/`) — prospeção de mercado e homogeneização de comparáveis, separada da AvaLias até estar testada: [docs/prospe/LEIAME.md](../prospe/LEIAME.md).

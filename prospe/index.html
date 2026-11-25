@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="pt-PT"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ProspeMerc — prospeção de mercado</title>
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="theme-color" content="#0f6e56">
+<style>
+:root{--c:#0f6e56;--cl:#e1f5ee;--b:#d6d6d0;--m:#6b6b66;--w:#b26a00}
+*{box-sizing:border-box}body{margin:0;font:15px/1.45 -apple-system,system-ui,Segoe UI,Roboto,sans-serif;background:#f6f6f2;color:#222}
+#app{max-width:980px;margin:0 auto;padding:12px 12px 80px}
+h1{font-size:22px;margin:6px 0}h1 small{font-size:12px;color:var(--m)}h2{font-size:18px}h3{font-size:15px;margin:2px 0 8px}
+.muted{color:var(--m);font-size:13px}.warn{color:var(--w)}b.warn{color:var(--w)}
+.card{background:#fff;border:1px solid var(--b);border-radius:10px;padding:10px 12px;margin:10px 0}.card.click{cursor:pointer}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+button,.btn{font:inherit;border-radius:8px;padding:8px 12px;border:1px solid var(--c);background:#fff;color:var(--c);cursor:pointer;display:inline-block}
+button.pri{background:var(--c);color:#fff}button.del{border-color:#a33;color:#a33}
+label{display:block;margin:6px 0;flex:1;min-width:0}label>span{display:block;font-size:12px;color:var(--m);margin-bottom:2px}
+input,select,textarea{font:inherit;font-size:16px;width:100%;padding:7px 8px;border:1px solid var(--b);border-radius:7px;background:#fff}
+.row{display:flex;gap:8px;flex-wrap:wrap}.row>label{min-width:110px}
+.pill{font-size:11px;padding:1px 7px;border-radius:9px;background:var(--cl);color:var(--c);margin-left:4px}.pill.warn{background:#fff3df;color:var(--w)}
+.bar{display:flex;align-items:center;gap:10px;position:sticky;top:0;background:#f6f6f2;padding:6px 0;z-index:5}
+.tabs{display:flex;gap:6px;overflow-x:auto;margin:6px 0}.tabs button{white-space:nowrap;border-color:var(--b);color:#333}.tabs button.on{background:var(--c);color:#fff;border-color:var(--c)}
+.comp.off{opacity:.55}.ch{cursor:pointer;display:flex;flex-wrap:wrap;gap:4px;align-items:center}.ch .r{margin-left:auto;font-size:13px;color:var(--m)}
+.etq img{max-width:100%;max-height:360px;border:1px solid var(--b);border-radius:6px;display:block}.noimg{padding:18px;border:1px dashed var(--b);border-radius:6px;color:var(--m);text-align:center;font-size:13px}
+.tk{display:flex;align-items:center;gap:6px;flex:0}.tk input{width:auto}
+.tw{overflow-x:auto}table.mat{border-collapse:collapse;font-size:13px;min-width:760px}table.mat th,table.mat td{padding:4px 5px;border-bottom:1px solid #eee;text-align:center}
+table.mat th{font-size:11px;color:var(--m);font-weight:600}.fx{position:sticky;left:0;background:#fff}td.n{text-align:right;white-space:nowrap}tr.off td{opacity:.5}
+input.pc{width:62px;font-size:14px;padding:4px;text-align:right}input.pc.auto,input.auto{color:#555;background:#f3f7f5}
+.kv{display:grid;grid-template-columns:auto auto;gap:3px 14px;font-size:14px;margin:6px 0}.kv.big{font-size:16px;margin-top:10px}
+.rel{background:#fff;padding:14px;border:1px solid var(--b);border-radius:10px}table.rt{border-collapse:collapse;font-size:11px;width:100%}table.rt th{border-bottom:1px solid #000;text-align:center}table.rt td{padding:2px 3px}
+.eg{display:grid;grid-template-columns:1fr 1fr;gap:14px}.eg figure{margin:0;break-inside:avoid}.eg img{max-width:100%;max-height:330px;display:block;border:1px solid #ccc}.eg figcaption{text-align:left;font-size:11px;font-style:italic;margin-top:3px}
+@media print{body{background:#fff}#app{padding:0;max-width:none}.bar,.tabs,.noprint{display:none!important}.rel{border:0;padding:0}}
+</style></head><body><div id="app"></div>
+<script>
+const CRC_T=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+function crc32(u){let c=0xFFFFFFFF;for(let i=0;i<u.length;i++)c=CRC_T[(c^u[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0}
+const _enc=new TextEncoder(),_dec=new TextDecoder();
+function u8concat(arr){const n=arr.reduce((s,a)=>s+a.length,0);const o=new Uint8Array(n);let p=0;for(const a of arr){o.set(a,p);p+=a.length}return o}
+function zipStore(files){
+  const parts=[],central=[];let off=0;
+  for(const f of files){
+    const name=_enc.encode(f.name);const data=typeof f.data==='string'?_enc.encode(f.data):f.data;const crc=crc32(data);
+    const lh=new DataView(new ArrayBuffer(30));
+    lh.setUint32(0,0x04034b50,true);lh.setUint16(4,20,true);lh.setUint16(6,0x0800,true);lh.setUint16(8,0,true);
+    lh.setUint16(10,0,true);lh.setUint16(12,0x21,true);lh.setUint32(14,crc,true);lh.setUint32(18,data.length,true);
+    lh.setUint32(22,data.length,true);lh.setUint16(26,name.length,true);lh.setUint16(28,0,true);
+    parts.push(new Uint8Array(lh.buffer),name,data);
+    const ch=new DataView(new ArrayBuffer(46));
+    ch.setUint32(0,0x02014b50,true);ch.setUint16(4,20,true);ch.setUint16(6,20,true);ch.setUint16(8,0x0800,true);
+    ch.setUint16(10,0,true);ch.setUint16(12,0,true);ch.setUint16(14,0x21,true);ch.setUint32(16,crc,true);
+    ch.setUint32(20,data.length,true);ch.setUint32(24,data.length,true);ch.setUint16(28,name.length,true);ch.setUint32(42,off,true);
+    central.push(new Uint8Array(ch.buffer),name);
+    off+=30+name.length+data.length;
+  }
+  const cdSize=central.reduce((s,p)=>s+p.length,0);
+  const end=new DataView(new ArrayBuffer(22));
+  end.setUint32(0,0x06054b50,true);end.setUint16(8,files.length,true);end.setUint16(10,files.length,true);
+  end.setUint32(12,cdSize,true);end.setUint32(16,off,true);
+  return u8concat([...parts,...central,new Uint8Array(end.buffer)]);
+}
+function xesc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'')}
+const XL_COL=n=>{let s='';n++;while(n){const m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=Math.floor((n-1)/26)}return s};
+function alXlsx(sh){const E=t=>xesc(String(t));const rowsX=sh.rows.map((r,i)=>`<row r="${i+1}">${(r||[]).map((c,j)=>{if(c==null||c==='')return '';const o=typeof c==='object'?c:{v:c};const ref=`${XL_COL(j)}${i+1}`,st=o.s?` s="${o.s}"`:'';
+  if(o.f)return `<c r="${ref}"${st}><f>${E(o.f)}</f>${typeof o.v==='number'&&isFinite(o.v)?`<v>${o.v}</v>`:''}</c>`;if(typeof o.v==='number')return isFinite(o.v)?`<c r="${ref}"${st}><v>${o.v}</v></c>`:'';
+  return `<c r="${ref}"${st} t="inlineStr"><is><t xml:space="preserve">${E(o.v)}</t></is></c>`}).join('')}</row>`).join('');
+ const nc=Math.max(...sh.rows.map(r=>(r||[]).length),1),last=`${XL_COL(nc-1)}${sh.rows.length}`;
+ const Fn=b=>`<font>${b?'<b/>':''}<sz val="10"/><name val="Calibri"/><family val="2"/></font>`,Xf=(nf,font,bd,al)=>`<xf numFmtId="${nf}" fontId="${font}" fillId="0" borderId="${bd}" xfId="0"${nf?' applyNumberFormat="1"':''}${font?' applyFont="1"':''}${bd?' applyBorder="1"':''}${al?` applyAlignment="1"><alignment ${al}/></xf>`:'/>'}`;
+ const cols=(sh.cols||[]).map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('');
+ return zipStore([{name:'[Content_Types].xml',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>'},
+  {name:'_rels/.rels',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'},
+  {name:'xl/workbook.xml',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${E(sh.name||'Cálculo')}" sheetId="1" r:id="rId1"/></sheets><calcPr calcId="191029" fullCalcOnLoad="1"/><oleSize ref="A1:${last}"/></workbook>`},
+  {name:'xl/_rels/workbook.xml.rels',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'},
+  {name:'xl/styles.xml',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="5"><numFmt numFmtId="164" formatCode="#,##0.00"/><numFmt numFmtId="165" formatCode="0.00%"/><numFmt numFmtId="166" formatCode="#,##0.0000"/><numFmt numFmtId="167" formatCode="#,##0"/><numFmt numFmtId="168" formatCode="0%"/></numFmts><fonts count="2">${Fn(0)}${Fn(1)}</fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left/><right/><top/><bottom style="thin"><color auto="1"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="12">${Xf(0,0,0)}${Xf(0,1,0)}${Xf(0,1,1,'wrapText="1" vertical="center"')}${Xf(164,0,0)}${Xf(164,1,0)}${Xf(165,0,0)}${Xf(166,0,0)}${Xf(167,0,0)}${Xf(166,1,0)}${Xf(168,0,0)}${Xf(167,1,0)}${Xf(165,1,0)}</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`},
+  {name:'xl/worksheets/sheet1.xml',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><dimension ref="A1:${last}"/><sheetViews><sheetView workbookViewId="0" showGridLines="0"/></sheetViews><sheetFormatPr defaultRowHeight="13.5"/>${cols?`<cols>${cols}</cols>`:''}<sheetData>${rowsX}</sheetData><pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/></worksheet>`}])}
+
+</script>
+<script>
+/* ProspeMerc — prospeção de mercado e homogeneização de comparáveis (app de ensaio, separada da AvaLias).
+   Estudos → sujeito (o ativo a avaliar) + comparáveis (C01, C02…, com etiqueta = captura do anúncio) → matriz de homogeneização → valor.
+   Venda (€/m²) ou arrendamento (€/m²/mês). Saídas: Excel com fórmulas, página para imprimir/PDF (matriz + etiquetas), JSON para levar para a AvaLias. */
+const VERSION='0.1';
+const FAT=[['neg','Negociação'],['loc','Localização'],['are','Área'],['est','Estado / idade'],['qua','Qualidade'],['out','Outro']];
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+/* números em pt-PT: «185 000 €», «1.250,50», «1250.5» */
+function num(v){let t=String(v??'').replace(/[€\s ]|m²|m2/g,'').trim();if(!t)return null;
+ if(t.includes(',')&&t.includes('.'))t=t.replace(/\./g,'').replace(',','.');else if(t.includes(','))t=t.replace(',','.');else if(/^\d{1,3}(\.\d{3})+$/.test(t))t=t.replace(/\./g,'');
+ const n=parseFloat(t);return isFinite(n)?n:null}
+const fmt=(n,d=0)=>n==null||!isFinite(n)?'—':n.toLocaleString('pt-PT',{minimumFractionDigits:d,maximumFractionDigits:d});
+const eur=(n,d=0)=>n==null||!isFinite(n)?'—':fmt(n,d)+' €';
+const pct=n=>n==null||!isFinite(n)?'—':(n>0?'+':'')+fmt(n*100,1)+' %';
+
+/* ---------- base de dados (no aparelho) ---------- */
+let db;const DBN='prospemerc';
+function idb(){return new Promise((ok,ko)=>{const r=indexedDB.open(DBN,1);r.onupgradeneeded=()=>{const d=r.result;d.createObjectStore('est',{keyPath:'id'});d.createObjectStore('img',{keyPath:'id'})};r.onsuccess=()=>{db=r.result;ok()};r.onerror=()=>ko(r.error)})}
+const tx=(st,m='readonly')=>db.transaction(st,m).objectStore(st);
+const put=(st,o)=>new Promise(ok=>{const r=tx(st,'readwrite').put(o);r.onsuccess=()=>ok()});
+const get=(st,id)=>new Promise(ok=>{const r=tx(st).get(id);r.onsuccess=()=>ok(r.result)});
+const del=(st,id)=>new Promise(ok=>{const r=tx(st,'readwrite').delete(id);r.onsuccess=()=>ok()});
+const all=st=>new Promise(ok=>{const r=tx(st).getAll();r.onsuccess=()=>ok(r.result||[])});
+const IMG=new Map();
+async function imgData(id){if(!id)return null;if(IMG.has(id))return IMG.get(id);const r=await get('img',id);const d=r?.data||null;IMG.set(id,d);return d}
+async function imgPut(id,data){IMG.set(id,data);await put('img',{id,data})}
+
+/* ---------- estado ---------- */
+let EST=[];const S={view:'home',eid:null,tab:'suj',open:{}};
+const cur=()=>EST.find(e=>e.id===S.eid);
+const settings=JSON.parse(localStorage.getItem('prospe.set')||'{"neg":"-10"}');
+const saveSet=()=>localStorage.setItem('prospe.set',JSON.stringify(settings));
+let saveT;function save(){const e=cur();if(!e)return;e.upd=Date.now();clearTimeout(saveT);saveT=setTimeout(()=>put('est',e),250)}
+
+function novoEstudo(){const e={id:uid(),nome:'',tipo:'venda',modo:'soma',cri:Date.now(),upd:Date.now(),suj:{desc:'',local:'',area:'',tip:'',ano:'',estado:'',notas:''},comps:[],adot:'',adotAuto:true,just:''};EST.unshift(e);S.eid=e.id;S.view='est';S.tab='suj';put('est',e);render()}
+function novoComp(e){const n=e.comps.length?Math.max(...e.comps.map(c=>+String(c.cod).replace(/\D/g,'')||0))+1:1;
+ const c={id:uid(),cod:'C'+String(n).padStart(2,'0'),fonte:'',link:'',data:new Date().toISOString().slice(0,10),nat:'oferta',preco:'',area:'',tip:'',local:'',ano:'',estado:'',notas:'',txt:'',img:null,inc:true,f:{neg:settings.neg??'-10'},fAuto:{neg:true}};
+ e.comps.push(c);S.open[c.id]=true;save();render()}
+
+/* ---------- cálculo ---------- */
+function unit(c){const p=num(c.preco),a=num(c.area);return p!=null&&a?p/a:null}
+function fval(c,k){if(k==='neg'&&c.fAuto?.neg)return c.nat==='oferta'?(num(settings.neg)??0)/100:0;const v=num(c.f?.[k]);return v==null?0:v/100}
+function ajuste(e,c){const fs=FAT.map(([k])=>fval(c,k));return e.modo==='produto'?fs.reduce((t,f)=>t*(1+f),1)-1:fs.reduce((t,f)=>t+f,0)}
+function homog(e,c){const u=unit(c);return u==null?null:u*(1+ajuste(e,c))}
+function stats(e){const L=e.comps.filter(c=>c.inc).map(c=>homog(e,c)).filter(v=>v!=null);const n=L.length;if(!n)return {n:0};
+ const m=L.reduce((a,b)=>a+b,0)/n,so=[...L].sort((a,b)=>a-b),med=n%2?so[(n-1)/2]:(so[n/2-1]+so[n/2])/2,sd=n>1?Math.sqrt(L.reduce((t,v)=>t+(v-m)**2,0)/(n-1)):0;
+ return {n,m,med,sd,cv:m?sd/m:0,min:so[0],max:so[n-1]}}
+function adot(e){const st=stats(e);if(e.adotAuto||!String(e.adot||'').trim())return st.n?st.m:null;return num(e.adot)}
+function valor(e){const u=adot(e),a=num(e.suj.area);return u!=null&&a?u*a:null}
+const UN=e=>e.tipo==='renda'?'€/m²/mês':'€/m²';
+
+/* ---------- leitura do texto do anúncio ---------- */
+function lerAnuncio(t){const T=String(t||'');let preco=null,area=null;
+ const P=[...T.matchAll(/(?:€\s*([\d][\d . ]*(?:,\d{1,2})?))|(([\d][\d . ]*(?:,\d{1,2})?)\s*(?:€|eur))/gi)].map(m=>num(m[1]||m[3])).filter(v=>v!=null&&v>=50);
+ if(P.length)preco=Math.max(...P);
+ const A=[...T.matchAll(/(\d[\d . ]*(?:[.,]\d+)?)\s*(?:m²|m2|m\^2)/gi)].map(m=>num(m[1])).filter(v=>v!=null&&v>=5);
+ if(A.length)area=A[0];return {preco,area}}
+
+/* ---------- imagens (etiquetas) ---------- */
+function fileToData(f){return new Promise(ok=>{const r=new FileReader();r.onload=()=>ok(r.result);r.readAsDataURL(f)})}
+function loadImg(src){return new Promise((ok,ko)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=ko;i.src=src})}
+async function shrink(data,max=1600){const im=await loadImg(data);const k=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);return c.toDataURL('image/jpeg',.85)}
+async function rotate(data){const im=await loadImg(data);const c=document.createElement('canvas');c.width=im.height;c.height=im.width;const g=c.getContext('2d');g.translate(c.width,0);g.rotate(Math.PI/2);g.drawImage(im,0,0);return c.toDataURL('image/jpeg',.85)}
+async function setImg(c,data){const id=c.img||uid();await imgPut(id,await shrink(data));c.img=id;save();render()}
+
+/* ---------- desenho ---------- */
+const inp=(b,l,v,o={})=>`<label${o.w?` style="flex:${o.w}"`:''}><span>${esc(l)}</span><input data-b="${b}" value="${esc(v)}"${o.ph?` placeholder="${esc(o.ph)}"`:''}${o.dec?' inputmode="decimal"':''}${o.type?` type="${o.type}"`:''}></label>`;
+const sel=(b,l,v,ops)=>`<label><span>${esc(l)}</span><select data-b="${b}">${ops.map(([k,t])=>`<option value="${k}"${k===v?' selected':''}>${esc(t)}</option>`).join('')}</select></label>`;
+const ta=(b,l,v,r=3,ph='')=>`<label><span>${esc(l)}</span><textarea data-b="${b}" rows="${r}" placeholder="${esc(ph)}">${esc(v)}</textarea></label>`;
+
+function render(){const app=$('#app');app.innerHTML=S.view==='home'?vHome():vEst();if(S.view==='est')fillImgs();window.scrollTo(0,S.scroll||0);S.scroll=0}
+function vHome(){return `<header><h1>ProspeMerc <small>${VERSION}</small></h1><p class="muted">Prospeção de mercado e homogeneização de comparáveis — app de ensaio (separada da AvaLias).</p></header>
+ <div class="btns"><button class="pri" data-a="novo">+ Novo estudo</button><label class="btn sec">Importar estudo (JSON)<input type="file" accept=".json,application/json" data-a="impJ" hidden></label></div>
+ ${EST.length?EST.map(e=>{const st=stats(e),v=valor(e);return `<div class="card click" data-a="abrir" data-id="${e.id}"><b>${esc(e.nome||'(sem nome)')}</b> <span class="pill">${e.tipo==='renda'?'Arrendamento':'Venda'}</span><div class="muted">${e.comps.length} comparáve${e.comps.length===1?'l':'is'} · ${st.n?`${UN(e)} adotado ${eur(adot(e),2)}`:'sem matriz'}${v!=null?` · ${e.tipo==='renda'?'renda '+eur(v)+'/mês':'valor '+eur(v)}`:''}</div></div>`}).join(''):'<p class="muted">Ainda não há estudos.</p>'}
+ <details class="card"><summary>Definições</summary>${inp('set.neg','Negociação por defeito nas ofertas (%)',settings.neg,{dec:1,ph:'-10'})}<p class="muted">Aplica-se às ofertas (anúncios); nas transações é 0 %. Pode corrigir em cada comparável.</p></details>`}
+
+function vEst(){const e=cur();if(!e){S.view='home';return vHome()}
+ const tabs=[['suj','1 · Sujeito'],['comp',`2 · Comparáveis (${e.comps.length})`],['mat','3 · Matriz'],['rel','4 · Relatório']];
+ return `<header class="bar"><button class="sec" data-a="home">← Estudos</button><b>${esc(e.nome||'(sem nome)')}</b></header>
+ <nav class="tabs">${tabs.map(([k,t])=>`<button class="${S.tab===k?'on':''}" data-a="tab" data-t="${k}">${t}</button>`).join('')}</nav>
+ ${S.tab==='suj'?vSuj(e):S.tab==='comp'?vComp(e):S.tab==='mat'?vMat(e):vRel(e)}`}
+
+function vSuj(e){const s=e.suj;return `<div class="card">${inp('e.nome','Nome do estudo',e.nome,{ph:'ex.: Moradia T3 — Oliveira do Conde'})}
+ <div class="row">${sel('e.tipo','Prospeção de',e.tipo,[['venda','Venda — €/m²'],['renda','Arrendamento — €/m²/mês']])}${sel('e.modo','Ajustes',e.modo,[['soma','Soma dos ajustes'],['produto','Produto dos coeficientes']])}</div></div>
+ <div class="card"><h3>Sujeito — o ativo a avaliar</h3>${inp('s.desc','Descrição',s.desc,{ph:'ex.: Moradia T3, 2 pisos, logradouro'})}${inp('s.local','Localização',s.local,{ph:'freguesia, concelho'})}
+ <div class="row">${inp('s.area','Área (m²)',s.area,{dec:1})}${inp('s.tip','Tipologia',s.tip,{ph:'T3'})}${inp('s.ano','Ano / idade',s.ano)}</div>${inp('s.estado','Estado de conservação',s.estado)}${ta('s.notas','Notas',s.notas,2)}
+ <p class="muted">A área do sujeito multiplica o valor unitário adotado na matriz.</p></div>
+ <div class="btns"><button class="sec" data-a="dup">Duplicar estudo</button><button class="del" data-a="delEst">Eliminar estudo</button></div>`}
+
+function vComp(e){return `${e.comps.map(c=>{const u=unit(c),op=!!S.open[c.id];return `<div class="card comp${c.inc?'':' off'}">
+ <div class="ch" data-a="tog" data-id="${c.id}"><b>${esc(c.cod)}</b> ${esc(c.fonte||'—')} <span class="pill ${c.nat==='oferta'?'warn':'ok'}">${c.nat==='oferta'?'Oferta':'Transação'}</span><span class="r">${eur(num(c.preco))} · ${fmt(num(c.area))} m² · ${eur(u,2)}${e.tipo==='renda'?'/m²/mês':'/m²'}</span></div>
+ ${op?`<div class="cb">
+  <div class="etq">${c.img?`<img data-img="${c.img}" alt="Etiqueta ${esc(c.cod)}">`:'<div class="noimg">Sem etiqueta — capture o anúncio (ecrã) ou cole a imagem</div>'}
+   <div class="btns"><label class="btn sec">📷 Imagem<input type="file" accept="image/*" data-a="file" data-id="${c.id}" hidden></label><button class="sec" data-a="paste" data-id="${c.id}">📋 Colar</button>${c.img?`<button class="sec" data-a="rot" data-id="${c.id}">⟳ Rodar</button><button class="sec" data-a="ver" data-id="${c.id}">🔍 Ver</button><button class="del" data-a="delImg" data-id="${c.id}">🗑</button>`:''}</div></div>
+  ${ta(`c.${c.id}.txt`,'Texto do anúncio (opcional — colar para ler preço e área)',c.txt,2,'Cole aqui o texto do anúncio')}${c.txt?`<div class="btns"><button class="sec" data-a="ler" data-id="${c.id}">Ler preço e área</button></div>`:''}
+  <div class="row">${inp(`c.${c.id}.fonte`,'Fonte',c.fonte,{ph:'site / agência / escritura'})}${inp(`c.${c.id}.data`,'Data',c.data,{type:'date'})}</div>
+  ${inp(`c.${c.id}.link`,'Ligação',c.link,{ph:'https://…'})}
+  <div class="row">${sel(`c.${c.id}.nat`,'Natureza',c.nat,[['oferta','Oferta (anúncio)'],['transacao','Transação']])}${inp(`c.${c.id}.preco`,e.tipo==='renda'?'Renda mensal (€)':'Preço (€)',c.preco,{dec:1})}${inp(`c.${c.id}.area`,'Área (m²)',c.area,{dec:1})}</div>
+  <div class="row">${inp(`c.${c.id}.tip`,'Tipologia',c.tip)}${inp(`c.${c.id}.ano`,'Ano / idade',c.ano)}${inp(`c.${c.id}.estado`,'Estado',c.estado)}</div>
+  ${inp(`c.${c.id}.local`,'Localização',c.local)}${ta(`c.${c.id}.notas`,'Notas',c.notas,2)}
+  <div class="btns"><label class="tk"><input type="checkbox" data-a="inc" data-id="${c.id}"${c.inc?' checked':''}> Entra na matriz</label><button class="del" data-a="delC" data-id="${c.id}">Eliminar ${esc(c.cod)}</button></div></div>`:''}</div>`}).join('')}
+ <div class="btns"><button class="pri" data-a="novoC">+ Comparável</button></div>`}
+
+function vMat(e){const st=stats(e),L=e.comps;const u=adot(e),v=valor(e);
+ const fin=(c,k)=>{const auto=k==='neg'&&c.fAuto?.neg;const val=auto?String((c.nat==='oferta'?num(settings.neg)??0:0)):(c.f?.[k]??'');return `<input class="pc${auto?' auto':''}" data-b="f.${c.id}.${k}" value="${esc(val)}" inputmode="decimal" title="%">`};
+ return `<div class="card"><p class="muted">Ajustes em % sobre o valor unitário de cada comparável (+ se o sujeito é melhor, − se é pior). ${e.modo==='soma'?'Ajuste total = soma dos ajustes.':'Ajuste total = produto dos coeficientes (1 + %) − 1.'} A negociação das ofertas vem sugerida (${esc(settings.neg)} %) — aceite ou corrija.</p>
+ <div class="tw"><table class="mat"><thead><tr><th class="fx">Comp.</th><th>Entra</th><th>${UN(e)}</th>${FAT.map(([,t])=>`<th>${t} %</th>`).join('')}<th>Ajuste</th><th>${UN(e)} homog.</th></tr></thead><tbody>
+ ${L.map(c=>`<tr class="${c.inc?'':'off'}"><td class="fx"><b>${esc(c.cod)}</b></td><td><input type="checkbox" data-a="inc" data-id="${c.id}"${c.inc?' checked':''}></td><td class="n">${fmt(unit(c),2)}</td>${FAT.map(([k])=>`<td>${fin(c,k)}</td>`).join('')}<td class="n">${pct(ajuste(e,c))}</td><td class="n"><b>${fmt(homog(e,c),2)}</b></td></tr>`).join('')||'<tr><td colspan="10" class="muted">Sem comparáveis.</td></tr>'}
+ </tbody></table></div></div>
+ <div class="card"><h3>Resultado</h3>${st.n?`<div class="kv"><span>Comparáveis na matriz</span><b>${st.n}</b><span>Média</span><b>${eur(st.m,2)}</b><span>Mediana</span><b>${eur(st.med,2)}</b><span>Desvio-padrão</span><b>${eur(st.sd,2)}</b><span>Coef. de variação</span><b class="${st.cv>0.15?'warn':''}">${fmt(st.cv*100,1)} %</b><span>Mínimo · máximo</span><b>${eur(st.min,2)} · ${eur(st.max,2)}</b></div>
+  ${st.cv>0.15?'<p class="warn">Dispersão elevada (CV &gt; 15 %): rever comparáveis ou ajustes.</p>':''}
+  <div class="row">${inp('e.adot',`Valor unitário adotado (${UN(e)})`,e.adotAuto?fmt(st.m,2):e.adot,{dec:1})}</div>${e.adotAuto?'<p class="muted">Sugerido = média homogeneizada (escreva outro valor para fixar).</p>':'<div class="btns"><button class="sec" data-a="adotAuto">↺ Voltar à média</button></div>'}
+  ${ta('e.just','Justificação do valor adotado',e.just,2)}
+  <div class="kv big"><span>Área do sujeito</span><b>${fmt(num(e.suj.area))} m²</b><span>${e.tipo==='renda'?'Renda de mercado':'Valor de mercado'}</span><b>${e.tipo==='renda'?(v!=null?eur(v)+'/mês · '+eur(v*12)+'/ano':'—'):eur(v)}</b></div>${num(e.suj.area)?'':'<p class="warn">Falta a área do sujeito (1 · Sujeito).</p>'}`:'<p class="muted">Marque comparáveis com preço e área.</p>'}</div>`}
+
+function vRel(e){return `<div class="btns noprint"><button class="pri" data-a="xlsx">Excel (.xlsx)</button><button class="sec" data-a="print">Imprimir / PDF</button><button class="sec" data-a="expJ">Exportar estudo (JSON)</button></div>
+ <p class="muted noprint">O Excel leva a matriz com fórmulas (para o Word, como quadro Excel). «Imprimir / PDF» dá a matriz e as etiquetas, com a legenda na linha a seguir a cada imagem, alinhada à esquerda. O JSON serve para levar o estudo para a AvaLias.</p>
+ <div id="rel" class="rel">${relHTML(e)}</div>`}
+function relHTML(e){const st=stats(e),L=e.comps.filter(c=>c.inc);
+ return `<h2>Prospeção de mercado — ${esc(e.nome||'')}</h2><p>${e.tipo==='renda'?'Arrendamento':'Venda'} · Sujeito: ${esc(e.suj.desc||'—')} · ${esc(e.suj.local||'')} · ${fmt(num(e.suj.area))} m²</p>
+ <table class="rt"><thead><tr><th>Comp.</th><th>Fonte</th><th>Natureza</th><th>${e.tipo==='renda'?'Renda':'Preço'}</th><th>Área</th><th>${UN(e)}</th>${FAT.map(([,t])=>`<th>${t}</th>`).join('')}<th>Ajuste</th><th>Homog.</th></tr></thead><tbody>
+ ${L.map(c=>`<tr><td>${esc(c.cod)}</td><td>${esc(c.fonte)}</td><td>${c.nat==='oferta'?'Oferta':'Transação'}</td><td class="n">${fmt(num(c.preco))}</td><td class="n">${fmt(num(c.area))}</td><td class="n">${fmt(unit(c),2)}</td>${FAT.map(([k])=>`<td class="n">${pct(fval(c,k))}</td>`).join('')}<td class="n">${pct(ajuste(e,c))}</td><td class="n"><b>${fmt(homog(e,c),2)}</b></td></tr>`).join('')}</tbody></table>
+ ${st.n?`<p>Média ${eur(st.m,2)} · mediana ${eur(st.med,2)} · desvio ${eur(st.sd,2)} · CV ${fmt(st.cv*100,1)} %. <b>Adotado: ${fmt(adot(e),2)} ${UN(e)}</b> → <b>${e.tipo==='renda'?'renda de mercado '+eur(valor(e))+'/mês':'valor de mercado '+eur(valor(e))}</b>.</p>${e.just?`<p>${esc(e.just)}</p>`:''}`:''}
+ <h3>Etiquetas dos comparáveis</h3><div class="eg">${L.filter(c=>c.img).map(c=>`<figure><img data-img="${c.img}"><figcaption>${esc(c.cod)} – ${esc(c.fonte||'')}${c.data?', '+esc(c.data.split('-').reverse().join('/')):''}${c.link?`<br><small>${esc(c.link)}</small>`:''}</figcaption></figure>`).join('')||'<p class="muted">Sem etiquetas.</p>'}</div>`}
+
+async function fillImgs(){for(const im of document.querySelectorAll('img[data-img]')){const d=await imgData(im.dataset.img);if(d)im.src=d}}
+
+/* ---------- Excel com fórmulas ---------- */
+function xlsxEst(e){const L=e.comps.filter(c=>c.inc&&unit(c)!=null);const H=['Comp.','Fonte','Natureza',e.tipo==='renda'?'Renda (€/mês)':'Preço (€)','Área (m²)',UN(e),...FAT.map(([,t])=>t),'Ajuste',UN(e)+' homog.'];
+ const rows=[[{v:`Prospeção de mercado — ${e.nome||''} (${e.tipo==='renda'?'arrendamento':'venda'})`,s:1}],[],H.map(v=>({v,s:2}))];const r0=4;
+ L.forEach((c,i)=>{const r=r0+i;const fs=FAT.map(([k])=>({v:fval(c,k),s:5}));const adj=e.modo==='produto'?`(1+G${r})*(1+H${r})*(1+I${r})*(1+J${r})*(1+K${r})*(1+L${r})-1`:`SUM(G${r}:L${r})`;
+  rows.push([c.cod,c.fonte,c.nat==='oferta'?'Oferta':'Transação',{v:num(c.preco),s:7},{v:num(c.area),s:3},{f:`D${r}/E${r}`,v:unit(c),s:3},...fs,{f:adj,v:ajuste(e,c),s:5},{f:`F${r}*(1+M${r})`,v:homog(e,c),s:4}])});
+ const r1=r0,r2=r0+L.length-1,st=stats(e),rr=r2+2;
+ rows.push([]);
+ rows.push(['Média','','','','','','','','','','','','',{f:`AVERAGE(N${r1}:N${r2})`,v:st.m,s:3}]);
+ rows.push(['Mediana','','','','','','','','','','','','',{f:`MEDIAN(N${r1}:N${r2})`,v:st.med,s:3}]);
+ rows.push(['Desvio-padrão','','','','','','','','','','','','',{f:`STDEV(N${r1}:N${r2})`,v:st.sd,s:3}]);
+ rows.push(['Valor unitário adotado','','','','','','','','','','','','',e.adotAuto||!String(e.adot||'').trim()?{f:`N${r2+2}`,v:adot(e),s:4}:{v:adot(e),s:4}]);
+ rows.push(['Área do sujeito (m²)','','','','','','','','','','','','',{v:num(e.suj.area),s:3}]);
+ rows.push([{v:e.tipo==='renda'?'Renda de mercado (€/mês)':'Valor de mercado (€)',s:1},'','','','','','','','','','','','',{f:`N${r2+5}*N${r2+6}`,v:valor(e),s:10}]);
+ return alXlsx({name:'Prospeção',rows,cols:[22,16,11,12,9,10,9,9,9,9,9,9,9,12]})}
+function dl(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500)}
+const fname=e=>(e.nome||'estudo').replace(/[^\wÀ-ÿ -]+/g,'').trim().replace(/\s+/g,'_').slice(0,40)||'estudo';
+
+/* ---------- eventos ---------- */
+document.addEventListener('click',async ev=>{const el=ev.target.closest('[data-a]');if(!el||el.tagName==='INPUT'&&el.type==='file')return;const a=el.dataset.a,e=cur(),c=e?.comps.find(x=>x.id===el.dataset.id);
+ if(el.type==='checkbox'&&a==='inc'){c.inc=el.checked;save();S.scroll=scrollY;render();return}
+ switch(a){case 'novo':novoEstudo();break;case 'abrir':S.eid=el.dataset.id;S.view='est';S.tab='suj';render();break;case 'home':S.view='home';render();break;
+  case 'tab':S.tab=el.dataset.t;render();break;case 'novoC':novoComp(e);break;case 'tog':S.open[el.dataset.id]=!S.open[el.dataset.id];S.scroll=scrollY;render();break;
+  case 'delC':if(confirm(`Eliminar ${c.cod}?`)){if(c.img)await del('img',c.img);e.comps=e.comps.filter(x=>x!==c);save();render()}break;
+  case 'delEst':if(confirm('Eliminar este estudo e as suas etiquetas?')){for(const x of e.comps)if(x.img)await del('img',x.img);await del('est',e.id);EST=EST.filter(x=>x!==e);S.view='home';render()}break;
+  case 'dup':{const n=JSON.parse(JSON.stringify(e));n.id=uid();n.nome=(e.nome||'')+' (cópia)';for(const x of n.comps){x.id=uid();if(x.img){const d=await imgData(x.img);x.img=uid();await imgPut(x.img,d)}}EST.unshift(n);await put('est',n);S.eid=n.id;render();break}
+  case 'paste':try{const it=await navigator.clipboard.read();for(const i of it){const t=i.types.find(t=>t.startsWith('image/'));if(t){const b=await i.getType(t);await setImg(c,await fileToData(b));return}}alert('A área de transferência não tem imagem. No iPhone: faça a captura do anúncio e use «📷 Imagem».')}catch(err){alert('Não foi possível colar. Use «📷 Imagem» ou Ctrl+V com o comparável aberto.')}break;
+  case 'rot':{const d=await imgData(c.img);await imgPut(c.img,await rotate(d));S.scroll=scrollY;render();break}
+  case 'ver':{const d=await imgData(c.img);const w=window.open();if(w)w.document.write(`<title>${esc(c.cod)}</title><img src="${d}" style="max-width:100%">`);break}
+  case 'delImg':if(confirm('Eliminar a etiqueta?')){await del('img',c.img);c.img=null;save();render()}break;
+  case 'ler':{const r=lerAnuncio(c.txt);let m=[];if(r.preco!=null&&!String(c.preco).trim()){c.preco=String(r.preco);m.push('preço')}if(r.area!=null&&!String(c.area).trim()){c.area=String(r.area);m.push('área')}save();S.scroll=scrollY;render();if(!m.length)alert(r.preco||r.area?'Preço e área já preenchidos (apague-os para voltar a ler).':'Não encontrei preço nem área no texto.');break}
+  case 'adotAuto':e.adotAuto=true;e.adot='';save();render();break;
+  case 'xlsx':dl(new Blob([xlsxEst(e)],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),`Prospecao_${fname(e)}.xlsx`);break;
+  case 'print':window.print();break;
+  case 'expJ':{const imgs={};for(const x of e.comps)if(x.img)imgs[x.img]=await imgData(x.img);dl(new Blob([JSON.stringify({app:'ProspeMerc',v:VERSION,estudo:e,imgs})],{type:'application/json'}),`Prospecao_${fname(e)}.json`);break}}});
+document.addEventListener('change',async ev=>{const el=ev.target;if(el.dataset.a==='file'&&el.files[0]){const c=cur().comps.find(x=>x.id===el.dataset.id);await setImg(c,await fileToData(el.files[0]))}
+ if(el.dataset.a==='impJ'&&el.files[0]){try{const o=JSON.parse(await el.files[0].text());const e=o.estudo;if(!e?.comps)throw 0;e.id=uid();for(const[k,d]of Object.entries(o.imgs||{}))await imgPut(k,d);EST.unshift(e);await put('est',e);S.eid=e.id;S.view='est';render()}catch(_){alert('Ficheiro inválido.')}}
+ if(el.matches('select[data-b]'))bind(el,true)});
+document.addEventListener('input',ev=>{if(ev.target.matches('[data-b]'))bind(ev.target,false)});
+document.addEventListener('focusout',ev=>{if(ev.target.matches('input[data-b],textarea[data-b]')&&ev.target.dataset.dirty){delete ev.target.dataset.dirty;const nx=ev.relatedTarget?.dataset?.b;S.scroll=scrollY;render();if(nx){const n=document.querySelector(`[data-b="${nx}"]`);if(n){n.focus({preventScroll:true});try{n.setSelectionRange(n.value.length,n.value.length)}catch(_){}}}}});
+document.addEventListener('paste',async ev=>{const e=cur();if(!e||S.tab!=='comp')return;const open=e.comps.filter(c=>S.open[c.id]);if(open.length!==1)return;const f=[...(ev.clipboardData?.files||[])].find(f=>f.type.startsWith('image/'));if(f){ev.preventDefault();await setImg(open[0],await fileToData(f))}});
+function bind(el,now){const b=el.dataset.b,v=el.value,e=cur();const [h,a,k]=b.split('.');
+ if(h==='set'){settings[a]=v;saveSet();return}
+ if(h==='e'){if(a==='adot'){e.adot=v;e.adotAuto=!String(v).trim()}else e[a]=v}else if(h==='s')e.suj[a]=v;
+ else if(h==='c'){const c=e.comps.find(x=>x.id===a);c[k]=v}
+ else if(h==='f'){const c=e.comps.find(x=>x.id===a);c.f=c.f||{};c.fAuto=c.fAuto||{};c.f[k]=v;if(k==='neg')c.fAuto.neg=false}
+ save();if(now){S.scroll=scrollY;render()}else el.dataset.dirty=1}
+
+(async()=>{await idb();EST=(await all('est')).sort((a,b)=>(b.upd||0)-(a.upd||0));render();if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{})})();
+
+</script>
+</body></html>
