@@ -1,5 +1,8 @@
 <!doctype html>
 <!--
+ExPropria v0.18.2 — resumo
+- Capa 11 · Tipográfica (só texto): filete vertical na cor do gabinete, N_Ref em grande e esbatida, título forte com traço curto, dados alinhados em 2 colunas.
+
 ExPropria v0.18.1 — resumo
 - Capas numeradas como nas outras apps (regra comum): 0 Modelo do gabinete · 5 Título em destaque · 6 Lado a lado · 7 Ficha técnica · 8 Faixa lateral · 9 Mosaico · 10 Carimbo técnico.
 
@@ -823,7 +826,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
 <script>
 'use strict';
-const VERSION='0.18.1';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
+const VERSION='0.18.2';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
 function growFit(t){if(!t||!t.classList?.contains('grow')||!t.offsetParent)return;t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px'}
 function growAll(root){(root||document).querySelectorAll('textarea.grow').forEach(growFit)}
 document.addEventListener('input',e=>growFit(e.target),true);
@@ -1550,7 +1553,7 @@ async function fillHeaders(zip,P,pn){
 }
 /* ---------- Estilos de capa (regra comum «Capas», docs/regras/capas.md): Modelo do gabinete (quadro N_Ref) · Faixa lateral · Mosaico · Carimbo técnico ----------
    Os dados saem do quadro N_Ref já preenchido (vale para uma ou várias parcelas) e da equipa: peritos ou árbitros, consoante a fase. */
-const CAPA_EST=[['modelo','0 · Modelo do gabinete (quadro N_Ref; imagem conforme «Imagem da capa»)'],['titulo','5 · Título em destaque — título grande, uma imagem e os dados por baixo'],['colunas','6 · Fotografias e dados lado a lado — até 6 miniaturas à esquerda, dados à direita'],['ficha','7 · Ficha técnica — faixa com o título, dados em caixas e 3 fotos, num caixilho'],['faixa','8 · Faixa lateral — faixa vertical com a referência; fotografia, título e dados'],['mosaico','9 · Mosaico — fotografia grande + 2 pequenas; título e dados em 2 colunas'],['carimbo','10 · Carimbo técnico — folha de desenho com carimbo dos dados no canto']];
+const CAPA_EST=[['modelo','0 · Modelo do gabinete (quadro N_Ref; imagem conforme «Imagem da capa»)'],['titulo','5 · Título em destaque — título grande, uma imagem e os dados por baixo'],['colunas','6 · Fotografias e dados lado a lado — até 6 miniaturas à esquerda, dados à direita'],['ficha','7 · Ficha técnica — faixa com o título, dados em caixas e 3 fotos, num caixilho'],['faixa','8 · Faixa lateral — faixa vertical com a referência; fotografia, título e dados'],['mosaico','9 · Mosaico — fotografia grande + 2 pequenas; título e dados em 2 colunas'],['carimbo','10 · Carimbo técnico — folha de desenho com carimbo dos dados no canto'],['tipo','11 · Tipográfica (só texto) — filete vertical, referência em grande, título forte e dados em 2 colunas']];
 let capaCtx=null;
 async function cropBlobTo(blob,ratio,W){const im=blob&&await blobImg(blob);if(!im)return null;const H=Math.round(W/ratio),c=document.createElement('canvas');c.width=W;c.height=H;drawCover(c.getContext('2d'),im,0,0,W,H);return await new Promise(ok=>c.toBlob(ok,'image/jpeg',.82))}
 async function capaEstilo(zip,doc,rels,ctDoc){const est=cur?.layout?.capaEst||'modelo';if(est==='modelo')return;
@@ -1621,6 +1624,16 @@ async function capaEstilo(zip,doc,rels,ctDoc){const est=cur?.layout?.capaEst||'m
   const sel=blobs.slice(0,3);if(sel.length){let cells='';for(let c=0;c<3;c++)cells+=tcs(c<2?CF:FW-2*CF,sel[c]?cp2(await img(sel[c],pw,ph),{jc:'center'}):'');F+=cp2('',{a:160})+tb([CF,CF,FW-2*CF],`<w:tr><w:trPr><w:cantSplit/></w:trPr>${cells}</w:tr>`,{m:20,w:FW})}
   const fb=['top','left','bottom','right'].map(k=>`<w:${k} w:val="single" w:sz="12" w:space="0" w:color="${COR}"/>`).join('');
   X=frame(`<w:tbl><w:tblPr><w:tblW w:w="${TW}" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders>${fb}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="${FM}" w:type="dxa"/><w:left w:w="${FM}" w:type="dxa"/><w:bottom w:w="${FM}" w:type="dxa"/><w:right w:w="${FM}" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${TW}"/></w:tblGrid><w:tr><w:trPr><w:cantSplit/></w:trPr><w:tc><w:tcPr><w:tcW w:w="${TW}" w:type="dxa"/></w:tcPr>${F}${END}</w:tc></w:tr></w:tbl>`)}
+    if(est==='tipo'){// 11 · Tipográfica (só texto): filete vertical na cor do gabinete, referência em grande e esbatida, título forte com traço curto, dados alinhados em 2 colunas
+      const PADL=520,IW=TW-PADL-200,LW=2600,VW=IW-LW;const RF=nref?'N_Ref '+nref:'',TI=titulo,OB=fin,DD=D;
+      const sl=`<w:tbl><w:tblPr><w:tblW w:w="1400" w:type="dxa"/><w:tblBorders><w:bottom w:val="single" w:sz="36" w:space="0" w:color="${COR}"/></w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="1400"/></w:tblGrid><w:tr><w:trPr><w:trHeight w:val="40" w:hRule="exact"/></w:trPr><w:tc><w:tcPr><w:tcW w:w="1400" w:type="dxa"/></w:tcPr><w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/><w:rPr><w:sz w:val="2"/></w:rPr></w:pPr></w:p></w:tc></w:tr></w:tbl>`;
+      const dc=(w,c,o={})=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${o.bl?`<w:tcBorders><w:left w:val="single" w:sz="4" w:space="0" w:color="${COR}"/></w:tcBorders>`:''}<w:tcMar><w:top w:w="50" w:type="dxa"/><w:left w:w="${o.bl?200:0}" w:type="dxa"/><w:bottom w:w="50" w:type="dxa"/><w:right w:w="${o.bl?0:200}" w:type="dxa"/></w:tcMar><w:vAlign w:val="top"/></w:tcPr>${c}</w:tc>`;
+      const rows=DD.filter(([l,v])=>String(v||'').trim()).map(([l,v])=>`<w:tr><w:trPr><w:cantSplit/></w:trPr>${dc(LW,cp2(R(String(l).toUpperCase(),{sz:7.5,color:'808080'}),{jc:'right'}))}${dc(VW,cp2(R(String(v),{sz:10.5})),{bl:1})}</w:tr>`).join('');
+      const nb=['top','left','bottom','right','insideH','insideV'].map(k=>`<w:${k} w:val="nil"/>`).join('');
+      const dt=rows?`<w:tbl><w:tblPr><w:tblW w:w="${IW}" w:type="dxa"/><w:tblBorders>${nb}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${LW}"/><w:gridCol w:w="${VW}"/></w:tblGrid>${rows}</w:tbl>`:'';
+      const inner=(RF?cp2(R(RF,{b:true,sz:40,color:'B8DCD9'}),{a:80}):'')+cp2(R(TI,{b:true,sz:26}),{a:160})+sl+(OB?cp2(R(OB,{i:true,sz:13,color:'404040'}),{b:200}):'')+cp2('',{b:1500})+dt+(vers?'Versões: '+vers:''?cp2(R(vers?'Versões: '+vers:'',{sz:8,color:'808080'}),{b:500}):'');
+      const lb=`<w:left w:val="single" w:sz="36" w:space="0" w:color="${COR}"/>`;
+      X=frame(`<w:tbl><w:tblPr><w:tblW w:w="${TW}" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders>${lb}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="200" w:type="dxa"/><w:left w:w="${PADL}" w:type="dxa"/><w:bottom w:w="200" w:type="dxa"/><w:right w:w="200" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${TW}"/></w:tblGrid><w:tr><w:trPr><w:cantSplit/></w:trPr><w:tc><w:tcPr><w:tcW w:w="${TW}" w:type="dxa"/></w:tcPr>${inner}<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/><w:rPr><w:sz w:val="2"/></w:rPr></w:pPr></w:p></w:tc></w:tr></w:tbl>`)}
  if(!X)return;
  const NS=`xmlns:w="${WNS}" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="${RNS}"`;
  const frag=new DOMParser().parseFromString(`<w:body ${NS}><w:p><w:pPr><w:spacing w:before="0" w:after="0"/></w:pPr></w:p>${X}</w:body>`,'application/xml');if(frag.getElementsByTagName('parsererror').length)throw new Error('Capa: XML inválido');
