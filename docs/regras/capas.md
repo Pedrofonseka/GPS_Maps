@@ -14,6 +14,7 @@ Rotina comum às apps que geram relatório Word com capa (Relatório de Peritage
 | `ficha` | Ficha técnica | faixa baixa com N_Ref e título, dados em caixas, 3 fotos — tudo num **caixilho**, centrado em altura |
 | `faixa` | Faixa lateral | faixa vertical na cor do gabinete (toda a altura útil) com N_Ref e título ao alto; à direita uma fotografia, o título com um traço curto, a finalidade e os dados (1.1) |
 | `mosaico` | Mosaico | uma fotografia grande (2/3) e duas pequenas empilhadas; N_Ref, título em destaque, filete e dados em 2 colunas — **centrado em altura** (1.1) |
+| `carimbo` | Carimbo técnico | folha de desenho com margem desenhada; título, finalidade e fotografia em cima; carimbo no canto inferior direito (referência, dados aos pares, versão, folha); linhas do carimbo com altura fixa (dupla se o texto for longo) para a capa ocupar exatamente a área útil (1.1) |
 
 ## Regras fixas
 - Uma **linha de intervalo** entre o cabeçalho e a capa (todas as opções).
@@ -31,7 +32,7 @@ Rotina comum às apps que geram relatório Word com capa (Relatório de Peritage
 ## Onde está aplicada
 | App | Versão |
 |---|---|
-| Relatório de Peritagem (relat) | 1.28.5 · Faixa lateral e Mosaico 1.31.1 |
-| AvaLias (avalias) — fotos das verbas; título «Função – Relatório»; escolha em **Relatório › Capa** (secção própria, aberta), dados em Processo › R2 | 1.1.1 · Faixa lateral e Mosaico 1.46 |
+| Relatório de Peritagem (relat) | 1.28.5 · Faixa lateral e Mosaico 1.31.1 · Carimbo técnico 1.31.2 |
+| AvaLias (avalias) — fotos das verbas; título «Função – Relatório»; escolha em **Relatório › Capa** (secção própria, aberta), dados em Processo › R2 | 1.1.1 · Faixa lateral e Mosaico 1.46 · Carimbo técnico 1.47 |
 
-**Sem lista de capas:** ExPropria (capa fixa do modelo de cada fase), FullTopics (página de rosto com mapa), Regi e Revip (capa do modelo Word) — as duas capas novas entram quando essas apps passarem a ter escolha de capa.
+**Sem lista de capas:** ExPropria (capa fixa do modelo de cada fase), FullTopics (página de rosto com mapa), Regi e Revip (capa do modelo Word) — as capas novas entram quando essas apps passarem a ter escolha de capa.
