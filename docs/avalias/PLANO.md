@@ -128,3 +128,6 @@ Validar destinos; perguntas de caracterização por tipo; métodos de avaliaçã
 - Cada anexo em ficheiro (PDF de uma ou várias páginas, imagem) tem «Onde entra no relatório»: no fim, em «Anexos» (numerado Anexo 01, 02…), ou intercalado depois dos Princípios, depois do Resumo, na ficha de uma verba (depois das fotografias) ou depois da Resposta.
 - Os intercalados entram na paginação geral, em página nova, com título próprio (título › tipo: descrição › nome) como tópico do índice; não contam para a numeração nem para a lista «Em anexo».
 - O mesmo no periText 1.34.0 (pontos: Localização, Inspeção, Resumo, Resposta).
+
+## v1.62 (25/11/2026) — PDM em construções (EDC)
+- Nas verbas de construção (grupo EDC), o PDM fica desligado por defeito («Não se aplica»). Em situações especiais, como perceber se o terreno tem capacidade edificativa remanescente, o perito escolhe «Consultar o PDM»: aparecem os mesmos campos dos terrenos (instrumentos, classe, categoria, RAN/REN, restrições, edificabilidade/IUS) e os extratos do PDM, que saem no Word e no Excel.
