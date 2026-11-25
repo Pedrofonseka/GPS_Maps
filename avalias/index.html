@@ -757,7 +757,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.53';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.54';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1017,7 +1017,7 @@ document.addEventListener('keydown',e=>{if(!(e.ctrlKey||e.metaKey)||!/^[zy]$/i.t
   e.preventDefault();doUndo(e.key.toLowerCase()==='y'||e.shiftKey?1:-1)});
 async function saveProc(){clearTimeout(saveT);S.prevStale=true;const p=cur();if(!p){dirty=false;return}
   if(!S.noHist){const h=hk(p),j=snap(p);if(j!==h.last){if(S.histBreak||!h.u.length||Date.now()-h.t>1500){h.u.push(h.last);if(h.u.length>60)h.u.shift()}h.r=[];h.last=j;h.t=S.histBreak?0:Date.now();S.histBreak=false;setTimeout(histBtns,0)}}
-  p.updatedAt=Date.now();
+  p.updatedAt=Date.now();try{DH.marca(p.anomalias,alHash)}catch(_){}
   try{await dbPut(p);dirty=false}
   catch(e){dirty=true;if(Date.now()-lastErrShown>8000){lastErrShown=Date.now();toast('Não foi possível gravar ('+errTxt(e)+'). Os dados continuam no ecrã; volte a tentar ou faça "Guardar cópia".',1)}}}
 const cur=()=>procs.find(p=>p.id===S.pid);
@@ -2714,6 +2714,25 @@ const baseDe=nome=>{const t=String(nome||'').trim().toLowerCase();return BASES_V
 /* texto para o relatório: «Base de valor: X (ref). definição nota» */
 const baseTxt=nome=>{const b=baseDe(nome);return b?`Base de valor: ${b.n} (${b.ref}). ${b.def} ${b.nota}`:''};
 /* @fim:bases */
+/* @comum:datahora v1.0 — REGRA GERAL (todas as apps): transferências entre aparelhos com data-hora, para nunca substituir dados mais recentes por mais antigos sem aviso. Regra: docs/regras/transferencias.md
+   - cada unidade transferível (processo, verba, parcela…) guarda «alterado em», atualizado sozinho quando o conteúdo muda;
+   - o nome do ficheiro enviado leva a data-hora do envio;
+   - ao receber, cada unidade mostra a data-hora deste aparelho e a do ficheiro, com «mais recente» / «mais antigo»;
+   - a escolha sugerida é sempre a mais recente; substituir dados mais recentes por mais antigos pede confirmação expressa. */
+const DH={
+ ms:t=>t==null||t===''?0:typeof t==='number'?t:(Date.parse(t)||0),
+ fmt:t=>{const m=DH.ms(t);if(!m)return 'sem data';const d=new Date(m),p=n=>String(n).padStart(2,'0');return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`},
+ tag:()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`},
+ /* 'rec' = o recebido é mais recente; 'loc' = o deste aparelho é mais recente; 'igual' / '?' (sem datas) */
+ qual:(loc,rec)=>{const a=DH.ms(loc),b=DH.ms(rec);if(!a&&!b)return '?';if(Math.abs(a-b)<1000)return 'igual';return b>a?'rec':'loc'},
+ linhas:(loc,rec)=>{const q=DH.qual(loc,rec);return `Neste aparelho: alterado em ${DH.fmt(loc)}${q==='loc'?' — mais recente':''}\nNo ficheiro: alterado em ${DH.fmt(rec)}${q==='rec'?' — mais recente':q==='loc'?' — MAIS ANTIGO':''}`},
+ html:(loc,rec)=>{const q=DH.qual(loc,rec);return `<div class="dh">📱 Neste aparelho: <b>${DH.fmt(loc)}</b>${q==='loc'?' <span class="dhn">mais recente</span>':''}<br>📄 No ficheiro: <b>${DH.fmt(rec)}</b>${q==='rec'?' <span class="dhn">mais recente</span>':q==='loc'?' <span class="dho">mais antigo</span>':''}</div>`},
+ css:'.dh{font-size:13px;margin:4px 0 6px;line-height:1.5}.dhn{background:#e1f5ee;color:#085041;border-radius:8px;padding:0 6px;font-size:12px}.dho{background:#fcebeb;color:#791f1f;border-radius:8px;padding:0 6px;font-size:12px;font-weight:600}',
+ /* marca «alterado em» nos itens cujo conteúdo mudou (hash próprio de cada app) */
+ marca:(itens,hash,iso=false)=>{for(const it of itens||[]){const c={...it};delete c._dh;delete c.updatedAt;const h=hash(c);if(it._dh!==h){if(it._dh!==undefined||!it.updatedAt)it.updatedAt=iso?new Date().toISOString():Date.now();it._dh=h}}},
+ aviso:'Vai substituir dados MAIS RECENTES deste aparelho por dados MAIS ANTIGOS do ficheiro. As alterações mais recentes perdem-se. Continuar?'};
+(()=>{try{const s=document.createElement('style');s.textContent=DH.css;document.head.appendChild(s)}catch(_){}})();
+/* @fim:datahora */
 const AL_BASE_EVS={'Valor de mercado':'EVS 1 — valor de mercado','Valor de renda de mercado':'EVS 1 — renda de mercado','Justo Valor':'EVS 2 — justo valor (fair value)','Valor Especial':'EVS 2 — valor especial','Valor de Investimento':'EVS 2 — valor de investimento','Valor Hipotecário':'EVS 2 — valor hipotecário (mortgage lending value)','Valor Seguro':'EVS 2 — valor seguro (insurable value)','Valor de uso alternativo':'EVS 1 — pressuposto especial: uso alternativo (não é uma base autónoma; acompanha o valor de mercado)','Valor de Liquidação (venda forçada)':'EVS 1 — pressuposto especial: venda forçada (não é uma base autónoma; acompanha o valor de mercado)'};
 const AL_BASE_OLD={'Valor de Liquidação':'Valor de Liquidação (venda forçada)'};
 AL_LISTS.proc_finalidade=['Arrendamento','Compra/venda','Hipoteca','Particular','Partilha'];
@@ -2984,15 +3003,15 @@ function alTrocaModal(p){const m=document.createElement('div');m.className='moda
 async function alEnviarVerbas(p,ids){if(dirty)await saveProc();await loadFotos(p);const V=p.anomalias.filter(a=>ids.includes(a.id));
  const one={...p,anomalias:V.map(a=>({...a,_code:alCode(p,a),fotos:a.fotos.map(f=>({...f,data:fd(f)})),vis:a.vis?.map?{...a.vis,map:{...a.vis.map,data:fotoCache.get(a.vis.map.id)||''}}:a.vis}))};
  const cods=V.map(a=>alCode(p,a));const nm=cods.length<=3?cods.join('-'):`${cods[0]}-a-${cods[cods.length-1]}_${cods.length}verbas`;
- await saveBlob(new Blob([JSON.stringify({app:'AvaLias',kind:'verbas',version:VERSION,date:new Date().toISOString(),procs:[one]})],{type:'application/json'}),`${safeName(p.codigo)}_Verbas_${safeName(nm)}.json`)}
-const alHash=a=>{const c=JSON.parse(JSON.stringify({...a,fotos:(a.fotos||[]).map(f=>({id:f.id,legenda:f.legenda,sel:f.sel,rot:f.rot}))}));delete c._code;delete c.updatedAt;const s=JSON.stringify(c);let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(36)};
+ await saveBlob(new Blob([JSON.stringify({app:'AvaLias',kind:'verbas',version:VERSION,date:new Date().toISOString(),procs:[one]})],{type:'application/json'}),`${safeName(p.codigo)}_Verbas_${safeName(nm)}_${DH.tag()}.json`)}
+const alHash=a=>{const c=JSON.parse(JSON.stringify({...a,fotos:(a.fotos||[]).map(f=>({id:f.id,legenda:f.legenda,sel:f.sel,rot:f.rot}))}));delete c._code;delete c.updatedAt;delete c._dh;const s=JSON.stringify(c);let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(36)};
 async function alReceber(d){if(d.app!=='AvaLias'||d.kind!=='verbas'||!d.procs?.[0])throw new Error('Não é um ficheiro de verbas da AvaLias.');const pp=d.procs[0];
  let P=procs.find(x=>x.id===pp.id)||null;
  if(!P){const c=procs.filter(x=>String(x.codigo||'').trim().toLowerCase()===String(pp.codigo||'').trim().toLowerCase()&&pp.codigo);const ch=await ask(`As verbas vêm do processo ${pp.codigo||'(sem código)'}, que não existe com a mesma identificação neste aparelho.`,['Cancelar',...(c.length?[`Juntar ao processo ${c[0].codigo}`]:[]),'Criar processo novo']);if(!ch)return;if(c.length&&ch===1)P=c[0];else{P={...pp,id:uid(),anomalias:[],createdAt:Date.now(),updatedAt:Date.now()};procs.push(P)}}
- const lin=pp.anomalias.map(it=>{const loc=P.anomalias.find(x=>x.id===it.id)||P.anomalias.find(x=>alCode(P,x)===it._code&&!pp.anomalias.some(o=>o.id===x.id));if(!loc)return {it,loc:null,st:'nova'};if(alHash(loc)===alHash({...it,fotos:it.fotos.map(f=>({...f,data:undefined}))}))return {it,loc,st:'igual'};return {it,loc,st:'dif',newer:(it.updatedAt||0)>=(loc.updatedAt||0)}});
- const res=await new Promise(ok=>{const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="box"><b style="font-size:17px">Receber verbas — ${esc(P.codigo||'')}</b><p class="muted">Só estas verbas mudam. Os dados gerais do processo e as outras verbas ficam como estão.</p>${lin.map((l,i)=>`<div class="card"><b>${esc(l.it._code)}</b> ${esc(l.it.al?.designacao||'')}<div class="muted">${l.st==='nova'?'Nova neste aparelho':l.st==='igual'?'Igual à deste aparelho':'Diferente da deste aparelho'} · recebida: 📷 ${l.it.fotos.length}${l.loc?` · neste aparelho: 📷 ${l.loc.fotos.length}`:''}</div><select data-i="${i}">${(l.st==='nova'?[['add','Acrescentar'],['skip','Não acrescentar']]:l.st==='igual'?[['skip','Igual — nada a fazer']]:[['subst','Substituir pela recebida'],['keep','Manter a deste aparelho'],['both','Manter as duas']]).map(([v,t])=>`<option value="${v}">${t}</option>`).join('')}</select></div>`).join('')}<div class="btns"><button class="green" data-ok>Aplicar</button><button class="secondary" data-no>Cancelar</button></div></div>`;
+ const lin=pp.anomalias.map(it=>{it.updatedAt=it.updatedAt||pp.updatedAt;const loc=P.anomalias.find(x=>x.id===it.id)||P.anomalias.find(x=>alCode(P,x)===it._code&&!pp.anomalias.some(o=>o.id===x.id));if(!loc)return {it,loc:null,st:'nova'};if(alHash(loc)===alHash({...it,fotos:it.fotos.map(f=>({...f,data:undefined}))}))return {it,loc,st:'igual'};return {it,loc,st:'dif',q:DH.qual(loc.updatedAt,it.updatedAt)}});
+ const res=await new Promise(ok=>{const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="box"><b style="font-size:17px">Receber verbas — ${esc(P.codigo||'')}</b><p class="muted">Só estas verbas mudam. Os dados gerais do processo e as outras verbas ficam como estão.</p>${lin.map((l,i)=>`<div class="card"><b>${esc(l.it._code)}</b> ${esc(l.it.al?.designacao||'')}<div class="muted">${l.st==='nova'?'Nova neste aparelho':l.st==='igual'?'Igual à deste aparelho':'Diferente da deste aparelho'} · recebida: 📷 ${l.it.fotos.length}${l.loc?` · neste aparelho: 📷 ${l.loc.fotos.length}`:''}</div>${l.st==='dif'?DH.html(l.loc.updatedAt,l.it.updatedAt):l.st==='nova'?`<div class="dh">📄 No ficheiro: <b>${DH.fmt(l.it.updatedAt)}</b></div>`:''}<select data-i="${i}">${(l.st==='nova'?[['add','Acrescentar'],['skip','Não acrescentar']]:l.st==='igual'?[['skip','Igual — nada a fazer']]:(l.q==='loc'?[['keep','Manter a deste aparelho (mais recente)'],['both','Manter as duas'],['subst','Substituir pela recebida (mais antiga)']]:[['subst','Substituir pela recebida'+(l.q==='rec'?' (mais recente)':'')],['keep','Manter a deste aparelho'],['both','Manter as duas']])).map(([v,t])=>`<option value="${v}">${t}</option>`).join('')}</select></div>`).join('')}<div class="btns"><button class="green" data-ok>Aplicar</button><button class="secondary" data-no>Cancelar</button></div></div>`;
   m.querySelector('[data-ok]').onclick=()=>{const r=[...m.querySelectorAll('select')].map(s=>s.value);m.remove();ok(r)};m.querySelector('[data-no]').onclick=()=>{m.remove();ok(null)};document.body.appendChild(m)});
- if(!res)return;const acts=lin.map((l,i)=>({...l,a:res[i]})).filter(l=>['add','subst','both'].includes(l.a));if(!acts.length)return toast('Nada foi alterado.');
+ if(!res)return;if(lin.some((l,i)=>res[i]==='subst'&&l.q==='loc')&&!await ask(DH.aviso+'\n\n'+lin.filter((l,i)=>res[i]==='subst'&&l.q==='loc').map(l=>`${l.it._code}: neste aparelho ${DH.fmt(l.loc.updatedAt)} · ficheiro ${DH.fmt(l.it.updatedAt)}`).join('\n'),['Cancelar','Substituir na mesma'],1))return;const acts=lin.map((l,i)=>({...l,a:res[i]})).filter(l=>['add','subst','both'].includes(l.a));if(!acts.length)return toast('Nada foi alterado.');
  const antes=JSON.parse(JSON.stringify(P));
  for(const l of acts){const it=JSON.parse(JSON.stringify(l.it));delete it._code;
   if(l.a==='both'||(l.a==='add'&&P.anomalias.some(x=>x.id===it.id))){it.id=uid();for(const f of it.fotos)f.id=uid();if(it.vis?.map)it.vis.map.id='map_'+it.id;if(l.a==='both'){alA(it);it.al.codigo=(String(l.it.al?.codigo||'').trim()||l.it._code)+'b';it.al.designacao=(it.al.designacao?it.al.designacao+' ':'')+'(recebida)'}}
@@ -3702,7 +3721,7 @@ document.addEventListener('click',async e=>{
     case 'chkProc':S.view='proc';S.sub=null;S.open.p1=true;S.open.p2=true;S.scrollTop=0;break;
     case 'sendProc':{if(dirty)await saveProc();const pp=procs.find(x=>x.id===el.dataset.id);if(!pp)return;toast('A preparar o processo…');await loadFotos(pp);
       const one={...pp,rel:await relAnexFull(pp.rel),visita:pp.visita?.map?{...pp.visita,map:{...pp.visita.map,data:fotoCache.get(pp.visita.map.id)||''}}:pp.visita,anomalias:pp.anomalias.map(a=>({...a,fotos:a.fotos.map(f=>({...f,data:fd(f)}))}))};
-      await saveBlob(new Blob([JSON.stringify({app:'AvaLias',kind:'processo',version:VERSION,date:new Date().toISOString(),procs:[one]})],{type:'application/json'}),`${safeName(pp.codigo)}_Processo_AvaLias.json`);return}
+      await saveBlob(new Blob([JSON.stringify({app:'AvaLias',kind:'processo',version:VERSION,date:new Date().toISOString(),procs:[one]})],{type:'application/json'}),`${safeName(pp.codigo)}_Processo_AvaLias_${DH.tag()}.json`);return}
     case 'help':{const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="box helpbox"><div class="btns" style="margin-top:0;justify-content:space-between"><b style="font-size:17px">Como funciona a AvaLias</b><button class="secondary mini" data-x>✕</button></div>${HELP_HTML}</div>`;m.addEventListener('click',e=>{if(e.target===m||e.target.closest('[data-x]'))m.remove()});document.body.appendChild(m);return}
     case 'filtQClear':S.filt.q='';S.scrollTop=window.scrollY;break;
     case 'addParte':{const n=Math.max(0,...p.partes.map(x=>+x.n))+1;p.partes.push({n,nome:'Parte '+n});await saveProc();S.scrollTop=window.scrollY;break}
@@ -3859,7 +3878,7 @@ document.addEventListener('change',async e=>{
   if(act==='impMap'){S.imp.map[el.dataset.k]=el.value===''?undefined:+el.value;render();return}
   if(act==='backupIn'){const f=el.files[0];el.value='';if(!f)return;try{const d=JSON.parse(await f.text());if(d.app==='AvaLias'&&d.kind==='verbas'){await alReceber(d);return}if(!['AvaLias'].includes(d.app)||!Array.isArray(d.procs))throw new Error('Ficheiro não é uma cópia desta app');
     if(d.kind==='processo'){const pp=d.procs[0];const ex=procs.find(x=>x.id===pp.id);let mode=2;
-      if(ex){const dn=x=>new Date(x.updatedAt||0).toLocaleString('pt-PT');mode=await ask(`O processo ${pp.codigo||''} já existe neste aparelho.\n• Neste aparelho: alterado em ${dn(ex)}\n• No ficheiro recebido: alterado em ${dn(pp)}${(pp.updatedAt||0)>(ex.updatedAt||0)?' (mais recente)':' (mais antigo)'}\nO que fazer?`,['Cancelar','Manter os dois','Substituir']);if(!mode)return}
+      if(ex){const dn=x=>new Date(x.updatedAt||0).toLocaleString('pt-PT');mode=await ask(`O processo ${pp.codigo||''} já existe neste aparelho.\n\n${DH.linhas(ex.updatedAt,pp.updatedAt)}\n\nO que fazer?`,['Cancelar','Manter os dois','Substituir']);if(!mode)return;if(mode===2&&DH.qual(ex.updatedAt,pp.updatedAt)==='loc'&&!await ask(DH.aviso,['Cancelar','Substituir na mesma'],1))return}
       if(ex&&mode===1){pp.id=uid();pp.codigo=(pp.codigo||'')+' (recebido)';for(const a of pp.anomalias)for(const f of a.fotos)f.id=uid();if(pp.visita?.map)pp.visita.map.id='map_'+pp.id}
       if(ex&&mode===2){for(const a of ex.anomalias)for(const f of a.fotos)await fotoDel(f.id)}
       migrateProc(pp);await migrateFotos(pp);await dbPut(pp);const k=procs.findIndex(x=>x.id===pp.id);k>=0?procs[k]=pp:procs.push(pp);S.prevNode=null;

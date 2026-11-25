@@ -1,5 +1,8 @@
 <!doctype html>
 <!--
+ExPropria v0.19.0 — resumo
+- REGRA GERAL «Transferências com data-hora» (comum/datahora.js): cada parcela guarda «alterado em» (atualizado quando o conteúdo muda); ao receber processo/parcelas mostra a data-hora deste aparelho e a do ficheiro (mais recente / mais antigo); a escolha sugerida é a mais recente; substituir por dados mais antigos pede confirmação expressa.
+
 ExPropria v0.18.5 — resumo
 - Capa 12: letra do modelo do utilizador (Calibri 11, normal) em todo o quadro, título incluído.
 
@@ -835,7 +838,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
 <script>
 'use strict';
-const VERSION='0.18.5';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
+const VERSION='0.19.0';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
 function growFit(t){if(!t||!t.classList?.contains('grow')||!t.offsetParent)return;t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px'}
 function growAll(root){(root||document).querySelectorAll('textarea.grow').forEach(growFit)}
 document.addEventListener('input',e=>growFit(e.target),true);
@@ -2168,6 +2171,25 @@ async function exportPastaARB(pp,opt={}){const r=await buildWordARB(!pp,pp,opt);
 
 /* ---------- Definições ---------- */
 const ASPETOS_BASE=['Geral','Envolvente','Acessos','Infraestruturas','Benfeitorias','Parte sobrante','Estado da obra','Condicionantes','Outro'];
+/* @comum:datahora v1.0 — REGRA GERAL (todas as apps): transferências entre aparelhos com data-hora, para nunca substituir dados mais recentes por mais antigos sem aviso. Regra: docs/regras/transferencias.md
+   - cada unidade transferível (processo, verba, parcela…) guarda «alterado em», atualizado sozinho quando o conteúdo muda;
+   - o nome do ficheiro enviado leva a data-hora do envio;
+   - ao receber, cada unidade mostra a data-hora deste aparelho e a do ficheiro, com «mais recente» / «mais antigo»;
+   - a escolha sugerida é sempre a mais recente; substituir dados mais recentes por mais antigos pede confirmação expressa. */
+const DH={
+ ms:t=>t==null||t===''?0:typeof t==='number'?t:(Date.parse(t)||0),
+ fmt:t=>{const m=DH.ms(t);if(!m)return 'sem data';const d=new Date(m),p=n=>String(n).padStart(2,'0');return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`},
+ tag:()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`},
+ /* 'rec' = o recebido é mais recente; 'loc' = o deste aparelho é mais recente; 'igual' / '?' (sem datas) */
+ qual:(loc,rec)=>{const a=DH.ms(loc),b=DH.ms(rec);if(!a&&!b)return '?';if(Math.abs(a-b)<1000)return 'igual';return b>a?'rec':'loc'},
+ linhas:(loc,rec)=>{const q=DH.qual(loc,rec);return `Neste aparelho: alterado em ${DH.fmt(loc)}${q==='loc'?' — mais recente':''}\nNo ficheiro: alterado em ${DH.fmt(rec)}${q==='rec'?' — mais recente':q==='loc'?' — MAIS ANTIGO':''}`},
+ html:(loc,rec)=>{const q=DH.qual(loc,rec);return `<div class="dh">📱 Neste aparelho: <b>${DH.fmt(loc)}</b>${q==='loc'?' <span class="dhn">mais recente</span>':''}<br>📄 No ficheiro: <b>${DH.fmt(rec)}</b>${q==='rec'?' <span class="dhn">mais recente</span>':q==='loc'?' <span class="dho">mais antigo</span>':''}</div>`},
+ css:'.dh{font-size:13px;margin:4px 0 6px;line-height:1.5}.dhn{background:#e1f5ee;color:#085041;border-radius:8px;padding:0 6px;font-size:12px}.dho{background:#fcebeb;color:#791f1f;border-radius:8px;padding:0 6px;font-size:12px;font-weight:600}',
+ /* marca «alterado em» nos itens cujo conteúdo mudou (hash próprio de cada app) */
+ marca:(itens,hash,iso=false)=>{for(const it of itens||[]){const c={...it};delete c._dh;delete c.updatedAt;const h=hash(c);if(it._dh!==h){if(it._dh!==undefined||!it.updatedAt)it.updatedAt=iso?new Date().toISOString():Date.now();it._dh=h}}},
+ aviso:'Vai substituir dados MAIS RECENTES deste aparelho por dados MAIS ANTIGOS do ficheiro. As alterações mais recentes perdem-se. Continuar?'};
+(()=>{try{const s=document.createElement('style');s.textContent=DH.css;document.head.appendChild(s)}catch(_){}})();
+/* @fim:datahora */
 /* @comum:peritos v1.0 — base de peritos e gabinetes partilhada entre apps (troca por ficheiro «Base_Peritos_….json», kind PFK_Peritos).
    FONTE ÚNICA: comum/peritos.js — não editar dentro das apps; editar e correr `python3 tools/sync_comum.py`.
    Modelo: settings.peritos = [{nome, esp, tel, email, res}] (o mesmo do ExPropria); settings.gabinetes = [{id, nome}] (se a app o tiver).
@@ -2902,7 +2924,7 @@ function openModal(html){$('#modalBox').innerHTML=html;$('#modal').classList.rem
 function closeModal(){$('#modal').classList.add('hidden');$('#modalBox').innerHTML=''}
 $('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
 function crumbs(){const p=[];if(cur)p.push(cur.v.nref||cur.v.proc||'Processo');if(curParcela)p.push(curParcela.nome||'Parcela');$('#crumbs').textContent=p.join(' › ')}
-async function saveCur(){if(!cur)return;cur.updatedAt=stamp();await put('processos',cur)}
+async function saveCur(){if(!cur)return;cur.updatedAt=stamp();try{DH.marca(cur.parcelas,parHash,true)}catch(_){}await put('processos',cur)}
 let saveT=null;function saveSoon(){clearTimeout(saveT);saveT=setTimeout(()=>saveCur().catch(e=>alert('Erro ao gravar: '+e.message)),400)}
 
 /* ---------- Calendário em grelha ---------- */
@@ -3599,17 +3621,17 @@ async function exportProcesso(){clearTimeout(saveT);await saveCur();busy(true,'A
 async function exportParcelas(L){clearTimeout(saveT);await saveCur();if(L.length===1)return exportParcela(L[0]);busy(true,'A preparar as parcelas…');try{const fotos=await packFotos(L);
   await saveJSON({app:'ExPropria',tipo:'parcelas',version:VERSION,date:stamp(),origem:{id:cur.id,nref:cur.v.nref||'',proc:cur.v.proc||'',fase:cur.fase},parcelas:L,visitas:L.map(p=>visOf(p)),hashes:L.map(parHash),fotos},`Exprop_parcelas_${winName(cur.v.nref||cur.v.proc||'')}_${L.length<=3?L.map(parTag).join('-'):L.length+'_parcelas'}_${dstamp()}.json`)}
  catch(e){alert('Erro ao exportar: '+e.message)}finally{busy(false)}}
-function parHash(p){const x=JSON.stringify({...p,fotos:(p.fotos||[]).map(f=>({...f}))});let h=2166136261;for(let i=0;i<x.length;i++){h^=x.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(36)+':'+x.length}
+function parHash(p0){const p={...p0};delete p._dh;delete p.updatedAt;const x=JSON.stringify({...p,fotos:(p.fotos||[]).map(f=>({...f}))});let h=2166136261;for(let i=0;i<x.length;i++){h^=x.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(36)+':'+x.length}
 /* receber parcelas: escolha parcela a parcela; só essas mudam; cópia automática do processo antes (Definições › 7) */
 async function importParcelas(P,j){const L=j.parcelas||[];if(!L.length)throw new Error('O ficheiro não tem parcelas.');
  if(j.origem?.fase&&j.origem.fase!==P.fase&&!await uiConfirm(`As parcelas vêm de um processo de ${EVENTOS[j.origem.fase]?.nome||j.origem.fase}; este processo é de ${EVENTOS[P.fase].nome}. Receber na mesma?`))return null;
  const linhas=L.map((p,k)=>{const nPar=String(p.rel?.v?.nPar||'').trim();const loc=P.parcelas.find(x=>x.id===p.id)||(nPar&&P.parcelas.find(x=>String(x.rel?.v?.nPar||'').trim()===nPar&&!L.some(o=>o.id===x.id)))||null;
-  if(!loc)return {k,p,loc,st:'nova',def:'add'};if(parHash(loc)===parHash(p))return {k,p,loc,st:'igual',def:'skip'};return {k,p,loc,st:'dif',def:'subst'}});
- const op=l=>l.st==='nova'?[['add','Acrescentar'],['skip','Não acrescentar']]:l.st==='igual'?[['skip','Igual — nada a fazer']]:[['subst','Substituir pela recebida'],['keep','Manter a deste aparelho'],['both','Manter as duas']];
+  if(!loc)return {k,p,loc,st:'nova',def:'add'};if(parHash(loc)===parHash(p))return {k,p,loc,st:'igual',def:'skip'};const q=DH.qual(loc.updatedAt,p.updatedAt||j.date);return {k,p,loc,st:'dif',q,def:q==='loc'?'keep':'subst'}});
+ const op=l=>l.st==='nova'?[['add','Acrescentar'],['skip','Não acrescentar']]:l.st==='igual'?[['skip','Igual — nada a fazer']]:[['subst','Substituir pela recebida'+(l.q==='rec'?' (mais recente)':l.q==='loc'?' (mais antiga)':'')],['keep','Manter a deste aparelho'+(l.q==='loc'?' (mais recente)':'')],['both','Manter as duas']];
  const ds=l=>l.st==='nova'?`Nova neste processo · ${(l.p.fotos||[]).length} fotos`:l.st==='igual'?'Igual à deste aparelho':`Diferente · recebida: ${(l.p.fotos||[]).length} fotos · neste aparelho: ${(l.loc.fotos||[]).length} fotos`;
- const esc2=await new Promise(ok=>{openModal(`<h3>Receber parcelas — ${esc(P.v.nref||P.v.proc||'')}</h3><div class="muted" style="margin:4px 0 10px">Só as parcelas abaixo são alteradas. Os dados gerais do processo e as outras parcelas ficam como estão.</div>${linhas.map(l=>`<div class="card" style="margin:6px 0"><b>${esc(l.p.nome)}</b><div class="muted" style="margin:2px 0 6px">${esc(ds(l))}</div><select data-rsel="${l.k}">${op(l).map(([v,t])=>`<option value="${v}" ${v===l.def?'selected':''}>${t}</option>`).join('')}</select></div>`).join('')}<div class="btns" style="flex-direction:column;align-items:stretch"><button class="green" data-rok>Aplicar</button><button class="secondary" data-rno>Cancelar</button></div>`);
+ const esc2=await new Promise(ok=>{openModal(`<h3>Receber parcelas — ${esc(P.v.nref||P.v.proc||'')}</h3><div class="muted" style="margin:4px 0 10px">Só as parcelas abaixo são alteradas. Os dados gerais do processo e as outras parcelas ficam como estão.</div>${linhas.map(l=>`<div class="card" style="margin:6px 0"><b>${esc(l.p.nome)}</b><div class="muted" style="margin:2px 0 6px">${esc(ds(l))}</div>${l.st==='dif'?DH.html(l.loc.updatedAt,l.p.updatedAt||j.date):''}<select data-rsel="${l.k}">${op(l).map(([v,t])=>`<option value="${v}" ${v===l.def?'selected':''}>${t}</option>`).join('')}</select></div>`).join('')}<div class="btns" style="flex-direction:column;align-items:stretch"><button class="green" data-rok>Aplicar</button><button class="secondary" data-rno>Cancelar</button></div>`);
   $('#modalBox [data-rok]').onclick=()=>{const r={};$$('#modalBox [data-rsel]').forEach(x=>r[x.dataset.rsel]=x.value);closeModal();ok(r)};$('#modalBox [data-rno]').onclick=()=>{closeModal();ok(null)}});
- if(!esc2)return null;const acts=linhas.map(l=>({...l,a:esc2[l.k]||l.def})).filter(l=>['add','subst','both'].includes(l.a));if(!acts.length){alert('Nada foi alterado.');return null}
+ if(!esc2)return null;{const V=linhas.filter(l=>(esc2[l.k]||l.def)==='subst'&&l.q==='loc');if(V.length&&!await uiConfirm(DH.aviso+'\n\n'+V.map(l=>`${l.p.nome}: neste aparelho ${DH.fmt(l.loc.updatedAt)} · ficheiro ${DH.fmt(l.p.updatedAt||j.date)}`).join('\n'),'Substituir na mesma'))return null}const acts=linhas.map(l=>({...l,a:esc2[l.k]||l.def})).filter(l=>['add','subst','both'].includes(l.a));if(!acts.length){alert('Nada foi alterado.');return null}
  busy(true,'A receber as parcelas…');try{
   if(acts.some(l=>l.a==='subst'))await lixoAdd([P],`Antes de receber parcelas (${acts.filter(l=>l.a==='subst').map(l=>l.loc.nome).join(', ')})`);
   let ult=null;for(const l of acts){const keep=l.a==='subst'?(l.loc.id===l.p.id):(l.a==='add'&&!P.parcelas.some(x=>x.id===l.p.id));const np=await putParcela(P,l.p,j.fotos||[],keep);
@@ -3649,7 +3671,7 @@ async function dropFotos(p){for(const f of (p.fotos||[])){await del('fotos',f.id
 async function importParcela(P,j){let p=j.parcela;if(!p||!p.id)throw new Error('Ficheiro de parcela incompleto.');
  const nPar=String(p.rel?.v?.nPar||'').trim();const alvo=P.parcelas.find(x=>x.id===p.id)||(nPar&&P.parcelas.find(x=>String(x.rel?.v?.nPar||'').trim()===nPar));
  if(j.origem?.fase&&j.origem.fase!==P.fase&&!await uiConfirm(`A parcela vem de um processo de ${EVENTOS[j.origem.fase]?.nome||j.origem.fase}; este processo é de ${EVENTOS[P.fase].nome}. Importar na mesma?`))return false;
- let modo='nova';if(alvo){modo=await askChoice('Parcela já existente',`O processo já tem «${esc(alvo.nome)}». O que fazer com «${esc(p.nome)}» do ficheiro?`,[['rep','Substituir a parcela existente','green'],['copia','Acrescentar como cópia']]);if(!modo)return false}
+ let modo='nova';if(alvo){const q=DH.qual(alvo.updatedAt,p.updatedAt||j.date);modo=await askChoice('Parcela já existente',`O processo já tem «${esc(alvo.nome)}». O que fazer com «${esc(p.nome)}» do ficheiro?${DH.html(alvo.updatedAt,p.updatedAt||j.date)}`,[['rep','Substituir a parcela existente'+(q==='loc'?' (por uma mais antiga)':''),q==='loc'?'secondary':'green'],['copia','Acrescentar como cópia',q==='loc'?'green':'']]);if(!modo)return false;if(modo==='rep'&&q==='loc'&&!await uiConfirm(DH.aviso,'Substituir na mesma'))return false}
  busy(true,'A importar a parcela…');try{
   const np=await putParcela(P,p,j.fotos||[],false);
   /* visita: reaproveita a do processo com a mesma data ou cria uma nova */
@@ -3659,7 +3681,7 @@ async function importParcela(P,j){let p=j.parcela;if(!p||!p.id)throw new Error('
   P.updatedAt=stamp();await put('processos',P);return np}finally{busy(false)}}
 async function importProcesso(j){const P0=j.processo;if(!P0||!P0.id)throw new Error('Ficheiro de processo incompleto.');
  const ex=processos.find(x=>x.id===P0.id);let modo='nova';
- if(ex){modo=await askChoice('Processo já existente',`Já existe neste aparelho o processo «${esc(ex.v.nref||ex.v.proc||'(sem N_Ref)')}», atualizado em ${esc(fmtStamp(ex.updatedAt))}. O ficheiro tem a versão de ${esc(fmtStamp(P0.updatedAt||j.date))}${(P0.updatedAt||'')<(ex.updatedAt||'')?' — <b>mais antiga</b> do que a deste aparelho':''}.`,[['rep','Substituir pelo do ficheiro','green'],['copia','Importar como cópia (fica com os dois)']]);if(!modo)return null}
+ if(ex){modo=await askChoice('Processo já existente',`Já existe neste aparelho o processo «${esc(ex.v.nref||ex.v.proc||'(sem N_Ref)')}», atualizado em ${esc(fmtStamp(ex.updatedAt))}. O ficheiro tem a versão de ${esc(fmtStamp(P0.updatedAt||j.date))}${(P0.updatedAt||'')<(ex.updatedAt||'')?' — <b>mais antiga</b> do que a deste aparelho':''}.`,[['rep','Substituir pelo do ficheiro','green'],['copia','Importar como cópia (fica com os dois)']]);if(!modo)return null;if(modo==='rep'&&DH.qual(ex.updatedAt,P0.updatedAt||j.date)==='loc'&&!await uiConfirm(DH.aviso,'Substituir na mesma'))return null}
  busy(true,'A importar o processo…');try{const P=JSON.parse(JSON.stringify(P0));const keep=modo!=='copia';
   if(!keep){P.id=uid();P.v=P.v||{};P.v.tag=[P.v.tag,'cópia importada '+fmtDate(hojeISO())].filter(Boolean).join(' · ')}
   if(ex&&modo==='rep')for(const p of ex.parcelas||[])await dropFotos(p);

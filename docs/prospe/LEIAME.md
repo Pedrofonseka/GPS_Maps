@@ -1,4 +1,6 @@
-# ProspeMerc — prospeção de mercado (app de ensaio)
+# ProspeMerc — prospeção de mercado (app de ensaio) — EM ESPERA
+
+> Em stand-by desde 25/11/2026, por decisão do utilizador, até haver melhores convicções. Não evoluir sem novo pedido.
 
 App separada para testar a prospeção e a homogeneização sem complicar a AvaLias. Se funcionar, integra-se na AvaLias (ver docs/avalias/PROSPECAO.md).
 

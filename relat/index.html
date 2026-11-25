@@ -767,7 +767,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: periText (antes «Relatório de Peritagem») =====
-const VERSION='1.31.8';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.32.0';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):parteLista(p));
@@ -914,6 +914,25 @@ function openMarker(a,f,selId=''){f.marks=f.marks||[];if(selId&&!f.marks.some(m=
  svg.addEventListener('pointerup',end);svg.addEventListener('pointercancel',()=>{drag=null;document.removeEventListener('touchmove',block,true)})}
 
 
+/* @comum:datahora v1.0 — REGRA GERAL (todas as apps): transferências entre aparelhos com data-hora, para nunca substituir dados mais recentes por mais antigos sem aviso. Regra: docs/regras/transferencias.md
+   - cada unidade transferível (processo, verba, parcela…) guarda «alterado em», atualizado sozinho quando o conteúdo muda;
+   - o nome do ficheiro enviado leva a data-hora do envio;
+   - ao receber, cada unidade mostra a data-hora deste aparelho e a do ficheiro, com «mais recente» / «mais antigo»;
+   - a escolha sugerida é sempre a mais recente; substituir dados mais recentes por mais antigos pede confirmação expressa. */
+const DH={
+ ms:t=>t==null||t===''?0:typeof t==='number'?t:(Date.parse(t)||0),
+ fmt:t=>{const m=DH.ms(t);if(!m)return 'sem data';const d=new Date(m),p=n=>String(n).padStart(2,'0');return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`},
+ tag:()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`},
+ /* 'rec' = o recebido é mais recente; 'loc' = o deste aparelho é mais recente; 'igual' / '?' (sem datas) */
+ qual:(loc,rec)=>{const a=DH.ms(loc),b=DH.ms(rec);if(!a&&!b)return '?';if(Math.abs(a-b)<1000)return 'igual';return b>a?'rec':'loc'},
+ linhas:(loc,rec)=>{const q=DH.qual(loc,rec);return `Neste aparelho: alterado em ${DH.fmt(loc)}${q==='loc'?' — mais recente':''}\nNo ficheiro: alterado em ${DH.fmt(rec)}${q==='rec'?' — mais recente':q==='loc'?' — MAIS ANTIGO':''}`},
+ html:(loc,rec)=>{const q=DH.qual(loc,rec);return `<div class="dh">📱 Neste aparelho: <b>${DH.fmt(loc)}</b>${q==='loc'?' <span class="dhn">mais recente</span>':''}<br>📄 No ficheiro: <b>${DH.fmt(rec)}</b>${q==='rec'?' <span class="dhn">mais recente</span>':q==='loc'?' <span class="dho">mais antigo</span>':''}</div>`},
+ css:'.dh{font-size:13px;margin:4px 0 6px;line-height:1.5}.dhn{background:#e1f5ee;color:#085041;border-radius:8px;padding:0 6px;font-size:12px}.dho{background:#fcebeb;color:#791f1f;border-radius:8px;padding:0 6px;font-size:12px;font-weight:600}',
+ /* marca «alterado em» nos itens cujo conteúdo mudou (hash próprio de cada app) */
+ marca:(itens,hash,iso=false)=>{for(const it of itens||[]){const c={...it};delete c._dh;delete c.updatedAt;const h=hash(c);if(it._dh!==h){if(it._dh!==undefined||!it.updatedAt)it.updatedAt=iso?new Date().toISOString():Date.now();it._dh=h}}},
+ aviso:'Vai substituir dados MAIS RECENTES deste aparelho por dados MAIS ANTIGOS do ficheiro. As alterações mais recentes perdem-se. Continuar?'};
+(()=>{try{const s=document.createElement('style');s.textContent=DH.css;document.head.appendChild(s)}catch(_){}})();
+/* @fim:datahora */
 /* @comum:imgtools v1.0 — ferramentas comuns para QUALQUER imagem anexada ao processo (extratos do PDM, páginas de anexos, imagens fornecidas…):
    🔍 Ver · ⟳ Rodar · ✏️ Marcar · 🗑 Eliminar — as mesmas das fotografias. Regra: docs/regras/imagens_anexas.md.
    Uso: ao desenhar, a app chama IMGT.bar(chave, objeto, {del:()=>…}); o objeto é {id,w,h,marks}; a imagem lê-se com fd(objeto) e guarda-se com fotoPut(id,data).
@@ -2879,7 +2898,7 @@ document.addEventListener('click',async e=>{{const _x=e.target.closest&&e.target
     case 'chkProc':S.view=p.visita?.data?'proc':'insp';S.sub=null;S.open.p1=true;S.open.p2=true;S.scrollTop=0;break;
     case 'sendProc':{if(dirty)await saveProc();const pp=procs.find(x=>x.id===el.dataset.id);if(!pp)return;toast('A preparar o processo…');await loadFotos(pp);
       const one=await procFull(pp);
-      await saveBlob(new Blob([JSON.stringify({app:'RelatAnomalias',kind:'processo',version:VERSION,date:new Date().toISOString(),procs:[one]})],{type:'application/json'}),`${safeName(pp.codigo)}_Processo_Relat.json`);return}
+      await saveBlob(new Blob([JSON.stringify({app:'RelatAnomalias',kind:'processo',version:VERSION,date:new Date().toISOString(),procs:[one]})],{type:'application/json'}),`${safeName(pp.codigo)}_Processo_Relat_${DH.tag()}.json`);return}
     case 'undo':return doUndo(-1);case 'redo':return doUndo(1);case 'menu':openMenu();return;
     case 'menuClose':return;
     case 'quit':await quitApp();return;
@@ -3084,7 +3103,7 @@ document.addEventListener('change',async e=>{{const _x=e.target.closest&&e.targe
   if(act==='impMap'){S.imp.map[el.dataset.k]=el.value===''?undefined:+el.value;render();return}
   if(act==='backupIn'){const f=el.files[0];el.value='';if(!f)return;try{const d=JSON.parse(await f.text());if(!['RelatAnomalias','RegiAnomalias'].includes(d.app)||!Array.isArray(d.procs))throw new Error('Ficheiro não é uma cópia desta app');
     if(d.kind==='processo'){const pp=d.procs[0];const ex=procs.find(x=>x.id===pp.id);let mode=2;
-      if(ex){const dn=x=>new Date(x.updatedAt||0).toLocaleString('pt-PT');mode=await ask(`O processo ${pp.codigo||''} já existe neste aparelho.\n• Neste aparelho: alterado em ${dn(ex)}\n• No ficheiro recebido: alterado em ${dn(pp)}${(pp.updatedAt||0)>(ex.updatedAt||0)?' (mais recente)':' (mais antigo)'}\nO que fazer?`,['Cancelar','Manter os dois','Substituir']);if(!mode)return}
+      if(ex){const dn=x=>new Date(x.updatedAt||0).toLocaleString('pt-PT');mode=await ask(`O processo ${pp.codigo||''} já existe neste aparelho.\n\n${DH.linhas(ex.updatedAt,pp.updatedAt)}\n\nO que fazer?`,['Cancelar','Manter os dois','Substituir']);if(!mode)return;if(mode===2&&DH.qual(ex.updatedAt,pp.updatedAt)==='loc'&&!await ask(DH.aviso,['Cancelar','Substituir na mesma'],1))return}
       if(ex&&mode===1){pp.id=uid();pp.codigo=(pp.codigo||'')+' (recebido)';for(const a of pp.anomalias)for(const f of a.fotos)f.id=uid();if(pp.visita?.map)pp.visita.map.id='map_'+pp.id}
       if(ex&&mode===2){for(const a of ex.anomalias)for(const f of a.fotos)await fotoDel(f.id)}
       migrateProc(pp);await migrateFotos(pp);await dbPut(pp);const k=procs.findIndex(x=>x.id===pp.id);k>=0?procs[k]=pp:procs.push(pp);S.prevNode=null;
