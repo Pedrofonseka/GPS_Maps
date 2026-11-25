@@ -1,4 +1,4 @@
-# Capas do relatório Word — versão 1.0
+# Capas do relatório Word — versão 1.1
 
 Rotina comum às apps que geram relatório Word com capa (Relatório de Peritagem, AvaLias).
 
@@ -12,6 +12,8 @@ Rotina comum às apps que geram relatório Word com capa (Relatório de Peritage
 | `titulo` | Título em destaque | título grande, uma imagem, dados por baixo — **centrado em altura** |
 | `colunas` | Fotografias e dados lado a lado | 2 colunas: até 6 miniaturas (4:3) à esquerda, dados à direita — **centrado em altura e largura** |
 | `ficha` | Ficha técnica | faixa baixa com N_Ref e título, dados em caixas, 3 fotos — tudo num **caixilho**, centrado em altura |
+| `faixa` | Faixa lateral | faixa vertical na cor do gabinete (toda a altura útil) com N_Ref e título ao alto; à direita uma fotografia, o título com um traço curto, a finalidade e os dados (1.1) |
+| `mosaico` | Mosaico | uma fotografia grande (2/3) e duas pequenas empilhadas; N_Ref, título em destaque, filete e dados em 2 colunas — **centrado em altura** (1.1) |
 
 ## Regras fixas
 - Uma **linha de intervalo** entre o cabeçalho e a capa (todas as opções).
@@ -29,5 +31,7 @@ Rotina comum às apps que geram relatório Word com capa (Relatório de Peritage
 ## Onde está aplicada
 | App | Versão |
 |---|---|
-| Relatório de Peritagem (relat) | 1.28.5 |
-| AvaLias (avalias) — fotos das verbas; título «Função – Relatório»; escolha em **Relatório › Capa** (secção própria, aberta), dados em Processo › R2 | 1.1.1 |
+| Relatório de Peritagem (relat) | 1.28.5 · Faixa lateral e Mosaico 1.31.1 |
+| AvaLias (avalias) — fotos das verbas; título «Função – Relatório»; escolha em **Relatório › Capa** (secção própria, aberta), dados em Processo › R2 | 1.1.1 · Faixa lateral e Mosaico 1.46 |
+
+**Sem lista de capas:** ExPropria (capa fixa do modelo de cada fase), FullTopics (página de rosto com mapa), Regi e Revip (capa do modelo Word) — as duas capas novas entram quando essas apps passarem a ter escolha de capa.
