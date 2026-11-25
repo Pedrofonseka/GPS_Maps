@@ -767,7 +767,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: periText (antes «Relatório de Peritagem») =====
-const VERSION='1.31.5';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.31.6';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):parteLista(p));
@@ -2302,8 +2302,8 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
       const im=(mapData?imgRun(await cropTo(mapData,IW/IH,1600),IW,IH,'Localização'):(allF.length?imgRun(await cropTo(fdOut(allF[0]),IW/IH,1600),IW,IH,'Capa'):''));
       const kc=(w,c,o={})=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${o.span?'<w:gridSpan w:val="2"/>':''}</w:tcPr>${c}</w:tc>`;
       const kl=t=>String(t).split('\n').map((ln,i,A)=>cp2(R(ln,{sz:11}),{b:i?0:60,a:i===A.length-1?60:0})).join('');
-      const qr=(l,v)=>String(v||'').trim()?`<w:tr><w:trPr><w:cantSplit/></w:trPr>${kc(LW2,kl(l))}${kc(VW2,kl(v))}</w:tr>`:'';
-      const q=`<w:tbl><w:tblPr><w:tblW w:w="${TW}" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders>${bd}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="100" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${LW2}"/><w:gridCol w:w="${VW2}"/></w:tblGrid><w:tr><w:trPr><w:cantSplit/></w:trPr>${kc(TW,cp2(R(TIT,{sz:12}),{b:80,a:80}),{span:1})}</w:tr>${qr('Solicitante:',SOL)}${qr('Endereço do local:',LOC)}${qr(`Relatório ${VER} / Datas:`,[VIS_?`Visita aos locais – ${VIS_}`:'',`Relatório – ${dRel}`].filter(Boolean).join('\n'))}</w:tbl>`;
+      const qr=(l,v)=>`<w:tr><w:trPr><w:cantSplit/></w:trPr>${kc(LW2,kl(l))}${kc(VW2,kl(String(v||'').trim()||'—'))}</w:tr>`;
+      const q=`<w:tbl><w:tblPr><w:tblW w:w="${TW}" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders>${bd}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="100" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${LW2}"/><w:gridCol w:w="${VW2}"/></w:tblGrid><w:tr><w:trPr><w:cantSplit/></w:trPr>${kc(TW,cp2(R(TIT,{sz:12}),{b:80,a:80}),{span:1})}</w:tr>${qr('Solicitante:',SOL)}${qr('Endereço do local:',LOC)}${qr(`Relatório ${VER} / Datas:`,`Visita aos locais – ${VIS_||'—'}\nRelatório – ${dRel}`)}</w:tbl>`;
       const ib=im?`<w:tbl><w:tblPr><w:tblW w:w="${TW}" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders>${bd}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="60" w:type="dxa"/><w:left w:w="60" w:type="dxa"/><w:bottom w:w="60" w:type="dxa"/><w:right w:w="60" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${TW}"/></w:tblGrid><w:tr><w:trPr><w:cantSplit/></w:trPr><w:tc><w:tcPr><w:tcW w:w="${TW}" w:type="dxa"/></w:tcPr>${cp2(im,{jc:'center'})}</w:tc></w:tr></w:tbl>`+cp2('',{b:600}):'';
       X=frame(ib+q,'center')}
     if(CM==='ficha'){const FM=200,FW=TW-2*FM,W2=Math.floor(FW/2),CF=Math.floor(FW/3),pw=(CF-40)/567,ph=pw*3/4;let F='';

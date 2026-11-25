@@ -1,5 +1,8 @@
 <!doctype html>
 <!--
+ExPropria v0.18.4 — resumo
+- Capa 12: o quadro tem sempre 4 linhas (título · solicitante · local · versão e datas), mesmo com dados por preencher (—).
+
 ExPropria v0.18.3 — resumo
 - Capa 12 · Imagem e quadro: imagem grande com moldura (mapa de localização ou fotografia) e quadro com título, solicitante, local, versão e datas (visita e relatório, mês e ano).
 
@@ -829,7 +832,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
 <script>
 'use strict';
-const VERSION='0.18.3';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
+const VERSION='0.18.4';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
 function growFit(t){if(!t||!t.classList?.contains('grow')||!t.offsetParent)return;t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px'}
 function growAll(root){(root||document).querySelectorAll('textarea.grow').forEach(growFit)}
 document.addEventListener('input',e=>growFit(e.target),true);
@@ -1650,8 +1653,8 @@ async function capaEstilo(zip,doc,rels,ctDoc){const est=cur?.layout?.capaEst||'m
       const im=(CB?await img(CB,IW,IH,CB===mapB?'Localização':'Capa'):'');
       const kc=(w,c,o={})=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${o.span?'<w:gridSpan w:val="2"/>':''}</w:tcPr>${c}</w:tc>`;
       const kl=t=>String(t).split('\n').map((ln,i,A)=>cp2(R(ln,{sz:11}),{b:i?0:60,a:i===A.length-1?60:0})).join('');
-      const qr=(l,v)=>String(v||'').trim()?`<w:tr><w:trPr><w:cantSplit/></w:trPr>${kc(LW2,kl(l))}${kc(VW2,kl(v))}</w:tr>`:'';
-      const q=`<w:tbl><w:tblPr><w:tblW w:w="${TW}" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders>${bd}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="100" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${LW2}"/><w:gridCol w:w="${VW2}"/></w:tblGrid><w:tr><w:trPr><w:cantSplit/></w:trPr>${kc(TW,cp2(R(TIT,{sz:12}),{b:80,a:80}),{span:1})}</w:tr>${qr('Solicitante:',SOL)}${qr('Endereço do local:',LOC)}${qr(`Relatório ${VER} / Datas:`,[VIS_?`Visita aos locais – ${VIS_}`:'',`Relatório – ${dRel}`].filter(Boolean).join('\n'))}</w:tbl>`;
+      const qr=(l,v)=>`<w:tr><w:trPr><w:cantSplit/></w:trPr>${kc(LW2,kl(l))}${kc(VW2,kl(String(v||'').trim()||'—'))}</w:tr>`;
+      const q=`<w:tbl><w:tblPr><w:tblW w:w="${TW}" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders>${bd}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="100" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${LW2}"/><w:gridCol w:w="${VW2}"/></w:tblGrid><w:tr><w:trPr><w:cantSplit/></w:trPr>${kc(TW,cp2(R(TIT,{sz:12}),{b:80,a:80}),{span:1})}</w:tr>${qr('Solicitante:',SOL)}${qr('Endereço do local:',LOC)}${qr(`Relatório ${VER} / Datas:`,`Visita aos locais – ${VIS_||'—'}\nRelatório – ${dRel}`)}</w:tbl>`;
       const ib=im?`<w:tbl><w:tblPr><w:tblW w:w="${TW}" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders>${bd}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="60" w:type="dxa"/><w:left w:w="60" w:type="dxa"/><w:bottom w:w="60" w:type="dxa"/><w:right w:w="60" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${TW}"/></w:tblGrid><w:tr><w:trPr><w:cantSplit/></w:trPr><w:tc><w:tcPr><w:tcW w:w="${TW}" w:type="dxa"/></w:tcPr>${cp2(im,{jc:'center'})}</w:tc></w:tr></w:tbl>`+cp2('',{b:600}):'';
       X=frame(ib+q)}
  if(!X)return;
