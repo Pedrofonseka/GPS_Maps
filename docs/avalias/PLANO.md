@@ -109,3 +109,4 @@ Validar destinos; perguntas de caracterização por tipo; métodos de avaliaçã
 - 1.48 (25/11/2026): capas numeradas (1 Mapa + fotos … 10 Carimbo técnico), com o mesmo número no periText 1.31.3 e no ExPropria 0.18.1 (regra comum).
 - 1.49 (25/11/2026): capa 11 · Tipográfica (só texto) — filete vertical na cor do gabinete, referência em grande, título forte e dados em 2 colunas. Também no periText 1.31.4 e no ExPropria 0.18.2.
 - 1.50 (25/11/2026): capa 12 · Imagem e quadro (modelo do utilizador): imagem grande com moldura e quadro com título, solicitante, endereço do local, versão e datas (visita e relatório). Também no periText 1.31.5 e no ExPropria 0.18.3.
+- 1.50.3–1.50.4 (25/11/2026): capas na letra do gabinete (estilo de texto do modelo, Calibri) em vez do estilo base (Times); sistema construtivo com «Alvenaria de pedra».
