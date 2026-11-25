@@ -758,7 +758,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.64';const VERSION_DATA='2026-11-25';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.65';const VERSION_DATA='2026-11-25';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -2142,7 +2142,10 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
    // análise específica de cada verba
    body+=await anexIn('res',2);body+=BRK+H1('Análise específica');
    const L1=2700,L2=TWb-L1;/* tabelas de texto: o tópico (coluna da esquerda) alinhado acima e uma linha horizontal por cima de cada tópico */
-const krow=(l,v)=>String(v??'').trim()?tr(tc(l,L1,{b:1,v:'top',tb:1})+tc(v,L2,{v:'top',tb:1})):'';
+const KTXT=ensureRel(p).fichaFmt==='txt';
+/* caracterização da verba no Word: em tabela (por defeito) ou em texto — «Tópico:» e o valor, com as linhas seguintes alinhadas pelo valor (avanço pendente) */
+const krow=(l,v)=>!String(v??'').trim()?'':KTXT?`<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:keepLines/><w:tabs><w:tab w:val="left" w:pos="${L1}"/></w:tabs><w:spacing w:before="40" w:after="40"/><w:ind w:left="${L1}" w:hanging="${L1}"/><w:jc w:val="left"/></w:pPr>${R(l+':',{b:true,sz:9})}<w:r><w:tab/></w:r>${R(v,{sz:9})}</w:p>`:tr(tc(l,L1,{b:1,v:'top',tb:1})+tc(v,L2,{v:'top',tb:1}));
+const ktab=(h,rows)=>KTXT?rows+E():tbl([L1,L2],tr(tc('Elemento',L1,{b:1,bb:1})+tc(h,L2,{b:1,bb:1}),1)+rows,false)+E();
    for(const [vi,a] of V.entries()){const x=a.al,fam=alFam(a),g=a.vis?.gps;
     body+=(vi?BRK:'')+H2(`${alCode(p,a)}${x.designacao?' – '+x.designacao:''}`)+E();
     let kr='',kfun='';
@@ -2161,8 +2164,8 @@ const krow=(l,v)=>String(v??'').trim()?tr(tc(l,L1,{b:1,v:'top',tb:1})+tc(v,L2,{v
     kr+=krow('Utilidade',[x.atr?'Atratividade: '+x.atr:'',x.util].filter(s=>String(s||'').trim()).join('\n'));
     if(veOn(a)){kr+=krow('Comprador especial',x.veComp);kr+=krow('Sinergia',x.veFund);kr+=krow('Valor de mercado',alNum(x.veVM)!=null?alEur(x.veVM):'');kr+=krow('Prémio de sinergia',alNum(x.vePct)!=null?String(x.vePct).replace('.',',')+' %':'')}
     kr+=krow(veOn(a)?'Valor estimado (valor especial)':'Valor estimado',[alNum(x.valor)!=null?alEur(x.valor):'',renda&&alNum(x.renda)!=null?'Renda mensal: '+alEur(x.renda)+'/mês':'',x.valObs].filter(s=>String(s||'').trim()).join('\n'));
-    if(kr)body+=tbl([L1,L2],tr(tc('Elemento',L1,{b:1,bb:1})+tc('Caracterização',L2,{b:1,bb:1}),1)+kr,false)+E();
-    if(kfun)body+=H3('Análise funcional')+tbl([L1,L2],tr(tc('Elemento',L1,{b:1,bb:1})+tc('Apreciação',L2,{b:1,bb:1}),1)+kfun,false)+E();
+    if(kr)body+=ktab('Caracterização',kr);
+    if(kfun)body+=H3('Análise funcional')+ktab('Apreciação',kfun);
     {const G=(x.pdmF||[]).map((g,i)=>g&&fd(g)?{g,i}:null).filter(Boolean),com=String(x.car?.pdmCom||'').trim();if(pdmOn(x,fam)&&!G.length){const MW=16.9,MH=4.6;body+=BRK+P(R('Extratos do PDM',{b:true}),{keep:1,sp:[0,80]});for(let i=0;i<PDM_SLOTS.length;i++){const lg=String((x.pdmF||[])[i]?.leg||'').trim()||PDM_SLOTS[i];body+=`<w:tbl><w:tblPr><w:tblW w:w="${Math.round(MW*567)}" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders>${['top','left','bottom','right'].map(k=>`<w:${k} w:val="dashed" w:sz="4" w:space="0" w:color="A0A0A0"/>`).join('')}</w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="${Math.round(MW*567)}"/></w:tblGrid><w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="${Math.round(MH*567)}" w:hRule="exact"/></w:trPr><w:tc><w:tcPr><w:tcW w:w="${Math.round(MW*567)}" w:type="dxa"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:jc w:val="center"/></w:pPr>${R('(colar aqui o extrato)',{i:true,sz:8,color:'A0A0A0'})}</w:p></w:tc></w:tr></w:tbl>`+P(R(lg,{i:true,sz:8}),{sp:[20,100]})}body+=P(R('Comentários sobre a consulta ao PDM',{b:true}),{keep:1,sp:[60,40]});for(const ln of (com||'—').split('\n'))body+=T(ln,{jc:'both'});body+=BRK}
      else if(pdmOn(x,fam)&&(G.length||com)){body+=BRK+P(R('Extratos do PDM',{b:true}),{keep:1,sp:[0,80]});
      const nl=Math.ceil(com.length/95)+(com?1:0),MH=Math.min(6.5,(22.5-0.8-G.length*0.6-nl*0.5)/Math.max(1,G.length));
@@ -3043,6 +3046,7 @@ document.addEventListener('click',async e=>{const el=e.target.closest('[data-ala
   case 'cstOff':{if(a.al.cst)a.al.cst.on=0;return keep()}
   case 'cstAdd':{a.al.cst.ed.push({d:'Construção',area:'',k1:'1',cnv:'1000',r:'',est:'5-Rg',adot:''});return keep()}
   case 'cstDel':{a.al.cst.ed.splice(+el.dataset.i,1);return keep()}
+  case 'fichaFmt':{const r=ensureRel(p);r.fichaFmt=el.dataset.v;return keep()}
   case 'cstLAdd':{const l=el.dataset.l;(a.al.cst[l]=a.al.cst[l]||[]).push({d:'',u:l==='dd'?'vg':'m²',q:'',p:'',o:''});return keep()}
   case 'cstLDel':{(a.al.cst[el.dataset.l]||[]).splice(+el.dataset.i,1);return keep()}
   case 'metSug':{alA(a);a.al.metTxt=alMetSug(a,p);return keep()}
@@ -3160,11 +3164,12 @@ function alRvItems(p){const r=ensureRel(p),L=[];const add=(sec,lbl,key,o,k)=>L.p
  return L}
 document.addEventListener('click',async e=>{if(!e.target.closest('[data-alrv]'))return;e.preventDefault();e.stopImmediatePropagation();const p=cur();if(!p)return;const r=ensureRel(p);r.rvKeep=r.rvKeep||{};
  const done=rvRun(alRvItems(p),r.rvKeep);await saveProc();rvModal(done,r.rvKeep,async()=>{await saveProc();S.scrollTop=window.scrollY;render()})},true);
+function fichaFmtHTML(p){const r=ensureRel(p),t=r.fichaFmt==='txt';return sec('rfmt','Caracterização das verbas no Word',`<div class="tks col">${alTk(!t,'Em tabela — Elemento | Caracterização, tópico em cima e linha por cima de cada tópico (por defeito)','data-alact="fichaFmt" data-v=""')}${alTk(t,'Em texto — «Tópico:» seguido do valor, as linhas seguintes alinhadas pelo valor, sem tabela','data-alact="fichaFmt" data-v="txt"')}</div><p class="muted">Vale para a análise específica de cada verba (caracterização e análise funcional). Exporte nos dois modos para comparar.</p>`,{cnt:pill(t?'texto':'tabela')})}
 function ordSecHTML(p){const r=ensureRel(p),n=p.anomalias.filter(a=>+a.ov>0).length;return sec('rord','Ordem das verbas no relatório',`<div class="tks col">${alTk(!r.ordVis,'Pela ordem do processo (como foram listadas) — por defeito','data-alact="ordVis" data-v="0"')}${alTk(!!r.ordVis,`Pela ordem de visita (OV) — ${n} de ${p.anomalias.length} com ordem; as por visitar ficam no fim`,'data-alact="ordVis" data-v="1"')}</div><p class="muted">Os códigos das verbas (VB_xxx) não mudam; muda só a sequência no Word, no quadro-resumo e no livro Excel. A coluna OV aparece sempre no resumo.</p>`,{cnt:pill(r.ordVis?'Visita':'Processo'),def:false})}
 function vRel(){const p=cur();const box=document.createElement('div');box.innerHTML=vRel_relat();
  box.querySelectorAll('.card.chk,details[data-key="r1"],details[data-key="r5"],details[data-key="r2"],details[data-key="r3"],details[data-key="r4"],details[data-key="rr2"]').forEach(e=>e.remove());
  const V=p.anomalias,tot=V.reduce((s,a)=>s+(alNum(a.al?.valor)||0),0),nf=V.reduce((s,a)=>s+relF(a).length,0);
- const b=box.querySelector('.blk');if(b)b.insertAdjacentHTML('afterend',capaSecHTML(p)+ordSecHTML(p));if(b)b.outerHTML=blk('Resultado',`${V.length} verba(s) · ${V.filter(alCompleta).length} completa(s) · ${nf} foto(s)${tot?' · total '+alEur(tot):''}`);
+ const b=box.querySelector('.blk');if(b)b.insertAdjacentHTML('afterend',capaSecHTML(p)+ordSecHTML(p)+fichaFmtHTML(p));if(b)b.outerHTML=blk('Resultado',`${V.length} verba(s) · ${V.filter(alCompleta).length} completa(s) · ${nf} foto(s)${tot?' · total '+alEur(tot):''}`);
  {const c=box.querySelector('.blk');if(c)c.insertAdjacentHTML('afterend',`<div class="card"><b>🔍 Revisão do texto</b><p class="muted">Corrige automaticamente as gralhas mecânicas (espaços, pontuação, maiúscula no início da frase, ponto final) em todos os textos do processo e das verbas; depois pode aceitar cada correção ou manter o original.</p><div class="btns"><button class="green" data-alrv="1">🔍 Rever o texto</button></div></div>`)}
  box.insertAdjacentHTML('beforeend',sec('rf','Fotografias e tamanho dos documentos',`<div class="btns"><button class="secondary" data-dupscan="1">🔍 Procurar fotografias repetidas</button>${camUnsaved(p).length?`<button class="secondary" data-act="saveCam">💾 Guardar ${camUnsaved(p).length} foto(s) tirada(s) na app na Fototeca</button>`:''}</div>`+maxUI().replace('cada anomalia','cada verba')+tamHTML(p)));
  return box.innerHTML}

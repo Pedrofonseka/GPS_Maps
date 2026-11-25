@@ -144,3 +144,4 @@ Validar destinos; perguntas de caracterização por tipo; métodos de avaliaçã
 - Estado de conservação 2: «Deficiente / Reparação significativa».
 - Textos: «Nada a relevar.» nos constrangimentos; p32 «retrata de forma aceitável a realidade jurídica»; N1 «reflete sempre…» e «indivisibilidade/titularidade repartida».
 - Tabelas de texto no Word (ficha da verba, análise funcional): tópico da coluna da esquerda alinhado acima e linha horizontal por cima de cada tópico.
+- 1.65 (25/11/2026): «Caracterização das verbas no Word» (separador Relatório, a seguir à ordem das verbas): em tabela (por defeito) ou em texto («Tópico:» + valor, com avanço pendente, sem tabela) — para comparar.
