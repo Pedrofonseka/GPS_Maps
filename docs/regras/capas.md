@@ -35,4 +35,6 @@ Rotina comum às apps que geram relatório Word com capa (Relatório de Peritage
 | Relatório de Peritagem (relat) | 1.28.5 · Faixa lateral e Mosaico 1.31.1 · Carimbo técnico 1.31.2 |
 | AvaLias (avalias) — fotos das verbas; título «Função – Relatório»; escolha em **Relatório › Capa** (secção própria, aberta), dados em Processo › R2 | 1.1.1 · Faixa lateral e Mosaico 1.46 · Carimbo técnico 1.47 |
 
-**Sem lista de capas:** ExPropria (capa fixa do modelo de cada fase), FullTopics (página de rosto com mapa), Regi e Revip (capa do modelo Word) — as capas novas entram quando essas apps passarem a ter escolha de capa.
+**ExPropria 0.18.0:** «Estilo da capa» (Relatório › layout): Modelo do gabinete (quadro N_Ref, por defeito) · Faixa lateral · Mosaico · Carimbo técnico. Os dados vêm do quadro N_Ref já preenchido (uma ou várias parcelas; Finalidade em destaque, Versões em rodapé da capa) e da equipa do processo — «Perito(s)» ou, na arbitragem, «Árbitro(s)», com a função quando há mais de um. Imagens: fotografias marcadas «Capa», depois as outras; sem fotografias, o mapa. A capa substitui toda a página 1 do modelo; o índice continua na página 2.
+
+**Sem lista de capas:** FullTopics (página de rosto com mapa), Regi e Revip (capa do modelo Word) — as capas novas entram quando essas apps passarem a ter escolha de capa.
