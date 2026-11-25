@@ -22,6 +22,7 @@ input,select,textarea{font:inherit;font-size:16px;width:100%;padding:7px 8px;bor
 .tabs{display:flex;gap:6px;overflow-x:auto;margin:6px 0}.tabs button{white-space:nowrap;border-color:var(--b);color:#333}.tabs button.on{background:var(--c);color:#fff;border-color:var(--c)}
 .comp.off{opacity:.55}.ch{cursor:pointer;display:flex;flex-wrap:wrap;gap:4px;align-items:center}.ch .r{margin-left:auto;font-size:13px;color:var(--m)}
 .etq img{max-width:100%;max-height:360px;border:1px solid var(--b);border-radius:6px;display:block}.noimg{padding:18px;border:1px dashed var(--b);border-radius:6px;color:var(--m);text-align:center;font-size:13px}
+.sl{display:flex;flex-wrap:wrap;gap:8px}.sl a{text-decoration:none;font-size:14px}
 .tk{display:flex;align-items:center;gap:6px;flex:0}.tk input{width:auto}
 .tw{overflow-x:auto}table.mat{border-collapse:collapse;font-size:13px;min-width:760px}table.mat th,table.mat td{padding:4px 5px;border-bottom:1px solid #eee;text-align:center}
 table.mat th{font-size:11px;color:var(--m);font-weight:600}.fx{position:sticky;left:0;background:#fff}td.n{text-align:right;white-space:nowrap}tr.off td{opacity:.5}
@@ -78,7 +79,7 @@ function alXlsx(sh){const E=t=>xesc(String(t));const rowsX=sh.rows.map((r,i)=>`<
 /* ProspeMerc — prospeção de mercado e homogeneização de comparáveis (app de ensaio, separada da AvaLias).
    Estudos → sujeito (o ativo a avaliar) + comparáveis (C01, C02…, com etiqueta = captura do anúncio) → matriz de homogeneização → valor.
    Venda (€/m²) ou arrendamento (€/m²/mês). Saídas: Excel com fórmulas, página para imprimir/PDF (matriz + etiquetas), JSON para levar para a AvaLias. */
-const VERSION='0.1.1';
+const VERSION='0.2.1';
 const FAT=[['neg','Negociação'],['loc','Localização'],['are','Área'],['est','Estado / idade'],['qua','Qualidade'],['out','Outro']];
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -110,10 +111,10 @@ const settings=JSON.parse(localStorage.getItem('prospe.set')||'{"neg":"-10"}');
 const saveSet=()=>localStorage.setItem('prospe.set',JSON.stringify(settings));
 let saveT;function save(){const e=cur();if(!e)return;e.upd=Date.now();clearTimeout(saveT);saveT=setTimeout(()=>put('est',e),250)}
 
-function novoEstudo(){const e={id:uid(),nome:'',tipo:'venda',modo:'soma',cri:Date.now(),upd:Date.now(),suj:{desc:'',local:'',area:'',tip:'',ano:'',estado:'',notas:''},comps:[],adot:'',adotAuto:true,just:''};EST.unshift(e);S.eid=e.id;S.view='est';S.tab='suj';put('est',e);render()}
-function novoComp(e){const n=e.comps.length?Math.max(...e.comps.map(c=>+String(c.cod).replace(/\D/g,'')||0))+1:1;
+function novoEstudo(){const e={id:uid(),nome:'',tipo:'venda',modo:'soma',cri:Date.now(),upd:Date.now(),suj:{desc:'',local:'',area:'',tip:'',ano:'',estado:'',notas:'',dist:'',conc:'',freg:'',timo:'moradia'},comps:[],adot:'',adotAuto:true,just:''};EST.unshift(e);S.eid=e.id;S.view='est';S.tab='suj';put('est',e);render()}
+function novoComp(e,quiet){const n=e.comps.length?Math.max(...e.comps.map(c=>+String(c.cod).replace(/\D/g,'')||0))+1:1;
  const c={id:uid(),cod:'C'+String(n).padStart(2,'0'),fonte:'',link:'',data:new Date().toISOString().slice(0,10),nat:'oferta',preco:'',area:'',tip:'',local:'',ano:'',estado:'',notas:'',txt:'',img:null,inc:true,f:{neg:settings.neg??'-10'},fAuto:{neg:true}};
- e.comps.push(c);S.open[c.id]=true;save();render()}
+ e.comps.push(c);if(!quiet){S.open[c.id]=true;save();render()}}
 
 /* ---------- cálculo ---------- */
 function unit(c){const p=num(c.preco),a=num(c.area);return p!=null&&a?p/a:null}
@@ -153,24 +154,47 @@ function vHome(){return `<header><h1>ProspeMerc <small>${VERSION}</small></h1><p
  <details class="card"><summary>Definições</summary>${inp('set.neg','Negociação por defeito nas ofertas (%)',settings.neg,{dec:1,ph:'-10'})}<p class="muted">Aplica-se às ofertas (anúncios); nas transações é 0 %. Pode corrigir em cada comparável.</p></details>`}
 
 function vEst(){const e=cur();if(!e){S.view='home';return vHome()}
- const tabs=[['suj','1 · Sujeito'],['comp',`2 · Comparáveis (${e.comps.length})`],['mat','3 · Matriz'],['rel','4 · Relatório']];
+ const tabs=[['suj','1 · Sujeito'],['proc','2 · Procurar'],['comp',`3 · Comparáveis (${e.comps.length})`],['mat','4 · Matriz'],['rel','5 · Relatório']];
  return `<header class="bar"><button class="sec" data-a="home">← Estudos</button><b>${esc(e.nome||'(sem nome)')}</b></header>
  <nav class="tabs">${tabs.map(([k,t])=>`<button class="${S.tab===k?'on':''}" data-a="tab" data-t="${k}">${t}</button>`).join('')}</nav>
- ${S.tab==='suj'?vSuj(e):S.tab==='comp'?vComp(e):S.tab==='mat'?vMat(e):vRel(e)}`}
+ ${S.tab==='suj'?vSuj(e):S.tab==='proc'?vProc(e):S.tab==='comp'?vComp(e):S.tab==='mat'?vMat(e):vRel(e)}`}
 
 function vSuj(e){const s=e.suj;return `<div class="card">${inp('e.nome','Nome do estudo',e.nome,{ph:'ex.: Moradia T3 — Oliveira do Conde'})}
  <div class="row">${sel('e.tipo','Prospeção de',e.tipo,[['venda','Venda — €/m²'],['renda','Arrendamento — €/m²/mês']])}${sel('e.modo','Ajustes',e.modo,[['soma','Soma dos ajustes'],['produto','Produto dos coeficientes']])}</div></div>
- <div class="card"><h3>Sujeito — o ativo a avaliar</h3>${inp('s.desc','Descrição',s.desc,{ph:'ex.: Moradia T3, 2 pisos, logradouro'})}${inp('s.local','Localização',s.local,{ph:'freguesia, concelho'})}
- <div class="row">${inp('s.area','Área (m²)',s.area,{dec:1})}${inp('s.tip','Tipologia',s.tip,{ph:'T3'})}${inp('s.ano','Ano / idade',s.ano)}</div>${inp('s.estado','Estado de conservação',s.estado)}${ta('s.notas','Notas',s.notas,2)}
+ <div class="card"><h3>Sujeito — o ativo a avaliar</h3>${inp('s.desc','Descrição',s.desc,{ph:'ex.: Moradia T3, 2 pisos, logradouro'})}<div class="row">${sel('s.timo','Tipo de imóvel',s.timo||'moradia',TIMO.map(t=>[t[0],t[1]]))}${inp('s.tip','Tipologia',s.tip,{ph:'T3'})}</div><div class="row">${inp('s.dist','Distrito',s.dist,{ph:'Viseu'})}${inp('s.conc','Concelho',s.conc,{ph:'Carregal do Sal'})}${inp('s.freg','Freguesia',s.freg,{ph:'Oliveira do Conde'})}</div>${inp('s.local','Localização (morada / lugar)',s.local,{ph:'rua, lugar'})}
+ <div class="row">${inp('s.area','Área (m²)',s.area,{dec:1})}${inp('s.ano','Ano / idade',s.ano)}</div>${inp('s.estado','Estado de conservação',s.estado)}${ta('s.notas','Notas',s.notas,2)}
  <p class="muted">A área do sujeito multiplica o valor unitário adotado na matriz.</p></div>
  <div class="btns"><button class="sec" data-a="dup">Duplicar estudo</button><button class="del" data-a="delEst">Eliminar estudo</button></div>`}
 
+/* ---------- 2 · Procurar: ligações de pesquisa já filtradas pelo sujeito + colar ligações dos anúncios escolhidos ---------- */
+const TIMO=[['moradia','Moradia','casas','moradia','moradias'],['apartamento','Apartamento','casas','apartamento','apartamentos'],['terreno','Terreno','terrenos','terreno','terrenos-e-quintas'],['quinta','Quinta / herdade','casas','quinta','terrenos-e-quintas'],['armazem','Armazém / pavilhão','armazens','armazem','lojas-escritorios-e-armazens'],['loja','Loja / comércio','lojas','loja','lojas-escritorios-e-armazens'],['escritorio','Escritório','escritorios','escritorio','lojas-escritorios-e-armazens']];
+const slug=t=>String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+const SITES={'idealista.pt':'Idealista','imovirtual.com':'Imovirtual','supercasa.pt':'Supercasa','casa.sapo.pt':'Casa Sapo','custojusto.pt':'CustoJusto','olx.pt':'OLX','remax.pt':'RE/MAX','era.pt':'ERA','century21.pt':'Century 21','kwportugal.pt':'KW','zome.pt':'Zome','iadportugal.pt':'IAD','casayes.pt':'Casa Yes'};
+const fonteDe=u=>{try{const h=new URL(u).hostname.replace(/^www\./,'');const k=Object.keys(SITES).find(k=>h===k||h.endsWith('.'+k));return k?SITES[k]:h}catch(_){return ''}};
+function pesquisas(e){const s=e.suj,ar=e.tipo==='renda',T=TIMO.find(t=>t[0]===(s.timo||'moradia'))||TIMO[0],c=slug(s.conc),d=slug(s.dist),f=slug(s.freg),tp=String(s.tip||'').trim();
+ const q=[T[1],tp,ar?'arrendar':'venda',s.freg,s.conc].filter(Boolean).join(' ');const g=dom=>`https://www.google.com/search?q=${encodeURIComponent('site:'+dom+' '+q)}`;const L=[];
+ if(c){L.push(['Idealista',`https://www.idealista.pt/${ar?'arrendar':'comprar'}-${T[2]}/${c}/`]);
+  if(d)L.push(['Imovirtual',`https://www.imovirtual.com/pt/resultados/${ar?'arrendar':'comprar'}/${T[3]}${tp&&/^t\d/i.test(tp)?','+tp.toLowerCase():''}/${d}/${c}${f?'/'+f:''}`]);
+  L.push(['Supercasa',`https://supercasa.pt/${ar?'arrendar':'comprar'}-casas/${c}`]);
+  if(d)L.push(['CustoJusto',`https://www.custojusto.pt/${d}/${c}/imobiliario/${T[4]}`])}
+ for(const dom of ['idealista.pt','imovirtual.com','casa.sapo.pt','supercasa.pt','olx.pt'])L.push([`Google — ${SITES[dom]}`,g(dom)]);return L}
+function vProc(e){const s=e.suj,L=pesquisas(e),falta=!s.conc;
+ return `<div class="card"><h3>1. Abrir as pesquisas</h3><p class="muted">Ligações já filtradas pelo sujeito (${esc([TIMO.find(t=>t[0]===(s.timo||'moradia'))?.[1],s.tip,e.tipo==='renda'?'arrendamento':'venda',s.freg,s.conc].filter(Boolean).join(' · '))}). Abrem no navegador; escolha os anúncios comparáveis (tipo, área, idade e estado parecidos, perto do sujeito).</p>
+  ${falta?'<p class="warn">Indique o concelho (e o distrito) em 1 · Sujeito para ter as ligações diretas dos sites.</p>':''}
+  <div class="sl">${L.map(([t,u])=>`<a class="btn sec" href="${esc(u)}" target="_blank" rel="noopener">${esc(t)} ↗</a>`).join('')}</div></div>
+ <div class="card"><h3>2. Trazer os anúncios escolhidos</h3><p class="muted">Em cada anúncio: Partilhar → Copiar ligação; depois cole aqui (pode colar várias ligações de uma vez, uma por linha). Cada ligação passa a um comparável (C01, C02…) com a fonte já preenchida; depois complete preço, área e etiqueta em 3 · Comparáveis.</p>
+  <textarea id="links" rows="4" placeholder="https://www.idealista.pt/imovel/…&#10;https://www.imovirtual.com/pt/anuncio/…"></textarea>
+  <div class="btns"><button class="pri" data-a="addLinks">Criar comparáveis</button><button class="sec" data-a="pasteLinks">📋 Colar</button><label class="btn sec">Importar lista (JSON)<input type="file" accept=".json,application/json" data-a="impL" hidden></label></div>
+  <p class="muted">«Importar lista» aceita uma lista de comparáveis já recolhida (por exemplo, a que o Claude lhe preparar no chat): fonte, ligação, preço, área, tipologia, localização.</p></div>`}
+function addLinks(e,txt){const have=new Set(e.comps.map(c=>c.link));const U=[...new Set((String(txt).match(/https?:\/\/[^\s<>"']+/g)||[]).map(u=>u.replace(/[),.;]+$/,'')))].filter(u=>!have.has(u));
+ for(const u of U){novoComp(e,true);const c=e.comps.at(-1);c.link=u;c.fonte=fonteDe(u)}return U.length}
+function addLista(e,arr){let n=0;for(const o of arr||[]){if(o.link&&e.comps.some(c=>c.link===o.link))continue;novoComp(e,true);const c=e.comps.at(-1);for(const k of ['fonte','link','preco','area','tip','local','ano','estado','notas','data'])if(o[k]!=null&&o[k]!=='')c[k]=String(o[k]);if(o.nat==='transacao')c.nat='transacao';if(!c.fonte&&c.link)c.fonte=fonteDe(c.link);n++}return n}
 function vComp(e){return `${e.comps.map(c=>{const u=unit(c),op=!!S.open[c.id];return `<div class="card comp${c.inc?'':' off'}">
- <div class="ch" data-a="tog" data-id="${c.id}"><b>${esc(c.cod)}</b> ${esc(c.fonte||'—')} <span class="pill ${c.nat==='oferta'?'warn':'ok'}">${c.nat==='oferta'?'Oferta':'Transação'}</span><span class="r">${eur(num(c.preco))} · ${fmt(num(c.area))} m² · ${eur(u,2)}${e.tipo==='renda'?'/m²/mês':'/m²'}</span></div>
+ <div class="ch" data-a="tog" data-id="${c.id}"><b>${esc(c.cod)}</b> ${esc(c.fonte||'—')} <span class="pill ${c.nat==='oferta'?'warn':'ok'}">${c.nat==='oferta'?'Oferta':'Transação'}</span><span class="r" data-k="h${c.id}">${eur(num(c.preco))} · ${fmt(num(c.area))} m² · ${eur(u,2)}${e.tipo==='renda'?'/m²/mês':'/m²'}</span></div>
  ${op?`<div class="cb">
   <div class="etq">${c.img?`<img data-img="${c.img}" alt="Etiqueta ${esc(c.cod)}">`:'<div class="noimg">Sem etiqueta — capture o anúncio (ecrã) ou cole a imagem</div>'}
    <div class="btns"><label class="btn sec">📷 Imagem<input type="file" accept="image/*" data-a="file" data-id="${c.id}" hidden></label><button class="sec" data-a="paste" data-id="${c.id}">📋 Colar</button>${c.img?`<button class="sec" data-a="rot" data-id="${c.id}">⟳ Rodar</button><button class="sec" data-a="ver" data-id="${c.id}">🔍 Ver</button><button class="del" data-a="delImg" data-id="${c.id}">🗑</button>`:''}</div></div>
-  ${ta(`c.${c.id}.txt`,'Texto do anúncio (opcional — colar para ler preço e área)',c.txt,2,'Cole aqui o texto do anúncio')}${c.txt?`<div class="btns"><button class="sec" data-a="ler" data-id="${c.id}">Ler preço e área</button></div>`:''}
+  ${ta(`c.${c.id}.txt`,'Texto do anúncio (opcional — colar para ler preço e área)',c.txt,2,'Cole aqui o texto do anúncio')}<div class="btns"><button class="sec" data-a="ler" data-id="${c.id}">Ler preço e área do texto</button></div>
   <div class="row">${inp(`c.${c.id}.fonte`,'Fonte',c.fonte,{ph:'site / agência / escritura'})}${inp(`c.${c.id}.data`,'Data',c.data,{type:'date'})}</div>
   ${inp(`c.${c.id}.link`,'Ligação',c.link,{ph:'https://…'})}
   <div class="row">${sel(`c.${c.id}.nat`,'Natureza',c.nat,[['oferta','Oferta (anúncio)'],['transacao','Transação']])}${inp(`c.${c.id}.preco`,e.tipo==='renda'?'Renda mensal (€)':'Preço (€)',c.preco,{dec:1})}${inp(`c.${c.id}.area`,'Área (m²)',c.area,{dec:1})}</div>
@@ -183,13 +207,13 @@ function vMat(e){const st=stats(e),L=e.comps;const u=adot(e),v=valor(e);
  const fin=(c,k)=>{const auto=k==='neg'&&c.fAuto?.neg;const val=auto?String((c.nat==='oferta'?num(settings.neg)??0:0)):(c.f?.[k]??'');return `<input class="pc${auto?' auto':''}" data-b="f.${c.id}.${k}" value="${esc(val)}" inputmode="decimal" title="%">`};
  return `<div class="card"><p class="muted">Ajustes em % sobre o valor unitário de cada comparável (+ se o sujeito é melhor, − se é pior). ${e.modo==='soma'?'Ajuste total = soma dos ajustes.':'Ajuste total = produto dos coeficientes (1 + %) − 1.'} A negociação das ofertas vem sugerida (${esc(settings.neg)} %) — aceite ou corrija.</p>
  <div class="tw"><table class="mat"><thead><tr><th class="fx">Comp.</th><th>Entra</th><th>${UN(e)}</th>${FAT.map(([,t])=>`<th>${t} %</th>`).join('')}<th>Ajuste</th><th>${UN(e)} homog.</th></tr></thead><tbody>
- ${L.map(c=>`<tr class="${c.inc?'':'off'}"><td class="fx"><b>${esc(c.cod)}</b></td><td><input type="checkbox" data-a="inc" data-id="${c.id}"${c.inc?' checked':''}></td><td class="n">${fmt(unit(c),2)}</td>${FAT.map(([k])=>`<td>${fin(c,k)}</td>`).join('')}<td class="n">${pct(ajuste(e,c))}</td><td class="n"><b>${fmt(homog(e,c),2)}</b></td></tr>`).join('')||'<tr><td colspan="10" class="muted">Sem comparáveis.</td></tr>'}
+ ${L.map(c=>`<tr class="${c.inc?'':'off'}"><td class="fx"><b>${esc(c.cod)}</b></td><td><input type="checkbox" data-a="inc" data-id="${c.id}"${c.inc?' checked':''}></td><td class="n" data-k="u${c.id}">${fmt(unit(c),2)}</td>${FAT.map(([k])=>`<td>${fin(c,k)}</td>`).join('')}<td class="n" data-k="a${c.id}">${pct(ajuste(e,c))}</td><td class="n" data-k="m${c.id}"><b>${fmt(homog(e,c),2)}</b></td></tr>`).join('')||'<tr><td colspan="10" class="muted">Sem comparáveis.</td></tr>'}
  </tbody></table></div></div>
- <div class="card"><h3>Resultado</h3>${st.n?`<div class="kv"><span>Comparáveis na matriz</span><b>${st.n}</b><span>Média</span><b>${eur(st.m,2)}</b><span>Mediana</span><b>${eur(st.med,2)}</b><span>Desvio-padrão</span><b>${eur(st.sd,2)}</b><span>Coef. de variação</span><b class="${st.cv>0.15?'warn':''}">${fmt(st.cv*100,1)} %</b><span>Mínimo · máximo</span><b>${eur(st.min,2)} · ${eur(st.max,2)}</b></div>
-  ${st.cv>0.15?'<p class="warn">Dispersão elevada (CV &gt; 15 %): rever comparáveis ou ajustes.</p>':''}
+ <div class="card"><h3>Resultado</h3>${st.n?`<div class="kv" data-k="st"><span>Comparáveis na matriz</span><b>${st.n}</b><span>Média</span><b>${eur(st.m,2)}</b><span>Mediana</span><b>${eur(st.med,2)}</b><span>Desvio-padrão</span><b>${eur(st.sd,2)}</b><span>Coef. de variação</span><b class="${st.cv>0.15?'warn':''}">${fmt(st.cv*100,1)} %</b><span>Mínimo · máximo</span><b>${eur(st.min,2)} · ${eur(st.max,2)}</b></div>
+  <div data-k="cv">${st.cv>0.15?'<p class="warn">Dispersão elevada (CV &gt; 15 %): rever comparáveis ou ajustes.</p>':''}</div>
   <div class="row">${inp('e.adot',`Valor unitário adotado (${UN(e)})`,e.adotAuto?fmt(st.m,2):e.adot,{dec:1})}</div>${e.adotAuto?'<p class="muted">Sugerido = média homogeneizada (escreva outro valor para fixar).</p>':'<div class="btns"><button class="sec" data-a="adotAuto">↺ Voltar à média</button></div>'}
   ${ta('e.just','Justificação do valor adotado',e.just,2)}
-  <div class="kv big"><span>Área do sujeito</span><b>${fmt(num(e.suj.area))} m²</b><span>${e.tipo==='renda'?'Renda de mercado':'Valor de mercado'}</span><b>${e.tipo==='renda'?(v!=null?eur(v)+'/mês · '+eur(v*12)+'/ano':'—'):eur(v)}</b></div>${num(e.suj.area)?'':'<p class="warn">Falta a área do sujeito (1 · Sujeito).</p>'}`:'<p class="muted">Marque comparáveis com preço e área.</p>'}</div>`}
+  <div class="kv big" data-k="val"><span>Área do sujeito</span><b>${fmt(num(e.suj.area))} m²</b><span>${e.tipo==='renda'?'Renda de mercado':'Valor de mercado'}</span><b>${e.tipo==='renda'?(v!=null?eur(v)+'/mês · '+eur(v*12)+'/ano':'—'):eur(v)}</b></div>${num(e.suj.area)?'':'<p class="warn">Falta a área do sujeito (1 · Sujeito).</p>'}`:'<p class="muted">Marque comparáveis com preço e área.</p>'}</div>`}
 
 function vRel(e){return `<div class="btns noprint"><button class="pri" data-a="xlsx">Excel (.xlsx)</button><button class="sec" data-a="print">Imprimir / PDF</button><button class="sec" data-a="expJ">Exportar estudo (JSON)</button></div>
  <p class="muted noprint">O Excel leva a matriz com fórmulas (para o Word, como quadro Excel). «Imprimir / PDF» dá a matriz e as etiquetas, com a legenda na linha a seguir a cada imagem, alinhada à esquerda. O JSON serve para levar o estudo para a AvaLias.</p>
@@ -233,22 +257,26 @@ document.addEventListener('click',async ev=>{const el=ev.target.closest('[data-a
   case 'ver':{const d=await imgData(c.img);const w=window.open();if(w)w.document.write(`<title>${esc(c.cod)}</title><img src="${d}" style="max-width:100%">`);break}
   case 'delImg':if(confirm('Eliminar a etiqueta?')){await del('img',c.img);c.img=null;save();render()}break;
   case 'ler':{const r=lerAnuncio(c.txt);let m=[];if(r.preco!=null&&!String(c.preco).trim()){c.preco=String(r.preco);m.push('preço')}if(r.area!=null&&!String(c.area).trim()){c.area=String(r.area);m.push('área')}save();S.scroll=scrollY;render();if(!m.length)alert(r.preco||r.area?'Preço e área já preenchidos (apague-os para voltar a ler).':'Não encontrei preço nem área no texto.');break}
+  case 'addLinks':{const n=addLinks(e,$('#links').value);save();if(n){S.tab='comp';render()}alert(n?`${n} comparáve${n===1?'l criado':'is criados'}.`:'Não encontrei ligações novas.');break}
+  case 'pasteLinks':try{$('#links').value+=(($('#links').value?'\n':'')+await navigator.clipboard.readText())}catch(_){alert('Cole com toque longo → Colar.')}break;
   case 'adotAuto':e.adotAuto=true;e.adot='';save();render();break;
   case 'xlsx':dl(new Blob([xlsxEst(e)],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),`Prospecao_${fname(e)}.xlsx`);break;
   case 'print':window.print();break;
   case 'expJ':{const imgs={};for(const x of e.comps)if(x.img)imgs[x.img]=await imgData(x.img);dl(new Blob([JSON.stringify({app:'ProspeMerc',v:VERSION,estudo:e,imgs})],{type:'application/json'}),`Prospecao_${fname(e)}.json`);break}}});
 document.addEventListener('change',async ev=>{const el=ev.target;if(el.dataset.a==='file'&&el.files[0]){const c=cur().comps.find(x=>x.id===el.dataset.id);await setImg(c,await fileToData(el.files[0]))}
  if(el.dataset.a==='impJ'&&el.files[0]){try{const o=JSON.parse(await el.files[0].text());const e=o.estudo;if(!e?.comps)throw 0;e.id=uid();for(const[k,d]of Object.entries(o.imgs||{}))await imgPut(k,d);EST.unshift(e);await put('est',e);S.eid=e.id;S.view='est';render()}catch(_){alert('Ficheiro inválido.')}}
+ if(el.dataset.a==='impL'&&el.files[0]){try{const o=JSON.parse(await el.files[0].text());const n=addLista(cur(),Array.isArray(o)?o:o.comps||o.comparaveis);save();S.tab='comp';render();alert(`${n} comparáve${n===1?'l importado':'is importados'}.`)}catch(_){alert('Lista inválida.')}}
  if(el.matches('select[data-b]'))bind(el,true)});
 document.addEventListener('input',ev=>{if(ev.target.matches('[data-b]'))bind(ev.target,false)});
-document.addEventListener('focusout',ev=>{if(ev.target.matches('input[data-b],textarea[data-b]')&&ev.target.dataset.dirty){delete ev.target.dataset.dirty;const nx=ev.relatedTarget?.dataset?.b;S.scroll=scrollY;render();if(nx){const n=document.querySelector(`[data-b="${nx}"]`);if(n){n.focus({preventScroll:true});try{n.setSelectionRange(n.value.length,n.value.length)}catch(_){}}}}});
+/* valores calculados: atualizam-se enquanto se escreve, sem redesenhar (o campo não perde o foco e o toque seguinte não se perde) */
+let refT;function refresh(){clearTimeout(refT);refT=setTimeout(()=>{if(S.view!=='est')return;const t=document.createElement('div');t.innerHTML=vEst();for(const el of document.querySelectorAll('[data-k]')){const n=t.querySelector(`[data-k="${el.dataset.k}"]`);if(n&&n.innerHTML!==el.innerHTML)el.innerHTML=n.innerHTML}},120)}
 document.addEventListener('paste',async ev=>{const e=cur();if(!e||S.tab!=='comp')return;const open=e.comps.filter(c=>S.open[c.id]);if(open.length!==1)return;const f=[...(ev.clipboardData?.files||[])].find(f=>f.type.startsWith('image/'));if(f){ev.preventDefault();await setImg(open[0],await fileToData(f))}});
 function bind(el,now){const b=el.dataset.b,v=el.value,e=cur();const [h,a,k]=b.split('.');
  if(h==='set'){settings[a]=v;saveSet();return}
  if(h==='e'){if(a==='adot'){e.adot=v;e.adotAuto=!String(v).trim()}else e[a]=v}else if(h==='s')e.suj[a]=v;
  else if(h==='c'){const c=e.comps.find(x=>x.id===a);c[k]=v}
  else if(h==='f'){const c=e.comps.find(x=>x.id===a);c.f=c.f||{};c.fAuto=c.fAuto||{};c.f[k]=v;if(k==='neg')c.fAuto.neg=false}
- save();if(now){S.scroll=scrollY;render()}else el.dataset.dirty=1}
+ save();if(now){S.scroll=scrollY;render()}else refresh()}
 
 (async()=>{await idb();EST=(await all('est')).sort((a,b)=>(b.upd||0)-(a.upd||0));render();if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{})})();
 
