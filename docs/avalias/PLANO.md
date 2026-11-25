@@ -110,3 +110,4 @@ Validar destinos; perguntas de caracterização por tipo; métodos de avaliaçã
 - 1.49 (25/11/2026): capa 11 · Tipográfica (só texto) — filete vertical na cor do gabinete, referência em grande, título forte e dados em 2 colunas. Também no periText 1.31.4 e no ExPropria 0.18.2.
 - 1.50 (25/11/2026): capa 12 · Imagem e quadro (modelo do utilizador): imagem grande com moldura e quadro com título, solicitante, endereço do local, versão e datas (visita e relatório). Também no periText 1.31.5 e no ExPropria 0.18.3.
 - 1.50.3–1.50.4 (25/11/2026): capas na letra do gabinete (estilo de texto do modelo, Calibri) em vez do estilo base (Times); sistema construtivo com «Alvenaria de pedra».
+- 1.50.5 (25/11/2026): «Estado de construção» (antes «Estado de execução»): Não iniciado · Em construção · Interrompido · Inacabado · Concluído (o antigo «Por concluir» passa a «Inacabado»). Qualquer estado que não «Concluído» sugere o método residual.
