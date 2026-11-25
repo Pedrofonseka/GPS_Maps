@@ -3,9 +3,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>ProspeMerc — prospeção de mercado</title>
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-180.png">
-<meta name="apple-mobile-web-app-capable" content="yes"><meta name="theme-color" content="#0f6e56">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="theme-color" content="#b8540f">
 <style>
-:root{--c:#0f6e56;--cl:#e1f5ee;--b:#d6d6d0;--m:#6b6b66;--w:#b26a00}
+:root{--c:#b8540f;--cl:#fdeedd;--b:#d6d6d0;--m:#6b6b66;--w:#b26a00}
 *{box-sizing:border-box}body{margin:0;font:15px/1.45 -apple-system,system-ui,Segoe UI,Roboto,sans-serif;background:#f6f6f2;color:#222}
 #app{max-width:980px;margin:0 auto;padding:12px 12px 80px}
 h1{font-size:22px;margin:6px 0}h1 small{font-size:12px;color:var(--m)}h2{font-size:18px}h3{font-size:15px;margin:2px 0 8px}
@@ -78,7 +78,7 @@ function alXlsx(sh){const E=t=>xesc(String(t));const rowsX=sh.rows.map((r,i)=>`<
 /* ProspeMerc — prospeção de mercado e homogeneização de comparáveis (app de ensaio, separada da AvaLias).
    Estudos → sujeito (o ativo a avaliar) + comparáveis (C01, C02…, com etiqueta = captura do anúncio) → matriz de homogeneização → valor.
    Venda (€/m²) ou arrendamento (€/m²/mês). Saídas: Excel com fórmulas, página para imprimir/PDF (matriz + etiquetas), JSON para levar para a AvaLias. */
-const VERSION='0.1';
+const VERSION='0.1.1';
 const FAT=[['neg','Negociação'],['loc','Localização'],['are','Área'],['est','Estado / idade'],['qua','Qualidade'],['out','Outro']];
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
