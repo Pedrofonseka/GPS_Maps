@@ -173,6 +173,7 @@ table.orc td textarea{min-width:220px;font-size:12px}.orcv{text-align:right;font
 @media (pointer:coarse){input,select,textarea{font-size:16px!important}} /* iPhone: abaixo de 16px amplia o ecrã ao tocar na caixa e o ecrã salta */
 .imgt{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
 input.auto,textarea.auto{color:#1565c0;font-style:italic;background:#eef5ff}
+.capf{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0}.capfi{width:104px;border:2px solid #ddd;border-radius:8px;padding:4px;background:#fff}.capfi.on{border-color:#2e7d32}.capfi img,.capfp img{width:100%;height:70px;object-fit:cover;border-radius:5px;display:block}.capfi small{display:block;font-size:11px;color:#666;margin:2px 0}.capfi .btns{margin:2px 0 0;gap:4px}.capfp{width:96px;padding:2px;border:1px solid #ccc;border-radius:6px;background:#fff}
 </style>
 </head>
 <body>
@@ -767,7 +768,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: periText (antes «Relatório de Peritagem») =====
-const VERSION='1.32.2';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.33.0';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):parteLista(p));
@@ -776,6 +777,23 @@ const zonaTxt=a=>[a.zona,a.piso,a.local].filter(Boolean).filter((v,i,r)=>r.index
 const CTXID='__ctx';const ensureCtx=p=>p.ctxA||(p.ctxA={id:CTXID,fotos:[],vals:{}});
 const holders=p=>[...(p.anomalias||[]),...(p.ctxA?[p.ctxA]:[])]; // todos os conjuntos de fotos do processo
 const anCode=(p,a)=>a&&a.id===CTXID?'C':`${parteSig(p,parteOf(p,a))}.${String(numOf(p,a)).padStart(3,'0')}`;
+/* FOTOGRAFIAS DA CAPA: sugeridas de TODAS as verbas (uma de cada por volta); cada lugar pode ser aceite (✓) ou trocado (↻) por outra fotografia; «🔀 Nova sugestão» baralha as não fixadas */
+const CAPA_N={fotosLoc:6,imgMapa:6,fotos:9,destaque:1,titulo:1,colunas:6,ficha:3,faixa:1,mosaico:3,carimbo:1,classica:1,tipo:0,nenhuma:0};
+const capaGrp=p=>{const c=relF(p.ctxA||{fotos:[]});return [...(c.length?[{a:null,L:c}]:[]),...p.anomalias.map(a=>({a,L:relF(a)}))]};
+const capaPoolF=p=>capaGrp(p).flatMap(g=>g.L.map(f=>({f,a:g.a})));
+function capaRR(p){const c=relF(p.ctxA||{fotos:[]});const G=(c.length?[c]:shuffleR(p.anomalias).map(a=>relF(a))).map(L=>{return [...shuffleR(L.filter(f=>f.capa)),...shuffleR(L.filter(f=>!f.capa))]}).filter(L=>L.length);const o=[];for(let i=0;G.some(L=>L[i]);i++)for(const L of G)if(L[i])o.push(L[i]);return o}
+function capaOrdem(p){const r=ensureRel(p),pool=capaPoolF(p),byId=new Map(pool.map(o=>[o.f.id,o.f]));
+ if(!(r.capaSug||[]).some(id=>byId.has(id)))r.capaSug=capaRR(p).slice(0,12).map(f=>f.id);
+ const N=Math.max(CAPA_N[r.capa||'fotosLoc']??6,0),fix=r.capaF||[],used=new Set(),out=[];const sug=(r.capaSug||[]).filter(id=>byId.has(id));let si=0;
+ for(let i=0;i<N;i++){let id=fix[i]&&byId.has(fix[i])&&!used.has(fix[i])?fix[i]:null;while(!id&&si<sug.length){const c=sug[si++];if(!used.has(c)&&!fix.includes(c))id=c}if(!id)break;used.add(id);out.push(byId.get(id))}
+ for(const f of capaRR(p))if(!used.has(f.id)){used.add(f.id);out.push(f)}return out}
+function capaFotosHTML(p){const r=ensureRel(p),N=CAPA_N[r.capa||'fotosLoc']??6;if(!N)return '';const O=capaOrdem(p).slice(0,N),fix=r.capaF||[];if(!O.length)return `<p class="muted">Ainda não há fotografias (contextualização ou situações) marcadas para o relatório.</p>`;
+ const vb=f=>{const a=p.anomalias.find(a=>a.fotos.includes(f));return a?anCode(p,a):'Contextualização'};
+ return `<label>Fotografias da capa <span class="muted">(sugeridas: contextualização ou, sem ela, todas as situações — ✓ aceite ou ↻ troque cada uma)</span></label><div class="capf">${O.map((f,i)=>{const ok=fix[i]===f.id;const d=fd(f);return `<div class="capfi ${ok?'on':''}">${d?`<img src="${d}" alt="">`:'<div class="noimg">📷</div>'}<small>${esc(vb(f))} · ${ok?'escolhida':'sugerida'}</small><div class="btns"><button class="${ok?'green':'secondary'} mini" data-act="capfOk" data-i="${i}" data-id="${f.id}">✓</button><button class="secondary mini" data-act="capfTroca" data-i="${i}">↻ Trocar</button></div></div>`}).join('')}</div>
+ <div class="btns"><button class="secondary mini" data-act="capfNova">🔀 Nova sugestão</button>${fix.some(Boolean)?'<button class="secondary mini" data-act="capfLimpa">Limpar escolhas</button>':''}</div>`}
+function capaPick(p){return new Promise(ok=>{const m=document.createElement('div');m.className='modal';
+ m.innerHTML=`<div class="box"><b style="font-size:17px">Escolher fotografia para a capa</b>${capaGrp(p).map(({a,L})=>{return L.length?`<div class="muted" style="margin:8px 0 4px">${a?esc(anCode(p,a)):'Contextualização'}</div><div class="capf">${L.map(f=>`<button class="capfp" data-id="${f.id}">${fd(f)?`<img src="${fd(f)}">`:'📷'}</button>`).join('')}</div>`:''}).join('')}<div class="btns"><button class="secondary" data-no>Cancelar</button></div></div>`;
+ m.onclick=e=>{const b=e.target.closest('[data-id]');if(b){m.remove();ok(b.dataset.id)}else if(e.target.closest('[data-no]')){m.remove();ok(null)}};document.body.appendChild(m)})}
 const imgCode=(p,a,i)=>`IMG ${anCode(p,a)}.${i+1}`;
 const DB_NAME='RelatAnomalias_DB';
 const DEF_CATALOG=['Humidade', 'Infiltrações', 'Impermeabilizações', 'Fissuração', 'Desgaste', 'Desagregação', 'Por concluir', 'Fratura', 'Riscado', 'Picado', 'Erro de medidas', 'Erro de geometria', 'Condensações', 'Bolores', 'Eflorescências', 'Corrosão', 'Destacamento', 'Deformação', 'Assentamento', 'Falta de estanquidade', 'Mau funcionamento', 'Vetustez'];
@@ -2136,7 +2154,7 @@ function relProcHTML(p,which='proc'){const r=ensureRel(p),col=isCol(r),part=isPa
     ${RL('objeto','Objeto de análise',r.objeto,'ex.: Moradia – Rua X, n.º 10 (habitação e logradouro)')}
     ${RL('contexto','Contexto/ finalidade',r.contexto,'ex.: Ação de despejo')}
     ${part?'':`${RL('parte1','Parte 1',r.parte1)}${RL('parte2','Parte 2',r.parte2)}`}
-    <label>Tipo de capa <span class="muted">(imagens de contextualização; se não houver, usa as das situações)</span></label><div class="capas">${CAPAS.map(([k,t,d])=>`<div class="capa ${(r.capa||'fotosLoc')===k?'on':''}"><button class="capasel" data-act="rCapa" data-v="${k}"><b>${(r.capa||'fotosLoc')===k?'● ':'○ '}${t}</b><small>${d}</small></button><button class="secondary mini" data-act="capaPrev" data-v="${k}">👁 Ver</button></div>`).join('')}</div>
+    <label>Tipo de capa <span class="muted">(imagens de contextualização; se não houver, usa as das situações)</span></label><div class="capas">${CAPAS.map(([k,t,d])=>`<div class="capa ${(r.capa||'fotosLoc')===k?'on':''}"><button class="capasel" data-act="rCapa" data-v="${k}"><b>${(r.capa||'fotosLoc')===k?'● ':'○ '}${t}</b><small>${d}</small></button><button class="secondary mini" data-act="capaPrev" data-v="${k}">👁 Ver</button></div>`).join('')}</div>${capaFotosHTML(p)}
     ${RL('versao','Versão do relatório',r.versao,'ex.: 1.01VF ou Draft00')}<p class="muted">Nome do ficheiro (e rodapé): <b>${esc(relFileName(p))}</b></p>`;
   const nq=r.quesitos.length;
   const QW=part?['queixa','queixas','Queixa']:['quesito','quesitos','Quesito'];
@@ -2223,7 +2241,7 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
   // ---- capa ----
   const TW=9638,CW=3212;const g=p.visita?.gps;const allF0=()=>p.anomalias.flatMap(a=>relF(a)).filter(f=>fd(f)).length;
   let mapData=null;if(g&&['fotosLoc','imgMapa','colunas','faixa','mosaico','carimbo','classica'].includes(r.capa||'fotosLoc')){mapData=await googleMapData(g,1600,Math.round(1600*(allF0()<6?9.2:5.0)/16.9));if(!mapData){try{if(await ensureMap(p,true))mapData=fotoCache.get(p.visita.map.id)}catch(e){}}}
-  const ctxF=relF(p.ctxA||{fotos:[]}).filter(f=>fd(f));const allF=ctxF.length?ctxF:shuffleR(p.anomalias.flatMap(a=>relF(a)).filter(f=>fd(f)));
+  const ctxF=relF(p.ctxA||{fotos:[]}).filter(f=>fd(f));const allF=capaOrdem(p).filter(f=>fd(f)); /* fotografias da capa: escolhidas + sugeridas */
   const CM=r.capa==='imgMapa'?'fotosLoc':(r.capa||'fotosLoc');const nF=CM==='fotos'?Math.min(9,allF.length):(['nenhuma','destaque','titulo','colunas','ficha','faixa','mosaico','carimbo','tipo','classica'].includes(CM))?0:(allF.length>=6?6:Math.min(3,allF.length));const big=nF<6;
   const mapH=big?9.2:5.0,phW=5.55,phH=4.16;
   const cellM=(content,w,o={})=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${o.span?`<w:gridSpan w:val="${o.span}"/>`:''}<w:vAlign w:val="center"/></w:tcPr>${content}</w:tc>`;
@@ -2876,6 +2894,10 @@ document.addEventListener('click',async e=>{{const _x=e.target.closest&&e.target
     case 'rDelMod':{const k=el.dataset.k,i=+el.dataset.i;if(!await ask('Apagar este modelo?',['Cancelar','Apagar'],1))return;settings[k].splice(i,1);await saveSettings();S.scrollTop=window.scrollY;break}
     case 'rUseCons':{const q=ensureRel(p).quesitos[+el.dataset.i],t=String(q.rp?.[+el.dataset.j]||'').trim();if(!t)return toast('Essa resposta está vazia.',1);if(String(q.resp||'').trim()&&!await ask('Substituir a resposta de consenso atual?',['Cancelar','Substituir'],1))return;q.resp=t;await saveProc();S.scrollTop=window.scrollY;break}
     case 'rCapa':ensureRel(p).capa=el.dataset.v;await saveProc();S.scrollTop=window.scrollY;break;
+    case 'capfOk':{const r=ensureRel(p),i=+el.dataset.i;r.capaF=r.capaF||[];r.capaF[i]=r.capaF[i]===el.dataset.id?null:el.dataset.id;await saveProc();S.scrollTop=window.scrollY;break}
+    case 'capfTroca':{await loadFotos(p);const id=await capaPick(p);if(!id)return;const r=ensureRel(p),i=+el.dataset.i;r.capaF=r.capaF||[];const j=r.capaF.indexOf(id);if(j>=0&&j!==i)r.capaF[j]=null;r.capaF[i]=id;await saveProc();S.scrollTop=window.scrollY;break}
+    case 'capfNova':{const r=ensureRel(p);r.capaSug=capaRR(p).slice(0,12).map(f=>f.id);await saveProc();S.scrollTop=window.scrollY;break}
+    case 'capfLimpa':{const r=ensureRel(p);r.capaF=[];await saveProc();S.scrollTop=window.scrollY;break}
     case 'rUnan':ensureRel(p).unan=el.dataset.v==='1';await saveProc();S.scrollTop=window.scrollY;break;
     case 'aiRun':{if(!a)return;busy(true,'A analisar as fotografias…');try{aiGuarda(a,await aiAnalyse(p,a));await saveProc()}catch(err){toast(err.message,1)}finally{busy(false)}S.scrollTop=window.scrollY;break}
     case 'aiDrop':{if(!a)return;delete a.ia;await saveProc();S.scrollTop=window.scrollY;break}
