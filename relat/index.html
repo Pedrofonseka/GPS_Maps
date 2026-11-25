@@ -767,7 +767,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: periText (antes «Relatório de Peritagem») =====
-const VERSION='1.31.7';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.31.8';const VERSION_DATA='2026-11-24';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):parteLista(p));
@@ -2492,7 +2492,7 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
   const idx=P(R('Índice',{b:true,sz:12}),{sp:[0,200]})+tocE.join('')+BRK;
   const TIT1=P(R(relTitulo(r),{b:true,sz:13}),{jc:'center',sp:[0,240]}); // título do trabalho no topo da 1.ª página do texto (a seguir ao índice)
   body=body.replace(/(<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"\/><\/w:pPr><\/w:p>){2,}/g,'$1');
-  let full=coverXml+idx+TIT1+body+'<w:p><w:pPr><w:spacing w:before="0" w:after="0"/></w:pPr></w:p>';
+  let full=coverXml+'<!--CAPA_FIM-->'+idx+TIT1+body+'<w:p><w:pPr><w:spacing w:before="0" w:after="0"/></w:pPr></w:p>';
   // dentro das tabelas, o parágrafo não leva o fundo branco do estilo do gabinete (senão fica uma moldura à volta do texto nas células com fundo)
   {let d=0;full=full.replace(/<w:tbl>|<\/w:tbl>|(<w:pPr><w:pStyle w:val="1-periTextogeral"\/>(?:<w:keepNext\/>|<w:keepLines\/>|<w:pageBreakBefore\/>|<w:widowControl\/>)*)(?!<w:pBdr|<w:shd)/g,(m,g)=>{if(m==='<w:tbl>'){d++;return m}if(m==='</w:tbl>'){d--;return m}return d>0?g+'<w:shd w:val="clear" w:color="auto" w:fill="auto"/>':m})}
   // cada imagem vai dentro de um controlo de conteúdo «Imagem» (Programador): um clique sobre ela permite trocá-la no Word
@@ -2504,6 +2504,9 @@ async function buildRelat(p){ensureRel(p);const r=p.rel,col=isCol(r),part=isPart
   const hd=hdrDefaults(p);const HV={H1:r.h1||hd.h1,H3:r.h3||hd.h3,H4A:r.h4a||hd.h4a,H4B:r.h4b||hd.h4b};
   const H=RELAT_HDRS[r.gab]||RELAT_HDRS.nid;
   let doc=TX(F('word/document.xml'));
+  // capa na letra do gabinete: a do estilo de texto do modelo (1-periTextogeral); sem isto, a capa herdava o estilo base (Times New Roman)
+  {const st=F('word/styles.xml')?TX(F('word/styles.xml')):'';const m=st.match(/w:styleId="1-periTextogeral"[\s\S]*?<\/w:style>/);const fn=(m&&(m[0].match(/w:ascii="([^"]+)"/)||[])[1])||'Calibri';const RF=`<w:rFonts w:ascii="${fn}" w:hAnsi="${fn}" w:cs="${fn}"/>`;
+   const i=full.indexOf('<!--CAPA_FIM-->');if(i>=0){let c=full.slice(0,i).replace(/<w:rPr>((?:(?!<\/w:rPr>)[\s\S])*)<\/w:rPr>/g,(m0,g)=>/<w:rFonts/.test(g)?m0:`<w:rPr>${RF}${g}</w:rPr>`).replace(/<w:r>(?=<w:t[ >]|<w:br\/>|<w:tab\/>)/g,`<w:r><w:rPr>${RF}</w:rPr>`);full=c+full.slice(i+15)}}
   doc=doc.replace(/(<w:pgMar [^>]*w:header=")\d+"/,'$1284"'); // cabeçalho a 0,5 cm do papel
   // margem superior por gabinete: o cabeçalho da Proficis (logotipo + 5 linhas) ocupa cerca de 4 cm; os outros cabem em 3 cm — mais área para texto
   doc=doc.replace(/(<w:pgMar w:top=")\d+"/,'$1'+MTOP(r.gab)+'"'); // margem superior 3,5 cm (todos os gabinetes)
