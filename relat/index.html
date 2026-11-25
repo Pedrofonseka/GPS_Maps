@@ -768,7 +768,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: periText (antes «Relatório de Peritagem») =====
-const VERSION='1.34.0';const VERSION_DATA='2026-11-25';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.34.1';const VERSION_DATA='2026-11-25';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):parteLista(p));
@@ -1607,7 +1607,7 @@ function gpsBlock(p){const g=p.visita?.gps;
 async function gpsSet(p,txt,src,acc){const pp=parseGpsTxt(txt);
   if(!pp){setGpsStatus('O texto não tem coordenadas reconhecíveis. No Google Maps, mantém o dedo no local: as coordenadas aparecem no topo (ex.: 41.15794, -8.62910) — toca nelas para copiar.');return false}
   p.visita.gps={lat:pp.lat,lon:pp.lng,acc:acc??null,src:src||'Manual',at:Date.now()};await saveProc();
-  const el=$('#gps');if(el)el.value=gpsTxt(p.visita.gps);const a=$('#gpsMaps');if(a)a.href=gpsMapsUrl(p.visita.gps);
+  const el=$('#gps');if(el)el.value=gpsTxt(p.visita.gps);const a=$('#gpsMaps');if(a)a.href=gpsMapsUrl(p.visita.gps);{const vs=$('#vistas');if(vs)vs.outerHTML=VISTAS.html(p.visita.gps.lat,p.visita.gps.lon)}
   setGpsStatus(`Coordenadas: <b>${gpsTxt(p.visita.gps)}</b>.${gpsPT(p.visita.gps)?'':' <b>Atenção:</b> fora de Portugal — confirma.'}`);
   showGpsPreview(p);ensureMap(p,true).then(ok=>{if(ok&&S.view==='proc'&&!S.sub){S.scrollTop=window.scrollY;render()}});return true}
 const mapAttr=m=>m==='street'?'Mapa: © colaboradores do OpenStreetMap':'Imagem de satélite: Esri, Maxar, Earthstar Geographics';
