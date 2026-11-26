@@ -50,5 +50,5 @@ Cada capa tem um número fixo, igual em todas as apps, e aparece na lista como �
 
 ## 13 e 14 — Esquadria (v1.3, AvaLias 1.71)
 - **13 · ESF – Esquadria sem fotos**: esquadria (filete fino, mais grosso em baixo) com faixa de título — à esquerda o n.º do processo sobre a cor do gabinete; à direita entidade, título em negrito e, alinhado à direita em itálico, «Conjunto de N Ativos» (ou a designação do ativo, se for só um); linha escura por baixo da faixa. Quadro de dados em 2 colunas, rótulos pequenos em maiúsculas: Contexto processual | Local; Data da visita | Parte 1; Versão – data («V_1.00 – Novembro 2026») | Parte 2; Obs a toda a largura. No terço inferior da página.
-- **14 · ECF – Esquadria com fotos**: igual, com até 3 fotografias (4:3) em linha entre a faixa e o quadro; centrada na altura da página.
+- **14 · ECF – Esquadria com fotos**: igual e, logo por baixo da esquadria, até 3 fotografias (4:3) em mosaico — a largura da esquadria dividida em 3 partes iguais, encostadas; centrada na altura da página.
 - Onde está aplicada: AvaLias 1.71. Falta: periText, ExPropria.
