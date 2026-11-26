@@ -746,7 +746,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.69.1';const VERSION_DATA='2026-11-26';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.69.2';const VERSION_DATA='2026-11-26';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -2049,7 +2049,7 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
 const KTXT=ensureRel(p).fichaFmt==='txt';
 /* caracterização da verba no Word: em tabela (por defeito) ou em texto — «Tópico:» e o valor, com as linhas seguintes alinhadas pelo valor (avanço pendente) */
 const krow=(l,v)=>!String(v??'').trim()?'':KTXT?`<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:keepLines/><w:tabs><w:tab w:val="left" w:pos="${L1}"/></w:tabs><w:spacing w:before="40" w:after="40"/><w:ind w:left="${L1}" w:hanging="${L1}"/><w:jc w:val="left"/></w:pPr>${R(l+':',{b:true,sz:9})}<w:r><w:tab/></w:r>${R(v,{sz:9})}</w:p>`:tr(tc(l,L1,{b:1,v:'top',tb:1})+tc(v,L2,{v:'top',tb:1}));
-const ktab=(h,rows)=>KTXT?rows+E():tbl([L1,L2],tr(tc('Elemento',L1,{b:1,bb:1})+tc(h,L2,{b:1,bb:1}),1)+rows,false)+E();
+const ktab=(h,rows)=>KTXT?rows+E():tbl([L1,L2],tr(tc('Assunto',L1,{b:1,bb:1})+tc(h,L2,{b:1,bb:1}),1)+rows,false)+E();
    for(const [vi,a] of V.entries()){const x=a.al,fam=alFam(a),g=a.vis?.gps;
     body+=(vi?BRK:'')+H2(`${alCode(p,a)}${x.designacao?' – '+x.designacao:''}`)+E();
     /* mapa de localização da verba (o que se guarda ao indicar as coordenadas) — entra no tópico «Localização», com a legenda na linha a seguir, alinhada à esquerda */
@@ -2074,10 +2074,10 @@ const ktab=(h,rows)=>KTXT?rows+E():tbl([L1,L2],tr(tc('Elemento',L1,{b:1,bb:1})+t
     kr+=krow('Utilidade',[x.atr?'Atratividade: '+x.atr:'',x.util].filter(s=>String(s||'').trim()).join('\n'));
     if(veOn(a)){kr+=krow('Comprador especial',x.veComp);kr+=krow('Sinergia',x.veFund);kr+=krow('Valor de mercado',alNum(x.veVM)!=null?alEur(x.veVM):'');kr+=krow('Prémio de sinergia',alNum(x.vePct)!=null?String(x.vePct).replace('.',',')+' %':'')}
     kr+=krow(veOn(a)?'Valor estimado (valor especial)':'Valor estimado',[alNum(x.valor)!=null?alEur(x.valor):'',renda&&alNum(x.renda)!=null?'Renda mensal: '+alEur(x.renda)+'/mês':'',x.valObs].filter(s=>String(s||'').trim()).join('\n'));
-    if(kr)body+=ktab('Caracterização',kr);
+    if(kr)body+=H3('Caraterização')+ktab('Descrição',kr);
     if(kfun)body+=H3('Análise funcional')+ktab('Apreciação',kfun);
-    {const G=(x.pdmF||[]).map((g,i)=>g&&fd(g)?{g,i}:null).filter(Boolean),com=String(x.car?.pdmCom||'').trim();if(pdmOn(x,fam)&&!G.length){const MW=16.9,MH=4.6;body+=BRK+P(R('Extratos do PDM',{b:true}),{keep:1,sp:[0,80]});for(let i=0;i<PDM_SLOTS.length;i++){const lg=String((x.pdmF||[])[i]?.leg||'').trim()||PDM_SLOTS[i];body+=`<w:sdt><w:sdtPr><w:alias w:val="${esc(lg)}"/><w:tag w:val="pdm${i+1}"/><w:id w:val="${7100+i+Math.floor(Math.random()*90000)*10}"/><w:picture/></w:sdtPr><w:sdtContent><w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:keepNext/><w:spacing w:before="60" w:after="0"/><w:jc w:val="center"/></w:pPr>${imgRun(PDM_PH(),MW,MH,'Extrato do PDM')}</w:p></w:sdtContent></w:sdt>`+P(R(lg,{i:true,sz:8}),{sp:[20,100]})}body+=P(R('Comentários sobre a consulta ao PDM',{b:true}),{keep:1,sp:[60,40]});for(const ln of (com||'—').split('\n'))body+=T(ln,{jc:'both'});body+=BRK}
-     else if(pdmOn(x,fam)&&(G.length||com)){body+=BRK+P(R('Extratos do PDM',{b:true}),{keep:1,sp:[0,80]});
+    {const G=(x.pdmF||[]).map((g,i)=>g&&fd(g)?{g,i}:null).filter(Boolean),com=String(x.car?.pdmCom||'').trim();if(pdmOn(x,fam)&&!G.length){const MW=16.9,MH=4.6;body+=BRK+H3('Extratos do PDM');for(let i=0;i<PDM_SLOTS.length;i++){const lg=String((x.pdmF||[])[i]?.leg||'').trim()||PDM_SLOTS[i];body+=`<w:sdt><w:sdtPr><w:alias w:val="${esc(lg)}"/><w:tag w:val="pdm${i+1}"/><w:id w:val="${7100+i+Math.floor(Math.random()*90000)*10}"/><w:picture/></w:sdtPr><w:sdtContent><w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:keepNext/><w:spacing w:before="60" w:after="0"/><w:jc w:val="center"/></w:pPr>${imgRun(PDM_PH(),MW,MH,'Extrato do PDM')}</w:p></w:sdtContent></w:sdt>`+P(R(lg,{i:true,sz:8}),{sp:[20,100]})}body+=P(R('Comentários sobre a consulta ao PDM',{b:true}),{keep:1,sp:[60,40]});for(const ln of (com||'—').split('\n'))body+=T(ln,{jc:'both'});body+=BRK}
+     else if(pdmOn(x,fam)&&(G.length||com)){body+=BRK+H3('Extratos do PDM');
      const nl=Math.ceil(com.length/95)+(com?1:0),MH=Math.min(6.5,(22.5-0.8-G.length*0.6-nl*0.5)/Math.max(1,G.length));
      for(const {g,i} of G){const MW=16.9;let w=MW,h=MW*(g.h||3)/(g.w||4);if(h>MH){h=MH;w=MH*(g.w||4)/(g.h||3)}const ind=Math.max(0,Math.round((MW-w)/2*567));body+=`<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:keepNext/><w:spacing w:before="60" w:after="0"/><w:ind w:left="${ind}"/><w:jc w:val="left"/></w:pPr>${imgRun(fdOut(g),w,h,'PDM')}</w:p><w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:spacing w:before="20" w:after="100"/><w:ind w:left="${ind}"/><w:jc w:val="left"/></w:pPr>${R(String(g.leg||'').trim()||PDM_SLOTS[i],{i:true,sz:8})}</w:p>`}
      if(com){body+=P(R('Comentários sobre a consulta ao PDM',{b:true}),{keep:1,sp:[60,40]});for(const ln of com.split('\n'))body+=T(ln,{jc:'both'})}body+=BRK}}
