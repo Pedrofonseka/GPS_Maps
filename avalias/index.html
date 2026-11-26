@@ -746,7 +746,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.70';const VERSION_DATA='2026-11-26';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.70.1';const VERSION_DATA='2026-11-26';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1872,7 +1872,9 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
   if(nF){const sel=allF.slice(0,nF);for(let rr=0;rr<Math.ceil(nF/3);rr++){let cells='';for(let c=0;c<3;c++){const f=sel[rr*3+c];cells+=cellM(cpara(f?imgRun(await cropTo(fdOut(f),4/3,900),phW,phH,'Foto'):''),CW)}rows+=`<w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="${Math.round(phH*567)+40}" w:hRule="exact"/></w:trPr>${cells}</w:tr>`}}
   const noB=['top','left','bottom','right','insideH','insideV'].map(s=>`<w:${s} w:val="nil"/>`).join('');
   let body=!rows?'':`<w:tbl><w:tblPr><w:tblW w:w="${TW}" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders>${noB}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="20" w:type="dxa"/><w:left w:w="20" w:type="dxa"/><w:bottom w:w="20" w:type="dxa"/><w:right w:w="20" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${CW}"/><w:gridCol w:w="${CW}"/><w:gridCol w:w="${TW-2*CW}"/></w:tblGrid>${rows}</w:tbl>`;
-  if(rows)body+=P(R(g?`${g.lat.toFixed(6)}°, ${g.lon.toFixed(6)}°`:'',{sz:8,color:'404040'}),{sp:[20,0]})+P('',{sp:[0,0]})+P('',{sp:[0,0]});
+  /* com fotografias de várias verbas, as coordenadas GPS não saem (não se saberia a que verba se referem) */
+  const capaVV=new Set(allF.map(f=>(p.anomalias||[]).findIndex(a=>(a.fotos||[]).some(x=>x.id===f.id))).filter(i=>i>=0)).size>1;
+  if(rows)body+=P(R(g&&!capaVV?`${g.lat.toFixed(6)}°, ${g.lon.toFixed(6)}°`:'',{sz:8,color:'404040'}),{sp:[20,0]})+P('',{sp:[0,0]})+P('',{sp:[0,0]});
   // quadro de identificação
   const part0=isPart(r);const LBL=[`N_Ref: ${p.codigo||''}`,part0?'Proc. / Solicitante':'Proc. / Entidade','Objeto de análise',p.local?'Local':'',r.contexto?'Contexto processual':'',part0?'':'Parte 1',part0?'':'Parte 2',p.visita?.data?'Data da visita':'','Versões/ datas'].filter(Boolean);
   const L1=Math.max(1300,Math.min(3400,Math.round((Math.max(...LBL.map(l=>l.length))+4)*100))),L2=TW-L1;const bd=(t,b)=>`<w:tcBorders>${t?'<w:top w:val="single" w:sz="6" w:space="0" w:color="404040"/>':''}${b?'<w:bottom w:val="single" w:sz="6" w:space="0" w:color="404040"/>':''}</w:tcBorders>`;
