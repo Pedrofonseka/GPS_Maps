@@ -746,7 +746,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.71.3';const VERSION_DATA='2026-11-26';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.71.4';const VERSION_DATA='2026-11-26';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1984,14 +1984,14 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
       const procT=r.procJud?`Proc. ${r.procJud}`:String(p.codigo||'');
       const bot=`<w:tcBorders><w:bottom w:val="single" w:sz="12" w:space="0" w:color="${LN}"/></w:tcBorders>`;
       const hc=(w,c,fill)=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="${fill}"/>${bot}<w:vAlign w:val="top"/></w:tcPr>${c}</w:tc>`;
-      let F=tb([WL,WR],`<w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="1250"/></w:trPr>${hc(WL,cp2(R('PROCESSO',{sz:7,color:'E6F2F1'}),{b:40,a:20})+cp2(R(procT.replace(/^Proc\.\s*/,''),{b:true,sz:12,color:'FFFFFF'}),{}),AC)}${hc(WR,cp2(R(r.entidade||'',{sz:11,color:'404040'}),{b:40,a:40})+`<w:p><w:pPr><w:spacing w:before="0" w:after="0"/><w:jc w:val="left"/></w:pPr>${R(titulo,{b:true,sz:18,color:LN})}</w:p><w:p><w:pPr><w:spacing w:before="0" w:after="120" w:line="120" w:lineRule="exact"/><w:pBdr><w:bottom w:val="single" w:sz="12" w:space="1" w:color="${AC}"/></w:pBdr><w:ind w:right="${Math.round(WR*0.8)}"/><w:rPr><w:sz w:val="4"/></w:rPr></w:pPr></w:p>`+cp2(R(sub,{i:true,sz:11,color:AD}),{jc:'right',a:20}),BG)}</w:tr>`,{m:100,w:FW});
-      F+=cp2('',{a:260});
-      const gc=(w,l,v,o={})=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${o.span?`<w:gridSpan w:val="${o.span}"/>`:''}<w:tcBorders>${['top','left','bottom','right'].map(k=>`<w:${k} w:val="single" w:sz="4" w:color="${GL}"/>`).join('')}</w:tcBorders><w:vAlign w:val="top"/></w:tcPr>${cp2(R(l.toUpperCase(),{sz:7,color:AD}),{b:60})}${cp2(R(v||'',{sz:11.5,color:'262626'}),{a:60})}</w:tc>`;
+      let F=tb([WL,WR],`<w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="1050"/></w:trPr>${hc(WL,cp2(R('PROCESSO',{sz:7,color:'E6F2F1'}),{b:40,a:20})+cp2(R(procT.replace(/^Proc\.\s*/,''),{b:true,sz:12,color:'FFFFFF'}),{}),AC)}${hc(WR,cp2(R(r.entidade||'',{sz:11,color:'404040'}),{b:40,a:40})+`<w:p><w:pPr><w:spacing w:before="0" w:after="0"/><w:jc w:val="left"/></w:pPr>${R(titulo,{b:true,sz:18,color:LN})}</w:p><w:p><w:pPr><w:spacing w:before="0" w:after="120" w:line="120" w:lineRule="exact"/><w:pBdr><w:bottom w:val="single" w:sz="12" w:space="1" w:color="${AC}"/></w:pBdr><w:ind w:right="${Math.round(WR*0.8)}"/><w:rPr><w:sz w:val="4"/></w:rPr></w:pPr></w:p>`+cp2(R(sub,{i:true,sz:11,color:AD}),{jc:'right',a:20}),BG)}</w:tr>`,{m:100,w:FW});
+      F+=cp2('',{a:180});
+      const gc=(w,l,v,o={})=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${o.span?`<w:gridSpan w:val="${o.span}"/>`:''}<w:tcBorders>${['top','left','bottom','right'].map(k=>`<w:${k} w:val="single" w:sz="4" w:color="${GL}"/>`).join('')}</w:tcBorders><w:vAlign w:val="top"/></w:tcPr>${cp2(R(l.toUpperCase(),{sz:6.5,color:AD}),{b:10})}${cp2(R(v||'',{sz:10.5,color:'262626'}),{a:10})}</w:tc>`;
       const R1=part?[['Local',p.local],['Solicitante',r.entidade],['','']]:[['Local',p.local],['Parte 1',r.parte1],['Parte 2',r.parte2]];
       const L1c=[['Contexto processual',r.contexto],['Data da visita',dl],['Versão – data',verM]];
-      let rows='';for(let k=0;k<3;k++)rows+=`<w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="760"/></w:trPr>${gc(WL,L1c[k][0],L1c[k][1])}${gc(WR,R1[k][0],R1[k][1])}</w:tr>`;
-      rows+=`<w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="820"/></w:trPr>${gc(FW,'Obs',r.capaObs||'',{span:2})}</w:tr>`;
-      F+=tb([WL,WR],rows,{m:90,w:FW});
+      let rows='';for(let k=0;k<3;k++)rows+=`<w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="480"/></w:trPr>${gc(WL,L1c[k][0],L1c[k][1])}${gc(WR,R1[k][0],R1[k][1])}</w:tr>`;
+      rows+=`<w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="520"/></w:trPr>${gc(FW,'Obs',r.capaObs||'',{span:2})}</w:tr>`;
+      F+=tb([WL,WR],rows,{m:50,w:FW});
       const hasMos=CM==='esqf'&&allF.length>0;const fb=['top','left','right'].map(k=>`<w:${k} w:val="single" w:sz="8" w:space="0" w:color="${LN}"/>`).join('')+`<w:bottom w:val="single" w:sz="${hasMos?8:18}" w:space="0" w:color="${LN}"/>`;
       const box=`<w:tbl><w:tblPr><w:tblW w:w="${TW}" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders>${fb}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="${FM}" w:type="dxa"/><w:left w:w="${FM}" w:type="dxa"/><w:bottom w:w="${FM}" w:type="dxa"/><w:right w:w="${FM}" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${TW}"/></w:tblGrid><w:tr><w:trPr><w:cantSplit/></w:trPr><w:tc><w:tcPr><w:tcW w:w="${TW}" w:type="dxa"/></w:tcPr>${F}<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/><w:rPr><w:sz w:val="2"/></w:rPr></w:pPr></w:p></w:tc></w:tr></w:tbl>`;
       /* ECF: fotografias por baixo da esquadria, em mosaico — a largura da esquadria em 3 partes iguais, encostadas */
