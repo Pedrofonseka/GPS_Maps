@@ -746,7 +746,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.69';const VERSION_DATA='2026-11-26';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.69.1';const VERSION_DATA='2026-11-26';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -2016,8 +2016,11 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
    body+=KV('Finalidade:',AP.finalidade==='Outra'?AP.finalidadeOutra:AP.finalidade)+KV('Base de valor:',AP.base)+KV('Tipo de posse:',AP.posse)+KV('Quantidade de verbas:',String(V.length));
    // visitas (capítulo opcional — por decidir se fica aqui ou só nas fichas)
    if(r.incVisita!==false){body+=E()+H1('Da visita aos locais')+E();
-   const Wv=[1300,1500,TWb-2800];
-   body+=tbl(Wv,tr(tc('Verba',Wv[0],{b:1,fill:'D9D9D9'})+tc('Data',Wv[1],{b:1,fill:'D9D9D9'})+tc('Presenças',Wv[2],{b:1,fill:'D9D9D9'}),1)+V.map(a=>tr(tc(alCode(p,a),Wv[0])+tc(a.vis?.data?`${a.vis.data}${a.vis.hora?' '+a.vis.hora:''}`:'—',Wv[1])+tc(String(a.vis?.presencas||'').trim()||'—',Wv[2]))).join(''));
+   const PC=alPresComum(p);
+   if(PC){body+=T('Todos os presentes e intervenientes visitaram todos os locais. Estiveram presentes:',{jc:'both'});for(const ln of PC.split('\n').filter(l=>l.trim()))body+=T('- '+ln.trim().replace(/^[-–•]\s*/,''),{jc:'both'});body+=E();
+    const Wv=[1300,2400];body+=tbl(Wv,tr(tc('Verba',Wv[0],{b:1,fill:'D9D9D9'})+tc('Data',Wv[1],{b:1,fill:'D9D9D9'}),1)+V.map(a=>tr(tc(alCode(p,a),Wv[0])+tc(a.vis?.data?`${a.vis.data}${a.vis.hora?' '+a.vis.hora:''}`:'—',Wv[1]))).join(''))}
+   else{const Wv=[1300,1500,TWb-2800];
+   body+=tbl(Wv,tr(tc('Verba',Wv[0],{b:1,fill:'D9D9D9'})+tc('Data',Wv[1],{b:1,fill:'D9D9D9'})+tc('Presenças',Wv[2],{b:1,fill:'D9D9D9'}),1)+V.map(a=>tr(tc(alCode(p,a),Wv[0])+tc(a.vis?.data?`${a.vis.data}${a.vis.hora?' '+a.vis.hora:''}`:'—',Wv[1])+tc(String(a.vis?.presencas||'').trim()||'—',Wv[2]))).join(''))}
    body+=E()+H2('Constrangimentos, impedimentos ou dúvidas relevantes')+(String(r.constrang||'').trim()?String(r.constrang).trim().split('\n').map(l=>T(l,{jc:'both'})).join(''):T('Nada a relevar.')+T('As condições de visita consideram-se suficientes para a análise que se pretende, nos termos em que vem definida.',{jc:'both'}))+E()}
    // cronologia do processo (opcional)
    {const CL=cronoList(r);if(CL.length&&r.cronoWord!==false){const Wc=[1500,TWb-1500];body+=H1('Cronologia do processo')+E()+tbl(Wc,tr(tc('Data',Wc[0],{b:1,fill:'D9D9D9'})+tc('Ocorrência',Wc[1],{b:1,fill:'D9D9D9'}),1)+CL.map(x=>tr(tc(dPT(x.data)||'—',Wc[0])+tc(x.desc,Wc[1]))).join(''))+E()}}
@@ -2059,7 +2062,7 @@ const ktab=(h,rows)=>KTXT?rows+E():tbl([L1,L2],tr(tc('Elemento',L1,{b:1,bb:1})+t
       const im=pp(imgRun(W.data,w,h,'Mapa'),'<w:keepNext/>')+pp(R(`Localização de ${alCode(p,a)} · ${mapAttr(mm.mode)}`,{i:true,sz:8}));
       kr+=krow('Localização',lt||'—')+(KTXT?im:tr(`<w:tc><w:tcPr><w:tcW w:w="${TWb}" w:type="dxa"/><w:gridSpan w:val="2"/><w:vAlign w:val="top"/></w:tcPr>${im}</w:tc>`))}else kr+=krow('Localização',lt)}
      else kr+=krow('Localização',lt)}
-    kr+=krow('Visita',[[a.vis?.data,a.vis?.hora].filter(Boolean).join(' '),ovCod(a.ov)?'Ordem de visita: '+ovCod(a.ov):'',String(a.vis?.presencas||'').trim()?'Presenças: '+a.vis.presencas:''].filter(Boolean).join('\n'));
+    kr+=krow('Visita',[[a.vis?.data,a.vis?.hora].filter(Boolean).join(' '),ovCod(a.ov)?'Ordem de visita: '+ovCod(a.ov):'',String(a.vis?.presencas||'').trim()&&!(r.incVisita!==false&&alPresComum(p))?'Presenças: '+a.vis.presencas:''].filter(Boolean).join('\n'));
     kr+=krow('Tipo de ativo',x.tipo?`${alTipoNome(a)} (${alGrp(a)} – ${AL_GRUPOS[alGrp(a)]})`:'');kr+=krow('Destino',alDestTxt(a));
     if(fam){if(x.modo==='suc')for(const [k,l] of AL_SUC[fam])kr+=krow(l,x.suc[k]);
      else{let gr='';for(const f of AL_CAR[fam]){if(f[0]==='g'){gr=f[1];continue}const v=x.car[f[0]],tx=Array.isArray(v)?v.map(alOpt).join(', '):(f[2]==='c'?alOpt(v):v);if(gr==='Análise funcional'){kfun+=krow(f[1],tx);continue}kr+=krow(f[1],tx)}}
@@ -3068,6 +3071,8 @@ function alRvItems(p){const r=ensureRel(p),L=[];const add=(sec,lbl,key,o,k)=>L.p
  return L}
 document.addEventListener('click',async e=>{if(!e.target.closest('[data-alrv]'))return;e.preventDefault();e.stopImmediatePropagation();const p=cur();if(!p)return;const r=ensureRel(p);r.rvKeep=r.rvKeep||{};
  const done=rvRun(alRvItems(p),r.rvKeep);await saveProc();rvModal(done,r.rvKeep,async()=>{await saveProc();S.scrollTop=window.scrollY;render()})},true);
+/* presenças iguais em todas as verbas (todos visitaram todos os locais): um só parágrafo em «Da visita aos locais» e não se repete em cada verba */
+function alPresComum(p){const V=alAtivas(p);if(V.length<2)return '';const n=t=>String(t||'').trim().replace(/\s+/g,' ').toLowerCase(),P0=n(V[0].vis?.presencas);return P0&&V.every(a=>n(a.vis?.presencas)===P0)?String(V[0].vis.presencas).trim():''}
 function resAprHTML(p){const r=ensureRel(p),V=alAtivas(p),n=V.filter(a=>String(a.al.resApr||'').trim()).length+(String(r.resApr||'').trim()?1:0);
  return sec('rapr','Resumo de apreciação (antes do Valor estimado)',`<p class="muted">Tópico de nível 1 antes do «Valor estimado». Comentários gerais e, se quiser, um comentário de resumo por verba. Sem texto, o tópico não sai.</p><label>Comentários gerais</label><textarea data-bind="rel.resApr" rows="4" placeholder="Apreciação geral do conjunto…">${esc(r.resApr||'')}</textarea>${V.map(a=>`<label>${esc(alCode(p,a))}${a.al.designacao?' – '+esc(a.al.designacao):''}</label><textarea data-albind="${a.id}" data-k="resApr" rows="2" placeholder="Comentário de resumo desta verba…">${esc(a.al.resApr||'')}</textarea>`).join('')}`,{cnt:pill(n?n+' com texto':'vazio',n?'ok':'')})}
 function fichaFmtHTML(p){const r=ensureRel(p),t=r.fichaFmt==='txt';return sec('rfmt','Caracterização das verbas no Word',`<div class="tks col">${alTk(!t,'Em tabela — Elemento | Caracterização, tópico em cima e linha por cima de cada tópico (por defeito)','data-alact="fichaFmt" data-v=""')}${alTk(t,'Em texto — «Tópico:» seguido do valor, as linhas seguintes alinhadas pelo valor, sem tabela','data-alact="fichaFmt" data-v="txt"')}</div><p class="muted">Vale para a análise específica de cada verba (caracterização e análise funcional). Exporte nos dois modos para comparar.</p><div class="tks col">${tickBox('',r.mapVerba!==false,'Mapa de localização em cada verba (a seguir à caracterização) — precisa de rede ao indicar as coordenadas','data-act="rTk" data-k="mapVerba"')}</div>`,{cnt:pill(t?'texto':'tabela')})}
