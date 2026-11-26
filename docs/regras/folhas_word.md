@@ -27,3 +27,8 @@
 - O mesmo aspeto na imagem que o Word mostra antes de abrir o objeto.
 - Implementação no AvaLias: `gridSheet` (aplicada em `alOlePara`), estilos 12–23 (= 0–11 com limites) em `XL_STYLES`, `alXlsPng` com grelha e células unidas.
 - Falta aplicar no periText e no ExPropria.
+
+## v1.2 — alinhamento e largura (AvaLias 1.69)
+- Todas as folhas do Word com a mesma largura (a da página, 84 car.): a folga vai para as colunas descritivas.
+- Colunas estreitas (≤ 12 car.): cabeçalho e conteúdo centrados; colunas largas (descritivas): à esquerda.
+- No ecrã (tabelas HTML): cada coluna com a largura do texto + 2 carateres, as mesmas regras de alinhamento e limite do cabeçalho arrastável.
