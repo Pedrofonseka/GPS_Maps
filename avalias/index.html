@@ -746,7 +746,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.69.2';const VERSION_DATA='2026-11-26';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.70';const VERSION_DATA='2026-11-26';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -2041,10 +2041,21 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
    {const G=[...new Set(V.map(alGrp))];if(G.length>1)for(const g of Object.keys(AL_GRUPOS).filter(k=>G.includes(k))){const vv=V.filter(a=>alGrp(a)===g).map(a=>alNum(a.al.valor)).filter(v=>v!=null),st=vv.reduce((s1,v)=>s1+v,0);rows+=tr([tc(`Subtotal ${g} – ${AL_GRUPOS[g]}`,cV+cD+cT,{span:3,fill:'F8F8F8'}),tc(vv.length?alEur(st):'—',cVal,{jc:'center',fill:'F8F8F8'}),...(renda?[tc('',cR,{fill:'F8F8F8'})]:[]),...(bad?[tc('',cB,{fill:'F8F8F8'})]:[])].join(''))}}
    rows+=tr([tc('Total apurado',cV+cD+cT,{b:1,span:3,fill:'F2F2F2'}),tc(alEur(tot)||'—',cVal,{b:1,jc:'center',fill:'F2F2F2'}),...(renda?[tc(totR?alEur(totR)+'/mês':'—',cR,{b:1,jc:'center',fill:'F2F2F2'})]:[]),...(bad?[tc('',cB,{fill:'F2F2F2'})]:[])].join(''));
    if(!S.noOle&&V.length)body+=alOlePara(alResumoSheet(p),oleParts);else body+=tbl(W,rows);
-   body+=H2('Considerações sobre o valor estimado')+E();{const b=baseDe(AP.base||'Valor de mercado');body+=T(sgTxt(p,AL_N[0]),{jc:'both'})+T(sgTxt(p,AL_N[1]),{jc:'both'})+E();if(b){body+=T(`N2 – O montante foi apurado, no contexto da Base de valor definida: ${b.n} e significa:`,{jc:'both'})+T(sgTxt(p,` - ${b.def} ${b.nota}`),{jc:'both'})}else body+=T(sgTxt(p,AL_N[2]),{jc:'both'})}
+   {const vt=String(r.valTxt||'').trim(),VV=V.map(a=>[a,String(a.al.valTxt||'').trim()]).filter(([,t])=>t);if(vt||VV.length){body+=E();for(const ln of sgTxt(p,vt).split('\n').filter(l=>l.trim()))body+=T(ln,{jc:'both'});for(const [a,t] of VV){body+=P(R(`${alCode(p,a)}${a.al.designacao?' – '+a.al.designacao:''}`,{b:true}),{keep:1,sp:[120,40]});for(const ln of t.split('\n').filter(l=>l.trim()))body+=T(ln,{jc:'both'})}}}
+   body+=E()+H1('Considerações sobre o valor estimado')+E();{const b=baseDe(AP.base||'Valor de mercado');body+=T(sgTxt(p,AL_N[0]),{jc:'both'})+T(sgTxt(p,AL_N[1]),{jc:'both'})+E();if(b){body+=T(`N2 – O montante foi apurado, no contexto da Base de valor definida: ${b.n} e significa:`,{jc:'both'})+T(sgTxt(p,` - ${b.def} ${b.nota}`),{jc:'both'})}else body+=T(sgTxt(p,AL_N[2]),{jc:'both'})}
    if(bad){body+=E()+T('N3 – BAD – Benefício económico de adjudicação direta',{jc:'both'});for(const t of AL_BAD)body+=T(t,{jc:'both'});body+=E();body+=P(R('Nota:',{b:true}),{bdrT:1})+T(sgTxt(p,`Havendo especial interesse de algum dos intervenientes, considera-se aplicável o conceito de BAD – Benefício económico de adjudicação direta – sugerindo-se uma redução de valor até à percentagem indicada no quadro, para cada verba.`),{jc:'both'})}
+   body+=await anexIn('res',2);
+  // resposta ao solicitado — só se houver questões específicas (antes da análise específica)
+   if(part){body+=BRK+H1('Apreciação das queixas');
+   r.quesitos.forEach((q,i)=>{body+=H2(`Queixa ${qCode(i)}`)+E()+T(q.txt,{jc:'both'})+E();
+     const cons=String(q.resp||'').trim();
+     if(cons||!col)body+=P(R('Resposta:',{b:true,i:true}))+T(cons||'—',{jc:'both'})+E();
+     else{r.peritos.forEach((pe,j)=>{const t=String(q.rp?.[j]||'').trim();body+=P(R(`Resposta — ${pe.nome||'Perito '+(j+1)} (${represR(r,pe).replace(/^Perito /,'').replace(/^n/,'n')}):`,{b:true,i:true}))+T(t||'—',{jc:'both'})+E()})}});
+   if(!r.quesitos.length)body+=T('—');}
+   else if(qBlocos(r).length){body+=BRK+H1('Resposta ao solicitado')+QBLK(true)}
+   body+=await anexIn('resp',2);
    // análise específica de cada verba
-   body+=await anexIn('res',2);body+=BRK+H1('Análise específica');
+   body+=BRK+H1('Análise específica');
    const L1=2700,L2=TWb-L1;/* tabelas de texto: o tópico (coluna da esquerda) alinhado acima e uma linha horizontal por cima de cada tópico */
 const KTXT=ensureRel(p).fichaFmt==='txt';
 /* caracterização da verba no Word: em tabela (por defeito) ou em texto — «Tópico:» e o valor, com as linhas seguintes alinhadas pelo valor (avanço pendente) */
@@ -2109,23 +2120,7 @@ const ktab=(h,rows)=>KTXT?rows+E():tbl([L1,L2],tr(tc('Assunto',L1,{b:1,bb:1})+tc
       pr+=`<w:tr><w:trPr><w:cantSplit/></w:trPr>${cells}</w:tr><w:tr><w:trPr><w:cantSplit/></w:trPr>${caps}</w:tr>`}
      body+=tbl([CW2,TWb-CW2],pr,false)+E()}
     body+=await anexIn('v:'+a.id,3)}}
-  // 7 — resposta ao solicitado
-  if(part){body+=BRK+H1('Apreciação das queixas');
-  r.quesitos.forEach((q,i)=>{body+=H2(`Queixa ${qCode(i)}`)+E()+T(q.txt,{jc:'both'})+E();
-    const cons=String(q.resp||'').trim();
-    if(cons||!col)body+=P(R('Resposta:',{b:true,i:true}))+T(cons||'—',{jc:'both'})+E();
-    else{r.peritos.forEach((pe,j)=>{const t=String(q.rp?.[j]||'').trim();body+=P(R(`Resposta — ${pe.nome||'Perito '+(j+1)} (${represR(r,pe).replace(/^Perito /,'').replace(/^n/,'n')}):`,{b:true,i:true}))+T(t||'—',{jc:'both'})+E()})}});
-  if(!r.quesitos.length)body+=T('—');}
-  else{const AP=alP(p),V=alAtivas(p),bad=!!AP.bad,tot=V.reduce((s1,a)=>s1+(alNum(a.al.valor)||0),0),alvo=objAlvo(p);
-   body+=BRK+H1('Resposta às questões colocadas');
-   if(V.length){body+=H2('Valor estimado')+E()+T('De acordo com a análise, o valor estimado é de:',{jc:'both'})+E();
-    if(V.length===1){const a=V[0];body+=P(R('Valor: ',{b:true})+R(alNum(a.al.valor)!=null?alEur(a.al.valor):'—',{b:true}))}
-    else body+=P(R('Valor total: ',{b:true})+R(alEur(tot),{b:true}))+T('Discriminado por verba no quadro do «Valor estimado».',{jc:'both'});
-    if(bad){const pc=String(AP.badPct||10);body+=E()+P(R(`BAD elegível — desconto sugerido: até ${pc} %`)+R(V.length===1&&alNum(V[0].al.valor)!=null?` (valor com o desconto máximo: ${alEur(Math.round(alNum(V[0].al.valor)*(1-(+pc.replace(',','.')||0)/100)/100)*100)})`:'')+R(' — ver N3 das considerações sobre o valor estimado.'))}
-    body+=E()}
-   body+=H2('Outras questões')+QBLK(true)}
   // 8, 9
-  body+=await anexIn('resp',2);
   {const L=RES_R.filter(([k])=>(r.resOff||{})[k]!==true);if(L.length&&r.incReservas!==false){body+=BRK+H1('Reservas de análise');
    L.forEach(([k,l,d],n)=>{body+=H2(l).slice(BL.length);for(const ln of sgTxt(p,String((r.res||{})[k]??'').trim()||d).split('\n'))body+=/^[a-z]\)\s/.test(ln)?`<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:ind w:left="425" w:hanging="425"/><w:jc w:val="both"/></w:pPr>${R(ln.slice(0,2))}<w:r><w:tab/></w:r>${R(ln.slice(2).trim())}</w:p>`:T(ln,{jc:'both'})})}}
   if(r.incAmbiente!==false){body+=E()+H1('Ambiente, sustentabilidade e conformidade de licenciamento');for(const ln of String(r.ambiente||AMBIENTE_R).split('\n'))body+=T(ln,{jc:'both'});body+=E()}
@@ -2137,7 +2132,7 @@ const ktab=(h,rows)=>KTXT?rows+E():tbl([L1,L2],tr(tc('Assunto',L1,{b:1,bb:1})+tc
     for(const pe of r.peritos)body+=P('',{sp:[360,0]})+P(R('_______________________________________'))+P(R(pe.nome||'',{b:true}))+P(R(represR(r,pe),{i:true,sz:9}))}
   else{body+=P('',{sp:[360,0]})+P(R('_______________________________________'))+P(R(String(settings.peritoNome||'').trim()||'Perito avaliador',{b:true}));if(String(settings.peritoQual||'').trim())body+=P(R(settings.peritoQual.trim(),{i:true,sz:9}));for(const c of credList())if(c.t&&credOn(r,c.k))body+=P(R(c.t,{i:true,sz:9}))}
   // 11, 12
-  const ax=ANEX_R.filter(d=>r.anexos[d]).map(d=>CHK(true,sgDoc(p,d))).join('')+String(r.anexosOutros||'').split('\n').filter(x=>x.trim()).map(x=>CHK(true,x.trim())).join('')+anexFim(r).map((a,i)=>CHK(true,anexLbl(a,i))).join('');
+  const ax=ANEX_R.filter(d=>r.anexos[d]).map(d=>CHK(true,sgDoc(p,d))).join('')+String(r.anexosOutros||'').split('\n').filter(x=>x.trim()).map(x=>CHK(true,x.trim())).join('')+anexFim(r).map((a,i)=>CHK(true,anexLbl(a,i)+(anexKind(a)?'':' (ficheiro entregue em separado)'))).join('');
   if(ax)body+=H1('Em anexo')+ax;
   // página de separação «ANEXOS» e o conteúdo dos anexos (PDF/imagens em páginas): cada anexo em página nova, com o título (sub-tópico de «Em anexo» no índice), centrado; largura escolhida (por defeito 19 cm)
   if(ax)body+=BRK+'<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:spacing w:before="0" w:after="0" w:line="5600" w:lineRule="exact"/></w:pPr></w:p>'+P(R('ANEXOS',{b:true,sz:28}),{jc:'center',sp:[0,0]});
@@ -2213,7 +2208,7 @@ async function addAnexFiles(p,files,larg){const r=ensureRel(p);r.anexF=r.anexF||
 /* anexos no fim (numerados) e intercalados (com título próprio) */
 const anexFim=r=>(r.anexF||[]).filter(a=>!a.onde||!anexKind(a));
 function anexIntLbl(a){const t=String(a.titulo||'').trim();if(t)return t;const tp=a.tipo2&&a.tipo2!=='Outros'?a.tipo2:'';const d=String(a.desc||'').trim();return tp?`${tp}${d?': '+d:''}`:d||String(a.nome||'Documento').replace(/\.[A-Za-z0-9]{1,5}$/,'')}
-const ANEX_ONDE=p=>[['','No fim — em «Anexos» (numerado)'],['pri','Intercalado — depois dos «Princípios de análise»'],['res','Intercalado — depois do «Valor estimado»'],...alAtivas(p).map(a=>['v:'+a.id,`Intercalado — na ficha da verba ${alCode(p,a)}${a.al?.designacao?' ('+a.al.designacao+')':''}, depois das fotografias`]),['resp','Intercalado — depois da «Resposta às questões colocadas»']];
+const ANEX_ONDE=p=>[['','No fim — em «Anexos» (numerado)'],['pri','Intercalado — depois dos «Princípios de análise»'],['res','Intercalado — depois do «Valor estimado»'],...alAtivas(p).map(a=>['v:'+a.id,`Intercalado — na ficha da verba ${alCode(p,a)}${a.al?.designacao?' ('+a.al.designacao+')':''}, depois das fotografias`]),['resp','Intercalado — depois da «Resposta ao solicitado» (antes da análise específica)']];
 function anexLbl(a,i){const n=`Anexo ${String(i+1).padStart(2,'0')}`;if(String(a.titulo||'').trim())return `${n} – ${String(a.titulo).trim()}`;const tp=a.tipo2&&a.tipo2!=='Outros'?a.tipo2:'';const d=String(a.desc||'').trim();const nm=String(a.nome||'').replace(/\.[A-Za-z0-9]{1,5}$/,'');
   return tp?`${n} – ${tp}${d?': '+d:''}`:d?`${n} – ${d}`:`${n} – ${nm}`}
 function anexFilesHTML(p){const r=ensureRel(p),L=r.anexF||[];return `<label>Ficheiros anexos <span class="muted">(saem na lista «Em anexo», na pasta ZIP e — PDF e imagens — dentro do Word)</span></label>
@@ -2222,7 +2217,7 @@ function anexFilesHTML(p){const r=ensureRel(p),L=r.anexF||[];return `<label>Fich
     <label>Conteúdo <span class="muted">(se não der nome)</span></label><select data-act="rAnexTipo" data-i="${i}"><option value="">— escolher —</option>${ANEXT_R.map(t=>`<option ${a.tipo2===t?'selected':''}>${t}</option>`).join('')}</select>
     <input data-bind="ax.${i}.desc" value="${esc(a.desc||'')}" placeholder="${a.tipo2==='Outros'?'Descreva o conteúdo':'Descrição do conteúdo (opcional), ex.: artigo 1234 urbano'}">${anexKind(a)?`<label>Onde entra no relatório</label><select data-act="rAnexOnde" data-i="${i}">${ANEX_ONDE(p).map(([k,t])=>`<option value="${esc(k)}"${(a.onde||'')===k?' selected':''}>${esc(t)}</option>`).join('')}</select>`:''}<p class="muted" style="margin:2px 0 0">No relatório: ${esc(a.onde&&anexKind(a)?anexIntLbl(a)+' (intercalado, dentro da paginação)':anexLbl(a,anexFim(r).indexOf(a)))}</p>
     ${anexKind(a)?`<div class="rw" style="align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap">${tickBox('',a.inc!==false&&!!(a.pages||[]).length||(a.inc!==false&&!a.pages),`Incluir no Word${(a.pages||[]).length?` (${a.pages.length} pág.)`:''}`,`data-act="rAnexInc" data-i="${i}"`)}<label style="margin:0">Largura (cm)</label><input type="number" step="0.5" min="3" max="19" data-act="rAnexLarg" data-i="${i}" value="${a.larg||ANEX_LARG}" style="width:80px"></div><div class="muted" style="font-size:11px">Por defeito ${ANEX_LARG} cm = largura da página − 2 cm (centrado na página). Se a página for alta demais, a app reduz para caber.</div>${(a.pages||[]).length?`<div class="photos" style="margin-top:6px">${a.pages.map((pg,j)=>fotoCache.get(pg.id)?`<div style="border:1px solid #ddd;border-radius:6px;padding:4px"><img src="${fdOut(pg)}" style="width:100%;max-height:130px;object-fit:contain"><div class="muted" style="font-size:11px">Página ${j+1}${(pg.marks||[]).length?' · ✏️':''}</div>${IMGT.bar(`anx.${a.id}.${j}`,pg,{del:()=>{a.pages.splice(j,1);if(!a.pages.length)a.inc=false}})}</div>`:'').join('')}</div>`:''}`:'<div class="muted" style="font-size:11px;margin-top:4px">Este tipo de ficheiro vai só na lista «Em anexo» e na pasta ZIP. Para entrar no Word, junte-o em PDF ou imagem.</div>'}</div>`).join('')}
-  <div class="btns"><label class="btn secondary mini">📄 Anexar documento (planta, certidão… PDF ou outro)<input type="file" multiple accept=".pdf,application/pdf,image/*,.doc,.docx,.xls,.xlsx,.dwg,.dxf,.zip" data-act="rAddAnexF" hidden></label><label class="btn secondary mini">🖼️ Anexar imagens<input type="file" multiple accept="image/*" data-act="rAddAnexF" data-k="img" hidden></label></div>
+  <div class="btns"><label class="btn secondary mini">📄 Anexar documento (planta, certidão… PDF ou outro)<input type="file" multiple accept="*/*" data-act="rAddAnexF" hidden></label><label class="btn secondary mini">🖼️ Anexar imagens<input type="file" multiple accept="image/*" data-act="rAddAnexF" data-k="img" hidden></label></div>
   <p class="muted" style="font-size:11px">PDF e imagens entram no Word, cada anexo em página própria a seguir à lista «Em anexo», com o seu título. As imagens seguem a rotina das fotografias (compressão e qualidade de Definições, com um mínimo para leitura em página inteira).</p>`}
 /* ficha da verba em linhas «campo · valor» (para o Excel; a mesma informação do quadro da verba no Word) */
 function alFichaRows(p,a){alA(a);alValSync(a);const x=a.al,fam=alFam(a),g=a.vis?.gps,AP=alP(p),L=[];const add=(l,v)=>{if(Array.isArray(v))v=v.map(alOpt).join(', ');v=String(v??'').trim();if(v)L.push([l,v])};
@@ -3073,8 +3068,9 @@ document.addEventListener('click',async e=>{if(!e.target.closest('[data-alrv]'))
  const done=rvRun(alRvItems(p),r.rvKeep);await saveProc();rvModal(done,r.rvKeep,async()=>{await saveProc();S.scrollTop=window.scrollY;render()})},true);
 /* presenças iguais em todas as verbas (todos visitaram todos os locais): um só parágrafo em «Da visita aos locais» e não se repete em cada verba */
 function alPresComum(p){const V=alAtivas(p);if(V.length<2)return '';const n=t=>String(t||'').trim().replace(/\s+/g,' ').toLowerCase(),P0=n(V[0].vis?.presencas);return P0&&V.every(a=>n(a.vis?.presencas)===P0)?String(V[0].vis.presencas).trim():''}
-function resAprHTML(p){const r=ensureRel(p),V=alAtivas(p),n=V.filter(a=>String(a.al.resApr||'').trim()).length+(String(r.resApr||'').trim()?1:0);
- return sec('rapr','Resumo de apreciação (antes do Valor estimado)',`<p class="muted">Tópico de nível 1 antes do «Valor estimado». Comentários gerais e, se quiser, um comentário de resumo por verba. Sem texto, o tópico não sai.</p><label>Comentários gerais</label><textarea data-bind="rel.resApr" rows="4" placeholder="Apreciação geral do conjunto…">${esc(r.resApr||'')}</textarea>${V.map(a=>`<label>${esc(alCode(p,a))}${a.al.designacao?' – '+esc(a.al.designacao):''}</label><textarea data-albind="${a.id}" data-k="resApr" rows="2" placeholder="Comentário de resumo desta verba…">${esc(a.al.resApr||'')}</textarea>`).join('')}`,{cnt:pill(n?n+' com texto':'vazio',n?'ok':'')})}
+function relTxtHTML(p,key,id,tit,desc,ph1,ph2){const r=ensureRel(p),V=alAtivas(p),n=V.filter(a=>String(a.al[key]||'').trim()).length+(String(r[key]||'').trim()?1:0);
+ return sec(id,tit,`<p class="muted">${desc}</p><label>Texto geral</label><textarea data-bind="rel.${key}" rows="4" placeholder="${esc(ph1)}">${esc(r[key]||'')}</textarea>${V.map(a=>`<label>${esc(alCode(p,a))}${a.al.designacao?' – '+esc(a.al.designacao):''}</label><textarea data-albind="${a.id}" data-k="${key}" rows="2" placeholder="${esc(ph2)}">${esc(a.al[key]||'')}</textarea>`).join('')}`,{cnt:pill(n?n+' com texto':'vazio',n?'ok':'')})}
+const resAprHTML=p=>relTxtHTML(p,'resApr','rapr','Resumo de apreciação','Tópico de nível 1, depois dos «Princípios de análise» e antes do «Valor estimado». Sem texto, o tópico não sai.','Apreciação geral do conjunto…','Comentário de resumo desta verba…')+relTxtHTML(p,'valTxt','rval','Valor estimado — textos','No tópico «Valor estimado», a seguir ao quadro e antes das «Considerações sobre o valor estimado». Opcional.','Texto geral sobre o valor estimado…','Texto sobre o valor desta verba…');
 function fichaFmtHTML(p){const r=ensureRel(p),t=r.fichaFmt==='txt';return sec('rfmt','Caracterização das verbas no Word',`<div class="tks col">${alTk(!t,'Em tabela — Elemento | Caracterização, tópico em cima e linha por cima de cada tópico (por defeito)','data-alact="fichaFmt" data-v=""')}${alTk(t,'Em texto — «Tópico:» seguido do valor, as linhas seguintes alinhadas pelo valor, sem tabela','data-alact="fichaFmt" data-v="txt"')}</div><p class="muted">Vale para a análise específica de cada verba (caracterização e análise funcional). Exporte nos dois modos para comparar.</p><div class="tks col">${tickBox('',r.mapVerba!==false,'Mapa de localização em cada verba (a seguir à caracterização) — precisa de rede ao indicar as coordenadas','data-act="rTk" data-k="mapVerba"')}</div>`,{cnt:pill(t?'texto':'tabela')})}
 function ordSecHTML(p){const r=ensureRel(p),n=p.anomalias.filter(a=>+a.ov>0).length;return sec('rord','Ordem das verbas no relatório',`<div class="tks col">${alTk(!r.ordVis,'Pela ordem do processo (como foram listadas) — por defeito','data-alact="ordVis" data-v="0"')}${alTk(!!r.ordVis,`Pela ordem de visita (OV) — ${n} de ${p.anomalias.length} com ordem; as por visitar ficam no fim`,'data-alact="ordVis" data-v="1"')}</div><p class="muted">Os códigos das verbas (VB_xxx) não mudam; muda só a sequência no Word, no quadro-resumo e no livro Excel. A coluna OV aparece sempre no resumo.</p>`,{cnt:pill(r.ordVis?'Visita':'Processo'),def:false})}
 function vRel(){const p=cur();const box=document.createElement('div');box.innerHTML=vRel_relat();
