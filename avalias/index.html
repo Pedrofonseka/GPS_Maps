@@ -746,7 +746,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.70.1';const VERSION_DATA='2026-11-26';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.70.2';const VERSION_DATA='2026-11-26';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1055,6 +1055,7 @@ async function compressImage(file,kb){
   return last;
 }
 // ---------- fotos repetidas: assinatura visual (dHash 64 bits) — apanha a mesma imagem mesmo que reimportada noutra qualidade ----------
+async function compImg(src,cm){try{const im=await loadImg(src);const maxW=Math.min(2000,Math.max(300,Math.round((cm||16)/2.54*200))),sc=Math.min(1,maxW/im.width),w=Math.max(1,Math.round(im.width*sc)),h=Math.max(1,Math.round(im.height*sc)),c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,w,h);g.drawImage(im,0,0,w,h);const o=b64ToU8(src),n=b64ToU8(c.toDataURL('image/jpeg',0.82));return n.length<o.length?n:o}catch(e){return b64ToU8(src)}}
 async function phash(src){const i=await loadImg(src);const c=document.createElement('canvas');c.width=9;c.height=8;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(i,0,0,9,8);
   const d=x.getImageData(0,0,9,8).data;const g=k=>d[k*4]*0.299+d[k*4+1]*0.587+d[k*4+2]*0.114;let h='';
   for(let r=0;r<8;r++){let n=0;for(let cc=0;cc<8;cc++)n=(n<<1)|(g(r*9+cc)>g(r*9+cc+1)?1:0);h+=n.toString(16).padStart(2,'0')}return h}
@@ -1853,7 +1854,7 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
   const anexIn=async(pos,lv)=>{let o='';for(const a of (ensureRel(p).anexF||[]))if((a.onde||'')===pos&&a.inc!==false&&anexKind(a))o+=await anexXml(a,anexIntLbl(a),lv);return o};
   const CHK=(on,t)=>`<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:spacing w:before="20" w:after="20"/></w:pPr><w:sdt><w:sdtPr><w:id w:val="${1000+(++bmi)}"/><w14:checkbox><w14:checked w14:val="${on?1:0}"/><w14:checkedState w14:val="2612" w14:font="MS Gothic"/><w14:uncheckedState w14:val="2610" w14:font="MS Gothic"/></w14:checkbox></w:sdtPr><w:sdtContent><w:r><w:rPr><w:rFonts w:ascii="MS Gothic" w:eastAsia="MS Gothic" w:hAnsi="MS Gothic" w:hint="eastAsia"/></w:rPr><w:t>${on?'☒':'☐'}</w:t></w:r></w:sdtContent></w:sdt><w:r><w:t xml:space="preserve"> ${X(t)}</w:t></w:r></w:p>`;
   const BRK='<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
-  const imgRun=(data,cxCm,cyCm,name)=>{const id=++mid;media.push({name:`word/media/relat_${id}.jpeg`,data:b64ToU8(data),rid:`rRel${id}`});const cx=Math.round(cxCm*360000),cy=Math.round(cyCm*360000);
+  const imgRun=(data,cxCm,cyCm,name)=>{const id=++mid;media.push({name:`word/media/relat_${id}.jpeg`,src:data,cm:cxCm,rid:`rRel${id}`});const cx=Math.round(cxCm*360000),cy=Math.round(cyCm*360000);
     return `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${id}" name="${name} ${id}"/><wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${id}" name="relat_${id}.jpeg"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rRel${id}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`};
   // ---- capa ----
   const TW=9638,CW=3212;const g=p.visita?.gps;const allF0=()=>p.anomalias.flatMap(a=>relF(a)).filter(f=>fd(f)).length;
@@ -2176,6 +2177,8 @@ const ktab=(h,rows)=>KTXT?rows+E():tbl([L1,L2],tr(tc('Assunto',L1,{b:1,bb:1})+tc
    if(FN.length){const fx=F('word/footnotes.xml');if(fx)fx.data=_enc.encode(TX(fx).replace('</w:footnotes>',FN.map((t,k)=>`<w:footnote w:id="${k+1}"><w:p><w:pPr><w:pStyle w:val="Textodenotaderodap"/><w:jc w:val="both"/></w:pPr><w:r><w:rPr><w:vertAlign w:val="superscript"/></w:rPr><w:footnoteRef/></w:r><w:r><w:rPr><w:sz w:val="16"/></w:rPr><w:t xml:space="preserve"> ${X(t)}</w:t></w:r></w:p></w:footnote>`).join('')+'</w:footnotes>'))}
   F('docProps/core.xml').data=_enc.encode(TX(F('docProps/core.xml')).replace('{{TITULO}}',X(`${titulo} — ${r.objeto||''}`)));
   const relsF=F('word/_rels/document.xml.rels');relsF.data=_enc.encode(TX(relsF).replace('</Relationships>',media.map(m=>`<Relationship Id="${m.rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="${m.name.slice(5)}"/>`).join('')+'</Relationships>'));
+  /* imagens comprimidas para o tamanho a que são impressas (≈200 ppp, JPEG 82 %) — o Word fica mais leve */
+  {const cache=new Map();for(const m of media)if(!m.data){const k=m.src.length+'|'+m.src.slice(-64)+'|'+Math.round(m.cm*10);if(!cache.has(k))cache.set(k,await compImg(m.src,m.cm));m.data=cache.get(k)}}
   for(const m of media)files.push({name:m.name,data:m.data});
   if(oleParts.length){relsF.data=_enc.encode(TX(relsF).replace('</Relationships>',oleParts.map(m=>`<Relationship Id="${m.rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/${m.type}" Target="${m.name.slice(5)}"/>`).join('')+'</Relationships>'));
    for(const m of oleParts)files.push({name:m.name,data:m.data});const ct=F('[Content_Types].xml');let t=TX(ct);for(const [e,c] of [['png','image/png'],['xlsx','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']])if(!new RegExp(`Extension="${e}"`,'i').test(t))t=t.replace(/(<Types[^>]*>)/,`$1<Default Extension="${e}" ContentType="${c}"/>`);ct.data=_enc.encode(t)}
