@@ -746,7 +746,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.71.2';const VERSION_DATA='2026-11-26';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.71.3';const VERSION_DATA='2026-11-26';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -2154,7 +2154,8 @@ const ktab=(h,rows)=>KTXT?rows+E():tbl([L1,L2],tr(tc('Assunto',L1,{b:1,bb:1})+tc
   body+=H1('Termo de encerramento')+T('Relatório concluído em:')+T(String(r.dataEnc||'').trim()||mesAno())+E();
   if(col){body+=T(r.unan?'O presente relatório foi elaborado por unanimidade dos peritos.':'O presente relatório não reúne unanimidade, manifestando-se as seguintes posições discordantes:',{jc:'both'});if(!r.unan&&String(r.discord||'').trim())body+=T(r.discord,{jc:'both'});body+=E();
     for(const pe of r.peritos)body+=P('',{sp:[360,0]})+P(R('_______________________________________'))+P(R(pe.nome||'',{b:true}))+P(R(represR(r,pe),{i:true,sz:9}))}
-  else{body+=P('',{sp:[360,0]})+P(R('_______________________________________'))+P(R(String(settings.peritoNome||'').trim()||'Perito avaliador',{b:true}));if(String(settings.peritoQual||'').trim())body+=P(R(settings.peritoQual.trim(),{i:true,sz:9}));for(const c of credList())if(c.t&&credOn(r,c.k))body+=P(R(c.t,{i:true,sz:9}))}
+  else{/* carimbo de assinatura: espaço para assinar, traço, nome a negrito e as credenciais em itálico, uma por linha */
+   body+=P('',{sp:[1100,0]})+`<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/><w:keepNext/><w:pBdr><w:bottom w:val="single" w:sz="8" w:space="1" w:color="000000"/></w:pBdr><w:spacing w:before="0" w:after="160"/><w:ind w:right="2800"/></w:pPr></w:p>`+P(R(String(settings.peritoNome||'').trim()||'Perito avaliador',{b:true,sz:11}),{keep:1,sp:[0,100]});if(String(settings.peritoQual||'').trim())body+=P(R(settings.peritoQual.trim(),{i:true,sz:10}),{keep:1,sp:[0,80]});for(const c of credList())if(c.t&&credOn(r,c.k))body+=P(R(c.t,{i:true,sz:10}),{keep:1,sp:[0,80]})}
   // 11, 12
   const ax=ANEX_R.filter(d=>r.anexos[d]).map(d=>CHK(true,sgDoc(p,d))).join('')+String(r.anexosOutros||'').split('\n').filter(x=>x.trim()).map(x=>CHK(true,x.trim())).join('')+anexFim(r).map((a,i)=>CHK(true,anexLbl(a,i)+(anexKind(a)?'':' (ficheiro entregue em separado)'))).join('');
   if(ax)body+=H1('Em anexo')+ax;
@@ -2649,9 +2650,9 @@ function alMetHTML(a,p){const x=a.al,on=alMetOn(x),bft=alBft(a),ad=x.mAdot&&x.me
  return h}
 /* texto do modelo «Ava_Context» (Valor estimado — considerações e BAD) */
 /* credenciais do perito por baixo da assinatura: textos em Definições (só no aparelho); em cada relatório escolhe-se quais saem */
-const CRED_DEF=['Perito avaliador da Autoridade Tributária e Aduaneira (AT)','Perito avaliador de imóveis registado na CMVM','Membro da Ordem dos Engenheiros','Perito da Lista Oficial de Peritos do Ministério da Justiça',''];
+const CRED_DEF=['Perito avaliador CMVM','Perito da Lista oficial do Ministério da Justiça * Expropriações','Perito da AT – Ministério das Finanças * Avaliação Fiscal','Membro da Ordem dos Engenheiros',''];
 const credList=()=>CRED_DEF.map((d,i)=>({k:'cred'+(i+1),t:String(settings['cred'+(i+1)]??d).trim()}));
-const credOn=(r,k)=>r.cred&&k in r.cred?!!r.cred[k]:true;
+const credOn=(r,k)=>r.cred&&k in r.cred?!!r.cred[k]:k!=='cred4';
 const AL_N=[
  'N1 - O Valor indicado reflete sempre a totalidade do ativo (100% de quota-parte), não incluindo taxas nem comissões de mediação imobiliária.',
  'Em situação de indivisibilidade/titularidade repartida, deverá ser feita a proporção em função da respetiva quota-parte.',
