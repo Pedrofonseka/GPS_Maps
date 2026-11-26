@@ -47,3 +47,8 @@ Cada capa tem um número fixo, igual em todas as apps, e aparece na lista como �
 **ExPropria 0.18.0–0.18.1:** «Estilo da capa» (Relatório › layout): 0 Modelo do gabinete (quadro N_Ref, por defeito; as capas 1–4 correspondem às opções «Imagem da capa» do modelo) · 5 Título em destaque · 6 Lado a lado · 7 Ficha técnica · 8 Faixa lateral · 9 Mosaico · 10 Carimbo técnico · 11 Tipográfica · 12 Imagem e quadro. Os dados vêm do quadro N_Ref já preenchido (uma ou várias parcelas; Finalidade em destaque, Versões em rodapé da capa) e da equipa do processo — «Perito(s)» ou, na arbitragem, «Árbitro(s)», com a função quando há mais de um. Imagens: fotografias marcadas «Capa», depois as outras; sem fotografias, o mapa. A capa substitui toda a página 1 do modelo; o índice continua na página 2.
 
 **Sem lista de capas:** FullTopics (página de rosto com mapa), Regi e Revip (capa do modelo Word) — as capas novas entram quando essas apps passarem a ter escolha de capa.
+
+## 13 e 14 — Esquadria (v1.3, AvaLias 1.71)
+- **13 · ESF – Esquadria sem fotos**: esquadria (filete fino, mais grosso em baixo) com faixa de título — à esquerda o n.º do processo sobre a cor do gabinete; à direita entidade, título em negrito e, alinhado à direita em itálico, «Conjunto de N Ativos» (ou a designação do ativo, se for só um); linha escura por baixo da faixa. Quadro de dados em 2 colunas, rótulos pequenos em maiúsculas: Contexto processual | Local; Data da visita | Parte 1; Versão – data («V_1.00 – Novembro 2026») | Parte 2; Obs a toda a largura. No terço inferior da página.
+- **14 · ECF – Esquadria com fotos**: igual, com até 3 fotografias (4:3) em linha entre a faixa e o quadro; centrada na altura da página.
+- Onde está aplicada: AvaLias 1.71. Falta: periText, ExPropria.
