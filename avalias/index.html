@@ -746,7 +746,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.81';const VERSION_DATA='2026-11-27';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.81.1';const VERSION_DATA='2026-11-27';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -2513,7 +2513,7 @@ const AL_TIPOS=[['AES','Área de estacionamento','imo'],['CAS','Casa','imo'],['C
 const AL_GRUPOS={EDC:'Edifícios e construções',TAC:'Terreno apto para construção',TOF:'Terreno para outras finalidades',MOB:'Mobiliário',MEQ:'Máquinas/Equipamentos',VEI:'Veículos',SEP:'Sepulturas e jazigos',OTS:'Outras situações',NID:'Não identificado'};
 const AL_TIPO_GRP={TRN:'TOF',AES:'EDC',CAS:'EDC',EDM:'EDC',CAP:'EDC',ANX:'EDC',EDI:'EDC',FRA:'EDC',MBA:'EDC',MQU:'EDC',MOR:'EDC',MUR:'EDC',PAV:'EDC',PIS:'EDC',TCI:'TAC',TCM:'TAC',TUR:'TAC',TER:'TOF',EQP:'MEQ',MOB:'MOB',VEI:'VEI',SEP:'SEP',OUT:'OTS'};
 /* 1.78: grupo automático — construções EDC; terreno TAC se tiver capacidade edificativa (mesmo parcial: área TAC, composição ou utilidade potencial de edificação), senão TOF */
-/* 1.79: terreno — no local o perito aprecia (? TOF / ? TAC); no gabinete os IGT confirmam. As variáveis do potencial produtivo só aparecem se for (ou parecer) TOF ou tiver parte TOF */
+/* 1.79: terreno — no local o perito aprecia (? TOF / ? TAC); no gabinete os IGT confirmam. As características físicas só aparecem se for (ou parecer) TOF ou tiver parte TOF */
 const TER_TOFONLY=['morf','trab','restr','agua','energia','Terreno — características físicas (TOF)'];
 const terIgtFeito=a=>{const c=a.al.car||{};return pdmOn(a.al,'ter')&&!!(c.pdmClasse||c.pdmCat||aptCa(c).length||alNum(c.aptTac)!=null)};
 const terTAC=a=>{if(aptAreas(a).tof>0)return false;if(terIgtFeito(a)||alGrp(a)==='TAC'&&uEff(a).some(d=>uClass(d)==='TAC'))return alGrp(a)==='TAC';return a.al.car?.apLoc==='TAC'};
@@ -2607,7 +2607,7 @@ const uEff=a=>{const x=a.al||{};return x.uPotEq||!(x.uPot||[]).length?(x.uAt||[]
 /* composição do ativo — áreas parciais de cada utilidade (unidade de coerência): cada parte segue o seu método e os resultados agregam-se */
 function compRows(a){const x=a.al||{};if(!['imo','ter'].includes(alFam(a)))return [];return uEff(a).map(d=>{const t=d==='Outro'?(String((x.uPotEq||!(x.uPot||[]).length?x.uAtOutro:x.uPotOutro)||'').trim()||'Outro'):d;return {d,t,c:uClass(d),v:(x.comp||{})[d]}})}
 function compHTML(a){const R=compRows(a),x=a.al;if(!R.length)return '';const at=arVal(a,'at'),f=v=>CULT.fmt(v,2);const S={TAC:0,TOF:0,EDC:0};R.forEach(r=>{const v=alNum(r.v);if(v!=null&&S[r.c]!=null)S[r.c]+=v});const ter=S.TAC+S.TOF;
- return `<div class="algrp">Composição do ativo — áreas parciais por utilidade</div><p class="muted" style="margin-top:0">Indique a área parcial de cada utilidade: cada parte é avaliada pelo seu critério/método e os resultados agregam-se nesta unidade de coerência. Um terreno com capacidade edificativa, mesmo parcial, é TAC.</p>
+ return `<div class="algrp">Composição do ativo — áreas parciais por utilidade</div><p class="muted" style="margin-top:0">Indique a área parcial de cada utilidade: cada parte é avaliada pelo seu critério/método e os resultados agregam-se nesta unidade de coerência. Um terreno com capacidade edificativa, mesmo parcial, é TAC.</p>${(()=>{const L=arKs(a).map(([k,sg])=>[sg,arVal(a,k),k]).filter(([,v])=>v!=null);const S0=R.reduce((t,r)=>t+(alNum(r.v)||0),0);return `<div class="cmres" style="margin:4px 0;border-left:4px solid #e65100">📌 <b>Lembrete — área considerada para este ativo:</b> ${L.length?L.map(([sg,v,k])=>`${esc(sg)} = <b>${f(v)} m²</b> <span class="muted">(${esc(arSrc(a,k))})</span>`).join(' · '):'<span style="color:#c62828">sem áreas adotadas — preencha a matriz de áreas (1 · Identificação)</span>'}${at!=null?`<br>A distribuir (AT): ${f(at)} m² · já distribuído: ${f(S0)} m²${Math.abs(at-S0)>0.5?` · <b>falta ${f(at-S0)} m²</b>`:' ✓'}`:''}</div>`})()}
  <table class="cstx" style="width:100%"><tr><th>Utilidade</th><th style="width:60px">Classe</th><th style="width:110px">Área (m²)</th></tr>${R.map((r,i)=>`<tr><td>${esc(r.t)}</td><td style="text-align:center">${r.c?grpChip(r.c):'—'}</td><td><input data-bind="alcomp.${i}" inputmode="decimal" value="${esc(r.v||'')}" placeholder="${R.length===1&&(r.c==='TAC'||r.c==='TOF')&&at!=null?esc(f(at)):''}" style="width:100px"></td></tr>`).join('')}</table>
  ${ter||S.EDC?`<p class="muted">${['TAC','TOF','EDC'].filter(k=>S[k]).map(k=>`${k}: <b>${f(S[k])} m²</b>`).join(' · ')}${at!=null&&alFam(a)==='ter'&&ter&&Math.abs(ter+S.EDC-at)>0.5?` <span style="color:#e65100">— soma das partes (${f(ter+S.EDC)} m²) ≠ AT (${f(at)} m²)</span>`:''}</p>`:''}`}
 const compTxt=a=>{const R=compRows(a).filter(r=>alNum(r.v)!=null);return R.map(r=>`${r.t}${r.c?' ('+r.c+')':''}: ${CULT.fmt(alNum(r.v),2)} m²`).join('\n')};
