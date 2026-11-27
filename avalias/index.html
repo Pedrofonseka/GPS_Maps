@@ -746,7 +746,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.82';const VERSION_DATA='2026-11-27';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.82.1';const VERSION_DATA='2026-11-27';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -2040,7 +2040,7 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
       else r.peritos.forEach((pe,j)=>{const t=String(q.rp?.[j]||'').trim();h+=P(R(`Resposta — ${pe.nome||'Perito '+(j+1)} (${represR(r,pe).replace(/^Perito /,'')})`,{b:true}),{keep:1})+T(t||'—',{jc:'both'})+E()})}}
     if(!resp)h+=E()}return h};
   body+=H1('Objeto de análise');
-  if(part){body+=H2('O que foi solicitado')+T(objPart(p),{jc:'both'})+E();body+=H2('Outras questões a analisar');if(r.quesitos.length){r.quesitos.forEach((q,i)=>{body+=P(R(qCode(i)+' – ',{b:true})+R(q.txt),{jc:'both'})});body+=E()}else body+=T('Nada a acrescentar.')+E()}
+  if(part){body+=H2('O que foi solicitado')+T(objPart(p),{jc:'both'})+E();body+=H2('Outras questões a analisar');if(r.quesitos.length){r.quesitos.forEach((q,i)=>{body+=P(R((i+1)+'. ',{b:true})+R(q.txt),{jc:'both'})});body+=E()}else body+=T('Nada a acrescentar.')+E()}
   else{const sol=[[part?'Solicitante':'Tribunal / entidade',r.entidade],['Processo n.º',r.procJud],['Contexto processual',r.contexto],['Partes',[r.parte1,r.parte2].filter(x=>String(x||'').trim()).join(' / ')]].filter(([,v])=>String(v||'').trim());
    if(String(r.entidade||'').trim()){body+=H2('Solicitante')+T(String(r.entidade).trim())+E()}
    body+=H2('O que foi solicitado');if(objTxt(p)){const t=objTxt(p);body+=T(t.charAt(0).toUpperCase()+t.slice(1)+'.',{jc:'both'})}else body+=T(objPart(p),{jc:'both'});body+=E();
@@ -2090,7 +2090,7 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
    body+=await anexIn('res',2);
   // resposta ao solicitado — só se houver questões específicas (antes da análise específica)
    if(part&&r.quesitos.length){body+=BRK+H1('Resposta às questões colocadas');
-   r.quesitos.forEach((q,i)=>{body+=H2(`Questão ${qCode(i)}`)+E()+T(q.txt,{jc:'both'})+E();
+   r.quesitos.forEach((q,i)=>{body+=H2(`Questão ${i+1}`)+E()+T(q.txt,{jc:'both'})+E();
      const cons=String(q.resp||'').trim();
      if(cons||!col)body+=P(R('Resposta:',{b:true,i:true}))+T(cons||'—',{jc:'both'})+E();
      else{r.peritos.forEach((pe,j)=>{const t=String(q.rp?.[j]||'').trim();body+=P(R(`Resposta — ${pe.nome||'Perito '+(j+1)} (${represR(r,pe).replace(/^Perito /,'').replace(/^n/,'n')}):`,{b:true,i:true}))+T(t||'—',{jc:'both'})+E()})}});
