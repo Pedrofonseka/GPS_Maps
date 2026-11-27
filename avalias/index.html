@@ -746,7 +746,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.81.2';const VERSION_DATA='2026-11-27';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.81.3';const VERSION_DATA='2026-11-27';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1575,8 +1575,8 @@ function peHTML(p,a){const x=a.al,A=peAll(p),mine=A.filter(e=>e.a===a),au=peAuto
  return `<div class="algrp">Pressupostos especiais desta verba</div><p class="muted" style="margin-top:0">Característica específica deste ativo que vincula a avaliação (tema + descrição). No relatório numeram-se em sequência (PE 01, PE 02…) no tópico «Pressupostos especiais» e são chamados aqui, na avaliação.</p>
  ${au?`<div class="cmres" style="margin:4px 0">${x.peAutoOff?'':`<b>${peN((mine.find(e=>e.auto)||{}).n||0)}</b> `}🔗 <b>${esc(au.t)}</b> (automático): ${esc(au.d)} <button class="secondary mini" data-alact="peAuto">${x.peAutoOff?'Incluir':'Não incluir'}</button></div>`:''}
  ${(x.pes||[]).map((e,i)=>{const m=mine.filter(y=>!y.auto)[i];return `<div class="qbox" style="margin-top:6px"><div class="qhd"><b>${m?peN(m.n):'PE —'}</b><input data-bind="alpe.${i}.t" value="${esc(e.t||'')}" placeholder="Tema (ex.: Área de terreno adjacente)" style="flex:1;margin:0 6px;min-width:0"><button class="secondary mini" data-alact="peLibAdd" data-v="${i}" title="Guardar na biblioteca">📚＋</button><button class="del" data-alact="peDel" data-v="${i}">✕</button></div><textarea data-bind="alpe.${i}.d" rows="3" placeholder="Descrição do pressuposto">${esc(e.d||'')}</textarea></div>`}).join('')}
- <div class="btns"><select data-alpelib style="width:auto;max-width:100%"><option value="">📚 Da biblioteca…</option>${lib.map((e,i)=>`<option value="${i}">${esc(e.t)}</option>`).join('')}</select><button class="secondary mini" data-alact="peNew">+ Novo pressuposto</button></div>
- <details style="margin-top:4px"><summary class="muted">Gerir a biblioteca (${lib.length})</summary>${lib.map((e,i)=>`<div class="inrow" style="margin-top:3px"><span style="flex:1"><b>${esc(e.t)}</b> — <span class="muted">${esc(String(e.d).slice(0,90))}${String(e.d).length>90?'…':''}</span></span><button class="del" data-alact="peLibDel" data-v="${i}">✕</button></div>`).join('')}</details>`}
+ <details${(x.pes||[]).length?'':' open'} style="margin-top:6px"><summary><b>📚 Biblioteca de pressupostos (${lib.length})</b> <span class="muted">— escolher</span></summary>${lib.map((e,i)=>{const usado=(x.pes||[]).some(y=>String(y.t||'').trim().toLowerCase()===String(e.t).trim().toLowerCase());return `<div class="qbox" style="margin-top:4px"><div class="qhd"><b style="flex:1">${esc(e.t)}</b><button class="${usado?'green':'secondary'} mini" data-alact="peUse" data-v="${i}">${usado?'✓ Já usado':'+ Usar nesta verba'}</button><button class="del" data-alact="peLibDel" data-v="${i}" title="Eliminar da biblioteca">✕</button></div><div style="font-size:13px;line-height:1.35">${esc(e.d)}</div></div>`}).join('')}</details>
+ <div class="btns"><button class="secondary mini" data-alact="peNew">+ Novo pressuposto</button></div>`}
 function peList(p){const r=ensureRel(p),L=[];const nf=v=>Number(v).toLocaleString('pt-PT',{maximumFractionDigits:2});
  for(const a of alAtivas(p)){if(!['imo','ter'].includes(alFam(a)))continue;const x=a.al,D=arKs(a).map(([k,sg])=>{const v=arVal(a,k),c=arCell(a,k,'CDP');return arSrcK(a,k)==='MDE'&&v!=null?{sg,v,c}:null}).filter(Boolean);if(!D.length&&!x.arPE)continue;
   const nota=String(x.arNota||'').trim().replace(/[.;\s]*$/,'');const dif=D.map(d=>`${d.sg} = ${nf(d.v)} m²${d.c!=null&&Math.abs(d.v-d.c)>0.005?` e não ${nf(d.c)} m²`:''}`).join('; ');
@@ -3102,6 +3102,7 @@ document.addEventListener('click',async e=>{const el=e.target.closest('[data-ala
   case 'copyLoc':{const pr=p.anomalias[p.anomalias.indexOf(a)-1];if(!pr)return;alA(a);a.al.morada=pr.al?.morada||'';a.al.concelho=pr.al?.concelho||'';a.al.freguesia=pr.al?.freguesia||'';a.vis.gps=pr.vis?.gps?{...pr.vis.gps}:null;a.vis.map=pr.vis?.map?{...pr.vis.map}:undefined;p.visita=a.vis;toast('Localização copiada.');return keep()}
   case 'pmMet':{alA(a);const r=pmRows(a)[+el.dataset.v];if(!r)return;const m=el.dataset.m;a.al.pm=a.al.pm||{};const o=a.al.pm[r.d]=a.al.pm[r.d]||{};o.met=o.met||{};o.met[m]=!o.met[m];if(!o.met[m]&&o.ad===m)o.ad='';if(o.met[m]&&!o.ad)o.ad=m;pmSyncMet(a);if(a.al.valAuto==='')a.al.valAuto='met';alValSync(a);return keep()}
   case 'pmAd':{alA(a);const r=pmRows(a)[+el.dataset.v];if(!r)return;const o=(a.al.pm=a.al.pm||{})[r.d]=a.al.pm[r.d]||{};o.ad=el.dataset.m;a.al.valAuto='met';alValSync(a);return keep()}
+  case 'peUse':{alA(a);const y=peLib()[+el.dataset.v];if(y)(a.al.pes=a.al.pes||[]).push({t:y.t,d:y.d});return keep()}
   case 'peNew':{alA(a);(a.al.pes=a.al.pes||[]).push({t:'',d:''});return keep()}
   case 'peDel':{alA(a);(a.al.pes||[]).splice(+el.dataset.v,1);return keep()}
   case 'peAuto':{alA(a);a.al.peAutoOff=!a.al.peAutoOff;return keep()}
