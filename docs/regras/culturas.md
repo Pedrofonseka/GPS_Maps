@@ -16,7 +16,7 @@ Dois métodos para TOF: **valores de referência** (€/m² com fonte) e **rendi
 
 ## Terrenos — enquadramento e infraestruturas (AvaLias 1.4)
 - **PDM obrigatório em terrenos** (como no ExPropria, 2.6): instrumentos em vigor, publicação, classe de solo, categoria/qualificação, designação no PDM, RAN, REN, perigosidade de incêndio, outras restrições, regime de edificabilidade/índices. A verificação avisa se faltar a classe de solo.
-- **Acessos e infraestruturas pela lógica do Código das Expropriações** (todas as verbas com contexto): «Acesso ao local» escalonado — Sem acesso direto · Caminho de pé · Caminho tipo agrícola · Rua não pavimentada · Rua em construção · Rua pavimentada · Estrada não pavimentada · Estrada em construção · Estrada; depois «Disponibilidade, em frente ao local, de»: Passeios · Rede de água · Rede pluvial · Rede de saneamento · Rede de telecomunicações · Rede de energia · Rede de iluminação. Os antigos «Acessos» passam para a nova escala; «Infraestruturas» (Bom/Mau) deixou de existir.
+- **Acessos e infraestruturas pela lógica do Código das Expropriações** (todas as verbas com contexto): «Acesso ao local» escalonado — Sem acesso direto · Caminho de pé · Caminho em terra · Caminho tipo agroflorestal · Rua não pavimentada · Rua em construção · Rua pavimentada · Estrada não pavimentada · Estrada em construção · Estrada; depois «Disponibilidade, em frente ao local, de»: Passeios · Rede de água · Rede pluvial · Rede de saneamento · Rede de telecomunicações · Rede de energia · Rede de iluminação. Os antigos «Acessos» passam para a nova escala; «Infraestruturas» (Bom/Mau) deixou de existir.
 
 ## Rendimento das culturas
 
