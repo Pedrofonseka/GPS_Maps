@@ -47,7 +47,7 @@ Regras próprias de uma só app ficam na pasta da app (ex.: AvaLias — [../aval
 | **Quadros Excel no Word centrados — REGRA GERAL**: a folha de cálculo embutida nunca passa da largura útil da página (encolhem as colunas de texto mais largas, as numéricas mantêm-se) e, sendo mais estreita, fica centrada — AvaLias 1.45, ExPropria 0.17.2 | [folhas_word.md](folhas_word.md) | 1.1 |
 | **Transferências com data-hora — REGRA GERAL (todas as apps)**: cada processo/verba/parcela guarda «alterado em»; o ficheiro enviado leva data-hora; ao receber mostram-se as duas datas (mais recente / mais antigo), sugere-se a mais recente e substituir por mais antigo pede confirmação | [transferencias.md](transferencias.md) · `comum/datahora.js` | 1.0 |
 | **Vistas do local** junto à localização GPS: Google Earth histórico, Street View com datas, satélite, ortofotos DGT 1995-2021 (copia as coordenadas) — AvaLias 1.57, periText 1.32.1, ExPropria 0.19.1 | `comum/vistas.js` | 1.0 |
-| **Biblioteca de bases de valor** (EVS 1/2: definição + nota; sai no fecho do resumo, N2, e na resposta «Valor estimado») | [bases_valor.md](bases_valor.md) · `comum/bases.js` | 1.0 |
+| **Biblioteca de bases de valor** (EVS 1/2: definição + nota; sai no fecho do resumo, N2, e na resposta «Valor estimado») | [bases_valor.md](bases_valor.md) · `comum/bases.js` | 1.1 |
 | **Biblioteca de siglas** (sigla · significado · grupo; lista de siglas do relatório e aviso de siglas desconhecidas) | [siglas.md](siglas.md) · `comum/siglas.js` | 1.0 |
 | **Motores comuns** (`comum/*.js`, copiados para dentro das apps entre `@comum:<nome>` e `@fim:<nome>`; nunca editar nas apps) | `tools/sync_comum.py` | 1.0 |
 

@@ -1,4 +1,4 @@
-# Biblioteca de bases de valor — versão 1.0
+# Biblioteca de bases de valor — versão 1.1
 
 Motor comum `comum/bases.js` (copiado para as apps por `tools/sync_comum.py`). Referência: EVS 2025 (TEGoVA) — EVS 1 Valor de mercado; EVS 2 Bases de valor que não o valor de mercado. Definições em redação própria, fiéis ao conceito (não são transcrição das normas).
 
@@ -24,8 +24,11 @@ Com a base «Valor Especial», cada verba tem: comprador especial · fundamento 
 | Valor Seguro | EVS 2 |
 | Valor de Liquidação | EVS 1 — pressuposto especial |
 | Valor de uso alternativo | EVS 1 — pressuposto especial |
+| BAD – Benefício económico de adjudicação direta | prática corrente — tick cumulativo com a base de valor (ON = conceito aplicável) |
+
+**1.1 (AvaLias 1.79):** a definição do BAD passou do texto do relatório para esta base de definições; na app é um tick junto da base de valor.
 
 ## Onde está aplicada
 | App | Versão |
 |---|---|
-| AvaLias | 1.51 |
+| AvaLias | 1.51 (BAD: 1.79) |
