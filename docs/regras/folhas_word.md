@@ -31,4 +31,4 @@
 ## v1.2 — alinhamento e largura (AvaLias 1.69)
 - Todas as folhas do Word com a mesma largura (a da página, 84 car.): a folga vai para as colunas descritivas.
 - Colunas estreitas (≤ 12 car.): cabeçalho e conteúdo centrados; colunas largas (descritivas): à esquerda.
-- No ecrã (tabelas HTML): cada coluna com a largura do texto + 2 carateres, as mesmas regras de alinhamento e limite do cabeçalho arrastável.
+- No ecrã (tabelas HTML): cada coluna com a largura do texto + 2 carateres (identificadores curtos: ~10 carateres), colunas redimensionáveis pelo utilizador (limite do cabeçalho arrastável ou campo esticável); colunas estreitas com cabeçalho e dados centrados; no telemóvel, se não couber, a identificação passa para a 1.ª linha e os valores por baixo.
