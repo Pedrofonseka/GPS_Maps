@@ -746,7 +746,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.83';const VERSION_DATA='2026-11-27';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.83.1';const VERSION_DATA='2026-11-27';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1684,7 +1684,7 @@ function objFunAuto(p){const V=alAtivas(p);if(V.length>1)return 'conj';if(V.leng
 const objFunEf=p=>{const r=ensureRel(p);return r.objFun||objFunAuto(p)};
 const objNx=p=>{const r=ensureRel(p),n=parseInt(r.objNx);return n>0?n:alAtivas(p).length};
 function objAlvo(p){const r=ensureRel(p),k=objFunEf(p);if(k==='conj'){const n=objNx(p);return `um conjunto de ${n} ativo${n===1?'':'s'}`}if(k==='out')return String(r.objFunOutro||'').trim().replace(/^(estimar o valor de|apurar o valor real de)\s+/i,'');return OBJ_ALVO[k]||''}
-function objPart(p){const r=ensureRel(p),V=alAtivas(p);const o=String(r.objeto||'').trim();if(V.length===1){const t=(alTipoNome(V[0])||'ativo').toLowerCase().replace(/\s*\(.*\)$/,'');const art=/^(moradia|fração|casa|habitação|garagem|loja|quinta|máquina|viatura|embarcação|parcela|sepultura|construção|edificação|unidade|vivenda)/.test(t)||/a$/.test(t.split(' ')[0])?'uma':'um';return `Pretende-se a avaliação de ${art} ${t}${o?' — '+o:''}, de acordo com a descrição fornecida.`}return `Pretende-se a avaliação de um conjunto de ${V.length} situações${o?' — '+o:''}, de acordo com a descrição fornecida.`}
+function objPart(p){const r=ensureRel(p),V=alAtivas(p);const o=String(r.objeto||'').trim();if(V.length===1){const t=(alTipoNome(V[0])||'ativo').toLowerCase().replace(/\s*\(.*\)$/,'');const art=/^(moradia|fração|casa|habitação|garagem|loja|quinta|máquina|viatura|embarcação|parcela|sepultura|construção|edificação|unidade|vivenda)/.test(t)||/a$/.test(t.split(' ')[0])?'uma':'um';const oOk=o&&!/^conjunto/i.test(o)&&!o.toLowerCase().includes(t.split(' ')[0]);return `Pretende-se a avaliação de ${art} ${t}${oOk?' — '+o:''}, de acordo com a descrição fornecida.`}return `Pretende-se a avaliação de um conjunto de ${V.length} situações, de acordo com a descrição fornecida.`}
 function objTxt(p){const r=ensureRel(p),k=objFunEf(p);if(!k)return '';if(k==='out'){const t=String(r.objFunOutro||'').trim();return t?t.charAt(0).toLowerCase()+t.slice(1):''}return 'apurar o valor real de '+objAlvo(p)}
 
 
