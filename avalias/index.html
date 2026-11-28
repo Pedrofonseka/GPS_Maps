@@ -29,6 +29,8 @@ input,textarea,select{scroll-margin-top:16px;scroll-margin-bottom:90px}
 #steps button{flex:1;background:#fff;color:var(--mute);border:0;border-radius:0;border-bottom:3px solid transparent;padding:11px 4px;font-weight:600;font-size:15px}
 #steps button.on{color:var(--ink);border-bottom-color:var(--pri)}
 #app{max-width:760px;margin:0 auto;padding:12px 14px calc(var(--safe) + env(safe-area-inset-bottom))}
+/* 1.88.3: telemóvel deitado — usa a largura toda do ecrã (colunas mais largas) e o cabeçalho deixa de ficar preso ao topo, para sobrar altura para escrever */
+@media (orientation:landscape) and (max-height:520px){#app{max-width:none;padding-left:max(10px,env(safe-area-inset-left));padding-right:max(10px,env(safe-area-inset-right))}#top{position:static!important}#sub .subdesc,#sub .fnav,#sub .valstrip{max-width:none}#hdr{padding-top:6px;padding-bottom:6px}}
 h2{font-size:18px;margin:10px 0 8px;color:var(--pri)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin:10px 0}
 .card.active{border-color:var(--ok);background:var(--okbg)}
@@ -77,7 +79,7 @@ table.tb th{background:#e6e8eb;text-align:left;padding:6px;font-weight:600}table
 table.tb .c{text-align:center;width:70px}table.tb input{width:22px;height:22px;accent-color:var(--pri)}
 .chk{display:flex;align-items:center;gap:7px;margin:4px 0;font-size:14px;color:var(--ink)}.chk input{width:20px;height:20px}
 .clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-#sub .bkr{display:flex;gap:6px;flex-wrap:wrap;align-items:center;max-width:760px;margin:0 auto;padding:5px 12px;font-size:13px;border-bottom:1px dashed var(--line)}#sub .bkr.warn{background:#fff4e5}#sub .bkr b{color:var(--priTx);margin-right:2px}#sub .bkr .mini{padding:5px 9px;font-size:12.5px}#sub{background:#f7f8f9;border-bottom:1px solid var(--line);box-shadow:0 2px 4px rgba(0,0,0,.06)}
+#app .bkr{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:0 0 8px;padding:6px 8px;font-size:13px;background:#fff;border:1px solid var(--line);border-radius:10px}#app .bkr.warn{background:#fff4e5;border-color:#f2c48a}#app .bkr b{color:var(--priTx)}#app .bkr .mini{padding:5px 9px;font-size:12.5px}#sub .bkr{display:flex;gap:6px;flex-wrap:wrap;align-items:center;max-width:760px;margin:0 auto;padding:5px 12px;font-size:13px;border-bottom:1px dashed var(--line)}#sub .bkr.warn{background:#fff4e5}#sub .bkr b{color:var(--priTx);margin-right:2px}#sub .bkr .mini{padding:5px 9px;font-size:12.5px}#sub{background:#f7f8f9;border-bottom:1px solid var(--line);box-shadow:0 2px 4px rgba(0,0,0,.06)}
 .subdesc{max-width:760px;margin:0 auto 8px;padding:0 30px 0 14px;font-size:13.5px;line-height:1.35;color:#2b2d31;cursor:pointer;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;position:relative}.subdesc.full{display:block;max-height:40vh;overflow:auto}.subdesc b{color:var(--pri)}.subdesc .dmore{position:absolute;right:12px;top:0;color:var(--mute);font-size:11px}
 .fnav{display:flex;align-items:center;gap:6px;margin:0 auto;max-width:760px;padding:7px 14px}
 .ancode{font-size:20px;font-weight:700;margin:2px 0 4px}.ancode .muted{font-size:12px;font-weight:400}
@@ -747,7 +749,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.88.2';const VERSION_DATA='2026-11-27';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.88.3';const VERSION_DATA='2026-11-27';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1124,7 +1126,7 @@ function render_relat(){try{applyWide()}catch(_){};setTimeout(()=>{try{if(S.coer
   let html;
   if(S.sub==='ficha'&&curA())html=vFicha();else if(S.sub==='imp'&&p)html=vImport();
   else{S.sub=null;html=({home:vHome,proc:vProc,anom:vAnoms,rel:vRel,defs:vDefs}[S.view]||vHome)()}
-  {const vs=p&&['proc','anom','rel'].includes(S.view)?valStrip(p,S.sub==='ficha'?curA():null):'';let bk='';try{bk=bkRuler(['home','defs'].includes(S.view)?null:p)}catch(_){}$('#sub').innerHTML=bk+(S.sub==='ficha'?(S.subNav||''):'')+vs;$('#sub').style.display=bk||S.sub==='ficha'||vs?'':'none'}
+  {const vs=p&&['proc','anom','rel'].includes(S.view)?valStrip(p,S.sub==='ficha'?curA():null):'';let bk='';$('#sub').innerHTML=bk+(S.sub==='ficha'?(S.subNav||''):'')+vs;$('#sub').style.display=bk||S.sub==='ficha'||vs?'':'none'}
   const _ae=document.activeElement,_foco=_ae&&_ae!==document.body&&$('#app').contains(_ae)&&/^(INPUT|TEXTAREA|SELECT)$/.test(_ae.tagName);
   document.querySelectorAll('#app .alsug').forEach(n=>n.remove());
   window._lastHtml=html;if(!domMorph($('#app'),html))window.KBD_PEND=true;
@@ -1158,7 +1160,7 @@ const HELP_HTML=`
 <details><summary>Instalação e atualizações</summary><p>Abra pelo ícone do ecrã principal (não pela app Ficheiros). As versões novas instalam-se sozinhas quando abre a app com rede. Os dados ficam só neste aparelho.</p></details>`;
 function vHome(){
   const list=[...procs].sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
-  return `${installTip()}<h2>Processos (${procs.length})</h2><div class="btns"><button class="green" data-act="newProc">+ Novo processo</button></div>
+  return `${installTip()}${bkRuler(null)}<h2>Processos (${procs.length})</h2><div class="btns"><button class="green" data-act="newProc">+ Novo processo</button></div>
   <div class="list">${list.map(x=>{const n=x.anomalias.length,ok=x.anomalias.filter(isDone).length;return `<div class="card ${x.id===S.pid?'active':''}" data-act="openProc" data-id="${x.id}"><b>${esc(x.codigo||'(sem código)')}</b> ${esc(x.designacao||'')}<div class="muted">${esc(x.local||'')}${x.visita?.data?' · vistoria '+esc(x.visita.data):''}</div><div style="margin-top:4px"><button class="secondary mini" style="float:right" data-act="sendProc" data-id="${x.id}" title="Enviar este processo para outro aparelho (BK2_…)">📤 Enviar processo</button>${pill(n+' verba'+(n===1?'':'s'))}${n?pill(x.anomalias.filter(alCompleta).length+' completa'+(x.anomalias.filter(alCompleta).length===1?'':'s'),x.anomalias.every(alCompleta)?'ok':'warn'):''}</div></div>`}).join('')||'<p class="muted">Ainda não há processos.</p>'}</div>`;
 }
 // ----- Processo -----
@@ -3077,7 +3079,7 @@ document.addEventListener('click',async e=>{const a=e.target.closest('[data-crad
  if(a.dataset.cradd)r.crono.push({data:new Date().toISOString().slice(0,10),desc:''});else r.crono.splice(+a.dataset.crdel,1);await saveProc();S.scrollTop=window.scrollY;render()},true);
 document.addEventListener('change',async e=>{const el=e.target;if(!el.dataset?.crword)return;e.stopImmediatePropagation();const p=cur();if(!p)return;const r=ensureRel(p);r.cronoWord=el.checked;await saveProc()},true);
 let L0;function vAnoms(){const p=cur();alP(p);L0=p.anomalias;L0.forEach(alA);const L=settings.listOv?ovSort(L0):L0,semOv=L0.filter(a=>!(+a.ov>0)&&ovTsOf(a)).length,sugN=L0.filter(a=>a.ovSug).length;const tot=L.reduce((s,a)=>s+(alNum(a.al.valor)||0),0),done=L.filter(alCompleta).length;
- return `<h2>Verbas (${L.length})</h2><div class="card"><div class="steps3"><span><b>1</b> Identificar e localizar</span><span><b>2</b> Tipo, estado e fotos</span><span><b>3</b> Utilidade, métodos e valor</span></div>
+ return `<h2 style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">Verbas (${L.length})<span style="flex:1"></span><button class="secondary mini" data-alact="trocar" title="Escolher as verbas a enviar para outro aparelho (BK3_…)" style="font-size:13px;font-weight:600">📤 Enviar verbas para outro aparelho…</button></h2><div class="card"><div class="steps3"><span><b>1</b> Identificar e localizar</span><span><b>2</b> Tipo, estado e fotos</span><span><b>3</b> Utilidade, métodos e valor</span></div>
  ${alModBar()}<div class="btns"><button class="secondary mini" data-almod="fotos">📷 Campo — só fotos</button><button class="secondary mini" data-almod="aval">🧮 Gabinete — avaliação</button><button class="secondary mini" data-almod="tudo">Ficha completa</button></div><p class="muted" style="margin:2px 0 0">O módulo fica fixo ao passar de verba em verba (◀ ▶). Os dados são os mesmos em todos os módulos.</p>
  <div class="btns"><button class="green" data-alact="nova">+ Nova verba</button><button class="secondary" data-alact="trocar">⇄ Enviar / receber verbas</button></div>
  ${L.length>1?`<div class="tks sm" style="margin-top:6px"><span class="muted" style="align-self:center">Ordem:</span>${alTk(!settings.listOv,'Processo','data-alact="ovList" data-v="0"')}${alTk(!!settings.listOv,'Visita (OV)','data-alact="ovList" data-v="1"')}</div>${semOv?`<div class="btns"><button class="secondary mini" data-alact="ovFotos">🕘 Sugerir ordem de visita pelas fotografias (${semOv})</button></div>`:''}${sugN?`<div class="btns"><button class="secondary mini" data-alact="ovOkAll">✓ Aceitar as ${sugN} ordens sugeridas</button></div>`:''}`:''}
