@@ -747,7 +747,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.87.1';const VERSION_DATA='2026-11-27';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.87.2';const VERSION_DATA='2026-11-27';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -2066,13 +2066,15 @@ async function buildRelat(p){const FN=[];const FNREF=t=>{FN.push(t);return `<w:r
    body+=KV('Finalidade:',AP.finalidade==='Outra'?AP.finalidadeOutra:AP.finalidade)+KV('Base de valor:',AP.base)+KV('Tipo de posse:',AP.posse)+KV('Quantidade de situações:',String(V.length));
    // visitas (capítulo opcional — por decidir se fica aqui ou só nas fichas)
    if(r.incVisita!==false){body+=E()+H1('Da visita aos locais')+E();
-   presSyncAll(p);{const VV=visitas(p),multi=VV.filter((v,vi)=>V.some(a=>vnOf(p,a)===vi+1)).length>1;
-    VV.forEach((v,vi)=>{const vb=V.filter(a=>vnOf(p,a)===vi+1);if(!vb.length)return;const G=(v.pres||[]).filter(x=>String(x.n||'').trim()),RS=presRessalvas(p,vi);const dt=String(v.d||'').trim()||vb.map(a=>a.vis?.data).find(Boolean)||'';
-     if(multi)body+=P(R(`${vi+1}.ª visita`,{b:true}),{keep:1,sp:[120,40]});
-     body+=T(`${dt?`No encontro de ${dt}${String(v.h||'').trim()?', às '+v.h.trim():''}, compareceram`:'Compareceram'}${G.length?':':' — ninguém além do perito.'}`,{jc:'both'});for(const x of G)body+=P(R('• '+presFrase(x)),{jc:'both',ind:360});
-     if(multi)body+=T(`Foram visitadas ${vb.length>1?'as verbas':'a verba'} ${vb.map(a=>alCode(p,a)).join(', ').replace(/, ([^,]*)$/,' e $1')}.`,{jc:'both'});
-     if(v.todas!==false&&G.length&&vb.length>1)body+=T(`Todos os presentes e intervenientes acompanharam a visita a todas as verbas${multi?' desta visita':''}.`,{jc:'both'});
-     if(RS.length){body+=T('Com as seguintes ressalvas:',{jc:'both'});for(const t of RS)body+=T(t,{jc:'both'})}body+=E()})}
+   presSyncAll(p);{const VV=visitas(p),IND=709;const ref=x=>x.q==='Mandatário'?'o Ex.mo mandatário':String(x.n||'').trim();const lst=L=>L.length>1?L.slice(0,-1).join(', ')+' e '+L[L.length-1]:L[0]||'';
+    const verbo=n=>n===1?'acompanhou':'acompanharam',suj=(G,all)=>all?(G.length===1?'':G.length===2?'Ambos ':'Todos ')+'':'';
+    VV.forEach((v,vi)=>{const vb=V.filter(a=>vnOf(p,a)===vi+1);if(!vb.length)return;const G=(v.pres||[]).filter(x=>String(x.n||'').trim());const dt=String(String(v.d||'').trim()||vb.map(a=>a.vis?.data).find(Boolean)||'').replace(/\//g,'-');
+     body+=T(`${dt?`Na visita de ${dt}${String(v.h||'').trim()?', às '+v.h.trim():''}, ${G.length===1?'compareceu':'compareceram'}`:(G.length===1?'Compareceu':'Compareceram')}${G.length?':':' — ninguém além do perito.'}`,{jc:'both'});for(const x of G)body+=P(R('•  '+presFrase(x)),{jc:'both',ind:IND});
+     if(G.length){body+=E();const key=L=>L.map(x=>pnorm(x.n)).sort().join('|'),full=key(G);const grp=[];for(const a of vb){const L=presEff(p,a),k=key(L);let g=grp.find(y=>y.k===k);if(!g)grp.push(g={k,L,vb:[]});g.vb.push(alCode(p,a))}
+      const frase=(L,all,vbs,todas)=>{const n=L.length,sj=all?(n===1?'':n===2?'Ambos ':'Todos '):'Apenas '+lst(L.map(ref))+' ';const alvo=todas&&vb.length>1?'a todas as verbas':todas?`à verba ${alCode(p,vb[0])}`:vbs.length>1?`às verbas ${lst(vbs)}`:`à verba ${vbs[0]}`;const t=`${sj}${verbo(n)} a visita ${alvo}.`;return t.charAt(0).toUpperCase()+t.slice(1)};
+      if(grp.length===1&&grp[0].k===full)body+=P(R(frase(G,true,[],true)),{jc:'both',ind:IND});
+      else for(const g of grp)if(g.L.length)body+=P(R(frase(g.L,g.k===full,g.vb,false)),{jc:'both',ind:IND});else body+=P(R(`${g.vb.length>1?'As verbas '+lst(g.vb)+' foram visitadas':'A verba '+g.vb[0]+' foi visitada'} sem a presença de nenhum dos intervenientes.`),{jc:'both',ind:IND})}
+     body+=E()})}
    body+=E()+H2('Constrangimentos, impedimentos ou dúvidas relevantes')+(String(r.constrang||'').trim()?String(r.constrang).trim().split('\n').map(l=>T(l,{jc:'both'})).join(''):T('Nada a relevar.')+T('As condições de visita consideram-se suficientes para a análise que se pretende, nos termos em que vem definida.',{jc:'both'}))+E()}
    // cronologia do processo (opcional)
    {const CL=cronoList(r);if(CL.length&&r.cronoWord!==false){const Wc=[1500,TWb-1500];body+=H1('Cronologia do processo')+E()+tbl(Wc,tr(tc('Data',Wc[0],{b:1,fill:'D9D9D9'})+tc('Ocorrência',Wc[1],{b:1,fill:'D9D9D9'}),1)+CL.map(x=>tr(tc(dPT(x.data)||'—',Wc[0])+tc(x.desc,Wc[1]))).join(''))+E()}}
