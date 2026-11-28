@@ -747,7 +747,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.87.2';const VERSION_DATA='2026-11-27';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.87.3';const VERSION_DATA='2026-11-27';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -917,6 +917,12 @@ async function migrateFotos(p){let ch=false;const m=p.visita?.map;if(m&&m.data){
   for(const a of p.rel?.anexF||[]){if(a.data){await fotoPut(a.id,a.data);delete a.data;ch=true}for(const pg of a.pages||[])if(pg.data){await fotoPut(pg.id,pg.data);delete pg.data;ch=true}}
   if(ch)await dbPut(p);return p}
 /* processo com os anexos embutidos (cópia de segurança / envio) */
+/* 1.87.3: cópias — imagens guardadas fora das fotos (mapas GPS de cada verba e versão larga, extratos do PDM) vão num dicionário «blobs»; bibliotecas (pressupostos, valores referenciais, pessoas) vão com o ficheiro e juntam-se ao receber */
+function blobIdsOf(p,ids){const S2=new Set(),add=v=>{if(v)S2.add(v)};const m=p.visita?.map;if(m){add(m.wid)}for(const a of p.anomalias||[]){if(ids&&!ids.includes(a.id))continue;const vm=a.vis?.map;if(vm&&vm!==m){add(vm.id);add(vm.wid)}else if(vm)add(vm.wid);for(const g of a.al?.pdmF||[])if(g)add(g.id)}return [...S2]}
+async function blobsOf(L){const o={};for(const id of L){let d=fotoCache.get(id);if(!d){try{const r=await fotoGet(id);d=r?.data}catch(_){}}if(d)o[id]=d}return o}
+async function putBlobs(d){let n=0;for(const [id,data] of Object.entries(d?.blobs||{})){if(!data)continue;try{await fotoPut(id,data);fotoCache.set(id,data);n++}catch(_){}}return n}
+const libsOut=()=>({peLib:settings.peLib,vrfLib:settings.vrfLib,pessoas:settings.pessoas});
+function libsMerge(src){if(!src)return 0;let n=0;const mg=(k,key)=>{const R=src[k];if(!Array.isArray(R))return;const L=Array.isArray(settings[k])?settings[k]:(settings[k]=[]);for(const y of R){if(!L.some(z=>key(z)===key(y))){L.push({...y});n++}}};mg('peLib',y=>String(y.t||'').trim().toLowerCase());mg('vrfLib',y=>[y.u,y.v,y.un,y.d,y.c].map(v=>String(v||'').trim().toLowerCase()).join('|'));mg('pessoas',y=>pnorm(y.n));return n}
 async function relAnexFull(r){if(!r||!r.anexF)return r;return {...r,anexF:await Promise.all(r.anexF.map(async a=>({...a,data:await anexData(a),pages:await Promise.all((a.pages||[]).map(async pg=>({...pg,data:await anexData({id:pg.id})})))})))}}
 const numOf=(p,a)=>{if(p.lockNum&&a.num)return a.num;const pt=parteOf(p,a);let k=0;for(const x of p.anomalias){if(parteOf(p,x)==pt)k++;if(x===a||(a.id&&x.id===a.id))return k}return k};
 // fotos escolhidas para o relatório (sel!==false) vêm primeiro; as restantes ficam em reserva (guardadas, não exportadas)
@@ -3220,9 +3226,9 @@ function alTrocaModal(p){const m=document.createElement('div');m.className='moda
 async function alEnviarVerbas(p,ids){if(dirty)await saveProc();await loadFotos(p);const V=p.anomalias.filter(a=>ids.includes(a.id));
  const one={...p,anomalias:V.map(a=>({...a,_code:alCode(p,a),fotos:a.fotos.map(f=>({...f,data:fd(f)})),vis:a.vis?.map?{...a.vis,map:{...a.vis.map,data:fotoCache.get(a.vis.map.id)||''}}:a.vis}))};
  const cods=V.map(a=>alCode(p,a));const nm=cods.length<=3?cods.join('-'):`${cods[0]}-a-${cods[cods.length-1]}_${cods.length}verbas`;
- await saveBlob(new Blob([JSON.stringify({app:'AvaLias',kind:'verbas',version:VERSION,date:new Date().toISOString(),procs:[one]})],{type:'application/json'}),`${safeName(p.codigo)}_Verbas_${safeName(nm)}_${DH.tag()}.json`)}
+ const blobs=await blobsOf(blobIdsOf(p,ids));await saveBlob(new Blob([JSON.stringify({app:'AvaLias',kind:'verbas',version:VERSION,date:new Date().toISOString(),procs:[one],blobs,libs:libsOut()})],{type:'application/json'}),`${safeName(p.codigo)}_Verbas_${safeName(nm)}_${DH.tag()}.json`)}
 const alHash=a=>{const c=JSON.parse(JSON.stringify({...a,fotos:(a.fotos||[]).map(f=>({id:f.id,legenda:f.legenda,sel:f.sel,rot:f.rot}))}));delete c._code;delete c.updatedAt;delete c._dh;const s=JSON.stringify(c);let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(36)};
-async function alReceber(d){if(d.app!=='AvaLias'||d.kind!=='verbas'||!d.procs?.[0])throw new Error('Não é um ficheiro de verbas da AvaLias.');const pp=d.procs[0];
+async function alReceber(d){if(d.app!=='AvaLias'||d.kind!=='verbas'||!d.procs?.[0])throw new Error('Não é um ficheiro de verbas da AvaLias.');await putBlobs(d);if(libsMerge(d.libs))await saveSettings();const pp=d.procs[0];
  let P=procs.find(x=>x.id===pp.id)||null;
  if(!P){const c=procs.filter(x=>String(x.codigo||'').trim().toLowerCase()===String(pp.codigo||'').trim().toLowerCase()&&pp.codigo);const ch=await ask(`As verbas vêm do processo ${pp.codigo||'(sem código)'}, que não existe com a mesma identificação neste aparelho.`,['Cancelar',...(c.length?[`Juntar ao processo ${c[0].codigo}`]:[]),'Criar processo novo']);if(!ch)return;if(c.length&&ch===1)P=c[0];else{P={...pp,id:uid(),anomalias:[],createdAt:Date.now(),updatedAt:Date.now()};procs.push(P)}}
  const lin=pp.anomalias.map(it=>{it.updatedAt=it.updatedAt||pp.updatedAt;const loc=P.anomalias.find(x=>x.id===it.id)||P.anomalias.find(x=>alCode(P,x)===it._code&&!pp.anomalias.some(o=>o.id===x.id));if(!loc)return {it,loc:null,st:'nova'};if(alHash(loc)===alHash({...it,fotos:it.fotos.map(f=>({...f,data:undefined}))}))return {it,loc,st:'igual'};return {it,loc,st:'dif',q:DH.qual(loc.updatedAt,it.updatedAt)}});
@@ -4123,7 +4129,7 @@ document.addEventListener('click',async e=>{
     case 'chkProc':S.view='proc';S.sub=null;S.open.p1=true;S.open.p2=true;S.scrollTop=0;break;
     case 'sendProc':{if(dirty)await saveProc();const pp=procs.find(x=>x.id===el.dataset.id);if(!pp)return;toast('A preparar o processo…');await loadFotos(pp);
       const one={...pp,rel:await relAnexFull(pp.rel),visita:pp.visita?.map?{...pp.visita,map:{...pp.visita.map,data:fotoCache.get(pp.visita.map.id)||''}}:pp.visita,anomalias:pp.anomalias.map(a=>({...a,fotos:a.fotos.map(f=>({...f,data:fd(f)}))}))};
-      await saveBlob(new Blob([JSON.stringify({app:'AvaLias',kind:'processo',version:VERSION,date:new Date().toISOString(),procs:[one]})],{type:'application/json'}),`${safeName(pp.codigo)}_Processo_AvaLias_${DH.tag()}.json`);return}
+      const blobs=await blobsOf(blobIdsOf(pp));await saveBlob(new Blob([JSON.stringify({app:'AvaLias',kind:'processo',version:VERSION,date:new Date().toISOString(),procs:[one],blobs,libs:libsOut()})],{type:'application/json'}),`${safeName(pp.codigo)}_Processo_AvaLias_${DH.tag()}.json`);return}
     case 'help':{const m=document.createElement('div');m.className='modal';m.innerHTML=`<div class="box helpbox"><div class="btns" style="margin-top:0;justify-content:space-between"><b style="font-size:17px">Como funciona a AvaLias</b><button class="secondary mini" data-x>✕</button></div>${HELP_HTML}</div>`;m.addEventListener('click',e=>{if(e.target===m||e.target.closest('[data-x]'))m.remove()});document.body.appendChild(m);return}
     case 'filtQClear':S.filt.q='';S.scrollTop=window.scrollY;break;
     case 'addParte':{const n=Math.max(0,...p.partes.map(x=>+x.n))+1;p.partes.push({n,nome:'Parte '+n});await saveProc();S.scrollTop=window.scrollY;break}
@@ -4198,7 +4204,7 @@ document.addEventListener('click',async e=>{
         if(settings.expFichas!==false)L.push({blob:new Blob([await docxFor(p,'grelha')],{type:T}),name:`${safeName(p.codigo)}_Fichas_Anomalias.docx`});
         if(settings.expTexto!==false)L.push({blob:new Blob([await docxFor(p,'texto')],{type:T}),name:`${safeName(p.codigo)}_Analise_Anomalias_texto.docx`});
         if(!L.length)return toast('Marque pelo menos uma opção.',1);await saveBlobs(L)}catch(err){toast('Erro ao gerar Word: '+err.message,1)}return}
-    case 'backupOut':{toast('A preparar a cópia…');for(const pp of procs)await loadFotos(pp);const full=[];for(const pp of procs)full.push({...pp,rel:await relAnexFull(pp.rel),visita:pp.visita?.map?{...pp.visita,map:{...pp.visita.map,data:fotoCache.get(pp.visita.map.id)||''}}:pp.visita,anomalias:pp.anomalias.map(a=>({...a,fotos:a.fotos.map(f=>({...f,data:fd(f)}))}))});settings.lastBackup=Date.now();await saveSettings();const data={app:'AvaLias',version:VERSION,date:new Date().toISOString(),settings,procs:full};await saveBlob(new Blob([JSON.stringify(data)],{type:'application/json'}),`Backup_RelatAnomalias_${new Date().toISOString().slice(0,10)}.json`);break}
+    case 'backupOut':{toast('A preparar a cópia…');for(const pp of procs)await loadFotos(pp);const full=[];for(const pp of procs)full.push({...pp,rel:await relAnexFull(pp.rel),visita:pp.visita?.map?{...pp.visita,map:{...pp.visita.map,data:fotoCache.get(pp.visita.map.id)||''}}:pp.visita,anomalias:pp.anomalias.map(a=>({...a,fotos:a.fotos.map(f=>({...f,data:fd(f)}))}))});const blobs={};for(const pp of procs)Object.assign(blobs,await blobsOf(blobIdsOf(pp)));settings.lastBackup=Date.now();await saveSettings();const data={app:'AvaLias',version:VERSION,date:new Date().toISOString(),settings,procs:full,blobs};await saveBlob(new Blob([JSON.stringify(data)],{type:'application/json'}),`Backup_AvaLias_${new Date().toISOString().slice(0,10)}.json`);break}
     case 'catAdd':{const ck=el.dataset.k;S.open['dc_'+ck]=true;const t=$('#catNew_'+ck).value.trim();if(t&&!settings[ck].includes(t)){settings[ck].push(t);await saveSettings()}S.scrollTop=window.scrollY;break}
     case 'delCat':{const ck=el.dataset.k;const c=settings[ck][+el.dataset.i];if(!await ask(`Retirar "${c}" do catálogo? (fichas já preenchidas mantêm o valor)`,['Cancelar','Retirar'],1))return;settings[ck].splice(+el.dataset.i,1);await saveSettings();S.scrollTop=window.scrollY;break}
     case 'mvField':{const i=+el.dataset.i,j=i+ +el.dataset.d;if(j<0||j>=settings.fields.length)return;[settings.fields[i],settings.fields[j]]=[settings.fields[j],settings.fields[i]];await saveSettings();S.scrollTop=window.scrollY;break}
@@ -4280,7 +4286,7 @@ document.addEventListener('change',async e=>{
   if(act==='impSheet'){const i=+el.value;setImport(S.imp.sheets[i].rows,S.imp.sheets,i);render();return}
   if(act==='impHdr'){S.imp.hdr=+el.value;render();return}
   if(act==='impMap'){S.imp.map[el.dataset.k]=el.value===''?undefined:+el.value;render();return}
-  if(act==='backupIn'){const f=el.files[0];el.value='';if(!f)return;try{const d=JSON.parse(await f.text());if(d.app==='AvaLias'&&d.kind==='verbas'){await alReceber(d);return}if(!['AvaLias'].includes(d.app)||!Array.isArray(d.procs))throw new Error('Ficheiro não é uma cópia desta app');
+  if(act==='backupIn'){const f=el.files[0];el.value='';if(!f)return;try{const d=JSON.parse(await f.text());if(d.app==='AvaLias'&&d.kind==='verbas'){await alReceber(d);return}await putBlobs(d);if(libsMerge(d.libs||d.settings))await saveSettings();if(!['AvaLias'].includes(d.app)||!Array.isArray(d.procs))throw new Error('Ficheiro não é uma cópia desta app');
     if(d.kind==='processo'){const pp=d.procs[0];const ex=procs.find(x=>x.id===pp.id);let mode=2;
       if(ex){const dn=x=>new Date(x.updatedAt||0).toLocaleString('pt-PT');mode=await ask(`O processo ${pp.codigo||''} já existe neste aparelho.\n\n${DH.linhas(ex.updatedAt,pp.updatedAt)}\n\nO que fazer?`,['Cancelar','Manter os dois','Substituir']);if(!mode)return;if(mode===2&&DH.qual(ex.updatedAt,pp.updatedAt)==='loc'&&!await ask(DH.aviso,['Cancelar','Substituir na mesma'],1))return}
       if(ex&&mode===1){pp.id=uid();pp.codigo=(pp.codigo||'')+' (recebido)';for(const a of pp.anomalias)for(const f of a.fotos)f.id=uid();if(pp.visita?.map)pp.visita.map.id='map_'+pp.id}
