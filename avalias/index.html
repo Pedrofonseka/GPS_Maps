@@ -747,7 +747,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.87';const VERSION_DATA='2026-11-27';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.87.1';const VERSION_DATA='2026-11-27';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -2122,7 +2122,7 @@ const ktab=(h,rows)=>KTXT?rows+E():tbl([L1,L2],tr(tc('Assunto',L1,{b:1,bb:1})+tc
     kr+=krow('Descrição sumária',a.descricao);
     {const lt=[x.morada,alLocTxt(x),g?`GPS ${g.lat.toFixed(6)}°, ${g.lon.toFixed(6)}°`:''].filter(Boolean).join('\n');
      if(md&&mm){const W=await mapWideData(mm);if(W){const w=(TWb-160)/567,h=w*W.h/W.w,pp=(c,o='')=>`<w:p><w:pPr><w:pStyle w:val="1-periTextogeral"/>${o}<w:spacing w:before="20" w:after="20"/><w:jc w:val="left"/></w:pPr>${c}</w:p>`;
-      const im=pp(imgRun(W.data,w,h,'Mapa'),'<w:keepNext/>')+pp(R(`Localização de ${alCode(p,a)}`,{i:true,sz:8}));
+      const im=pp(imgRun(W.data,w,h,'Mapa'),'<w:keepNext/>')+pp(R(`${alCode(p,a)} - Contexto de localização e envolvente`,{i:true,sz:8}));
       kr+=krow('Localização',lt||'—')+(KTXT?im:tr(`<w:tc><w:tcPr><w:tcW w:w="${TWb}" w:type="dxa"/><w:gridSpan w:val="2"/><w:vAlign w:val="top"/></w:tcPr>${im}</w:tc>`))}else kr+=krow('Localização',lt)}
      else kr+=krow('Localização',lt)}
     kr+=krow(ovCodV(a)?'Visita - '+ovCodV(a):'Visita',[[a.vis?.data,a.vis?.hora].filter(Boolean).join(' '),,r.incVisita===false&&String(a.vis?.presencas||'').trim()?'Presenças: '+a.vis.presencas:''].filter(Boolean).join('\n'));
