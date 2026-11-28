@@ -77,7 +77,7 @@ table.tb th{background:#e6e8eb;text-align:left;padding:6px;font-weight:600}table
 table.tb .c{text-align:center;width:70px}table.tb input{width:22px;height:22px;accent-color:var(--pri)}
 .chk{display:flex;align-items:center;gap:7px;margin:4px 0;font-size:14px;color:var(--ink)}.chk input{width:20px;height:20px}
 .clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-#sub{background:#f7f8f9;border-bottom:1px solid var(--line);box-shadow:0 2px 4px rgba(0,0,0,.06)}
+#sub .bkr{display:flex;gap:6px;flex-wrap:wrap;align-items:center;max-width:760px;margin:0 auto;padding:5px 12px;font-size:13px;border-bottom:1px dashed var(--line)}#sub .bkr.warn{background:#fff4e5}#sub .bkr b{color:var(--priTx);margin-right:2px}#sub .bkr .mini{padding:5px 9px;font-size:12.5px}#sub{background:#f7f8f9;border-bottom:1px solid var(--line);box-shadow:0 2px 4px rgba(0,0,0,.06)}
 .subdesc{max-width:760px;margin:0 auto 8px;padding:0 30px 0 14px;font-size:13.5px;line-height:1.35;color:#2b2d31;cursor:pointer;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;position:relative}.subdesc.full{display:block;max-height:40vh;overflow:auto}.subdesc b{color:var(--pri)}.subdesc .dmore{position:absolute;right:12px;top:0;color:var(--mute);font-size:11px}
 .fnav{display:flex;align-items:center;gap:6px;margin:0 auto;max-width:760px;padding:7px 14px}
 .ancode{font-size:20px;font-weight:700;margin:2px 0 4px}.ancode .muted{font-size:12px;font-weight:400}
@@ -747,7 +747,7 @@ function buildPdf({proc,settings,anoms,layout,withPhotos,photoCols,dateCom,withV
 }
 
 // ===== App: AvaLias =====
-const VERSION='1.87.4';const VERSION_DATA='2026-11-27';/* data da release: atualizar sempre com VERSION */
+const VERSION='1.88';const VERSION_DATA='2026-11-27';/* data da release: atualizar sempre com VERSION */
 const DEF_PARTES=[{n:1,nome:'Autor'},{n:2,nome:'Réu'},{n:3,nome:'Tribunal'},{n:4,nome:'Perito (constatadas no local)'},{n:5,nome:'Solicitante'}];
 const parteSig=(p,n)=>{const nm=String(parteNome(p,n)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();return /^PERIT/.test(nm)?'P':/^AUTOR/.test(nm)?'A':/^REU/.test(nm)?'R':/^TRIB/.test(nm)?'T':/^SOLIC/.test(nm)?'S':(nm[0]||String(n))};
 const parteOf=(p,a)=>a.parte??(a.origem==='local'?(p.parteLocal??4):1);
@@ -1124,7 +1124,7 @@ function render_relat(){try{applyWide()}catch(_){};setTimeout(()=>{try{if(S.coer
   let html;
   if(S.sub==='ficha'&&curA())html=vFicha();else if(S.sub==='imp'&&p)html=vImport();
   else{S.sub=null;html=({home:vHome,proc:vProc,anom:vAnoms,rel:vRel,defs:vDefs}[S.view]||vHome)()}
-  {const vs=p&&['proc','anom','rel'].includes(S.view)?valStrip(p,S.sub==='ficha'?curA():null):'';$('#sub').innerHTML=(S.sub==='ficha'?(S.subNav||''):'')+vs;$('#sub').style.display=S.sub==='ficha'||vs?'':'none'}
+  {const vs=p&&['proc','anom','rel'].includes(S.view)?valStrip(p,S.sub==='ficha'?curA():null):'';let bk='';try{bk=bkRuler(['home','defs'].includes(S.view)?null:p)}catch(_){}$('#sub').innerHTML=bk+(S.sub==='ficha'?(S.subNav||''):'')+vs;$('#sub').style.display=''}
   const _ae=document.activeElement,_foco=_ae&&_ae!==document.body&&$('#app').contains(_ae)&&/^(INPUT|TEXTAREA|SELECT)$/.test(_ae.tagName);
   document.querySelectorAll('#app .alsug').forEach(n=>n.remove());
   window._lastHtml=html;if(!domMorph($('#app'),html))window.KBD_PEND=true;
@@ -1158,7 +1158,7 @@ const HELP_HTML=`
 <details><summary>Instalação e atualizações</summary><p>Abra pelo ícone do ecrã principal (não pela app Ficheiros). As versões novas instalam-se sozinhas quando abre a app com rede. Os dados ficam só neste aparelho.</p></details>`;
 function vHome(){
   const list=[...procs].sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
-  return `${installTip()}${bkBarHTML()}<h2>Processos (${procs.length})</h2><div class="btns"><button class="green" data-act="newProc">+ Novo processo</button></div>
+  return `${installTip()}<h2>Processos (${procs.length})</h2><div class="btns"><button class="green" data-act="newProc">+ Novo processo</button></div>
   <div class="list">${list.map(x=>{const n=x.anomalias.length,ok=x.anomalias.filter(isDone).length;return `<div class="card ${x.id===S.pid?'active':''}" data-act="openProc" data-id="${x.id}"><b>${esc(x.codigo||'(sem código)')}</b> ${esc(x.designacao||'')}<div class="muted">${esc(x.local||'')}${x.visita?.data?' · vistoria '+esc(x.visita.data):''}</div><div style="margin-top:4px"><button class="secondary mini" style="float:right" data-act="sendProc" data-id="${x.id}">📤 Enviar</button>${pill(n+' verba'+(n===1?'':'s'))}${n?pill(x.anomalias.filter(alCompleta).length+' completa'+(x.anomalias.filter(alCompleta).length===1?'':'s'),x.anomalias.every(alCompleta)?'ok':'warn'):''}</div></div>`}).join('')||'<p class="muted">Ainda não há processos.</p>'}</div>`;
 }
 // ----- Processo -----
@@ -1296,6 +1296,11 @@ function vImport(){
   }
   return h;
 }
+/* 1.88: régua das cópias, congelada no topo de cada janela — BK 1 (geral) na lista de processos, BK 2 (processo) no processo, BK 3 (verba/ativo/parcela) nas verbas */
+function bkRuler(p){const IN=(lbl,tit)=>`<label class="btn secondary mini" title="${esc(tit)}">${lbl}<input type="file" accept=".json,application/json" data-act="backupIn" hidden></label>`;
+ if(!p||S.view==='home'||S.view==='defs'){const t=settings.lastBackup,alt=procs.filter(x=>(x.updatedAt||0)>(t||0)).length,warn=procs.length&&(!t||alt);return `<div class="bkr${warn?' warn':''}"><b>BK 1 · Backup geral</b><button class="green mini" data-act="backupOut" title="Guardar todos os processos, definições e bibliotecas">⬇ Guardar tudo</button>${IN('⬆ Repor backup','Repor um backup geral (BK1_…) ou receber um processo (BK2_…)')}<span class="muted">${t?'último: '+new Date(t).toLocaleDateString('pt-PT')+(alt?` · ${alt} alterado(s)`:''):'ainda sem backup'}</span></div>`}
+ if(S.view==='anom'){const a=S.sub==='ficha'?curA():null;return `<div class="bkr"><b>BK 3 · Verba / ativo / parcela</b>${a?`<button class="green mini" data-alact="bk3Cur" title="Transferir só esta verba">📤 Transferir ${esc(alCode(p,a))}</button>`:''}<button class="secondary mini" data-alact="trocar" title="Escolher várias verbas para transferir">📤 Escolher verbas…</button>${IN('📥 Importar verba(s)','Receber um ficheiro BK3_… de outro aparelho')}</div>`}
+ return `<div class="bkr"><b>BK 2 · Processo</b><button class="green mini" data-act="sendProc" data-id="${p.id}" title="Transferir este processo com todas as verbas, fotos, mapas e anexos">📤 Transferir este processo</button>${IN('📥 Importar processo','Receber um ficheiro BK2_… de outro aparelho')}</div>`}
 function bkBarHTML(){const t=settings.lastBackup;const alt=procs.filter(x=>(x.updatedAt||0)>(t||0)).length;
   const txt=!t?(procs.length?'Ainda não foi feito nenhum backup neste aparelho.':'Sem dados para guardar.'):`Último backup: ${new Date(t).toLocaleString('pt-PT')}${alt?` · ${alt} processo(s) alterado(s) desde então`:' · sem alterações desde então'}`;
   const warn=procs.length&&(!t||alt);
@@ -3053,7 +3058,7 @@ const alAtivas=p=>ensureRel(p).ordVis?ovSort(p.anomalias):p.anomalias;
 const ovTsOf=a=>{const t=(a.fotos||[]).map(f=>+f.ts||0).filter(Boolean);return t.length?Math.min(...t):0};
 const ovChip=a=>+a.ov>0?`<span style="display:inline-block;font-size:10px;font-weight:700;color:${a.ovSug?'#8a6d00':'#1b5e20'};background:${a.ovSug?'#fff8e1':'#e8f5e9'};border:1px ${a.ovSug?'dashed #c9a227':'solid #81c784'};border-radius:6px;padding:0 5px;margin-right:4px" title="${a.ovSug?'Ordem de visita sugerida — confirme na ficha (3 · Visita)':'Ordem de visita'}">${ovCodV(a)}${a.ovSug?'?':''}</span>`:'';
 function ovTouchCur(){try{const p=cur(),a=curA();if(p&&a&&ovTouch(p.anomalias,a))toast(`${alCode(p,a)}: ordem de visita sugerida ${ovCodV(a)} — confirme ou corrija em 3 · Visita.`)}catch(e){}}
-function ovHTML(p,a){const L=p.anomalias;return `<label>Ordem de visita</label><div class="inrow" style="align-items:center">${+a.ov>0?`<b style="flex:0 0 auto">${ovCodV(a)}</b>${a.ovSug?'<span class="muted" style="flex:0 0 auto">(sugerida)</span>':''}`:'<span class="muted" style="flex:0 0 auto">por visitar</span>'}<input data-ovset="1" inputmode="numeric" value="${+a.ov>0?a.ov:''}" placeholder="n.º" style="width:64px;flex:0 0 64px">${a.ovSug?'<button class="green mini" data-alact="ovOk">✓ Aceitar</button>':''}${+a.ov>0?'<button class="secondary mini" data-alact="ovClr">Limpar</button>':`<button class="secondary mini" data-alact="ovNow">Visitada agora → ${ovCod(ovNext(L))}</button>`}</div><p class="muted" style="margin-top:2px">Ordem real no terreno (independente do código ${esc(alCode(p,a))}). A primeira foto tirada na app, o GPS ou «Data-hora» sugerem o número seguinte; escrevendo outro n.º, as restantes reajustam-se.</p>`}
+function ovHTML(p,a){const L=p.anomalias;return `<label>Ordem de visita</label><div class="inrow" style="align-items:center">${+a.ov>0?`<b style="flex:0 0 auto">${ovCodV(a)}</b>${a.ovSug?'<span class="muted" style="flex:0 0 auto">(sugerida)</span>':''}`:'<span class="muted" style="flex:0 0 auto">por visitar</span>'}<input data-ovset="1" inputmode="numeric" value="${+a.ov>0?a.ov:''}" placeholder="n.º" style="width:64px;flex:0 0 64px">${a.ovSug?'<button class="green mini" data-alact="ovOk">✓ Aceitar</button>':''}${+a.ov>0?'<button class="secondary mini" data-alact="ovClr">Limpar</button>':`<button class="secondary mini" data-alact="ovNow">Visitada agora → ${(()=>{const p0=ovProcOf(a);if(!p0)return ovCod(ovNext(L));const vn=vnOf(p0,a);return `OV_${vn}${String(p0.anomalias.filter(y=>+y.ov>0&&vnOf(p0,y)===vn).length+1).padStart(2,'0')}`})()}</button>`}</div><p class="muted" style="margin-top:2px">Ordem real no terreno (independente do código ${esc(alCode(p,a))}). A primeira foto tirada na app, o GPS ou «Data-hora» sugerem o número seguinte; escrevendo outro n.º, as restantes reajustam-se.</p>`}
 document.addEventListener('click',async e=>{const o=e.target.closest('[data-alact="ordVis"]');if(!o)return;e.preventDefault();e.stopImmediatePropagation();const p=cur();ensureRel(p).ordVis=o.dataset.v==='1';await saveProc();S.scrollTop=window.scrollY;render()},true);
 document.addEventListener('click',async e=>{const el=e.target.closest('[data-alact="ovList"],[data-alact="ovFotos"],[data-alact="ovOkAll"]');if(!el)return;e.preventDefault();e.stopImmediatePropagation();const p=cur();if(!p)return;const k=el.dataset.alact;
  if(k==='ovList'){settings.listOv=el.dataset.v==='1';await saveSettings()}else if(k==='ovFotos'){const n=ovFromTimes(p.anomalias,ovTsOf);toast(`${n} ordem(ns) de visita sugerida(s) pela hora das fotografias — confirme ou corrija.`);await saveProc()}else{p.anomalias.forEach(ovAccept);await saveProc()}S.scrollTop=window.scrollY;render()},true);
@@ -3184,6 +3189,7 @@ document.addEventListener('click',async e=>{const el=e.target.closest('[data-ala
    if(alTemDados(x)){const r=prompt(`Para confirmar, escreva o código da verba:\n\n${code}`,'');if(r===null)return;if(r.trim().toUpperCase().replace(/\s+/g,'')!==code.toUpperCase().replace(/\s+/g,''))return toast(`Não eliminada: o código não corresponde a ${code}.`,1)}
    removeAnomUndo(p,x);if(S.aid===x.id){S.aid=null;S.sub=null}await saveProc();S.scrollTop=window.scrollY;render();return}
   case 'trocar':{alTrocaModal(p);return}
+  case 'bk3Cur':{if(a)await alEnviarVerbas(p,[a.id]);return}
  }},true);
 
 /* ---------- campos ligados ---------- */
